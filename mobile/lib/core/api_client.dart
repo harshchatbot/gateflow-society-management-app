@@ -53,4 +53,38 @@ class ApiClient {
     }
   }
 
+
+    Future<Response<dynamic>> post(
+    String path, {
+    Map<String, dynamic>? data,
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      AppLogger.d('POST $path', data: {'data': data, 'query': queryParameters});
+      final resp = await _dio.post(path, data: data, queryParameters: queryParameters);
+      AppLogger.d('POST $path success', data: {'status': resp.statusCode});
+      return resp;
+    } on DioException catch (e, st) {
+      final appError = AppError.fromDio(e);
+      AppLogger.e(
+        'POST $path failed',
+        error: appError.technicalMessage,
+        stackTrace: st,
+        data: {
+          'status': e.response?.statusCode,
+          'data': e.response?.data,
+        },
+      );
+      throw appError;
+    } catch (e, st) {
+      final appError = AppError(
+        userMessage: 'Something went wrong. Please retry.',
+        technicalMessage: e.toString(),
+      );
+      AppLogger.e('POST $path unexpected error', error: e, stackTrace: st);
+      throw appError;
+    }
+  }
+
+
 }

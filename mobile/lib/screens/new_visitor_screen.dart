@@ -244,7 +244,7 @@ Widget _buildPhotoSection(ThemeData theme) {
               context,
               MaterialPageRoute(
                 builder: (_) => VisitorListScreen(
-                  guardId: guardId, // 👈 use the same guardId already in this screen
+                  guardId: widget.guardId, // 👈 use the same guardId already in this screen
                 ),
               ),
             );

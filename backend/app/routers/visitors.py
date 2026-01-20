@@ -13,6 +13,7 @@ from app.models.schemas import (
 )
 from app.services.visitor_service import get_visitor_service
 
+import aiofiles
 import logging
 logger = logging.getLogger(__name__)
 
@@ -95,20 +96,25 @@ async def create_visitor_with_photo(
             ext = ".jpg"
 
         filename = f"{uuid.uuid4().hex}{ext}"
-        file_path = os.path.join("uploads", "visitors", filename)
 
-        content = await photo.read()
-        with open(file_path, "wb") as f:
-            f.write(content)
+        # store this in sheets (relative)
+        rel_path = f"visitors/{filename}"
 
-        # 2) Create visitor row (store photo_path in sheets)
+        # write to disk (absolute-ish)
+        file_path = os.path.join("uploads", rel_path)
+
+        async with aiofiles.open(file_path, "wb") as f:
+            content = await photo.read()
+            await f.write(content)
+
         visitor = visitor_service.create_visitor_with_photo(
             flat_id=flat_id,
             visitor_type=visitor_type,
             visitor_phone=visitor_phone,
             guard_id=guard_id,
-            photo_path=file_path,
+            photo_path=rel_path,   # ✅ store relative path in sheets
         )
+
 
         return visitor
 
