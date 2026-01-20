@@ -13,10 +13,33 @@ from app.services.visitor_service import get_visitor_service
 router = APIRouter()
 
 
-@router.post("", response_model=VisitorResponse, status_code=status.HTTP_201_CREATED)
+@router.post(
+    "",
+    response_model=VisitorResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create visitor entry",
+    description="""
+    Create a new visitor entry.
+    
+    Validates:
+    - Flat exists in Flats sheet
+    - Flat is active (active==TRUE)
+    - Guard exists
+    
+    Creates visitor entry with:
+    - status=PENDING
+    - created_at in ISO UTC format
+    - Logs approval request stub to resident_phone
+    """
+)
 async def create_visitor(request: VisitorCreateRequest):
     """
     Create a new visitor entry
+    
+    - Validates flat_id exists and is active
+    - Appends to Visitors sheet with status=PENDING
+    - Returns created visitor record
+    - Logs approval request stub
     """
     visitor_service = get_visitor_service()
     

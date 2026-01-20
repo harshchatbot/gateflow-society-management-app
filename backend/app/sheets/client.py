@@ -152,12 +152,33 @@ class SheetsClient:
         
         return flats
     
-    def get_flat_by_id(self, flat_id: str) -> Optional[Dict]:
-        """Get a flat by flat_id"""
-        flats = self.get_flats()
-        for flat in flats:
+    def get_flat_by_id(self, flat_id: str, active_only: bool = False) -> Optional[Dict]:
+        """
+        Get a flat by flat_id
+        
+        Args:
+            flat_id: The flat ID to search for
+            active_only: If True, only return if flat is active. If False, return regardless of active status.
+        """
+        rows = self._get_sheet_values(settings.SHEET_FLATS)
+        if not rows:
+            return None
+        
+        headers = rows[0]
+        
+        for row in rows[1:]:
+            if len(row) < len(headers):
+                row.extend([''] * (len(headers) - len(row)))
+            
+            flat = dict(zip(headers, row))
+            
             if flat.get('flat_id') == flat_id:
+                # If active_only is True, check active status
+                if active_only:
+                    if flat.get('active', '').lower() != 'true':
+                        return None
                 return flat
+        
         return None
     
     # Guards operations
