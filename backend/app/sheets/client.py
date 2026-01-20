@@ -232,6 +232,7 @@ class SheetsClient:
         Writes the row using the Visitors sheet headers order.
         This makes it safe even if columns are added/reordered (like flat_no).
         """
+        
         rows = self._get_sheet_values(settings.SHEET_VISITORS)
 
         if not rows:
@@ -348,6 +349,66 @@ class SheetsClient:
                 return flat
 
         return None
+
+
+
+    def update_visitor_status(
+        self,
+        visitor_id: str,
+        status: str,
+        approved_at: str,
+        approved_by: str,
+        note: str = "",
+    ) -> Optional[Dict]:
+        """
+        Update an existing visitor row by visitor_id.
+        Assumes sheet headers include: visitor_id, status, approved_at, approved_by
+        and optionally note.
+        """
+        rows = self._get_sheet_values(settings.SHEET_VISITORS)
+        if not rows:
+            return None
+
+        headers = rows[0]
+        header_map = {h: i for i, h in enumerate(headers)}
+
+        if "visitor_id" not in header_map:
+            raise ValueError("Visitors sheet missing 'visitor_id' header")
+
+        # columns we want to update (only if present)
+        status_col = header_map.get("status")
+        approved_at_col = header_map.get("approved_at")
+        approved_by_col = header_map.get("approved_by")
+        note_col = header_map.get("note")  # optional
+
+        # find row index
+        for idx, row in enumerate(rows[1:], start=2):  # sheet rows are 1-based; + header => start=2
+            # pad row
+            if len(row) < len(headers):
+                row.extend([""] * (len(headers) - len(row)))
+
+            if row[header_map["visitor_id"]] == visitor_id:
+                # update local row values
+                if status_col is not None:
+                    row[status_col] = status
+                if approved_at_col is not None:
+                    row[approved_at_col] = approved_at
+                if approved_by_col is not None:
+                    row[approved_by_col] = approved_by
+                if note_col is not None:
+                    row[note_col] = note
+
+                # write whole row back
+                range_name = f"A{idx}:"
+                end_col_letter = chr(ord("A") + len(headers) - 1)
+                range_name = f"A{idx}:{end_col_letter}{idx}"
+
+                self._update_sheet(settings.SHEET_VISITORS, range_name, [row])
+
+                return dict(zip(headers, row))
+
+        return None
+
 
 
 # Singleton instance

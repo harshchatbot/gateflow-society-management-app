@@ -117,6 +117,7 @@ class VisitorService:
             # keep both
             "flat_id": resolved_flat_id,
             "flat_no": resolved_flat_no,
+            
 
             "visitor_type": visitor_type,
             "visitor_phone": visitor_phone,
@@ -321,6 +322,50 @@ class VisitorService:
         print(f"  Visitor: {visitor_type} - {visitor_phone}")
         print(f"  Visitor ID: {visitor_id}")
         print(f"  Message: Reply YES/NO to approve/reject")
+
+
+
+    def update_visitor_status(
+        self,
+        visitor_id: str,
+        status: str,
+        approved_by: Optional[str] = None,
+        note: Optional[str] = None,
+    ) -> VisitorResponse:
+        """
+        Update visitor status in Visitors sheet.
+        Also sets approved_at when approving/rejecting (UTC ISO).
+        """
+        status_norm = (status or "").strip().upper()
+        if not status_norm:
+            raise HTTPException(status_code=400, detail="status is required")
+
+        # allowed statuses (MVP)
+        allowed = {"APPROVED", "REJECTED", "LEAVE_AT_GATE", "PENDING"}
+        if status_norm not in allowed:
+            raise HTTPException(status_code=400, detail=f"Invalid status '{status_norm}'")
+
+        approved_at = ""
+        if status_norm in {"APPROVED", "REJECTED", "LEAVE_AT_GATE"}:
+            approved_at = datetime.now(timezone.utc).isoformat()
+
+        logger.info(
+            f"UPDATE_STATUS | visitor_id={visitor_id} status={status_norm} approved_by={approved_by} note={note}"
+        )
+
+        updated = self.sheets_client.update_visitor_status(
+            visitor_id=visitor_id,
+            status=status_norm,
+            approved_at=approved_at,
+            approved_by=approved_by or "",
+            note=note or "",
+        )
+
+        if not updated:
+            raise HTTPException(status_code=404, detail="Visitor not found")
+
+        return self._dict_to_visitor_response(updated)
+
 
 
 # Singleton instance

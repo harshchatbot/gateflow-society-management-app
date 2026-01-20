@@ -18,6 +18,9 @@ from app.services.visitor_service import get_visitor_service
 import aiofiles
 import logging
 
+from app.models.schemas import VisitorStatusUpdateRequest
+
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
@@ -158,3 +161,21 @@ async def get_visitors_by_flat_no(guard_id: str, flat_no: str):
     visitor_service = get_visitor_service()
     visitors = visitor_service.get_visitors_by_flat_no(guard_id=guard_id, flat_no=flat_no)
     return VisitorListResponse(visitors=visitors, count=len(visitors))
+
+
+
+
+@router.post(
+    "/{visitor_id}/status",
+    response_model=VisitorResponse,
+    summary="Update visitor status (APPROVED/REJECTED/LEAVE_AT_GATE)",
+)
+async def update_visitor_status(visitor_id: str, request: VisitorStatusUpdateRequest):
+    visitor_service = get_visitor_service()
+    updated = visitor_service.update_visitor_status(
+        visitor_id=visitor_id,
+        status=request.status,
+        approved_by=request.approved_by,
+        note=request.note,
+    )
+    return updated
