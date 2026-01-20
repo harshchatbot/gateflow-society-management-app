@@ -72,3 +72,12 @@ linux/flutter/ephemeral/
 
 # VS Code (optional)
 .vscode/
+
+# Flutter tool metadata (recreated)
+.metadata
+
+# Optional desktop platforms (ignore for MVP)
+linux/
+macos/
+windows/
+
