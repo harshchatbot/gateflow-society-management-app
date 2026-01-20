@@ -10,6 +10,11 @@ class Visitor {
   final String? approvedBy;
   final String guardId;
 
+  // Optional (future-proof)
+  final String? photoPath;
+  final String? photoUrl;
+  final String? note;
+
   Visitor({
     required this.visitorId,
     required this.societyId,
@@ -21,22 +26,28 @@ class Visitor {
     this.approvedAt,
     this.approvedBy,
     required this.guardId,
+    this.photoPath,
+    this.photoUrl,
+    this.note,
   });
 
   factory Visitor.fromJson(Map<String, dynamic> json) {
     return Visitor(
-      visitorId: json['visitor_id'] as String,
-      societyId: json['society_id'] as String,
-      flatId: json['flat_id'] as String,
-      visitorType: json['visitor_type'] as String,
-      visitorPhone: json['visitor_phone'] as String,
-      status: json['status'] as String,
+      visitorId: (json['visitor_id'] ?? '') as String,
+      societyId: (json['society_id'] ?? '') as String,
+      flatId: (json['flat_id'] ?? '') as String,
+      visitorType: (json['visitor_type'] ?? '') as String,
+      visitorPhone: (json['visitor_phone'] ?? '') as String,
+      status: (json['status'] ?? '') as String,
       createdAt: DateTime.parse(json['created_at'] as String),
-      approvedAt: json['approved_at'] != null
+      approvedAt: json['approved_at'] != null && (json['approved_at'] as String).isNotEmpty
           ? DateTime.parse(json['approved_at'] as String)
           : null,
       approvedBy: json['approved_by'] as String?,
-      guardId: json['guard_id'] as String,
+      guardId: (json['guard_id'] ?? '') as String,
+      photoPath: json['photo_path'] as String?,
+      photoUrl: json['photo_url'] as String?,
+      note: json['note'] as String?,
     );
   }
 
@@ -52,6 +63,9 @@ class Visitor {
       'approved_at': approvedAt?.toIso8601String(),
       'approved_by': approvedBy,
       'guard_id': guardId,
+      'photo_path': photoPath,
+      'photo_url': photoUrl,
+      'note': note,
     };
   }
 }

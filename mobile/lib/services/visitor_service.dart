@@ -153,5 +153,78 @@ class VisitorService {
 }
 
 
+  Future<Result<List<Visitor>>> getVisitorsToday({
+    required String guardId,
+  }) async {
+    try {
+      final resp = await _client.get(
+        '/api/visitors/today',
+        queryParameters: {'guard_id': guardId},
+      );
+
+      final data = resp.data;
+      final list = (data as List)
+          .map((e) => Visitor.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      return Result.success(list);
+    } on AppError catch (e) {
+      return Result.failure(e);
+    } catch (e, st) {
+      final err = AppError.fromUnknown(e, st);
+      return Result.failure(err);
+    }
+  }
+
+  Future<Result<List<Visitor>>> getVisitorsByFlat({
+    required String flatId,
+  }) async {
+    try {
+      final resp = await _client.get(
+        '/api/visitors/by-flat',
+        queryParameters: {'flat_id': flatId},
+      );
+
+      final data = resp.data;
+      final list = (data as List)
+          .map((e) => Visitor.fromJson(e as Map<String, dynamic>))
+          .toList();
+
+      return Result.success(list);
+    } on AppError catch (e) {
+      return Result.failure(e);
+    } catch (e, st) {
+      final err = AppError.fromUnknown(e, st);
+      return Result.failure(err);
+    }
+  }
+
+  Future<Result<Visitor>> updateVisitorStatus({
+    required String visitorId,
+    required String status,
+    String? approvedBy,
+    String? note,
+  }) async {
+    try {
+      final resp = await _client.post(
+        '/api/visitors/$visitorId/status',
+        data: {
+          'status': status,
+          'approved_by': approvedBy,
+          'note': note,
+        },
+      );
+
+      final visitor = Visitor.fromJson(resp.data as Map<String, dynamic>);
+      return Result.success(visitor);
+    } on AppError catch (e) {
+      return Result.failure(e);
+    } catch (e, st) {
+      final err = AppError.fromUnknown(e, st);
+      return Result.failure(err);
+    }
+  }
+
+
 
 }

@@ -44,6 +44,19 @@ class VisitorResponse(BaseModel):
     approved_by: Optional[str] = None
     guard_id: str
 
+    # NEW (optional)
+    photo_path: Optional[str] = None
+    photo_url: Optional[str] = None
+    note: Optional[str] = None
+
+
+class VisitorStatusUpdateRequest(BaseModel):
+    """Update visitor status request"""
+    status: str = Field(..., description="APPROVED / REJECTED / LEAVE_AT_GATE")
+    approved_by: Optional[str] = Field(default=None, description="Resident identifier/phone")
+    note: Optional[str] = Field(default=None, description="Optional note, eg leave at gate")
+
+
 
 class VisitorListResponse(BaseModel):
     """List of visitors response"""
@@ -68,3 +81,13 @@ class FlatListResponse(BaseModel):
     """List of flats response"""
     flats: list[FlatResponse]
     count: int
+
+
+class VisitorCreateRequest(BaseModel):
+    """Create visitor entry request"""
+    flat_id: str = Field(..., description="Flat ID")
+    visitor_type: str = Field(..., description="Visitor type: Guest, Delivery, or Cab")
+    visitor_phone: str = Field(..., description="Visitor phone number")
+    guard_id: str = Field(..., description="Guard ID creating the entry")
+    photo_path: Optional[str] = Field(default=None, description="Local/photo storage path (optional)")
+    photo_url: Optional[str] = Field(default=None, description="Public URL of photo (optional)")

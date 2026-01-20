@@ -10,6 +10,8 @@ import 'guard_login_screen.dart';
 
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'visitor_list_screen.dart';
+
 
 
 class NewVisitorScreen extends StatefulWidget {
@@ -230,14 +232,26 @@ Widget _buildPhotoSection(ThemeData theme) {
     
     return Scaffold(
       appBar: AppBar(
-        title: const Text('New Entry'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _isLoading ? null : _logout,
-          ),
-        ],
-      ),
+      title: const Text('New Visitor'),
+
+      // 👇 ADD THIS
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.list_alt),
+          tooltip: 'View Visitors',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => VisitorListScreen(
+                  guardId: guardId, // 👈 use the same guardId already in this screen
+                ),
+              ),
+            );
+          },
+        ),
+      ],
+    ),
       body: Stack(
         children: [
           SingleChildScrollView(

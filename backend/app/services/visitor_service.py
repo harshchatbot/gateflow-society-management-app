@@ -144,6 +144,11 @@ class VisitorService:
                 logger.warning(f"Failed to parse approved_at '{approved_at_str}': {e}")
                 approved_at = None
         
+        photo_url = None
+        if photo_path:
+            photo_url = f"/uploads/{photo_path}".replace("//", "/")
+
+
         return VisitorResponse(
             visitor_id=visitor_dict.get('visitor_id', ''),
             society_id=visitor_dict.get('society_id', ''),
@@ -155,6 +160,9 @@ class VisitorService:
             approved_at=approved_at,
             approved_by=visitor_dict.get('approved_by'),
             guard_id=visitor_dict.get('guard_id', ''),
+            photo_path=photo_path,
+            photo_url=photo_url,
+            note=visitor_dict.get("note") or None,
         )
     
     def _log_approval_request(self, flat: dict, visitor_data: dict):
