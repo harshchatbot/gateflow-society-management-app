@@ -1,18 +1,21 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:confetti/confetti.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../core/app_logger.dart';
 import '../core/app_error.dart';
 import '../core/storage.dart';
 import '../models/visitor.dart';
 import '../services/visitor_service.dart';
-import 'guard_login_screen.dart';
 
-import 'dart:io';
-import 'package:image_picker/image_picker.dart';
+import 'guard_login_screen.dart';
 import 'visitor_list_screen.dart';
 
-
+// New UI system
+import '../ui/app_colors.dart';
+import '../ui/glass_loader.dart';
 
 class NewVisitorScreen extends StatefulWidget {
   final String guardId;
@@ -32,7 +35,7 @@ class NewVisitorScreen extends StatefulWidget {
 
 class _NewVisitorScreenState extends State<NewVisitorScreen> {
   final _formKey = GlobalKey<FormState>();
-  
+
   // Controllers
   final _flatNoController = TextEditingController();
   final _visitorPhoneController = TextEditingController();
@@ -42,7 +45,6 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   final ImagePicker _picker = ImagePicker();
   File? _visitorPhoto;
 
-
   String _selectedVisitorType = 'GUEST';
   bool _isLoading = false;
   Visitor? _createdVisitor;
@@ -50,7 +52,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 2));
   }
 
   @override
@@ -61,7 +64,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     super.dispose();
   }
 
-  // --- LOGIC SECTION (Your Code) ---
+  // --- LOGIC SECTION (UNCHANGED) ---
 
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -71,23 +74,21 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       _createdVisitor = null;
     });
 
-    // API Call
     final result = (_visitorPhoto != null)
-    ? await _visitorService.createVisitorWithPhoto(
-        flatNo: _flatNoController.text.trim(),
-        visitorType: _selectedVisitorType,
-        visitorPhone: _visitorPhoneController.text.trim(),
-        guardId: widget.guardId,
-        photoFile: _visitorPhoto!,
-        // authToken: await Storage.getToken(), // only if needed
-      )
-    : await _visitorService.createVisitor(
-        flatNo: _flatNoController.text.trim(),
-        visitorType: _selectedVisitorType,
-        visitorPhone: _visitorPhoneController.text.trim(),
-        guardId: widget.guardId,
-      );
-
+        ? await _visitorService.createVisitorWithPhoto(
+            flatNo: _flatNoController.text.trim(),
+            visitorType: _selectedVisitorType,
+            visitorPhone: _visitorPhoneController.text.trim(),
+            guardId: widget.guardId,
+            photoFile: _visitorPhoto!,
+            // authToken: await Storage.getToken(), // only if needed
+          )
+        : await _visitorService.createVisitor(
+            flatNo: _flatNoController.text.trim(),
+            visitorType: _selectedVisitorType,
+            visitorPhone: _visitorPhoneController.text.trim(),
+            guardId: widget.guardId,
+          );
 
     if (!mounted) return;
 
@@ -99,7 +100,10 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       _confettiController.play();
     } else {
       setState(() => _isLoading = false);
-      final err = result.error ?? AppError(userMessage: 'Failed to create visitor', technicalMessage: 'Unknown');
+      final err = result.error ??
+          AppError(
+              userMessage: 'Failed to create visitor',
+              technicalMessage: 'Unknown');
       AppLogger.e('Visitor creation failed', error: err.technicalMessage);
       _showError(err.userMessage);
     }
@@ -136,151 +140,574 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   }
 
   Future<void> _takePhoto() async {
-  try {
-    final XFile? picked = await _picker.pickImage(
-      source: ImageSource.camera,
-      preferredCameraDevice: CameraDevice.front,
-      imageQuality: 75,
-      maxWidth: 1080,
-    );
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front,
+        imageQuality: 75,
+        maxWidth: 1080,
+      );
 
-    if (picked == null) return; // cancelled
+      if (picked == null) return;
 
-    setState(() {
-      _visitorPhoto = File(picked.path);
-    });
-  } catch (e) {
-    if (!mounted) return;
-    _showError("Camera error. Please allow camera permission and try again.");
-    AppLogger.e("Camera pick failed", error: e.toString());
+      setState(() {
+        _visitorPhoto = File(picked.path);
+      });
+    } catch (e) {
+      if (!mounted) return;
+      _showError("Camera error. Please allow camera permission and try again.");
+      AppLogger.e("Camera pick failed", error: e.toString());
+    }
   }
-}
 
-Widget _buildPhotoSection(ThemeData theme) {
-  final photo = _visitorPhoto;
+  // --- UI HELPERS (Premium) ---
 
-  return Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFFDFE1E6)),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text("Visitor Photo", style: theme.textTheme.titleMedium),
-        const SizedBox(height: 12),
+  Widget _premiumCard({required Widget child, EdgeInsets? padding}) {
+    return Container(
+      padding: padding ?? const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.045),
+            blurRadius: 26,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
 
-        if (photo == null)
-          SizedBox(
-            width: double.infinity,
-            height: 160,
-            child: OutlinedButton.icon(
-              onPressed: _isLoading ? null : _takePhoto,
-              icon: const Icon(Icons.camera_alt_outlined),
-              label: const Text("Take Photo"),
+  Widget _buildPhotoSection() {
+    final photo = _visitorPhoto;
+
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.bg,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Visitor Photo",
+            style: TextStyle(
+              fontSize: 13.5,
+              fontWeight: FontWeight.w800,
+              color: AppColors.text,
             ),
-          )
-        else
-          Column(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  photo,
-                  height: 220,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
+          ),
+          const SizedBox(height: 10),
+          if (photo == null)
+            SizedBox(
+              width: double.infinity,
+              height: 150,
+              child: OutlinedButton.icon(
+                onPressed: _isLoading ? null : _takePhoto,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  side: const BorderSide(color: AppColors.border),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  backgroundColor: AppColors.surface,
+                ),
+                icon: const Icon(Icons.camera_alt_outlined),
+                label: const Text(
+                  "Take Photo",
+                  style: TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _isLoading ? null : _takePhoto,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text("Retake"),
-                    ),
+            )
+          else
+            Column(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.file(
+                    photo,
+                    height: 210,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: _isLoading
-                          ? null
-                          : () => setState(() => _visitorPhoto = null),
-                      icon: const Icon(Icons.delete_outline),
-                      label: const Text("Remove"),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isLoading ? null : _takePhoto,
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.primary,
+                          side: const BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          backgroundColor: AppColors.surface,
+                        ),
+                        icon: const Icon(Icons.refresh_rounded),
+                        label: const Text(
+                          "Retake",
+                          style: TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _isLoading
+                            ? null
+                            : () => setState(() => _visitorPhoto = null),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppColors.error,
+                          side: BorderSide(color: AppColors.error.withOpacity(0.28)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          backgroundColor: AppColors.surface,
+                        ),
+                        icon: const Icon(Icons.delete_outline),
+                        label: const Text(
+                          "Remove",
+                          style: TextStyle(fontWeight: FontWeight.w900),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypePill(String type, IconData icon) {
+    final isSelected = _selectedVisitorType == type;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => setState(() => _selectedVisitorType = type),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primarySoft : AppColors.surface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isSelected ? AppColors.primarySoft : AppColors.border,
+            ),
+          ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                size: 22,
+                color: isSelected ? AppColors.primary : AppColors.text2,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                type,
+                style: TextStyle(
+                  color: isSelected ? AppColors.primary : AppColors.text2,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.2,
+                ),
               ),
             ],
           ),
-      ],
-    ),
-  );
-}
+        ),
+      ),
+    );
+  }
 
+  Widget _buildEntryForm() {
+    return _premiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Visitor Details",
+            style: TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w900,
+              color: AppColors.text,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            "Fill the details and send for resident approval.",
+            style: TextStyle(
+              fontSize: 12.2,
+              fontWeight: FontWeight.w600,
+              color: AppColors.text2,
+              height: 1.25,
+            ),
+          ),
+          const SizedBox(height: 14),
 
-  // --- UI SECTION (New Salesforce Design) ---
+          _buildPhotoSection(),
+          const SizedBox(height: 14),
+
+          // Flat No
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.bg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: TextFormField(
+              controller: _flatNoController,
+              textCapitalization: TextCapitalization.characters,
+              textInputAction: TextInputAction.next,
+              style: const TextStyle(
+                color: AppColors.text,
+                fontWeight: FontWeight.w700,
+                fontSize: 14.5,
+              ),
+              decoration: const InputDecoration(
+                labelText: "Flat No",
+                hintText: "e.g. A-101",
+                prefixIcon: Icon(Icons.home_outlined, color: AppColors.text2),
+                border: InputBorder.none,
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              ),
+              validator: (v) => v!.isEmpty ? "Required" : null,
+            ),
+          ),
+          const SizedBox(height: 14),
+
+          // Visitor Type
+          const Text(
+            "Visitor Type",
+            style: TextStyle(
+              color: AppColors.text,
+              fontWeight: FontWeight.w900,
+              fontSize: 13.5,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _buildTypePill("GUEST", Icons.person_outline),
+              const SizedBox(width: 10),
+              _buildTypePill("DELIVERY", Icons.local_shipping_outlined),
+              const SizedBox(width: 10),
+              _buildTypePill("CAB", Icons.local_taxi_outlined),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Phone
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.bg,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: TextFormField(
+              controller: _visitorPhoneController,
+              keyboardType: TextInputType.phone,
+              maxLength: 10,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              style: const TextStyle(
+                color: AppColors.text,
+                fontWeight: FontWeight.w700,
+                fontSize: 14.5,
+              ),
+              decoration: const InputDecoration(
+                labelText: "Phone Number",
+                prefixIcon: Icon(Icons.phone_outlined, color: AppColors.text2),
+                counterText: "",
+                border: InputBorder.none,
+                contentPadding:
+                    EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              ),
+              validator: (v) => v!.length < 10 ? "Invalid Phone" : null,
+            ),
+          ),
+
+          const SizedBox(height: 16),
+
+          SizedBox(
+            height: 54,
+            child: ElevatedButton.icon(
+              onPressed: _isLoading ? null : _handleSubmit,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              icon: const Icon(Icons.send_rounded),
+              label: const Text(
+                "Send for Approval",
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value, {bool isStatus = false}) {
+    Color chipBg = AppColors.warning.withOpacity(0.16);
+    Color chipFg = AppColors.warning;
+
+    if (value.toUpperCase().contains("APPROV")) {
+      chipBg = AppColors.success.withOpacity(0.16);
+      chipFg = AppColors.success;
+    } else if (value.toUpperCase().contains("REJECT")) {
+      chipBg = AppColors.error.withOpacity(0.14);
+      chipFg = AppColors.error;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textMuted,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          isStatus
+              ? Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: chipBg,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(color: chipFg.withOpacity(0.25)),
+                  ),
+                  child: Text(
+                    value,
+                    style: TextStyle(
+                      color: chipFg,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 12,
+                    ),
+                  ),
+                )
+              : Text(
+                  value,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.text,
+                  ),
+                ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuccessCard() {
+    final theme = Theme.of(context);
+    final v = _createdVisitor!;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.success.withOpacity(0.28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 26,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            height: 64,
+            width: 64,
+            decoration: BoxDecoration(
+              color: AppColors.success.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.success.withOpacity(0.18)),
+            ),
+            child: const Icon(Icons.check_rounded,
+                color: AppColors.success, size: 34),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            "Entry Created",
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w900,
+              color: AppColors.text,
+            ),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            "Waiting for resident approval…",
+            style: TextStyle(
+              color: AppColors.text2,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 14),
+          const Divider(height: 18),
+
+          _buildInfoRow("Visitor Name", "Guest"),
+          _buildInfoRow("Type", v.visitorType),
+          _buildInfoRow("Flat", v.flatId),
+          _buildInfoRow("Status", v.status, isStatus: true),
+
+          const SizedBox(height: 16),
+
+          SizedBox(
+            height: 52,
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _clearForm,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.text,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: const Text(
+                "New Entry",
+                style: TextStyle(fontWeight: FontWeight.w900),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
     return Scaffold(
+      backgroundColor: AppColors.bg,
       appBar: AppBar(
-      title: const Text('New Visitor'),
-
-      // 👇 ADD THIS
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.list_alt),
-          tooltip: 'View Visitors',
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => VisitorListScreen(
-                  guardId: widget.guardId, // 👈 use the same guardId already in this screen
+        backgroundColor: AppColors.bg,
+        elevation: 0,
+        surfaceTintColor: AppColors.bg,
+        title: const Text(
+          'New Visitor',
+          style: TextStyle(
+            color: AppColors.text,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.list_alt, color: AppColors.text),
+            tooltip: 'View Visitors',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => VisitorListScreen(
+                    guardId: widget.guardId,
+                  ),
                 ),
-              ),
-            );
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.logout),
-          tooltip: 'Logout',
-          onPressed: _isLoading ? null : _logout, // ✅ disables logout while submitting
-        ),
-      ],
-    ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: AppColors.text),
+            tooltip: 'Logout',
+            onPressed: _isLoading ? null : _logout,
+          ),
+        ],
+      ),
       body: Stack(
         children: [
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.primarySoft.withOpacity(0.75),
+                    AppColors.bg,
+                  ],
+                ),
+              ),
+            ),
+          ),
           SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
             child: Form(
               key: _formKey,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // 1. Guard Info Card
-                  _buildGuardInfoCard(theme),
-                  const SizedBox(height: 16),
+                  // Guard info
+                  _premiumCard(
+                    padding: const EdgeInsets.all(14),
+                    child: Row(
+                      children: [
+                        Container(
+                          height: 44,
+                          width: 44,
+                          decoration: BoxDecoration(
+                            color: AppColors.primarySoft,
+                            borderRadius: BorderRadius.circular(14),
+                            border: Border.all(color: AppColors.border),
+                          ),
+                          child: const Icon(Icons.security_rounded,
+                              color: AppColors.primary),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.guardName,
+                                style: const TextStyle(
+                                  fontSize: 14.5,
+                                  fontWeight: FontWeight.w900,
+                                  color: AppColors.text,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                "ID: ${widget.guardId} • Society: ${widget.societyId}",
+                                style: const TextStyle(
+                                  fontSize: 12.2,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.text2,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 14),
 
-                  // 2. Main Content (Form or Success)
-                  if (_createdVisitor != null) 
-                    _buildSuccessCard(theme)
-                  else 
-                    _buildEntryForm(theme),
+                  if (_createdVisitor != null) _buildSuccessCard() else _buildEntryForm(),
                 ],
               ),
             ),
           ),
-          
-          // Confetti Overlay
+
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
@@ -290,195 +717,11 @@ Widget _buildPhotoSection(ThemeData theme) {
               colors: const [Colors.green, Colors.blue, Colors.orange],
             ),
           ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildGuardInfoCard(ThemeData theme) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFDFE1E6)), // Subtle border
-      ),
-      child: Row(
-        children: [
-          CircleAvatar(
-            backgroundColor: theme.primaryColor.withOpacity(0.1),
-            child: Icon(Icons.security, color: theme.primaryColor),
+          GlassLoader(
+            show: _isLoading,
+            message: "Creating entry…",
           ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(widget.guardName, style: theme.textTheme.titleMedium),
-              Text(
-                "ID: ${widget.guardId} • Society: ${widget.societyId}",
-                style: theme.textTheme.bodySmall,
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEntryForm(ThemeData theme) {
-    
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("Visitor Details", style: theme.textTheme.titleMedium),
-          // Photo Section
-          _buildPhotoSection(theme),
-          const SizedBox(height: 16),
-
-          
-          // Flat ID
-          TextFormField(
-            controller: _flatNoController,
-            textCapitalization: TextCapitalization.characters,
-            decoration: const InputDecoration(
-              labelText: "Flat No",
-              hintText: "e.g. A-101",
-              prefixIcon: Icon(Icons.home_outlined),
-            ),
-            validator: (v) => v!.isEmpty ? "Required" : null,
-          ),
-          const SizedBox(height: 16),
-
-          // Visitor Type Selector
-          Text("Visitor Type", style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(child: _buildTypeCard("GUEST", Icons.person_outline)),
-              const SizedBox(width: 8),
-              Expanded(child: _buildTypeCard("DELIVERY", Icons.local_shipping_outlined)),
-              const SizedBox(width: 8),
-              Expanded(child: _buildTypeCard("CAB", Icons.local_taxi_outlined)),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Phone
-          TextFormField(
-            controller: _visitorPhoneController,
-            keyboardType: TextInputType.phone,
-            maxLength: 10,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            decoration: const InputDecoration(
-              labelText: "Phone Number",
-              prefixIcon: Icon(Icons.phone_outlined),
-              counterText: "", // Hide counter
-            ),
-            validator: (v) => v!.length < 10 ? "Invalid Phone" : null,
-          ),
-          
-          const SizedBox(height: 24),
-          
-          // Action Button
-          ElevatedButton.icon(
-            onPressed: _isLoading ? null : _handleSubmit,
-            icon: _isLoading 
-              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-              : const Icon(Icons.send),
-            label: Text(_isLoading ? "Processing..." : "Send for Approval"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSuccessCard(ThemeData theme) {
-    final v = _createdVisitor!;
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.green.withOpacity(0.3)),
-      ),
-      child: Column(
-        children: [
-          const Icon(Icons.check_circle, color: Colors.green, size: 64),
-          const SizedBox(height: 16),
-          Text("Entry Approved", style: theme.textTheme.headlineMedium),
-          Text("Waiting for resident...", style: theme.textTheme.bodySmall),
-          const Divider(height: 32),
-          
-          _buildInfoRow("Visitor Name", "Guest"), // You might add Name field later
-          _buildInfoRow("Type", v.visitorType),
-          _buildInfoRow("Flat", v.flatId),
-          _buildInfoRow("Status", v.status, isStatus: true),
-          
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: _clearForm,
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[800]),
-            child: const Text("New Entry"),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTypeCard(String type, IconData icon) {
-    final isSelected = _selectedVisitorType == type;
-    final color = isSelected ? Theme.of(context).primaryColor : Colors.grey[200];
-    final textColor = isSelected ? Colors.white : Colors.black87;
-
-    return GestureDetector(
-      onTap: () => setState(() => _selectedVisitorType = type),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).primaryColor : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected ? Theme.of(context).primaryColor : Colors.grey[300]!,
-          ),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: isSelected ? Colors.white : Colors.grey[600], size: 22),
-            const SizedBox(height: 4),
-            Text(
-              type, 
-              style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value, {bool isStatus = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(color: Colors.grey)),
-          isStatus 
-            ? Chip(label: Text(value), backgroundColor: Colors.orange[100], labelStyle: TextStyle(color: Colors.orange[900]))
-            : Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
         ],
       ),
     );

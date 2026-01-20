@@ -6,6 +6,10 @@ import '../core/app_error.dart';
 import '../core/app_logger.dart';
 import '../models/visitor.dart';
 
+import 'package:gateflow/services/visitor_service.dart';
+import 'package:gateflow/core/result.dart' as core_result;
+
+
 class Result<T> {
   final T? data;
   final AppError? error;

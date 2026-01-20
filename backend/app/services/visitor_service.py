@@ -2,12 +2,11 @@
 Visitor service for visitor entry management
 """
 
-from datetime import datetime, timezone
-from typing import List, Optional
+from datetime import datetime, timezone, timedelta
+from typing import List, Optional, Dict, Tuple
 import uuid
 import logging
-from datetime import timedelta
-
+import time
 
 from fastapi import HTTPException
 
@@ -23,6 +22,53 @@ class VisitorService:
 
     def __init__(self):
         self.sheets_client = get_sheets_client()
+
+        # -----------------------------
+        # Flat cache (society-scoped)
+        # -----------------------------
+        # society_id -> (expires_at_epoch, {flat_no_norm: flat_dict})
+        self._flat_cache: Dict[str, Tuple[float, Dict[str, dict]]] = {}
+        self._flat_cache_ttl_sec: int = 300  # 5 minutes
+
+    # -----------------------------
+    # Flat No Normalizer
+    # -----------------------------
+    def _norm_flat_no(self, flat_no: Optional[str]) -> str:
+        return (flat_no or "").strip().upper()
+
+    def clear_flat_cache(self, society_id: Optional[str] = None) -> None:
+        """Utility to clear flat cache (useful for testing)."""
+        if society_id:
+            self._flat_cache.pop(society_id, None)
+        else:
+            self._flat_cache.clear()
+
+    def _get_flat_map_cached(self, society_id: str) -> Dict[str, dict]:
+        """
+        Build/return cached map: flat_no_norm -> flat_dict for a society.
+        Uses SheetsClient.get_flats(society_id=...) which already returns active flats only.
+        """
+        now = time.time()
+        cached = self._flat_cache.get(society_id)
+
+        if cached and cached[0] > now:
+            return cached[1]
+
+        # Cache miss/expired: fetch once and build map
+        flats = self.sheets_client.get_flats(society_id=society_id)
+
+        m: Dict[str, dict] = {}
+        for f in flats:
+            k = self._norm_flat_no(f.get("flat_no"))
+            if k:
+                m[k] = f
+
+        self._flat_cache[society_id] = (now + self._flat_cache_ttl_sec, m)
+
+        logger.info(
+            f"FLAT_CACHE_REFRESHED | society_id={society_id} flats_cached={len(m)} ttl_sec={self._flat_cache_ttl_sec}"
+        )
+        return m
 
     # -----------------------------
     # Flat Resolver
@@ -40,21 +86,39 @@ class VisitorService:
 
         logger.info(f"RESOLVE_FLAT | society_id={society_id} flat_id={flat_id} flat_no={flat_no}")
 
-        # 1) Try flat_id if provided
+        # 1) Try flat_id if provided (no change)
         if flat_id:
             flat = self.sheets_client.get_flat_by_id(flat_id, active_only=True)
             if flat:
                 return flat
 
-        # 2) Try flat_no if provided
+        # 2) Try flat_no if provided (UPDATED: use cache-first, fallback to direct lookup)
         if flat_no:
-            flat_no_norm = (flat_no or "").strip().upper()
+            flat_no_norm = self._norm_flat_no(flat_no)
+
+            # 2a) Cache-first resolution
+            try:
+                flat_map = self._get_flat_map_cached(society_id)
+                flat = flat_map.get(flat_no_norm)
+                if flat:
+                    return flat
+            except Exception as e:
+                # Cache should never break functionality — fall back
+                logger.warning(f"RESOLVE_FLAT_CACHE_FAIL | society_id={society_id} err={e}")
+
+            # 2b) Fallback: direct sheet lookup (keeps existing behavior intact)
             flat = self.sheets_client.get_flat_by_no(
                 society_id=society_id,
                 flat_no=flat_no_norm,
                 active_only=True,
             )
             if flat:
+                # Optional: warm cache
+                try:
+                    flat_map = self._get_flat_map_cached(society_id)
+                    flat_map[self._norm_flat_no(flat.get("flat_no"))] = flat
+                except Exception:
+                    pass
                 return flat
 
         logger.warning(
@@ -117,7 +181,6 @@ class VisitorService:
             # keep both
             "flat_id": resolved_flat_id,
             "flat_no": resolved_flat_no,
-            
 
             "visitor_type": visitor_type,
             "visitor_phone": visitor_phone,
@@ -156,8 +219,6 @@ class VisitorService:
             photo_path=photo_path,
         )
 
-     # add near imports
-
     def get_visitors_today(self, guard_id: str) -> List[VisitorResponse]:
         """
         MVP semantics: return visitors from the LAST 24 HOURS (rolling window),
@@ -166,7 +227,9 @@ class VisitorService:
         now_utc = datetime.now(timezone.utc)
         cutoff = now_utc - timedelta(hours=24)
 
-        logger.info(f"RECENT_VISITORS_24H | guard_id={guard_id} now_utc={now_utc.isoformat()} cutoff={cutoff.isoformat()}")
+        logger.info(
+            f"RECENT_VISITORS_24H | guard_id={guard_id} now_utc={now_utc.isoformat()} cutoff={cutoff.isoformat()}"
+        )
 
         # Fetch by guard only (fast + minimal)
         visitors = self.sheets_client.get_visitors(guard_id=guard_id)
@@ -198,7 +261,6 @@ class VisitorService:
         logger.info(f"RECENT_VISITORS_24H_RESULT | guard_id={guard_id} count={len(filtered)}")
         return [self._dict_to_visitor_response(v) for v in filtered]
 
-
     def get_visitors_by_flat(self, flat_id: str) -> List[VisitorResponse]:
         """Legacy: Get all visitors for a flat by flat_id"""
         visitors = self.sheets_client.get_visitors(flat_id=flat_id)
@@ -213,7 +275,7 @@ class VisitorService:
         - Fetch visitors by flat_no (and society_id to prevent cross-society collisions)
         """
 
-        flat_no_norm = (flat_no or "").strip().upper()
+        flat_no_norm = self._norm_flat_no(flat_no)
         logger.info(f"GET_VISITORS_BY_FLAT_NO | guard_id={guard_id} flat_no={flat_no_norm}")
 
         if not flat_no_norm:
@@ -232,7 +294,7 @@ class VisitorService:
             )
             raise HTTPException(status_code=500, detail="Guard record missing society_id in sheet")
 
-        # 2) Resolve flat to ensure active/valid
+        # 2) Resolve flat to ensure active/valid (now cache-backed via _resolve_flat)
         _ = self._resolve_flat(society_id=society_id, flat_id=None, flat_no=flat_no_norm)
 
         # 3) Fetch visitors (prefer by flat_no + society_id)
@@ -243,7 +305,9 @@ class VisitorService:
             )
         except TypeError:
             # Fallback for older sheets_client that doesn't support flat_no filter
-            logger.warning("Sheets client get_visitors does not support flat_no filter yet; falling back to flat_id resolution.")
+            logger.warning(
+                "Sheets client get_visitors does not support flat_no filter yet; falling back to flat_id resolution."
+            )
             flat = self._resolve_flat(society_id=society_id, flat_no=flat_no_norm)
             resolved_flat_id = flat.get("flat_id")
             visitors = self.sheets_client.get_visitors(flat_id=resolved_flat_id)
@@ -323,8 +387,6 @@ class VisitorService:
         print(f"  Visitor ID: {visitor_id}")
         print(f"  Message: Reply YES/NO to approve/reject")
 
-
-
     def update_visitor_status(
         self,
         visitor_id: str,
@@ -365,7 +427,6 @@ class VisitorService:
             raise HTTPException(status_code=404, detail="Visitor not found")
 
         return self._dict_to_visitor_response(updated)
-
 
 
 # Singleton instance
