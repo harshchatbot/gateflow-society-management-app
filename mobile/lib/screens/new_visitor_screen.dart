@@ -70,12 +70,22 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     });
 
     // API Call
-    final result = await _visitorService.createVisitor(
-      flatId: _flatIdController.text.trim(),
-      visitorType: _selectedVisitorType,
-      visitorPhone: _visitorPhoneController.text.trim(),
-      guardId: widget.guardId,
-    );
+    final result = (_visitorPhoto != null)
+    ? await _visitorService.createVisitorWithPhoto(
+        flatId: _flatIdController.text.trim(),
+        visitorType: _selectedVisitorType,
+        visitorPhone: _visitorPhoneController.text.trim(),
+        guardId: widget.guardId,
+        photoFile: _visitorPhoto!,
+        // authToken: await Storage.getToken(), // only if needed
+      )
+    : await _visitorService.createVisitor(
+        flatId: _flatIdController.text.trim(),
+        visitorType: _selectedVisitorType,
+        visitorPhone: _visitorPhoneController.text.trim(),
+        guardId: widget.guardId,
+      );
+
 
     if (!mounted) return;
 

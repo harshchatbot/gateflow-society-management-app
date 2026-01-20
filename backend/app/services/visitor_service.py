@@ -11,6 +11,8 @@ from app.sheets.client import get_sheets_client
 from app.models.schemas import VisitorResponse, FlatResponse
 from app.models.enums import VisitorStatus
 
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -25,7 +27,8 @@ class VisitorService:
         flat_id: str,
         visitor_type: str,
         visitor_phone: str,
-        guard_id: str
+        guard_id: str,
+        photo_path: str = ""
     ) -> VisitorResponse:
         """
         Create a new visitor entry
@@ -64,6 +67,7 @@ class VisitorService:
             'approved_at': '',
             'approved_by': '',
             'guard_id': guard_id,
+            'photo_path': photo_path,
         }
         
         # Append to Visitors sheet
@@ -74,6 +78,27 @@ class VisitorService:
         
         return self._dict_to_visitor_response(visitor_data)
     
+
+
+    def create_visitor_with_photo(
+        self,
+        flat_id: str,
+        visitor_type: str,
+        visitor_phone: str,
+        guard_id: str,
+        photo_path: str
+    ) -> VisitorResponse:
+        return self.create_visitor(
+            flat_id=flat_id,
+            visitor_type=visitor_type,
+            visitor_phone=visitor_phone,
+            guard_id=guard_id,
+            photo_path=photo_path
+        )
+
+
+
+
     def get_visitors_today(self, guard_id: str) -> List[VisitorResponse]:
         """Get all visitors created today by a guard"""
         today = datetime.now().strftime('%Y-%m-%d')
