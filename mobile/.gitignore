@@ -45,3 +45,30 @@ app.*.map.json
 
 # Environment variables
 .env
+
+
+# ===== Flutter platform generated files =====
+
+# Android
+android/.gradle/
+android/local.properties
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/ephemeral/
+ios/Flutter/Generated.xcconfig
+
+# Web
+web/.last_build_id
+
+# macOS
+macos/Flutter/ephemeral/
+macos/Pods/
+
+# Windows / Linux
+windows/flutter/ephemeral/
+linux/flutter/ephemeral/
+
+# VS Code (optional)
+.vscode/
