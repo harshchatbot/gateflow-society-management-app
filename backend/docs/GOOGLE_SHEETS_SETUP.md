@@ -88,7 +88,7 @@ Create three sheets in your spreadsheet with these exact headers:
 
 2. Add your spreadsheet ID:
    ```env
-   SHEETS_SPREADSHEET_ID=your_spreadsheet_id_here
+   SHEETS_SPREADSHEET_ID=544872854
    GOOGLE_SHEETS_CREDENTIALS_PATH=credentials.json
    ```
 

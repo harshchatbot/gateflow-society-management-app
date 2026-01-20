@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'core/env.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/splash_screen.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Load environment variables
-  await Env.load();
-  
+
+  // Load environment variables from .env
+  await dotenv.load(fileName: ".env");
+
   runApp(const GateFlowApp());
 }
 
@@ -43,17 +43,17 @@ class GateFlowApp extends StatelessWidget {
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.grey.shade50,
+          fillColor: Colors.grey,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
+            borderSide: BorderSide(color: Colors.grey),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.blue.shade700, width: 2),
+            borderSide: BorderSide(color: Colors.blue, width: 2),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),

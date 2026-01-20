@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'core/env.dart';
+import 'env.dart';
 
 class ApiClient {
   late final Dio _dio;
