@@ -19,6 +19,12 @@ dependencies:
   # Local storage
   shared_preferences: ^2.2.2
   
+  # Logging
+  logger: ^2.1.0
+
+  # Confetti for success micro-interaction
+  confetti: ^0.7.0
+
   # UI
   cupertino_icons: ^1.0.6
 

@@ -1,16 +1,25 @@
 import 'package:dio/dio.dart';
-import 'env.dart';
+
+import 'package:gateflow/core/app_error.dart';
+import 'package:gateflow/core/app_logger.dart';
+import 'package:gateflow/core/env.dart';
 
 class ApiClient {
   late final Dio _dio;
 
   ApiClient() {
+    if (Env.apiBaseUrl.isEmpty) {
+      throw AppError(
+        userMessage: 'API base URL not configured. Check .env file.',
+        technicalMessage: 'API_BASE_URL is empty',
+      );
+    }
     _dio = Dio(
       BaseOptions(
         baseUrl: Env.apiBaseUrl,
         connectTimeout: const Duration(seconds: 10),
         receiveTimeout: const Duration(seconds: 10),
-        headers: {
+        headers: const {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
@@ -18,51 +27,30 @@ class ApiClient {
     );
   }
 
-  /// Guard login
-  Future<Map<String, dynamic>> guardLogin({
-    required String societyId,
-    required String pin,
+  Future<Response<dynamic>> post(
+    String path, {
+    Map<String, dynamic>? data,
+    Map<String, dynamic>? queryParameters,
   }) async {
     try {
-      final response = await _dio.post(
-        '/api/guards/login',
-        data: {
-          'society_id': societyId,
-          'pin': pin,
-        },
+      AppLogger.d('POST $path', data: {'data': data, 'query': queryParameters});
+      final resp = await _dio.post(path, data: data, queryParameters: queryParameters);
+      AppLogger.d('POST $path success', data: {'status': resp.statusCode});
+      return resp;
+    } on DioException catch (e, st) {
+      final appError = AppError.fromDio(e);
+      AppLogger.e('POST $path failed', error: appError.technicalMessage, stackTrace: st, data: {
+        'status': e.response?.statusCode,
+        'data': e.response?.data,
+      });
+      throw appError;
+    } catch (e, st) {
+      final appError = AppError(
+        userMessage: 'Something went wrong. Please retry.',
+        technicalMessage: e.toString(),
       );
-      return response.data;
-    } on DioException catch (e) {
-      if (e.response != null) {
-        throw Exception(e.response?.data['detail'] ?? 'Login failed');
-      }
-      throw Exception('Network error: ${e.message}');
-    }
-  }
-
-  /// Create visitor entry
-  Future<Map<String, dynamic>> createVisitor({
-    required String flatId,
-    required String visitorType,
-    required String visitorPhone,
-    required String guardId,
-  }) async {
-    try {
-      final response = await _dio.post(
-        '/api/visitors',
-        data: {
-          'flat_id': flatId,
-          'visitor_type': visitorType,
-          'visitor_phone': visitorPhone,
-          'guard_id': guardId,
-        },
-      );
-      return response.data;
-    } on DioException catch (e) {
-      if (e.response != null) {
-        throw Exception(e.response?.data['detail'] ?? 'Failed to create visitor');
-      }
-      throw Exception('Network error: ${e.message}');
+      AppLogger.e('POST $path unexpected error', error: e, stackTrace: st);
+      throw appError;
     }
   }
 }

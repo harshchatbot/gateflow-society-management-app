@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter/services.dart';
+
+import 'core/app_logger.dart';
+import 'core/env.dart';
 import 'screens/splash_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Load environment variables from .env
-  await dotenv.load(fileName: ".env");
+  // Lock to portrait for guard simplicity
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+
+  // Load environment variables from .env with logging
+  await Env.load();
 
   runApp(const GateFlowApp());
 }
@@ -16,49 +22,68 @@ class GateFlowApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF1F6FEB),
+      brightness: Brightness.light,
+    );
+
     return MaterialApp(
       title: 'GateFlow',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.blue,
-        primaryColor: Colors.blue.shade700,
+        colorScheme: colorScheme,
         useMaterial3: true,
+        scaffoldBackgroundColor: colorScheme.surface,
         appBarTheme: AppBarTheme(
           centerTitle: true,
           elevation: 0,
-          backgroundColor: Colors.blue.shade700,
-          foregroundColor: Colors.white,
-          titleTextStyle: const TextStyle(
+          backgroundColor: colorScheme.surface,
+          foregroundColor: colorScheme.onSurface,
+          titleTextStyle: TextStyle(
             fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+            fontWeight: FontWeight.w700,
+            color: colorScheme.onSurface,
           ),
         ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: Colors.blue.shade700,
-            foregroundColor: Colors.white,
-            elevation: 2,
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+            ),
+            elevation: 1,
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: Colors.grey,
+          fillColor: colorScheme.surfaceVariant,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(14),
           ),
           enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey),
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: colorScheme.outlineVariant),
           ),
           focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.blue, width: 2),
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: colorScheme.primary, width: 2),
           ),
           errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Colors.red),
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide(color: colorScheme.error),
           ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+        snackBarTheme: SnackBarThemeData(
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: colorScheme.error,
+          contentTextStyle: const TextStyle(fontSize: 16, color: Colors.white),
+        ),
+        cardTheme: CardTheme(
+          color: colorScheme.surface,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          elevation: 1,
+          margin: EdgeInsets.zero,
         ),
       ),
       home: const SplashScreen(),

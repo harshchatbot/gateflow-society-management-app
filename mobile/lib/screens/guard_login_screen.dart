@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../core/api_client.dart';
-import '../core/storage.dart';
-import '../models/guard.dart';
+import 'package:gateflow/core/app_error.dart';
+import 'package:gateflow/core/app_logger.dart';
+import 'package:gateflow/core/storage.dart';
+import 'package:gateflow/services/auth_service.dart';
+import 'package:gateflow/widgets/app_text_field.dart';
+import 'package:gateflow/widgets/primary_button.dart';
+import 'package:gateflow/widgets/section_card.dart';
 import 'new_visitor_screen.dart';
 
 class GuardLoginScreen extends StatefulWidget {
@@ -16,7 +20,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _societyIdController = TextEditingController();
   final _pinController = TextEditingController();
-  final _apiClient = ApiClient();
+  final _authService = AuthService();
   bool _isLoading = false;
 
   @override
@@ -27,32 +31,26 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
   }
 
   Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
-    try {
-      final response = await _apiClient.guardLogin(
-        societyId: _societyIdController.text.trim(),
-        pin: _pinController.text.trim(),
-      );
+    final result = await _authService.login(
+      societyId: _societyIdController.text.trim(),
+      pin: _pinController.text.trim(),
+    );
 
-      final guard = Guard.fromJson(response);
+    if (!mounted) return;
 
-      // Save session
+    if (result.isSuccess) {
+      final guard = result.data!;
       await Storage.saveGuardSession(
         guardId: guard.guardId,
         guardName: guard.guardName,
         societyId: guard.societyId,
       );
+      AppLogger.i('Guard session saved', data: {'guardId': guard.guardId});
 
-      if (!mounted) return;
-
-      // Navigate to new visitor screen
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (context) => NewVisitorScreen(
@@ -62,127 +60,130 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
           ),
         ),
       );
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      // Show error snackbar
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            e.toString().replaceFirst('Exception: ', ''),
-            style: const TextStyle(fontSize: 18),
-          ),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 4),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+    } else {
+      setState(() => _isLoading = false);
+      final error = result.error ?? AppError(userMessage: 'Login failed', technicalMessage: 'Unknown');
+      _showError(error.userMessage);
     }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message, style: const TextStyle(fontSize: 16)),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Guard Login'),
-        centerTitle: true,
-      ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Icon(
-                  Icons.login,
-                  size: 80,
-                  color: Colors.blue,
-                ),
-                const SizedBox(height: 40),
-                TextFormField(
-                  controller: _societyIdController,
-                  decoration: InputDecoration(
-                    labelText: 'Society ID',
-                    hintText: 'Enter society ID',
-                    border: OutlineInputBorder(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: colorScheme.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    prefixIcon: const Icon(Icons.apartment),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
+                    padding: const EdgeInsets.all(12),
+                    child: Icon(Icons.shield, color: colorScheme.primary, size: 28),
                   ),
-                  style: const TextStyle(fontSize: 18),
-                  textCapitalization: TextCapitalization.none,
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter society ID';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 24),
-                TextFormField(
-                  controller: _pinController,
-                  decoration: InputDecoration(
-                    labelText: 'PIN',
-                    hintText: 'Enter PIN',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    prefixIcon: const Icon(Icons.lock),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 16,
-                    ),
-                  ),
-                  style: const TextStyle(fontSize: 18),
-                  keyboardType: TextInputType.number,
-                  obscureText: true,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter PIN';
-                    }
-                    if (value.length < 4) {
-                      return 'PIN must be at least 4 digits';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 40),
-                ElevatedButton(
-                  onPressed: _isLoading ? null : _handleLogin,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 18),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: _isLoading
-                      ? const SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text(
-                          'Login',
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  const SizedBox(width: 12),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'GateFlow',
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: colorScheme.onSurface,
                         ),
+                      ),
+                      Text(
+                        'Guard-first visitor entry',
+                        style: TextStyle(color: colorScheme.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 32),
+              Expanded(
+                child: Form(
+                  key: _formKey,
+                  child: SectionCard(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          'Sign in',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            color: colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Enter your society ID and PIN to continue.',
+                          style: TextStyle(color: colorScheme.onSurfaceVariant),
+                        ),
+                        const SizedBox(height: 24),
+                        AppTextField(
+                          controller: _societyIdController,
+                          label: 'Society ID',
+                          hint: 'soc_ajmer_01',
+                          icon: Icons.apartment,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter society ID';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        AppTextField(
+                          controller: _pinController,
+                          label: 'PIN',
+                          hint: '1234',
+                          icon: Icons.lock,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          obscureText: true,
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Please enter PIN';
+                            }
+                            if (value.length < 4) {
+                              return 'PIN must be at least 4 digits';
+                            }
+                            return null;
+                          },
+                        ),
+                        const Spacer(),
+                        PrimaryButton(
+                          label: 'Login',
+                          onPressed: _handleLogin,
+                          isLoading: _isLoading,
+                          icon: Icons.login,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
