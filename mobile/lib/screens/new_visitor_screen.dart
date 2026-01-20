@@ -34,7 +34,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   final _formKey = GlobalKey<FormState>();
   
   // Controllers
-  final _flatIdController = TextEditingController();
+  final _flatNoController = TextEditingController();
   final _visitorPhoneController = TextEditingController();
   final _visitorService = VisitorService();
   late ConfettiController _confettiController;
@@ -55,7 +55,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
   @override
   void dispose() {
-    _flatIdController.dispose();
+    _flatNoController.dispose();
     _visitorPhoneController.dispose();
     _confettiController.dispose();
     super.dispose();
@@ -74,7 +74,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     // API Call
     final result = (_visitorPhoto != null)
     ? await _visitorService.createVisitorWithPhoto(
-        flatId: _flatIdController.text.trim(),
+        flatNo: _flatNoController.text.trim(),
         visitorType: _selectedVisitorType,
         visitorPhone: _visitorPhoneController.text.trim(),
         guardId: widget.guardId,
@@ -82,7 +82,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         // authToken: await Storage.getToken(), // only if needed
       )
     : await _visitorService.createVisitor(
-        flatId: _flatIdController.text.trim(),
+        flatNo: _flatNoController.text.trim(),
         visitorType: _selectedVisitorType,
         visitorPhone: _visitorPhoneController.text.trim(),
         guardId: widget.guardId,
@@ -117,7 +117,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
   void _clearForm() {
     setState(() {
-      _flatIdController.clear();
+      _flatNoController.clear();
       _visitorPhoneController.clear();
       _selectedVisitorType = 'GUEST';
       _createdVisitor = null;
@@ -250,6 +250,11 @@ Widget _buildPhotoSection(ThemeData theme) {
             );
           },
         ),
+        IconButton(
+          icon: const Icon(Icons.logout),
+          tooltip: 'Logout',
+          onPressed: _isLoading ? null : _logout, // ✅ disables logout while submitting
+        ),
       ],
     ),
       body: Stack(
@@ -346,7 +351,7 @@ Widget _buildPhotoSection(ThemeData theme) {
           
           // Flat ID
           TextFormField(
-            controller: _flatIdController,
+            controller: _flatNoController,
             textCapitalization: TextCapitalization.characters,
             decoration: const InputDecoration(
               labelText: "Flat No",

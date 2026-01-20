@@ -13,7 +13,8 @@ class VisitorListScreen extends StatefulWidget {
   State<VisitorListScreen> createState() => _VisitorListScreenState();
 }
 
-class _VisitorListScreenState extends State<VisitorListScreen> with SingleTickerProviderStateMixin {
+class _VisitorListScreenState extends State<VisitorListScreen>
+    with SingleTickerProviderStateMixin {
   final _service = VisitorService();
   late final TabController _tabController;
 
@@ -58,9 +59,14 @@ class _VisitorListScreenState extends State<VisitorListScreen> with SingleTicker
   }
 
   Future<void> _loadByFlat() async {
-    final flatId = _flatController.text.trim();
-    if (flatId.isEmpty) {
-      setState(() => _error = "Enter flat id");
+    debugPrint(
+        "BY_FLAT: Search clicked. flatInput='${_flatController.text}' guardId='${widget.guardId}'");
+
+    final flatNo = _flatController.text.trim();
+    debugPrint("BY_FLAT: calling API getVisitorsByFlatNo... $flatNo");
+
+    if (flatNo.isEmpty) {
+      setState(() => _error = "Enter flat no (e.g., A-101)");
       return;
     }
 
@@ -69,7 +75,10 @@ class _VisitorListScreenState extends State<VisitorListScreen> with SingleTicker
       _error = null;
     });
 
-    final res = await _service.getVisitorsByFlat(flatId: flatId);
+    final res = await _service.getVisitorsByFlatNo(
+      guardId: widget.guardId,
+      flatNo: flatNo,
+    );
 
     setState(() {
       _loading = false;
@@ -91,14 +100,18 @@ class _VisitorListScreenState extends State<VisitorListScreen> with SingleTicker
   }
 
   Widget _visitorTile(Visitor v) {
+    final displayFlat = v.flatNo.isNotEmpty ? v.flatNo : v.flatId;
+
     return ListTile(
       leading: CircleAvatar(
         backgroundImage: (v.photoUrl != null && v.photoUrl!.isNotEmpty)
             ? NetworkImage(v.photoUrl!)
             : null,
-        child: (v.photoUrl == null || v.photoUrl!.isEmpty) ? const Icon(Icons.person) : null,
+        child: (v.photoUrl == null || v.photoUrl!.isEmpty)
+            ? const Icon(Icons.person)
+            : null,
       ),
-      title: Text("${v.visitorType} • Flat ${v.flatId}"),
+      title: Text("${v.visitorType} • Flat $displayFlat"),
       subtitle: Text(v.visitorPhone.isEmpty ? "No phone" : v.visitorPhone),
       trailing: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -109,13 +122,18 @@ class _VisitorListScreenState extends State<VisitorListScreen> with SingleTicker
         ),
         child: Text(
           v.status,
-          style: TextStyle(color: _statusColor(v.status), fontSize: 12, fontWeight: FontWeight.w600),
+          style: TextStyle(
+              color: _statusColor(v.status),
+              fontSize: 12,
+              fontWeight: FontWeight.w600),
         ),
       ),
       onTap: () async {
         await Navigator.push(
           context,
-          MaterialPageRoute(builder: (_) => VisitorDetailsScreen(visitor: v, guardId: widget.guardId)),
+          MaterialPageRoute(
+              builder: (_) =>
+                  VisitorDetailsScreen(visitor: v, guardId: widget.guardId)),
         );
         // refresh after returning (status might change)
         if (_tabController.index == 0) {
@@ -156,7 +174,8 @@ class _VisitorListScreenState extends State<VisitorListScreen> with SingleTicker
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               color: Colors.red.withOpacity(0.08),
-              child: Text(_error!, style: const TextStyle(color: Colors.red)),
+              child:
+                  Text(_error!, style: const TextStyle(color: Colors.red)),
             ),
           Expanded(
             child: Stack(
@@ -185,7 +204,8 @@ class _VisitorListScreenState extends State<VisitorListScreen> with SingleTicker
                                 child: TextField(
                                   controller: _flatController,
                                   decoration: const InputDecoration(
-                                    labelText: "Flat ID",
+                                    labelText: "Flat No",
+                                    hintText: "e.g. A-101",
                                     border: OutlineInputBorder(),
                                   ),
                                 ),
@@ -193,6 +213,7 @@ class _VisitorListScreenState extends State<VisitorListScreen> with SingleTicker
                               const SizedBox(width: 10),
                               SizedBox(
                                 height: 48,
+                                width: 110,
                                 child: ElevatedButton(
                                   onPressed: _loadByFlat,
                                   child: const Text("Search"),
@@ -212,7 +233,6 @@ class _VisitorListScreenState extends State<VisitorListScreen> with SingleTicker
                     ),
                   ],
                 ),
-
                 if (_loading)
                   Positioned.fill(
                     child: Container(

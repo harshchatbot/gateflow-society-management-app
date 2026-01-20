@@ -1,202 +1,249 @@
-import 'package:gateflow/core/api_client.dart';
-import 'package:gateflow/core/app_error.dart';
-import 'package:gateflow/core/app_logger.dart';
-import 'package:gateflow/core/result.dart';
-import 'package:gateflow/models/visitor.dart';
-
-import 'dart:convert';
 import 'dart:io';
+import 'package:dio/dio.dart';
 
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:http/http.dart' as http;
+import '../core/api_client.dart';
+import '../core/app_error.dart';
+import '../core/app_logger.dart';
+import '../models/visitor.dart';
 
+class Result<T> {
+  final T? data;
+  final AppError? error;
+  bool get isSuccess => data != null && error == null;
 
+  Result.success(this.data) : error = null;
+  Result.failure(this.error) : data = null;
+}
 
 class VisitorService {
-  final ApiClient _client;
-  VisitorService({ApiClient? client}) : _client = client ?? ApiClient();
+  final ApiClient _api = ApiClient();
 
+  // ----------------------------
+  // Create Visitor (JSON)
+  // ----------------------------
   Future<Result<Visitor>> createVisitor({
-    required String flatId,
+    required String flatNo,
+    String? flatId, // optional backward compatibility
     required String visitorType,
     required String visitorPhone,
     required String guardId,
   }) async {
     try {
-      AppLogger.i('Create visitor request', data: {
-        'flatId': flatId,
-        'visitorType': visitorType,
-        'visitorPhone': visitorPhone,
-        'guardId': guardId,
-      });
+      final payload = <String, dynamic>{
+        "flat_no": flatNo.trim(),
+        "flat_id": flatId,
+        "visitor_type": visitorType,
+        "visitor_phone": visitorPhone,
+        "guard_id": guardId,
+      };
 
-      final resp = await _client.post(
-        '/api/visitors',
-        data: {
-          'flat_id': flatId,
-          'visitor_type': visitorType,
-          'visitor_phone': visitorPhone,
-          'guard_id': guardId,
-        },
-      );
+      payload.removeWhere((k, v) => v == null);
 
-      final visitor = Visitor.fromJson(resp.data as Map<String, dynamic>);
-      AppLogger.i('Visitor created', data: {'visitorId': visitor.visitorId, 'status': visitor.status});
+      AppLogger.i("API POST /api/visitors payload=$payload");
+
+      final res = await _api.post("/api/visitors", data: payload);
+
+      AppLogger.i("API POST /api/visitors status=${res.statusCode} data=${res.data}");
+
+      final visitor = Visitor.fromJson(_asMap(res.data));
       return Result.success(visitor);
-    } on AppError catch (e) {
-      return Result.failure(e);
-    } catch (e, st) {
-      final err = AppError.fromUnknown(e, st);
-      AppLogger.e('Create visitor unknown error', error: e, stackTrace: st);
+    } on DioException catch (e) {
+      final err = _mapDioError(e);
+      AppLogger.e("createVisitor DioException", error: err.technicalMessage);
+      return Result.failure(err);
+    } catch (e) {
+      final err = AppError(
+        userMessage: "Failed to create visitor",
+        technicalMessage: e.toString(),
+      );
+      AppLogger.e("createVisitor unknown error", error: err.technicalMessage);
       return Result.failure(err);
     }
   }
 
-
-
-
+  // ----------------------------
+  // Create Visitor With Photo (Multipart)
+  // ----------------------------
   Future<Result<Visitor>> createVisitorWithPhoto({
-  required String flatId,
-  required String visitorType,
-  required String visitorPhone,
-  required String guardId,
-  required File photoFile,
-  String? authToken,
-}) async {
-  try {
-    final baseUrl = dotenv.env['API_BASE_URL'];
-    if (baseUrl == null || baseUrl.isEmpty) {
-      return Result.failure(
-        AppError(
-          userMessage: "API base url missing",
-          technicalMessage: "API_BASE_URL not set in .env",
+    required String flatNo,
+    String? flatId,
+    required String visitorType,
+    required String visitorPhone,
+    required String guardId,
+    required File photoFile,
+  }) async {
+    try {
+      final fileName = photoFile.path.split("/").last;
+
+      final formData = FormData.fromMap({
+        "flat_no": flatNo.trim(),
+        if (flatId != null) "flat_id": flatId,
+        "visitor_type": visitorType,
+        "visitor_phone": visitorPhone,
+        "guard_id": guardId,
+        "photo": await MultipartFile.fromFile(
+          photoFile.path,
+          filename: fileName,
         ),
-      );
-    }
-
-    final uri = Uri.parse("$baseUrl/api/visitors/with-photo");
-
-    AppLogger.i('Create visitor WITH PHOTO request', data: {
-      'flatId': flatId,
-      'visitorType': visitorType,
-      'visitorPhone': visitorPhone,
-      'guardId': guardId,
-      'photoPath': photoFile.path,
-    });
-
-    final request = http.MultipartRequest("POST", uri);
-
-    if (authToken != null && authToken.isNotEmpty) {
-      request.headers["Authorization"] = "Bearer $authToken";
-    }
-
-    request.fields["flat_id"] = flatId;
-    request.fields["visitor_type"] = visitorType;
-    request.fields["visitor_phone"] = visitorPhone;
-    request.fields["guard_id"] = guardId;
-
-    request.files.add(
-      await http.MultipartFile.fromPath("photo", photoFile.path),
-    );
-
-    AppLogger.i("MULTIPART REQUEST →", data: {
-      "url": uri.toString(),
-      "fields": request.fields,
-      "file": {
-        "field": "photo",
-        "path": photoFile.path,
-        "size": await photoFile.length(),
-      }
-    });
-
-    final streamed = await request.send();
-    final resp = await http.Response.fromStream(streamed);
-
-    // 🔥 LOG FULL RESPONSE
-    AppLogger.i("MULTIPART RESPONSE ←", data: {
-      "status": resp.statusCode,
-      "headers": resp.headers,
-      "body": resp.body,
-    });
-
-    if (resp.statusCode < 200 || resp.statusCode >= 300) {
-      AppLogger.e("Create visitor WITH PHOTO failed", error: {
-        "status": resp.statusCode,
-        "body": resp.body,
       });
 
-      return Result.failure(
-        AppError(
-          userMessage: "Failed to upload photo",
-          technicalMessage: "HTTP ${resp.statusCode}: ${resp.body}",
-        ),
+      AppLogger.i("API POST /api/visitors/with-photo formData(flat_no=${flatNo.trim()}, flat_id=$flatId)");
+
+      final res = await _api.post(
+        "/api/visitors/with-photo",
+        data: formData,
       );
+
+      AppLogger.i("API POST /api/visitors/with-photo status=${res.statusCode} data=${res.data}");
+
+      final visitor = Visitor.fromJson(_asMap(res.data));
+      return Result.success(visitor);
+    } on DioException catch (e) {
+      final err = _mapDioError(e);
+      AppLogger.e("createVisitorWithPhoto DioException", error: err.technicalMessage);
+      return Result.failure(err);
+    } catch (e) {
+      final err = AppError(
+        userMessage: "Failed to create visitor with photo",
+        technicalMessage: e.toString(),
+      );
+      AppLogger.e("createVisitorWithPhoto unknown error", error: err.technicalMessage);
+      return Result.failure(err);
     }
-
-    final visitor = Visitor.fromJson(
-      jsonDecode(resp.body) as Map<String, dynamic>,
-    );
-
-    AppLogger.i('Visitor created with photo', data: {
-      'visitorId': visitor.visitorId,
-      'status': visitor.status,
-    });
-
-    return Result.success(visitor);
-  } on AppError catch (e) {
-    return Result.failure(e);
-  } catch (e, st) {
-    final err = AppError.fromUnknown(e, st);
-    AppLogger.e('Create visitor WITH PHOTO unknown error', error: e, stackTrace: st);
-    return Result.failure(err);
   }
-}
 
+  // ----------------------------
+  // Today Visitors
+  // ----------------------------
+  Future<Result<List<Visitor>>> getTodayVisitors({required String guardId}) async {
+    final path = "/api/visitors/today/$guardId";
+    try {
+      AppLogger.i("API GET $path");
 
-  Future<Result<List<Visitor>>> getVisitorsToday({
+      final res = await _api.get(path);
+
+      AppLogger.i("API GET $path status=${res.statusCode} data=${res.data}");
+
+      final data = _asMap(res.data);
+
+      if (!data.containsKey("visitors")) {
+        final err = AppError(
+          userMessage: "Invalid server response (missing 'visitors')",
+          technicalMessage: "Response missing visitors key: $data",
+        );
+        return Result.failure(err);
+      }
+
+      final raw = data["visitors"];
+      if (raw is! List) {
+        final err = AppError(
+          userMessage: "Invalid server response (visitors is not a list)",
+          technicalMessage: "visitors is ${raw.runtimeType} | data=$data",
+        );
+        return Result.failure(err);
+      }
+
+      late final List<Visitor> list;
+      try {
+        list = raw
+            .map((e) => Visitor.fromJson(_asMap(e)))
+            .toList();
+      } catch (parseErr) {
+        final err = AppError(
+          userMessage: "Failed to parse visitors",
+          technicalMessage: "Visitor.fromJson error: $parseErr | raw=$raw",
+        );
+        AppLogger.e("getTodayVisitors parse error", error: err.technicalMessage);
+        return Result.failure(err);
+      }
+
+      AppLogger.i("PARSED Today visitors count=${list.length}");
+      return Result.success(list);
+    } on DioException catch (e) {
+      final err = _mapDioError(e);
+      AppLogger.e("getTodayVisitors DioException", error: err.technicalMessage);
+      return Result.failure(err);
+    } catch (e) {
+      final err = AppError(
+        userMessage: "Failed to fetch visitors",
+        technicalMessage: e.toString(),
+      );
+      AppLogger.e("getTodayVisitors unknown error", error: err.technicalMessage);
+      return Result.failure(err);
+    }
+  }
+
+  // ----------------------------
+  // Visitors By Flat No (API-based)
+  // ----------------------------
+  Future<Result<List<Visitor>>> getVisitorsByFlatNo({
     required String guardId,
+    required String flatNo,
   }) async {
+    final encodedFlatNo = Uri.encodeComponent(flatNo.trim());
+    final path = "/api/visitors/by-flat-no/$guardId/$encodedFlatNo";
+
     try {
-      final resp = await _client.get(
-        '/api/visitors/today',
-        queryParameters: {'guard_id': guardId},
-      );
+      AppLogger.i("API GET $path (flatNo='$flatNo')");
 
-      final data = resp.data;
-      final list = (data as List)
-          .map((e) => Visitor.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final res = await _api.get(path);
 
+      AppLogger.i("API GET $path status=${res.statusCode} data=${res.data}");
+
+      final data = _asMap(res.data);
+
+      if (!data.containsKey("visitors")) {
+        final err = AppError(
+          userMessage: "Invalid server response (missing 'visitors')",
+          technicalMessage: "Response missing visitors key: $data",
+        );
+        return Result.failure(err);
+      }
+
+      final raw = data["visitors"];
+      if (raw is! List) {
+        final err = AppError(
+          userMessage: "Invalid server response (visitors is not a list)",
+          technicalMessage: "visitors is ${raw.runtimeType} | data=$data",
+        );
+        return Result.failure(err);
+      }
+
+      late final List<Visitor> list;
+      try {
+        list = raw
+            .map((e) => Visitor.fromJson(_asMap(e)))
+            .toList();
+      } catch (parseErr) {
+        final err = AppError(
+          userMessage: "Failed to parse visitors",
+          technicalMessage: "Visitor.fromJson error: $parseErr | raw=$raw",
+        );
+        AppLogger.e("getVisitorsByFlatNo parse error", error: err.technicalMessage);
+        return Result.failure(err);
+      }
+
+      AppLogger.i("PARSED ByFlat visitors count=${list.length}");
       return Result.success(list);
-    } on AppError catch (e) {
-      return Result.failure(e);
-    } catch (e, st) {
-      final err = AppError.fromUnknown(e, st);
+    } on DioException catch (e) {
+      final err = _mapDioError(e);
+      AppLogger.e("getVisitorsByFlatNo DioException", error: err.technicalMessage);
+      return Result.failure(err);
+    } catch (e) {
+      final err = AppError(
+        userMessage: "Failed to fetch visitors",
+        technicalMessage: e.toString(),
+      );
+      AppLogger.e("getVisitorsByFlatNo unknown error", error: err.technicalMessage);
       return Result.failure(err);
     }
   }
 
-  Future<Result<List<Visitor>>> getVisitorsByFlat({
-    required String flatId,
-  }) async {
-    try {
-      final resp = await _client.get(
-        '/api/visitors/by-flat',
-        queryParameters: {'flat_id': flatId},
-      );
-
-      final data = resp.data;
-      final list = (data as List)
-          .map((e) => Visitor.fromJson(e as Map<String, dynamic>))
-          .toList();
-
-      return Result.success(list);
-    } on AppError catch (e) {
-      return Result.failure(e);
-    } catch (e, st) {
-      final err = AppError.fromUnknown(e, st);
-      return Result.failure(err);
-    }
+  // ----------------------------
+  // Backward-compatible aliases
+  // ----------------------------
+  Future<Result<List<Visitor>>> getVisitorsToday({required String guardId}) {
+    return getTodayVisitors(guardId: guardId);
   }
 
   Future<Result<Visitor>> updateVisitorStatus({
@@ -205,26 +252,76 @@ class VisitorService {
     String? approvedBy,
     String? note,
   }) async {
+    final path = "/api/visitors/$visitorId/status";
     try {
-      final resp = await _client.post(
-        '/api/visitors/$visitorId/status',
-        data: {
-          'status': status,
-          'approved_by': approvedBy,
-          'note': note,
-        },
+      final payload = <String, dynamic>{
+        "status": status,
+        "approved_by": approvedBy,
+        "note": note,
+      };
+
+      payload.removeWhere((k, v) => v == null);
+
+      AppLogger.i("API POST $path payload=$payload");
+
+      final res = await _api.post(
+        path,
+        data: payload,
       );
 
-      final visitor = Visitor.fromJson(resp.data as Map<String, dynamic>);
-      return Result.success(visitor);
-    } on AppError catch (e) {
-      return Result.failure(e);
-    } catch (e, st) {
-      final err = AppError.fromUnknown(e, st);
+      AppLogger.i("API POST $path status=${res.statusCode} data=${res.data}");
+
+      final v = Visitor.fromJson(_asMap(res.data));
+      return Result.success(v);
+    } on DioException catch (e) {
+      final err = _mapDioError(e);
+      AppLogger.e("updateVisitorStatus DioException", error: err.technicalMessage);
+      return Result.failure(err);
+    } catch (e) {
+      final err = AppError(
+        userMessage: "Failed to update status",
+        technicalMessage: e.toString(),
+      );
+      AppLogger.e("updateVisitorStatus unknown error", error: err.technicalMessage);
       return Result.failure(err);
     }
   }
 
+  // ----------------------------
+  // Helpers
+  // ----------------------------
 
+  Map<String, dynamic> _asMap(dynamic v) {
+    if (v is Map<String, dynamic>) return v;
+    if (v is Map) return v.map((k, val) => MapEntry(k.toString(), val));
+    throw Exception("Expected Map but got ${v.runtimeType}: $v");
+  }
 
+  AppError _mapDioError(DioException e) {
+    String userMessage = "Network error. Please try again.";
+    String technical = e.toString();
+
+    if (e.response != null) {
+      final status = e.response?.statusCode;
+      final detail = e.response?.data;
+
+      String detailMsg = "";
+      if (detail is Map && detail["detail"] != null) {
+        detailMsg = detail["detail"].toString();
+      } else if (detail != null) {
+        detailMsg = detail.toString();
+      }
+
+      if (status == 400) userMessage = detailMsg.isNotEmpty ? detailMsg : "Invalid input";
+      if (status == 401) userMessage = "Unauthorized";
+      if (status == 404) userMessage = "API not found (404)";
+      if (status == 500) userMessage = "Server error. Please try again.";
+
+      technical = "HTTP $status | $detailMsg | url=${e.requestOptions.uri}";
+    } else {
+      technical = "DioException(no response) | ${e.type} | url=${e.requestOptions.uri} | ${e.message}";
+    }
+
+    return AppError(userMessage: userMessage, technicalMessage: technical);
+  }
 }

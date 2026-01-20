@@ -1,7 +1,13 @@
 class Visitor {
   final String visitorId;
   final String societyId;
+
+  /// Backend/internal identifier (keep it)
   final String flatId;
+
+  /// Guard-facing flat number (A-101) — NEW
+  final String flatNo;
+
   final String visitorType;
   final String visitorPhone;
   final String status;
@@ -19,6 +25,7 @@ class Visitor {
     required this.visitorId,
     required this.societyId,
     required this.flatId,
+    required this.flatNo,
     required this.visitorType,
     required this.visitorPhone,
     required this.status,
@@ -32,15 +39,27 @@ class Visitor {
   });
 
   factory Visitor.fromJson(Map<String, dynamic> json) {
+    final createdAtStr = (json['created_at'] ?? '').toString();
+
     return Visitor(
       visitorId: (json['visitor_id'] ?? '') as String,
       societyId: (json['society_id'] ?? '') as String,
       flatId: (json['flat_id'] ?? '') as String,
+
+      // NEW: parse flat_no safely
+      flatNo: (json['flat_no'] ?? '') as String,
+
       visitorType: (json['visitor_type'] ?? '') as String,
       visitorPhone: (json['visitor_phone'] ?? '') as String,
       status: (json['status'] ?? '') as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      approvedAt: json['approved_at'] != null && (json['approved_at'] as String).isNotEmpty
+
+      // safer parse to avoid crash if empty
+      createdAt: createdAtStr.isNotEmpty
+          ? DateTime.parse(createdAtStr)
+          : DateTime.fromMillisecondsSinceEpoch(0),
+
+      approvedAt: json['approved_at'] != null &&
+              (json['approved_at'] as String).isNotEmpty
           ? DateTime.parse(json['approved_at'] as String)
           : null,
       approvedBy: json['approved_by'] as String?,
@@ -56,6 +75,10 @@ class Visitor {
       'visitor_id': visitorId,
       'society_id': societyId,
       'flat_id': flatId,
+
+      // NEW
+      'flat_no': flatNo,
+
       'visitor_type': visitorType,
       'visitor_phone': visitorPhone,
       'status': status,

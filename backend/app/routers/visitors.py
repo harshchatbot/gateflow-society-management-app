@@ -4,6 +4,8 @@ Visitor API routes
 
 import os
 import uuid
+from typing import Optional
+
 from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form
 
 from app.models.schemas import (
@@ -15,8 +17,8 @@ from app.services.visitor_service import get_visitor_service
 
 import aiofiles
 import logging
-logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -30,9 +32,9 @@ router = APIRouter()
     Create a new visitor entry.
 
     Validates:
-    - Flat exists in Flats sheet
-    - Flat is active (active==TRUE)
     - Guard exists
+    - Flat exists in Flats sheet (by flat_id OR flat_no)
+    - Flat is active (active==TRUE)
 
     Creates visitor entry with:
     - status=PENDING
@@ -43,14 +45,25 @@ router = APIRouter()
 async def create_visitor(request: VisitorCreateRequest):
     visitor_service = get_visitor_service()
 
+    # ✅ Require either flat_id or flat_no
+    if not request.flat_id and not getattr(request, "flat_no", None):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either flat_id or flat_no is required (e.g., flat_no='A-101').",
+        )
+
     try:
         visitor = visitor_service.create_visitor(
             flat_id=request.flat_id,
+            flat_no=getattr(request, "flat_no", None),
             visitor_type=request.visitor_type,
             visitor_phone=request.visitor_phone,
             guard_id=request.guard_id,
         )
         return visitor
+
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
@@ -68,7 +81,8 @@ async def create_visitor(request: VisitorCreateRequest):
     description="Create a new visitor entry with a captured visitor photo (multipart/form-data).",
 )
 async def create_visitor_with_photo(
-    flat_id: str = Form(...),
+    flat_id: Optional[str] = Form(default=None),
+    flat_no: Optional[str] = Form(default=None),
     visitor_type: str = Form(...),
     visitor_phone: str = Form(...),
     guard_id: str = Form(...),
@@ -76,16 +90,17 @@ async def create_visitor_with_photo(
 ):
     visitor_service = get_visitor_service()
 
-    try:
+    if not flat_id and not flat_no:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either flat_id or flat_no is required (e.g., flat_no='A-101').",
+        )
 
+    try:
         logger.info(
-            f"WITH_PHOTO REQUEST | "
-            f"flat_id={flat_id}, "
-            f"visitor_type={visitor_type}, "
-            f"visitor_phone={visitor_phone}, "
-            f"guard_id={guard_id}, "
-            f"photo_name={photo.filename}, "
-            f"content_type={photo.content_type}"
+            f"WITH_PHOTO REQUEST | flat_id={flat_id} flat_no={flat_no} "
+            f"visitor_type={visitor_type} visitor_phone={visitor_phone} "
+            f"guard_id={guard_id} photo_name={photo.filename} content_type={photo.content_type}"
         )
 
         # 1) Save photo locally
@@ -96,11 +111,7 @@ async def create_visitor_with_photo(
             ext = ".jpg"
 
         filename = f"{uuid.uuid4().hex}{ext}"
-
-        # store this in sheets (relative)
         rel_path = f"visitors/{filename}"
-
-        # write to disk (absolute-ish)
         file_path = os.path.join("uploads", rel_path)
 
         async with aiofiles.open(file_path, "wb") as f:
@@ -109,15 +120,17 @@ async def create_visitor_with_photo(
 
         visitor = visitor_service.create_visitor_with_photo(
             flat_id=flat_id,
+            flat_no=flat_no,
             visitor_type=visitor_type,
             visitor_phone=visitor_phone,
             guard_id=guard_id,
-            photo_path=rel_path,   # ✅ store relative path in sheets
+            photo_path=rel_path,
         )
-
 
         return visitor
 
+    except HTTPException:
+        raise
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
@@ -131,4 +144,17 @@ async def create_visitor_with_photo(
 async def get_today_visitors(guard_id: str):
     visitor_service = get_visitor_service()
     visitors = visitor_service.get_visitors_today(guard_id)
+    return VisitorListResponse(visitors=visitors, count=len(visitors))
+
+
+@router.get(
+    "/by-flat-no/{guard_id}/{flat_no}",
+    response_model=VisitorListResponse,
+    summary="Get visitors by flat no for a guard's society",
+)
+async def get_visitors_by_flat_no(guard_id: str, flat_no: str):
+    logger.info(f"🔥 HIT BY_FLAT route | guard_id={guard_id} flat_no={flat_no}")
+
+    visitor_service = get_visitor_service()
+    visitors = visitor_service.get_visitors_by_flat_no(guard_id=guard_id, flat_no=flat_no)
     return VisitorListResponse(visitors=visitors, count=len(visitors))

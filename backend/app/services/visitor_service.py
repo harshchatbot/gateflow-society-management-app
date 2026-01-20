@@ -6,125 +6,260 @@ from datetime import datetime, timezone
 from typing import List, Optional
 import uuid
 import logging
+from datetime import timedelta
+
+
+from fastapi import HTTPException
 
 from app.sheets.client import get_sheets_client
-from app.models.schemas import VisitorResponse, FlatResponse
+from app.models.schemas import VisitorResponse
 from app.models.enums import VisitorStatus
-
-
 
 logger = logging.getLogger(__name__)
 
 
 class VisitorService:
     """Service for visitor-related operations"""
-    
+
     def __init__(self):
         self.sheets_client = get_sheets_client()
-    
+
+    # -----------------------------
+    # Flat Resolver
+    # -----------------------------
+    def _resolve_flat(
+        self,
+        society_id: str,
+        flat_id: Optional[str] = None,
+        flat_no: Optional[str] = None,
+    ) -> dict:
+        """
+        Resolve flat by flat_id OR by flat_no (A-101 style),
+        always enforcing active_only=True.
+        """
+
+        logger.info(f"RESOLVE_FLAT | society_id={society_id} flat_id={flat_id} flat_no={flat_no}")
+
+        # 1) Try flat_id if provided
+        if flat_id:
+            flat = self.sheets_client.get_flat_by_id(flat_id, active_only=True)
+            if flat:
+                return flat
+
+        # 2) Try flat_no if provided
+        if flat_no:
+            flat_no_norm = (flat_no or "").strip().upper()
+            flat = self.sheets_client.get_flat_by_no(
+                society_id=society_id,
+                flat_no=flat_no_norm,
+                active_only=True,
+            )
+            if flat:
+                return flat
+
+        logger.warning(
+            f"RESOLVE_FLAT_NOT_FOUND | society_id={society_id} flat_id={flat_id} flat_no={flat_no}"
+        )
+
+        raise HTTPException(
+            status_code=400,
+            detail="Flat not found. Please enter valid Flat No (e.g., A-101).",
+        )
+
     def create_visitor(
         self,
-        flat_id: str,
+        flat_id: Optional[str],
         visitor_type: str,
         visitor_phone: str,
         guard_id: str,
-        photo_path: str = ""
+        photo_path: str = "",
+        flat_no: Optional[str] = None,
     ) -> VisitorResponse:
         """
-        Create a new visitor entry
-        
-        Returns VisitorResponse with created visitor data
+        Create a new visitor entry.
+        Supports:
+          - flat_id (optional)
+          - flat_no (optional, like A-101)
+
+        Stores BOTH flat_id and flat_no in Visitors sheet for MVP consistency.
         """
-        # Validate flat exists (check without active filter first)
-        flat = self.sheets_client.get_flat_by_id(flat_id, active_only=False)
-        if not flat:
-            raise ValueError(f"Flat with ID {flat_id} not found")
-        
-        # Validate flat is active (case-insensitive check)
-        flat_active = str(flat.get('active', '')).lower()
-        if flat_active != 'true':
-            raise ValueError(f"Flat with ID {flat_id} exists but is not active")
-        
-        # Validate guard exists
+
+        # Validate guard exists FIRST (source of truth for society_id)
         guard = self.sheets_client.get_guard_by_id(guard_id)
         if not guard:
-            raise ValueError(f"Guard with ID {guard_id} not found")
-        
+            raise HTTPException(status_code=400, detail=f"Guard with ID {guard_id} not found")
+
+        society_id = guard.get("society_id")
+        if not society_id:
+            raise HTTPException(status_code=500, detail="Guard record missing society_id in sheet")
+
+        # Resolve flat (active only)
+        flat = self._resolve_flat(society_id=society_id, flat_id=flat_id, flat_no=flat_no)
+
+        resolved_flat_id = flat.get("flat_id") or ""
+        resolved_flat_no = (flat.get("flat_no") or flat_no or "").strip().upper()
+
+        if not resolved_flat_id:
+            raise HTTPException(status_code=500, detail="Flat record missing flat_id in sheet")
+        if not resolved_flat_no:
+            raise HTTPException(status_code=500, detail="Flat record missing flat_no in sheet")
+
         # Generate visitor_id
         visitor_id = str(uuid.uuid4())
-        society_id = flat.get('society_id', '')
-        
+
         # Create visitor entry with ISO UTC timestamp
         created_at_utc = datetime.now(timezone.utc).isoformat()
+
         visitor_data = {
-            'visitor_id': visitor_id,
-            'society_id': society_id,
-            'flat_id': flat_id,
-            'visitor_type': visitor_type,
-            'visitor_phone': visitor_phone,
-            'status': VisitorStatus.PENDING.value,
-            'created_at': created_at_utc,
-            'approved_at': '',
-            'approved_by': '',
-            'guard_id': guard_id,
-            'photo_path': photo_path,
+            "visitor_id": visitor_id,
+            "society_id": society_id,
+
+            # keep both
+            "flat_id": resolved_flat_id,
+            "flat_no": resolved_flat_no,
+
+            "visitor_type": visitor_type,
+            "visitor_phone": visitor_phone,
+            "status": VisitorStatus.PENDING.value,
+            "created_at": created_at_utc,
+            "approved_at": "",
+            "approved_by": "",
+            "guard_id": guard_id,
+            "photo_path": photo_path or "",
         }
-        
+
         # Append to Visitors sheet
         self.sheets_client.create_visitor(visitor_data)
-        
+
         # Log approval stub to resident phone
         self._log_approval_request(flat, visitor_data)
-        
-        return self._dict_to_visitor_response(visitor_data)
-    
 
+        return self._dict_to_visitor_response(visitor_data)
 
     def create_visitor_with_photo(
         self,
-        flat_id: str,
+        flat_id: Optional[str],
         visitor_type: str,
         visitor_phone: str,
         guard_id: str,
-        photo_path: str
+        photo_path: str,
+        flat_no: Optional[str] = None,
     ) -> VisitorResponse:
+        """Backward compatible: still accepts flat_id. New: can also accept flat_no."""
         return self.create_visitor(
             flat_id=flat_id,
+            flat_no=flat_no,
             visitor_type=visitor_type,
             visitor_phone=visitor_phone,
             guard_id=guard_id,
-            photo_path=photo_path
+            photo_path=photo_path,
         )
 
-
-
+     # add near imports
 
     def get_visitors_today(self, guard_id: str) -> List[VisitorResponse]:
-        """Get all visitors created today by a guard"""
-        today = datetime.now().strftime('%Y-%m-%d')
-        visitors = self.sheets_client.get_visitors(
-            guard_id=guard_id,
-            date_filter=today
-        )
-        
-        return [self._dict_to_visitor_response(v) for v in visitors]
-    
+        """
+        MVP semantics: return visitors from the LAST 24 HOURS (rolling window),
+        instead of calendar 'today'. This avoids timezone confusion.
+        """
+        now_utc = datetime.now(timezone.utc)
+        cutoff = now_utc - timedelta(hours=24)
+
+        logger.info(f"RECENT_VISITORS_24H | guard_id={guard_id} now_utc={now_utc.isoformat()} cutoff={cutoff.isoformat()}")
+
+        # Fetch by guard only (fast + minimal)
+        visitors = self.sheets_client.get_visitors(guard_id=guard_id)
+
+        filtered = []
+        for v in visitors:
+            created_at_str = (v.get("created_at") or "").strip()
+            if not created_at_str:
+                continue
+
+            try:
+                dt = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
+                if dt.tzinfo is None:
+                    dt = dt.replace(tzinfo=timezone.utc)
+
+                # keep only last 24 hours
+                if dt >= cutoff:
+                    filtered.append(v)
+
+            except Exception as e:
+                logger.warning(
+                    f"RECENT_24H_PARSE_FAIL | guard_id={guard_id} created_at='{created_at_str}' err={e}"
+                )
+                continue
+
+        # Sort newest first
+        filtered.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+
+        logger.info(f"RECENT_VISITORS_24H_RESULT | guard_id={guard_id} count={len(filtered)}")
+        return [self._dict_to_visitor_response(v) for v in filtered]
+
+
     def get_visitors_by_flat(self, flat_id: str) -> List[VisitorResponse]:
-        """Get all visitors for a flat"""
+        """Legacy: Get all visitors for a flat by flat_id"""
         visitors = self.sheets_client.get_visitors(flat_id=flat_id)
         return [self._dict_to_visitor_response(v) for v in visitors]
-    
+
+    def get_visitors_by_flat_no(self, guard_id: str, flat_no: str) -> List[VisitorResponse]:
+        """
+        MVP approach:
+        - Guard enters flat_no (A-101)
+        - Validate guard and society_id
+        - Ensure flat exists & active
+        - Fetch visitors by flat_no (and society_id to prevent cross-society collisions)
+        """
+
+        flat_no_norm = (flat_no or "").strip().upper()
+        logger.info(f"GET_VISITORS_BY_FLAT_NO | guard_id={guard_id} flat_no={flat_no_norm}")
+
+        if not flat_no_norm:
+            raise HTTPException(status_code=400, detail="flat_no is required")
+
+        # 1) Validate guard & derive society_id
+        guard = self.sheets_client.get_guard_by_id(guard_id)
+        if not guard:
+            logger.warning(f"GET_VISITORS_BY_FLAT_NO_GUARD_NOT_FOUND | guard_id={guard_id}")
+            raise HTTPException(status_code=400, detail=f"Guard with ID {guard_id} not found")
+
+        society_id = guard.get("society_id")
+        if not society_id:
+            logger.error(
+                f"GET_VISITORS_BY_FLAT_NO_GUARD_MISSING_SOCIETY | guard_id={guard_id} guard={guard}"
+            )
+            raise HTTPException(status_code=500, detail="Guard record missing society_id in sheet")
+
+        # 2) Resolve flat to ensure active/valid
+        _ = self._resolve_flat(society_id=society_id, flat_id=None, flat_no=flat_no_norm)
+
+        # 3) Fetch visitors (prefer by flat_no + society_id)
+        try:
+            visitors = self.sheets_client.get_visitors(
+                society_id=society_id,
+                flat_no=flat_no_norm,
+            )
+        except TypeError:
+            # Fallback for older sheets_client that doesn't support flat_no filter
+            logger.warning("Sheets client get_visitors does not support flat_no filter yet; falling back to flat_id resolution.")
+            flat = self._resolve_flat(society_id=society_id, flat_no=flat_no_norm)
+            resolved_flat_id = flat.get("flat_id")
+            visitors = self.sheets_client.get_visitors(flat_id=resolved_flat_id)
+
+        logger.info(f"GET_VISITORS_BY_FLAT_NO_RESULT | flat_no={flat_no_norm} count={len(visitors)}")
+        return [self._dict_to_visitor_response(v) for v in visitors]
+
     def _dict_to_visitor_response(self, visitor_dict: dict) -> VisitorResponse:
         """Convert visitor dict to VisitorResponse"""
-        created_at_str = visitor_dict.get('created_at', '')
-        approved_at_str = visitor_dict.get('approved_at', '')
-        
+
+        created_at_str = visitor_dict.get("created_at", "")
+        approved_at_str = visitor_dict.get("approved_at", "")
+
         # Parse created_at (ISO UTC format)
         try:
             if created_at_str:
-                # Handle ISO format with timezone info
-                created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
-                # Ensure it's timezone-aware
+                created_at = datetime.fromisoformat(created_at_str.replace("Z", "+00:00"))
                 if created_at.tzinfo is None:
                     created_at = created_at.replace(tzinfo=timezone.utc)
             else:
@@ -132,64 +267,55 @@ class VisitorService:
         except Exception as e:
             logger.warning(f"Failed to parse created_at '{created_at_str}': {e}")
             created_at = datetime.now(timezone.utc)
-        
+
         # Parse approved_at (optional)
         approved_at = None
         if approved_at_str:
             try:
-                approved_at = datetime.fromisoformat(approved_at_str.replace('Z', '+00:00'))
+                approved_at = datetime.fromisoformat(approved_at_str.replace("Z", "+00:00"))
                 if approved_at.tzinfo is None:
                     approved_at = approved_at.replace(tzinfo=timezone.utc)
             except Exception as e:
                 logger.warning(f"Failed to parse approved_at '{approved_at_str}': {e}")
                 approved_at = None
-        
+
+        photo_path = visitor_dict.get("photo_path") or None
         photo_url = None
         if photo_path:
             photo_url = f"/uploads/{photo_path}".replace("//", "/")
 
-
         return VisitorResponse(
-            visitor_id=visitor_dict.get('visitor_id', ''),
-            society_id=visitor_dict.get('society_id', ''),
-            flat_id=visitor_dict.get('flat_id', ''),
-            visitor_type=visitor_dict.get('visitor_type', ''),
-            visitor_phone=visitor_dict.get('visitor_phone', ''),
-            status=visitor_dict.get('status', VisitorStatus.PENDING.value),
+            visitor_id=visitor_dict.get("visitor_id", ""),
+            society_id=visitor_dict.get("society_id", ""),
+            flat_id=visitor_dict.get("flat_id", ""),
+            flat_no=visitor_dict.get("flat_no", "") or "",  # ✅ NEW
+            visitor_type=visitor_dict.get("visitor_type", ""),
+            visitor_phone=visitor_dict.get("visitor_phone", ""),
+            status=visitor_dict.get("status", VisitorStatus.PENDING.value),
             created_at=created_at,
             approved_at=approved_at,
-            approved_by=visitor_dict.get('approved_by'),
-            guard_id=visitor_dict.get('guard_id', ''),
+            approved_by=visitor_dict.get("approved_by"),
+            guard_id=visitor_dict.get("guard_id", ""),
             photo_path=photo_path,
             photo_url=photo_url,
             note=visitor_dict.get("note") or None,
         )
-    
+
     def _log_approval_request(self, flat: dict, visitor_data: dict):
-        """
-        Log approval request stub for resident
-        
-        This logs the approval request that would be sent via WhatsApp/SMS
-        to the resident's phone number from the Flats sheet.
-        """
-        resident_phone = flat.get('resident_phone', '')
-        flat_no = flat.get('flat_no', '')
-        resident_name = flat.get('resident_name', '')
-        visitor_type = visitor_data.get('visitor_type', '')
-        visitor_phone = visitor_data.get('visitor_phone', '')
-        visitor_id = visitor_data.get('visitor_id', '')
-        
-        # Log approval stub
+        """Stub approval log (WhatsApp/SMS in future)"""
+        resident_phone = flat.get("resident_phone", "")
+        flat_no = flat.get("flat_no", "")
+        resident_name = flat.get("resident_name", "")
+        visitor_type = visitor_data.get("visitor_type", "")
+        visitor_phone = visitor_data.get("visitor_phone", "")
+        visitor_id = visitor_data.get("visitor_id", "")
+
         logger.info(
-            f"APPROVAL_REQUEST_STUB | "
-            f"To: {resident_phone} | "
-            f"Flat: {flat_no} ({resident_name}) | "
-            f"Visitor: {visitor_type} | "
-            f"Phone: {visitor_phone} | "
-            f"VisitorID: {visitor_id}"
+            f"APPROVAL_REQUEST_STUB | To: {resident_phone} | "
+            f"Flat: {flat_no} ({resident_name}) | Visitor: {visitor_type} | "
+            f"Phone: {visitor_phone} | VisitorID: {visitor_id}"
         )
-        
-        # Also print for development visibility
+
         print(f"[APPROVAL_STUB] Would send to {resident_phone}:")
         print(f"  Flat: {flat_no} ({resident_name})")
         print(f"  Visitor: {visitor_type} - {visitor_phone}")
