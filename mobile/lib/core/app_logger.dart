@@ -25,11 +25,11 @@ class AppLogger {
   }
 
   static void w(String message, {Object? error, StackTrace? stackTrace, Map<String, dynamic>? data}) {
-    _logger.w(_format(message, data), error:error, stackTrace:stackTrace);
+    _logger.w(_format(message, data), error: error, stackTrace: stackTrace);
   }
 
   static void e(String message, {Object? error, StackTrace? stackTrace, Map<String, dynamic>? data}) {
-    _logger.e(_format(message, data), error:error, stackTrace:stackTrace);
+    _logger.e(_format(message, data), error: error, stackTrace: stackTrace);
   }
 
   static String _format(String message, Map<String, dynamic>? data) {

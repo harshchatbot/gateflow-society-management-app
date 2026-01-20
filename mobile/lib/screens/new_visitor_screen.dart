@@ -6,6 +6,8 @@ import 'package:gateflow/core/app_logger.dart';
 import 'package:gateflow/models/visitor.dart';
 import 'package:gateflow/services/visitor_service.dart';
 import 'package:gateflow/widgets/app_text_field.dart';
+import 'package:gateflow/widgets/full_screen_loader.dart';
+import 'package:gateflow/widgets/powered_by_footer.dart';
 import 'package:gateflow/widgets/primary_button.dart';
 import 'package:gateflow/widgets/section_card.dart';
 import 'package:gateflow/widgets/status_chip.dart';
@@ -116,6 +118,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                     const SizedBox(height: 16),
                     if (_createdVisitor != null) _buildSuccessCard(colorScheme),
                     if (_createdVisitor == null) _buildFormCard(colorScheme),
+                    const SizedBox(height: 12),
+                    const PoweredByFooter(),
                   ],
                 ),
               ),
@@ -128,8 +132,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               blastDirectionality: BlastDirectionality.explosive,
               maxBlastForce: 8,
               minBlastForce: 4,
-              emissionFrequency: 0.1,
-              numberOfParticles: 20,
+              emissionFrequency: 0.05,
+              numberOfParticles: 18,
               gravity: 0.3,
               colors: [
                 colorScheme.primary,
@@ -139,6 +143,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               ],
             ),
           ),
+          if (_isLoading) const FullScreenLoader(message: 'Submitting visitor...'),
         ],
       ),
     );

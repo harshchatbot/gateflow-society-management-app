@@ -25,6 +25,9 @@ dependencies:
   # Confetti for success micro-interaction
   confetti: ^0.7.0
 
+  # Links
+  url_launcher: ^6.2.5
+
   # UI
   cupertino_icons: ^1.0.6
 

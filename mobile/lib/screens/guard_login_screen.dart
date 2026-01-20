@@ -5,6 +5,8 @@ import 'package:gateflow/core/app_logger.dart';
 import 'package:gateflow/core/storage.dart';
 import 'package:gateflow/services/auth_service.dart';
 import 'package:gateflow/widgets/app_text_field.dart';
+import 'package:gateflow/widgets/full_screen_loader.dart';
+import 'package:gateflow/widgets/powered_by_footer.dart';
 import 'package:gateflow/widgets/primary_button.dart';
 import 'package:gateflow/widgets/section_card.dart';
 import 'new_visitor_screen.dart';
@@ -80,112 +82,119 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 12),
-              Row(
+      body: Stack(
+        children: [
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    decoration: BoxDecoration(
-                      color: colorScheme.primary.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.all(12),
-                    child: Icon(Icons.shield, color: colorScheme.primary, size: 28),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 12),
+                  Row(
                     children: [
-                      Text(
-                        'GateFlow',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
-                          color: colorScheme.onSurface,
+                      Container(
+                        decoration: BoxDecoration(
+                          color: colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
                         ),
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(Icons.shield, color: colorScheme.primary, size: 28),
                       ),
-                      Text(
-                        'Guard-first visitor entry',
-                        style: TextStyle(color: colorScheme.onSurfaceVariant),
+                      const SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'GateFlow',
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w800,
+                              color: colorScheme.onSurface,
+                            ),
+                          ),
+                          Text(
+                            'Guard-first visitor entry',
+                            style: TextStyle(color: colorScheme.onSurfaceVariant),
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 32),
-              Expanded(
-                child: Form(
-                  key: _formKey,
-                  child: SectionCard(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          'Sign in',
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: colorScheme.onSurface,
-                          ),
+                  const SizedBox(height: 32),
+                  Expanded(
+                    child: Form(
+                      key: _formKey,
+                      child: SectionCard(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Text(
+                              'Sign in',
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w700,
+                                color: colorScheme.onSurface,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Enter your society ID and PIN to continue.',
+                              style: TextStyle(color: colorScheme.onSurfaceVariant),
+                            ),
+                            const SizedBox(height: 24),
+                            AppTextField(
+                              controller: _societyIdController,
+                              label: 'Society ID',
+                              hint: 'soc_ajmer_01',
+                              icon: Icons.apartment,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please enter society ID';
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 16),
+                            AppTextField(
+                              controller: _pinController,
+                              label: 'PIN',
+                              hint: '1234',
+                              icon: Icons.lock,
+                              keyboardType: TextInputType.number,
+                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                              obscureText: true,
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) {
+                                  return 'Please enter PIN';
+                                }
+                                if (value.length < 4) {
+                                  return 'PIN must be at least 4 digits';
+                                }
+                                return null;
+                              },
+                            ),
+                            const Spacer(),
+                            PrimaryButton(
+                              label: 'Login',
+                              onPressed: _isLoading ? null : _handleLogin,
+                              isLoading: _isLoading,
+                              icon: Icons.login,
+                            ),
+                            const SizedBox(height: 12),
+                            const PoweredByFooter(),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Enter your society ID and PIN to continue.',
-                          style: TextStyle(color: colorScheme.onSurfaceVariant),
-                        ),
-                        const SizedBox(height: 24),
-                        AppTextField(
-                          controller: _societyIdController,
-                          label: 'Society ID',
-                          hint: 'soc_ajmer_01',
-                          icon: Icons.apartment,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter society ID';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        AppTextField(
-                          controller: _pinController,
-                          label: 'PIN',
-                          hint: '1234',
-                          icon: Icons.lock,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                          obscureText: true,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Please enter PIN';
-                            }
-                            if (value.length < 4) {
-                              return 'PIN must be at least 4 digits';
-                            }
-                            return null;
-                          },
-                        ),
-                        const Spacer(),
-                        PrimaryButton(
-                          label: 'Login',
-                          onPressed: _handleLogin,
-                          isLoading: _isLoading,
-                          icon: Icons.login,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
+          if (_isLoading) const FullScreenLoader(message: 'Signing in...'),
+        ],
       ),
     );
   }

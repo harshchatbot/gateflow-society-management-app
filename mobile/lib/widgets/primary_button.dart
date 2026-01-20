@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gateflow/core/theme.dart';
 
 class PrimaryButton extends StatelessWidget {
   final String label;
@@ -16,20 +17,20 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final colorScheme = Theme.of(context).colorScheme;
     return AnimatedScale(
       duration: const Duration(milliseconds: 120),
       scale: isLoading || onPressed == null ? 0.98 : 1.0,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          padding: const EdgeInsets.symmetric(vertical: 18),
+          minimumSize: const Size.fromHeight(52),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMd),
           ),
-          elevation: 1,
-          backgroundColor: theme.colorScheme.primary,
-          foregroundColor: theme.colorScheme.onPrimary,
+          backgroundColor: AppTheme.darkBlue,
+          foregroundColor: Colors.white,
         ),
         child: isLoading
             ? const SizedBox(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gateflow/core/theme.dart';
 
 class StatusChip extends StatelessWidget {
   final String label;
@@ -30,9 +31,9 @@ class StatusChip extends StatelessWidget {
   Color _colorForStatus(String status, ThemeData theme) {
     switch (status.toUpperCase()) {
       case 'APPROVED':
-        return Colors.green.shade700;
+        return AppTheme.success;
       case 'REJECTED':
-        return Colors.red.shade700;
+        return AppTheme.error;
       default:
         return theme.colorScheme.primary;
     }

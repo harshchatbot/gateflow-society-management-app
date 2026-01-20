@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:gateflow/core/theme.dart';
 
 class SectionCard extends StatelessWidget {
   final Widget child;
@@ -19,14 +20,7 @@ class SectionCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(AppTheme.radiusLg),
         border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: child,

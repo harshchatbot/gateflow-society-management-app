@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'package:gateflow/core/app_logger.dart';
 import 'package:gateflow/core/storage.dart';
 import 'guard_login_screen.dart';
@@ -69,9 +68,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            colors: [colorScheme.primary, colorScheme.primary.withOpacity(0.85)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+            colors: [colorScheme.primary, Colors.white],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
         ),
         child: FadeTransition(
@@ -80,27 +79,35 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.shield,
-                  size: 90,
-                  color: colorScheme.onPrimary,
+                Container(
+                  padding: const EdgeInsets.all(18),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: colorScheme.outlineVariant),
+                  ),
+                  child: Icon(
+                    Icons.shield,
+                    size: 64,
+                    color: colorScheme.primary,
+                  ),
                 ),
                 const SizedBox(height: 18),
                 Text(
                   'GateFlow',
                   style: TextStyle(
-                    fontSize: 32,
+                    fontSize: 30,
                     fontWeight: FontWeight.w800,
-                    color: colorScheme.onPrimary,
+                    color: colorScheme.onPrimaryContainer,
                     letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 Text(
                   'Guard-first visitor entry',
                   style: TextStyle(
-                    fontSize: 16,
-                    color: colorScheme.onPrimary.withOpacity(0.8),
+                    fontSize: 15,
+                    color: colorScheme.onPrimaryContainer.withOpacity(0.7),
                   ),
                 ),
               ],
