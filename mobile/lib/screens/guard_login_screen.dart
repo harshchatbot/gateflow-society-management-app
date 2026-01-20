@@ -1,14 +1,7 @@
+import 'dart:ui'; // Required for ImageFilter (Blur)
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:gateflow/core/app_error.dart';
-import 'package:gateflow/core/app_logger.dart';
-import 'package:gateflow/core/storage.dart';
-import 'package:gateflow/services/auth_service.dart';
-import 'package:gateflow/widgets/app_text_field.dart';
-import 'package:gateflow/widgets/full_screen_loader.dart';
-import 'package:gateflow/widgets/powered_by_footer.dart';
-import 'package:gateflow/widgets/primary_button.dart';
-import 'package:gateflow/widgets/section_card.dart';
+import '../widgets/powered_by_footer.dart';
+import '../core/storage.dart';
 import 'new_visitor_screen.dart';
 
 class GuardLoginScreen extends StatefulWidget {
@@ -19,181 +12,203 @@ class GuardLoginScreen extends StatefulWidget {
 }
 
 class _GuardLoginScreenState extends State<GuardLoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _societyIdController = TextEditingController();
-  final _pinController = TextEditingController();
-  final _authService = AuthService();
+  final _guardIdController = TextEditingController();
+  final _passwordController = TextEditingController();
   bool _isLoading = false;
 
   @override
   void dispose() {
-    _societyIdController.dispose();
-    _pinController.dispose();
+    _guardIdController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
-    if (!_formKey.currentState!.validate()) return;
+  void _handleLogin() async {
+    if (_guardIdController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter Guard ID and Password")),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
 
-    final result = await _authService.login(
-      societyId: _societyIdController.text.trim(),
-      pin: _pinController.text.trim(),
-    );
+    // Simulate API delay
+    await Future.delayed(const Duration(seconds: 2)); 
+    
+    // --- MOCK DATA ---
+    final String guardId = _guardIdController.text;
+    const String guardName = "Verified Guard"; 
+    const String societyId = "SOC-001"; 
+    // -----------------
 
-    if (!mounted) return;
+    await Storage.saveGuardSession(
+      guardId: guardId, 
+      guardName: guardName,
+      societyId: societyId,
+    ); 
 
-    if (result.isSuccess) {
-      final guard = result.data!;
-      await Storage.saveGuardSession(
-        guardId: guard.guardId,
-        guardName: guard.guardName,
-        societyId: guard.societyId,
-      );
-      AppLogger.i('Guard session saved', data: {'guardId': guard.guardId});
-
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => NewVisitorScreen(
-            guardId: guard.guardId,
-            guardName: guard.guardName,
-            societyId: guard.societyId,
-          ),
-        ),
-      );
-    } else {
+    if (mounted) {
       setState(() => _isLoading = false);
-      final error = result.error ?? AppError(userMessage: 'Login failed', technicalMessage: 'Unknown');
-      _showError(error.userMessage);
+      Navigator.pushReplacement(
+        context, 
+        MaterialPageRoute(
+          builder: (_) => NewVisitorScreen(
+            guardId: guardId, 
+            guardName: guardName,
+            societyId: societyId,
+          )
+        )
+      );
     }
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: const TextStyle(fontSize: 16)),
-        backgroundColor: Theme.of(context).colorScheme.error,
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+
     return Scaffold(
       body: Stack(
         children: [
+          // 1. The Main Login UI (Bottom Layer)
           SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        padding: const EdgeInsets.all(12),
-                        child: Icon(Icons.shield, color: colorScheme.primary, size: 28),
-                      ),
-                      const SizedBox(width: 12),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+            child: Column(
+              children: [
+                Expanded(
+                  child: Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            'GateFlow',
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: colorScheme.onSurface,
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: theme.primaryColor.withOpacity(0.1),
+                              shape: BoxShape.circle,
                             ),
+                            child: Icon(Icons.security_rounded, size: 56, color: theme.primaryColor),
                           ),
-                          Text(
-                            'Guard-first visitor entry',
-                            style: TextStyle(color: colorScheme.onSurfaceVariant),
+                          const SizedBox(height: 24),
+                          Text("GateFlow", style: theme.textTheme.headlineMedium),
+                          const SizedBox(height: 8),
+                          Text("Guard Access Portal", style: theme.textTheme.bodySmall),
+                          
+                          const SizedBox(height: 48),
+
+                          Container(
+                            padding: const EdgeInsets.all(32),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFDFE1E6)),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 10),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                TextField(
+                                  controller: _guardIdController,
+                                  textInputAction: TextInputAction.next,
+                                  decoration: const InputDecoration(
+                                    labelText: "Guard ID",
+                                    prefixIcon: Icon(Icons.badge_outlined),
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                                TextField(
+                                  controller: _passwordController,
+                                  obscureText: true,
+                                  textInputAction: TextInputAction.done,
+                                  onSubmitted: (_) => _handleLogin(),
+                                  decoration: const InputDecoration(
+                                    labelText: "Password",
+                                    prefixIcon: Icon(Icons.lock_outline),
+                                  ),
+                                ),
+                                const SizedBox(height: 32),
+                                ElevatedButton(
+                                  onPressed: _isLoading ? null : _handleLogin,
+                                  child: const Text("Secure Login"),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 32),
-                  Expanded(
-                    child: Form(
-                      key: _formKey,
-                      child: SectionCard(
-                        padding: const EdgeInsets.all(20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              'Sign in',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.w700,
-                                color: colorScheme.onSurface,
-                              ),
+                ),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 24.0),
+                  child: PoweredByFooter(),
+                ),
+              ],
+            ),
+          ),
+
+          // 2. The "Glass" Loader Overlay (Top Layer)
+          if (_isLoading)
+            Positioned.fill(
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10), // The Blur Effect
+                  child: Container(
+                    color: Colors.white.withOpacity(0.5), // Semi-transparent white tint
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Floating Logo
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: theme.primaryColor.withOpacity(0.2),
+                                  blurRadius: 30,
+                                  spreadRadius: 10,
+                                )
+                              ],
                             ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Enter your society ID and PIN to continue.',
-                              style: TextStyle(color: colorScheme.onSurfaceVariant),
+                            child: Icon(Icons.security_rounded, size: 48, color: theme.primaryColor),
+                          ),
+                          const SizedBox(height: 40),
+                          
+                          // Custom Spinner
+                          SizedBox(
+                            width: 50, 
+                            height: 50,
+                            child: CircularProgressIndicator(
+                              color: theme.primaryColor,
+                              strokeWidth: 4,
+                              strokeCap: StrokeCap.round, // Rounded ends look cleaner
                             ),
-                            const SizedBox(height: 24),
-                            AppTextField(
-                              controller: _societyIdController,
-                              label: 'Society ID',
-                              hint: 'soc_ajmer_01',
-                              icon: Icons.apartment,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter society ID';
-                                }
-                                return null;
-                              },
+                          ),
+                          const SizedBox(height: 24),
+                          
+                          // Elegant Text
+                          Text(
+                            "Verifying Credentials...",
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: theme.primaryColor,
+                              letterSpacing: 0.5,
                             ),
-                            const SizedBox(height: 16),
-                            AppTextField(
-                              controller: _pinController,
-                              label: 'PIN',
-                              hint: '1234',
-                              icon: Icons.lock,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                              obscureText: true,
-                              validator: (value) {
-                                if (value == null || value.trim().isEmpty) {
-                                  return 'Please enter PIN';
-                                }
-                                if (value.length < 4) {
-                                  return 'PIN must be at least 4 digits';
-                                }
-                                return null;
-                              },
-                            ),
-                            const Spacer(),
-                            PrimaryButton(
-                              label: 'Login',
-                              onPressed: _isLoading ? null : _handleLogin,
-                              isLoading: _isLoading,
-                              icon: Icons.login,
-                            ),
-                            const SizedBox(height: 12),
-                            const PoweredByFooter(),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                ],
+                ),
               ),
             ),
-          ),
-          if (_isLoading) const FullScreenLoader(message: 'Signing in...'),
         ],
       ),
     );

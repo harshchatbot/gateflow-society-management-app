@@ -1,121 +1,89 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class AppTheme {
-  // Salesforce-inspired palette
-  static const Color primary = Color(0xFF00A1E0);
-  static const Color darkBlue = Color(0xFF0176D3);
-  static const Color background = Color(0xFFFFFFFF);
-  static const Color surface = Color(0xFFF7FAFC);
-  static const Color border = Color(0xFFE5EAF0);
-  static const Color textPrimary = Color(0xFF0B1F33);
-  static const Color textSecondary = Color(0xFF52606D);
-  static const Color success = Color(0xFF2E844A);
-  static const Color warning = Color(0xFFFE9339);
-  static const Color error = Color(0xFFBA0517);
+  // 🎨 NEW Palette (The "Salesforce/Facebook" Look)
+  static const Color primaryBlue = Color(0xFF0176D3); 
+  static const Color backgroundGrey = Color(0xFFF5F7FA);
+  static const Color surfaceWhite = Colors.white;
+  static const Color textDark = Color(0xFF181B25);    
+  static const Color textGrey = Color(0xFF5E6C84);    
+  static const Color borderGrey = Color(0xFFDFE1E6);  
+  static const Color errorRed = Color(0xFFBA0517);
+  static const Color successGreen = Color(0xFF2E844A);
 
-  // Radii
-  static const double radiusSm = 8;
-  static const double radiusMd = 12;
-  static const double radiusLg = 16;
+  // 🛠 BACKWARDS COMPATIBILITY (Restoring missing variables for your widgets)
+  static const Color primary = primaryBlue;       // Map 'primary' to new blue
+  static const Color darkBlue = primaryBlue;      // Map 'darkBlue' to new blue
+  static const Color textPrimary = textDark;      // Map 'textPrimary' to new dark text
+  static const double radiusMd = 12.0;            // Restore radiusMd
+  static const double radiusLg = 16.0;            // Restore radiusLg
 
   static ThemeData light() {
-    final colorScheme = ColorScheme(
-      brightness: Brightness.light,
-      primary: primary,
-      onPrimary: Colors.white,
-      secondary: darkBlue,
-      onSecondary: Colors.white,
-      error: error,
-      onError: Colors.white,
-      background: background,
-      onBackground: textPrimary,
-      surface: surface,
-      onSurface: textPrimary,
-      surfaceVariant: surface,
-      onSurfaceVariant: textSecondary,
-      outline: border,
-      outlineVariant: border,
-      shadow: Colors.black12,
-      scrim: Colors.black54,
-      tertiary: success,
-      onTertiary: Colors.white,
-      inverseSurface: textPrimary,
-      inversePrimary: darkBlue,
-    );
-
     return ThemeData(
       useMaterial3: true,
-      colorScheme: colorScheme,
-      scaffoldBackgroundColor: background,
-      appBarTheme: AppBarTheme(
-        backgroundColor: background,
-        foregroundColor: textPrimary,
-        elevation: 0,
-        centerTitle: true,
-        titleTextStyle: const TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-          color: textPrimary,
-        ),
-        scrolledUnderElevation: 0,
-        toolbarHeight: 60,
+      scaffoldBackgroundColor: backgroundGrey, 
+      
+      // Color Scheme
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primaryBlue,
+        primary: primaryBlue,
+        secondary: primaryBlue,
+        background: backgroundGrey,
+        surface: surfaceWhite,
+        error: errorRed,
+        brightness: Brightness.light,
       ),
-      cardTheme: CardTheme(
-        color: surface,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(radiusLg),
-          side: const BorderSide(color: border),
-        ),
+
+      // AppBar
+      appBarTheme: const AppBarTheme(
+        backgroundColor: primaryBlue,
+        foregroundColor: surfaceWhite,
         elevation: 0,
-        margin: EdgeInsets.zero,
+        centerTitle: false,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
+
+      // Input Fields
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: surface,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        fillColor: surfaceWhite,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
-          borderSide: const BorderSide(color: border),
+          borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
-          borderSide: const BorderSide(color: border),
+          borderSide: const BorderSide(color: borderGrey),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(radiusMd),
-          borderSide: const BorderSide(color: primary, width: 2),
+          borderSide: const BorderSide(color: primaryBlue, width: 2),
         ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(radiusMd),
-          borderSide: const BorderSide(color: error),
-        ),
-        hintStyle: const TextStyle(color: textSecondary),
-        labelStyle: const TextStyle(color: textPrimary),
+        labelStyle: const TextStyle(color: textGrey),
+        prefixIconColor: textGrey,
       ),
+
+      // Buttons
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(radiusMd),
-          ),
-          backgroundColor: darkBlue,
+          backgroundColor: primaryBlue,
           foregroundColor: Colors.white,
+          minimumSize: const Size.fromHeight(56),
           elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusMd)),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
-      snackBarTheme: const SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: error,
-        contentTextStyle: TextStyle(color: Colors.white, fontSize: 16),
-      ),
+
+      // Text
       textTheme: const TextTheme(
-        bodyLarge: TextStyle(color: textPrimary),
-        bodyMedium: TextStyle(color: textPrimary),
-        bodySmall: TextStyle(color: textSecondary),
-        titleMedium: TextStyle(color: textPrimary, fontWeight: FontWeight.w600),
-        titleLarge: TextStyle(color: textPrimary, fontWeight: FontWeight.w700),
+        headlineMedium: TextStyle(color: textDark, fontWeight: FontWeight.w700, fontSize: 26),
+        titleMedium: TextStyle(color: textDark, fontWeight: FontWeight.w600, fontSize: 18),
+        bodyMedium: TextStyle(color: textDark, fontSize: 16),
+        bodySmall: TextStyle(color: textGrey, fontSize: 14),
       ),
-      dividerColor: border,
     );
   }
 }

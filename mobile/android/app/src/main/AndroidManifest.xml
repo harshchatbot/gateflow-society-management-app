@@ -1,4 +1,13 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    
+    <!-- Camera permission for visitor photo capture -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Optional: declare camera hardware (not required) -->
+    <uses-feature
+        android:name="android.hardware.camera"
+        android:required="false" />
+    
     <application
         android:label="mobile"
         android:name="${applicationName}"

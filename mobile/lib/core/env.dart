@@ -8,7 +8,7 @@ class Env {
   static Future<void> load() async {
     try {
       AppLogger.i('Loading .env file...');
-      await dotenv.load(fileName: '.env');
+      await dotenv.load(fileName: 'assets/.env');
       AppLogger.i('Env loaded', data: {'API_BASE_URL': dotenv.env['API_BASE_URL']});
     } catch (e, st) {
       AppLogger.e('Failed to load .env', error: e, stackTrace: st);

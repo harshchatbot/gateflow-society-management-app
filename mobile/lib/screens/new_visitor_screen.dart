@@ -1,16 +1,16 @@
-import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:gateflow/core/app_error.dart';
-import 'package:gateflow/core/app_logger.dart';
-import 'package:gateflow/models/visitor.dart';
-import 'package:gateflow/services/visitor_service.dart';
-import 'package:gateflow/widgets/app_text_field.dart';
-import 'package:gateflow/widgets/full_screen_loader.dart';
-import 'package:gateflow/widgets/powered_by_footer.dart';
-import 'package:gateflow/widgets/primary_button.dart';
-import 'package:gateflow/widgets/section_card.dart';
-import 'package:gateflow/widgets/status_chip.dart';
+import 'package:confetti/confetti.dart';
+import '../core/app_logger.dart';
+import '../core/app_error.dart';
+import '../core/storage.dart';
+import '../models/visitor.dart';
+import '../services/visitor_service.dart';
+import 'guard_login_screen.dart';
+
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+
 
 class NewVisitorScreen extends StatefulWidget {
   final String guardId;
@@ -30,14 +30,26 @@ class NewVisitorScreen extends StatefulWidget {
 
 class _NewVisitorScreenState extends State<NewVisitorScreen> {
   final _formKey = GlobalKey<FormState>();
+  
+  // Controllers
   final _flatIdController = TextEditingController();
   final _visitorPhoneController = TextEditingController();
   final _visitorService = VisitorService();
-  final _confettiController = ConfettiController(duration: const Duration(seconds: 1));
+  late ConfettiController _confettiController;
+
+  final ImagePicker _picker = ImagePicker();
+  File? _visitorPhoto;
+
 
   String _selectedVisitorType = 'GUEST';
   bool _isLoading = false;
   Visitor? _createdVisitor;
+
+  @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+  }
 
   @override
   void dispose() {
@@ -47,6 +59,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     super.dispose();
   }
 
+  // --- LOGIC SECTION (Your Code) ---
+
   Future<void> _handleSubmit() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -55,6 +69,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       _createdVisitor = null;
     });
 
+    // API Call
     final result = await _visitorService.createVisitor(
       flatId: _flatIdController.text.trim(),
       visitorType: _selectedVisitorType,
@@ -81,8 +96,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(fontSize: 16)),
-        backgroundColor: Theme.of(context).colorScheme.error,
+        content: Text(message),
+        backgroundColor: Colors.redAccent,
+        behavior: SnackBarBehavior.floating,
       ),
     );
   }
@@ -93,302 +109,349 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       _visitorPhoneController.clear();
       _selectedVisitorType = 'GUEST';
       _createdVisitor = null;
+      _visitorPhoto = null;
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('New Visitor'),
-        centerTitle: true,
-      ),
-      body: Stack(
-        children: [
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _buildGuardInfo(colorScheme),
-                    const SizedBox(height: 16),
-                    if (_createdVisitor != null) _buildSuccessCard(colorScheme),
-                    if (_createdVisitor == null) _buildFormCard(colorScheme),
-                    const SizedBox(height: 12),
-                    const PoweredByFooter(),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              maxBlastForce: 8,
-              minBlastForce: 4,
-              emissionFrequency: 0.05,
-              numberOfParticles: 18,
-              gravity: 0.3,
-              colors: [
-                colorScheme.primary,
-                Colors.green,
-                Colors.orange,
-                Colors.blueGrey,
-              ],
-            ),
-          ),
-          if (_isLoading) const FullScreenLoader(message: 'Submitting visitor...'),
-        ],
-      ),
-    );
+  Future<void> _logout() async {
+    await Storage.clearGuardSession();
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const GuardLoginScreen()),
+        (route) => false,
+      );
+    }
   }
 
-  Widget _buildGuardInfo(ColorScheme colorScheme) {
-    return SectionCard(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          CircleAvatar(
-            radius: 22,
-            backgroundColor: colorScheme.primary.withOpacity(0.12),
-            child: Icon(Icons.person, color: colorScheme.primary),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.guardName,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: colorScheme.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Guard ID: ${widget.guardId}',
-                  style: TextStyle(color: colorScheme.onSurfaceVariant),
-                ),
-                Text(
-                  'Society: ${widget.societyId}',
-                  style: TextStyle(color: colorScheme.onSurfaceVariant),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+  Future<void> _takePhoto() async {
+  try {
+    final XFile? picked = await _picker.pickImage(
+      source: ImageSource.camera,
+      preferredCameraDevice: CameraDevice.front,
+      imageQuality: 75,
+      maxWidth: 1080,
     );
-  }
 
-  Widget _buildFormCard(ColorScheme colorScheme) {
-    return SectionCard(
-      padding: const EdgeInsets.all(18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(
-            'Visitor Details',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.w700,
-              color: colorScheme.onSurface,
+    if (picked == null) return; // cancelled
+
+    setState(() {
+      _visitorPhoto = File(picked.path);
+    });
+  } catch (e) {
+    if (!mounted) return;
+    _showError("Camera error. Please allow camera permission and try again.");
+    AppLogger.e("Camera pick failed", error: e.toString());
+  }
+}
+
+Widget _buildPhotoSection(ThemeData theme) {
+  final photo = _visitorPhoto;
+
+  return Container(
+    padding: const EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFDFE1E6)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("Visitor Photo", style: theme.textTheme.titleMedium),
+        const SizedBox(height: 12),
+
+        if (photo == null)
+          SizedBox(
+            width: double.infinity,
+            height: 160,
+            child: OutlinedButton.icon(
+              onPressed: _isLoading ? null : _takePhoto,
+              icon: const Icon(Icons.camera_alt_outlined),
+              label: const Text("Take Photo"),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Enter visitor info and send for resident approval.',
-            style: TextStyle(color: colorScheme.onSurfaceVariant),
-          ),
-          const SizedBox(height: 20),
-          AppTextField(
-            controller: _flatIdController,
-            label: 'Flat ID',
-            hint: 'flat_101',
-            icon: Icons.home,
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter flat ID';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Visitor Type',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: colorScheme.onSurface),
-          ),
-          const SizedBox(height: 12),
-          Row(
+          )
+        else
+          Column(
             children: [
-              Expanded(child: _buildVisitorTypeButton('GUEST', Icons.person)),
-              const SizedBox(width: 10),
-              Expanded(child: _buildVisitorTypeButton('DELIVERY', Icons.local_shipping)),
-              const SizedBox(width: 10),
-              Expanded(child: _buildVisitorTypeButton('CAB', Icons.local_taxi)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          AppTextField(
-            controller: _visitorPhoneController,
-            label: 'Visitor Phone',
-            hint: '+919999999999',
-            icon: Icons.phone,
-            keyboardType: TextInputType.phone,
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+]'))],
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return 'Please enter visitor phone';
-              }
-              if (value.length < 10) {
-                return 'Please enter valid phone number';
-              }
-              return null;
-            },
-          ),
-          const SizedBox(height: 22),
-          PrimaryButton(
-            label: 'Send for Approval',
-            icon: Icons.send,
-            isLoading: _isLoading,
-            onPressed: _isLoading ? null : _handleSubmit,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVisitorTypeButton(String type, IconData icon) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final isSelected = _selectedVisitorType == type;
-    return AnimatedScale(
-      duration: const Duration(milliseconds: 120),
-      scale: isSelected ? 1.0 : 0.98,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () {
-          setState(() => _selectedVisitorType = type);
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: BoxDecoration(
-            color: isSelected ? colorScheme.primary : colorScheme.surfaceVariant,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? colorScheme.primary : colorScheme.outlineVariant,
-              width: 2,
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                icon,
-                color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
-                size: 26,
-              ),
-              const SizedBox(height: 6),
-              Text(
-                type,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? colorScheme.onPrimary : colorScheme.onSurface,
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  photo,
+                  height: 220,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSuccessCard(ColorScheme colorScheme) {
-    final visitor = _createdVisitor!;
-    return SectionCard(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.green.withOpacity(0.12),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.check_circle, color: Colors.green, size: 32),
-              ),
-              const SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              const SizedBox(height: 10),
+              Row(
                 children: [
-                  const Text(
-                    'Visitor entry created',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading ? null : _takePhoto,
+                      icon: const Icon(Icons.refresh),
+                      label: const Text("Retake"),
+                    ),
                   ),
-                  Text(
-                    'Sent for resident approval',
-                    style: TextStyle(color: colorScheme.onSurfaceVariant),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: _isLoading
+                          ? null
+                          : () => setState(() => _visitorPhoto = null),
+                      icon: const Icon(Icons.delete_outline),
+                      label: const Text("Remove"),
+                    ),
                   ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildInfoRow('Visitor ID', visitor.visitorId),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              const Text('Status:', style: TextStyle(fontWeight: FontWeight.w600)),
-              const SizedBox(width: 8),
-              StatusChip(label: visitor.status),
-            ],
+      ],
+    ),
+  );
+}
+
+
+  // --- UI SECTION (New Salesforce Design) ---
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('New Entry'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.logout),
+            onPressed: _isLoading ? null : _logout,
           ),
-          const SizedBox(height: 8),
-          _buildInfoRow('Created At', _formatDateTime(visitor.createdAt)),
-          const SizedBox(height: 20),
-          PrimaryButton(
-            label: 'New Entry',
-            icon: Icons.refresh,
-            onPressed: _clearForm,
+        ],
+      ),
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 1. Guard Info Card
+                  _buildGuardInfoCard(theme),
+                  const SizedBox(height: 16),
+
+                  // 2. Main Content (Form or Success)
+                  if (_createdVisitor != null) 
+                    _buildSuccessCard(theme)
+                  else 
+                    _buildEntryForm(theme),
+                ],
+              ),
+            ),
+          ),
+          
+          // Confetti Overlay
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              numberOfParticles: 20,
+              colors: const [Colors.green, Colors.blue, Colors.orange],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 110,
-          child: Text(
-            '$label:',
-            style: const TextStyle(fontWeight: FontWeight.w600),
+  Widget _buildGuardInfoCard(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFDFE1E6)), // Subtle border
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: theme.primaryColor.withOpacity(0.1),
+            child: Icon(Icons.security, color: theme.primaryColor),
           ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(fontWeight: FontWeight.w500),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(widget.guardName, style: theme.textTheme.titleMedium),
+              Text(
+                "ID: ${widget.guardId} • Society: ${widget.societyId}",
+                style: theme.textTheme.bodySmall,
+              ),
+            ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  String _formatDateTime(DateTime dateTime) {
-    return '${dateTime.day.toString().padLeft(2, '0')}/${dateTime.month.toString().padLeft(2, '0')}/${dateTime.year} '
-        '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
+  Widget _buildEntryForm(ThemeData theme) {
+    
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text("Visitor Details", style: theme.textTheme.titleMedium),
+          // Photo Section
+          _buildPhotoSection(theme),
+          const SizedBox(height: 16),
+
+          
+          // Flat ID
+          TextFormField(
+            controller: _flatIdController,
+            textCapitalization: TextCapitalization.characters,
+            decoration: const InputDecoration(
+              labelText: "Flat No",
+              hintText: "e.g. A-101",
+              prefixIcon: Icon(Icons.home_outlined),
+            ),
+            validator: (v) => v!.isEmpty ? "Required" : null,
+          ),
+          const SizedBox(height: 16),
+
+          // Visitor Type Selector
+          Text("Visitor Type", style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(child: _buildTypeCard("GUEST", Icons.person_outline)),
+              const SizedBox(width: 8),
+              Expanded(child: _buildTypeCard("DELIVERY", Icons.local_shipping_outlined)),
+              const SizedBox(width: 8),
+              Expanded(child: _buildTypeCard("CAB", Icons.local_taxi_outlined)),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Phone
+          TextFormField(
+            controller: _visitorPhoneController,
+            keyboardType: TextInputType.phone,
+            maxLength: 10,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            decoration: const InputDecoration(
+              labelText: "Phone Number",
+              prefixIcon: Icon(Icons.phone_outlined),
+              counterText: "", // Hide counter
+            ),
+            validator: (v) => v!.length < 10 ? "Invalid Phone" : null,
+          ),
+          
+          const SizedBox(height: 24),
+          
+          // Action Button
+          ElevatedButton.icon(
+            onPressed: _isLoading ? null : _handleSubmit,
+            icon: _isLoading 
+              ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+              : const Icon(Icons.send),
+            label: Text(_isLoading ? "Processing..." : "Send for Approval"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuccessCard(ThemeData theme) {
+    final v = _createdVisitor!;
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.check_circle, color: Colors.green, size: 64),
+          const SizedBox(height: 16),
+          Text("Entry Approved", style: theme.textTheme.headlineMedium),
+          Text("Waiting for resident...", style: theme.textTheme.bodySmall),
+          const Divider(height: 32),
+          
+          _buildInfoRow("Visitor Name", "Guest"), // You might add Name field later
+          _buildInfoRow("Type", v.visitorType),
+          _buildInfoRow("Flat", v.flatId),
+          _buildInfoRow("Status", v.status, isStatus: true),
+          
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: _clearForm,
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.grey[800]),
+            child: const Text("New Entry"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTypeCard(String type, IconData icon) {
+    final isSelected = _selectedVisitorType == type;
+    final color = isSelected ? Theme.of(context).primaryColor : Colors.grey[200];
+    final textColor = isSelected ? Colors.white : Colors.black87;
+
+    return GestureDetector(
+      onTap: () => setState(() => _selectedVisitorType = type),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? Theme.of(context).primaryColor : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? Theme.of(context).primaryColor : Colors.grey[300]!,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: isSelected ? Colors.white : Colors.grey[600], size: 22),
+            const SizedBox(height: 4),
+            Text(
+              type, 
+              style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value, {bool isStatus = false}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey)),
+          isStatus 
+            ? Chip(label: Text(value), backgroundColor: Colors.orange[100], labelStyle: TextStyle(color: Colors.orange[900]))
+            : Text(value, style: const TextStyle(fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
   }
 }
