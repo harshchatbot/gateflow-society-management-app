@@ -8,6 +8,10 @@ import 'visitor_list_screen.dart';
 
 // UI logic
 import '../ui/app_colors.dart'; 
+import 'guard_profile_screen.dart';
+import 'guard_login_screen.dart';
+
+
 
 class GuardShellScreen extends StatefulWidget {
   final String guardId;
@@ -43,7 +47,11 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
       societyId: widget.societyId,
     ),
     const Center(child: Text("History Screen")), // Added 4th screen
-    Center(child: Text("Profile: ${widget.guardName}")), // Fixed comma & 5th screen
+    ProfileScreen( // ✅ Removed the 'onLogout' parameter
+        guardId: widget.guardId,
+        guardName: widget.guardName,
+        societyId: widget.societyId,
+    ),
   ];
 
   @override

@@ -22,62 +22,60 @@ class GlassLoader extends StatelessWidget {
         absorbing: true,
         child: ClipRect(
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12), // Slightly reduced blur for performance
             child: Container(
-              color: AppColors.bg.withOpacity(0.92),
+              color: AppColors.bg.withOpacity(0.85), // Matches your premium background
               child: Center(
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
                   decoration: BoxDecoration(
-                    color: AppColors.surface.withOpacity(0.80),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppColors.border.withOpacity(0.9)),
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: AppColors.border),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.08),
-                        blurRadius: 28,
-                        offset: const Offset(0, 18),
+                        color: AppColors.text.withOpacity(0.06),
+                        blurRadius: 30,
+                        offset: const Offset(0, 15),
                       ),
                     ],
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Netflix-ish shimmer orb
-                      Shimmer.fromColors(
-                        baseColor: AppColors.border.withOpacity(0.65),
-                        highlightColor: AppColors.text.withOpacity(0.9),
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(999),
-                          ),
+                      // 1. Brand-Themed Spinner
+                      SizedBox(
+                        width: 45,
+                        height: 45,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 5,
+                          strokeCap: StrokeCap.round, // Modern rounded edges
+                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+                          backgroundColor: AppColors.primarySoft,
                         ),
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 24),
 
+                      // 2. Themed Message
                       Text(
                         message.toUpperCase(),
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w900,
-                          letterSpacing: 6.0,
+                          letterSpacing: 3.5, // Refined letter spacing
                           color: AppColors.text,
-                          height: 1.4,
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      const SizedBox(height: 18),
 
-                      // Shimmer bar
+                      // 3. Primary Shimmer Bar
                       Shimmer.fromColors(
-                        baseColor: AppColors.border.withOpacity(0.7),
-                        highlightColor: AppColors.text.withOpacity(0.95),
+                        baseColor: AppColors.primarySoft, // Blue tint base
+                        highlightColor: AppColors.primary.withOpacity(0.4), // Primary blue highlight
                         child: Container(
-                          width: 160,
-                          height: 6,
+                          width: 120,
+                          height: 4,
                           decoration: BoxDecoration(
                             color: Colors.white,
                             borderRadius: BorderRadius.circular(999),
