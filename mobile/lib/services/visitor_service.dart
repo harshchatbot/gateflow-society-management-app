@@ -8,6 +8,7 @@ import '../models/visitor.dart';
 
 import 'package:gateflow/services/visitor_service.dart';
 import 'package:gateflow/core/result.dart' as core_result;
+import 'package:flutter/foundation.dart';
 
 
 class Result<T> {
@@ -290,6 +291,32 @@ class VisitorService {
       return Result.failure(err);
     }
   }
+
+
+
+  // Add this inside your VisitorService class
+  Future<Result<Map<String, dynamic>>> getGuardProfile(String guardId) async {
+    final path = "/api/guards/profile/$guardId"; // Adjust this to your actual endpoint
+    debugPrint("final path : ${path}");
+    try {
+      AppLogger.i("API GET $path");
+      final res = await _api.get(path);
+      AppLogger.i("API GET $path status=${res.statusCode} data=${res.data}");
+      debugPrint("final res : ${res.data}");
+      final data = _asMap(res.data);
+      return Result.success(data);
+    } on DioException catch (e) {
+      final err = _mapDioError(e);
+      return Result.failure(err);
+    } catch (e) {
+      debugPrint("catch e : ${e}");
+      return Result.failure(AppError(
+        userMessage: "Guard not found in system",
+        technicalMessage: e.toString(),
+      ));
+    }
+  }
+
 
   // ----------------------------
   // Helpers

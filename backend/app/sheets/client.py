@@ -182,37 +182,61 @@ class SheetsClient:
         return None
 
     # Guards operations
+
+    # Guards operations in client.py
     def get_guards(self, society_id: Optional[str] = None) -> List[Dict]:
         """Get all guards, optionally filtered by society_id"""
-        rows = self._get_sheet_values(settings.SHEET_GUARDS)
-        if not rows:
+        try:
+            rows = self._get_sheet_values(settings.SHEET_GUARDS)
+            if not rows or len(rows) < 2:
+                return []
+
+            headers = [str(h).strip().lower() for h in rows[0]] # Normalize headers
+            guards = []
+
+            for row in rows[1:]:
+                # Pad row to match headers length
+                if len(row) < len(headers):
+                    row.extend([""] * (len(headers) - len(row)))
+
+                guard = dict(zip(headers, row))
+
+                # SOCIETY FILTER
+                if society_id and guard.get("society_id") != society_id:
+                    continue
+
+                # ✅ SAFE ACTIVE CHECK: Converts None to "" to prevent .lower() crash
+                active_val = str(guard.get("active") or "").lower().strip()
+                if active_val != "true":
+                    continue
+
+                guards.append(guard)
+
+            return guards
+        except Exception as e:
+            print(f"ERROR in get_guards: {e}")
             return []
 
-        headers = rows[0]
-        guards = []
+    def get_guard_by_id(self, guard_id: str) -> Optional[Dict]:
+        """Get a guard by guard_id specifically"""
+        # We call the sheet values directly to avoid double-filtering
+        rows = self._get_sheet_values(settings.SHEET_GUARDS)
+        if not rows or len(rows) < 2:
+            return None
 
+        headers = [str(h).strip().lower() for h in rows[0]]
+        
         for row in rows[1:]:
             if len(row) < len(headers):
                 row.extend([""] * (len(headers) - len(row)))
-
+            
             guard = dict(zip(headers, row))
-
-            if society_id and guard.get("society_id") != society_id:
-                continue
-
-            if guard.get("active", "").lower() != "true":
-                continue
-
-            guards.append(guard)
-
-        return guards
-
-    def get_guard_by_id(self, guard_id: str) -> Optional[Dict]:
-        """Get a guard by guard_id"""
-        guards = self.get_guards()
-        for guard in guards:
-            if guard.get("guard_id") == guard_id:
-                return guard
+            
+            # Check ID and Active status
+            if str(guard.get("guard_id")).strip() == str(guard_id).strip():
+                active_val = str(guard.get("active") or "").lower().strip()
+                if active_val == "true":
+                    return guard
         return None
 
     def get_guard_by_pin(self, society_id: str, pin: str) -> Optional[Dict]:
