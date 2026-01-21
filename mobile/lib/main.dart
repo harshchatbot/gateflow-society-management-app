@@ -3,23 +3,20 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/theme.dart';
 import 'core/storage.dart';
 import 'screens/guard_login_screen.dart';
-import 'screens/new_visitor_screen.dart';
+import 'screens/guard_shell_screen.dart'; // Correct relative path
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: "assets/.env"); // Ensure path is correct for your project
+  await dotenv.load(fileName: "assets/.env"); 
   
-  // 1. Get Session Map
   final session = await Storage.getGuardSession();
   
-  // 2. Determine Start Screen
   Widget startScreen;
   if (session != null) {
-    // Extract values from your Map
-    startScreen = NewVisitorScreen(
-      guardId: session['guard_id']!,
-      guardName: session['guard_name']!,
-      societyId: session['society_id']!,
+    startScreen = GuardShellScreen(
+      guardId: session['guard_id'] ?? 'Unknown',
+      guardName: session['guard_name'] ?? 'Guard',
+      societyId: session['society_id'] ?? 'Society',
     );
   } else {
     startScreen = const GuardLoginScreen();
@@ -37,7 +34,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'GateFlow',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(), // Uses the new Salesforce Theme
+      theme: AppTheme.light(), 
       home: initialScreen,
     );
   }
