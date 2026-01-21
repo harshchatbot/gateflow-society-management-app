@@ -6,6 +6,9 @@ import 'package:gateflow/services/visitor_service.dart';
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
 
+// ✅ Phosphor icon mapping (single source)
+import '../ui/app_icons.dart';
+
 class VisitorDetailsScreen extends StatefulWidget {
   final Visitor visitor;
   final String guardId;
@@ -74,17 +77,28 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
     return AppColors.textMuted;
   }
 
+  // ✅ Phosphor icons for visitor type
   IconData _typeIcon(String type) {
     switch (type.toUpperCase()) {
       case "DELIVERY":
-        return Icons.local_shipping_outlined;
+        return AppIcons.delivery;
       case "CAB":
-        return Icons.local_taxi_outlined;
+        return AppIcons.cab;
       case "GUEST":
-        return Icons.person_outline_rounded;
+        return AppIcons.guest;
       default:
-        return Icons.badge_outlined;
+        return AppIcons.visitor;
     }
+  }
+
+  // ✅ Optional: Phosphor icons for status chips
+  IconData _statusIcon(String status) {
+    final s = status.toUpperCase();
+    if (s.contains("APPROV")) return AppIcons.approved;
+    if (s.contains("REJECT")) return AppIcons.rejected;
+    if (s.contains("LEAVE")) return AppIcons.leave;
+    if (s.contains("PENDING")) return AppIcons.pending;
+    return AppIcons.more;
   }
 
   Widget _photoHeader() {
@@ -117,7 +131,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                   color: AppColors.bg,
                   child: Center(
                     child: Icon(
-                      Icons.image_not_supported_outlined,
+                      AppIcons.more, // ✅ replaces image_not_supported
                       color: AppColors.textMuted.withOpacity(0.8),
                       size: 40,
                     ),
@@ -183,7 +197,11 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                     ),
                   ),
                   const Spacer(),
-                  _StatusChip(status: _visitor.status, color: _statusColor(_visitor.status)),
+                  _StatusChip(
+                    status: _visitor.status,
+                    color: _statusColor(_visitor.status),
+                    icon: _statusIcon(_visitor.status), // ✅ added icon
+                  ),
                 ],
               ),
             ),
@@ -223,7 +241,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
       ),
       child: Row(
         children: [
-          Icon(Icons.error_outline, color: AppColors.error.withOpacity(0.9)),
+          Icon(AppIcons.reject, color: AppColors.error.withOpacity(0.9)), // ✅
           const SizedBox(width: 10),
           Expanded(
             child: Text(
@@ -237,7 +255,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
           ),
           IconButton(
             onPressed: () => setState(() => _error = null),
-            icon: const Icon(Icons.close_rounded),
+            icon: const Icon(AppIcons.more), // ✅ (or AppIcons.back if you prefer)
             color: AppColors.error.withOpacity(0.9),
             tooltip: "Dismiss",
           ),
@@ -250,12 +268,6 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
   Widget build(BuildContext context) {
     final displayFlat = _visitor.flatNo.isNotEmpty ? _visitor.flatNo : _visitor.flatId;
     final statusColor = _statusColor(_visitor.status);
-
-    // No functionality changed:
-    // - Same _setStatus calls
-    // - Same note usage
-    // - Same data shown (with nicer layout)
-    // - Loader replaced by GlassLoader
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -306,7 +318,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "$displayFlat",
+                      displayFlat,
                       style: const TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
@@ -316,7 +328,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(Icons.phone_outlined, size: 16, color: AppColors.text2),
+                        Icon(AppIcons.phone, size: 16, color: AppColors.text2), // ✅
                         const SizedBox(width: 6),
                         Text(
                           _visitor.visitorPhone.isEmpty ? "No phone" : _visitor.visitorPhone,
@@ -334,14 +346,21 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                             borderRadius: BorderRadius.circular(999),
                             border: Border.all(color: statusColor.withOpacity(0.30)),
                           ),
-                          child: Text(
-                            _visitor.status,
-                            style: TextStyle(
-                              color: statusColor,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 12,
-                              letterSpacing: 0.2,
-                            ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(_statusIcon(_visitor.status), size: 14, color: statusColor), // ✅
+                              const SizedBox(width: 6),
+                              Text(
+                                _visitor.status,
+                                style: TextStyle(
+                                  color: statusColor,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 12,
+                                  letterSpacing: 0.2,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -375,14 +394,15 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                           fontWeight: FontWeight.w700,
                           color: AppColors.text,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           hintText: "Add a note for the resident (optional)…",
-                          hintStyle: TextStyle(
+                          hintStyle: const TextStyle(
                             color: AppColors.textMuted,
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          prefixIcon: Icon(AppIcons.note, color: AppColors.text2), // ✅
                         ),
                       ),
                     ),
@@ -412,8 +432,9 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                         Expanded(
                           child: SizedBox(
                             height: 52,
-                            child: ElevatedButton(
+                            child: ElevatedButton.icon(
                               onPressed: () => _setStatus("APPROVED"),
+                              icon: const Icon(AppIcons.approve, size: 18), // ✅
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.success,
                                 foregroundColor: Colors.white,
@@ -422,7 +443,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                                   borderRadius: BorderRadius.circular(16),
                                 ),
                               ),
-                              child: const Text(
+                              label: const Text(
                                 "Approve",
                                 style: TextStyle(fontWeight: FontWeight.w900),
                               ),
@@ -433,8 +454,9 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                         Expanded(
                           child: SizedBox(
                             height: 52,
-                            child: OutlinedButton(
+                            child: OutlinedButton.icon(
                               onPressed: () => _setStatus("REJECTED"),
+                              icon: const Icon(AppIcons.reject, size: 18), // ✅
                               style: OutlinedButton.styleFrom(
                                 foregroundColor: AppColors.error,
                                 side: BorderSide(color: AppColors.error.withOpacity(0.28)),
@@ -443,7 +465,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                                 ),
                                 backgroundColor: AppColors.surface,
                               ),
-                              child: const Text(
+                              label: const Text(
                                 "Reject",
                                 style: TextStyle(fontWeight: FontWeight.w900),
                               ),
@@ -456,8 +478,9 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                     SizedBox(
                       width: double.infinity,
                       height: 52,
-                      child: OutlinedButton(
+                      child: OutlinedButton.icon(
                         onPressed: () => _setStatus("LEAVE_AT_GATE"),
+                        icon: const Icon(AppIcons.leave, size: 18), // ✅
                         style: OutlinedButton.styleFrom(
                           foregroundColor: AppColors.warning,
                           side: BorderSide(color: AppColors.warning.withOpacity(0.28)),
@@ -466,7 +489,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                           ),
                           backgroundColor: AppColors.surface,
                         ),
-                        child: const Text(
+                        label: const Text(
                           "Leave at Gate",
                           style: TextStyle(fontWeight: FontWeight.w900),
                         ),
@@ -494,10 +517,12 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
 class _StatusChip extends StatelessWidget {
   final String status;
   final Color color;
+  final IconData icon; // ✅ added
 
   const _StatusChip({
     required this.status,
     required this.color,
+    required this.icon,
   });
 
   @override
@@ -509,14 +534,21 @@ class _StatusChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: AppColors.border.withOpacity(0.9)),
       ),
-      child: Text(
-        status.toUpperCase(),
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w900,
-          color: color,
-          letterSpacing: 0.25,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: color), // ✅
+          const SizedBox(width: 6),
+          Text(
+            status.toUpperCase(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+              color: color,
+              letterSpacing: 0.25,
+            ),
+          ),
+        ],
       ),
     );
   }

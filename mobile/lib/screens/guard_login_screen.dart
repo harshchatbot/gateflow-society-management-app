@@ -2,11 +2,21 @@ import 'dart:ui'; // kept (existing blur overlay uses ImageFilter)
 import 'package:flutter/material.dart';
 import '../widgets/powered_by_footer.dart';
 import '../core/storage.dart';
-import 'new_visitor_screen.dart';
+//import 'new_visitor_screen.dart';
+import 'guard_dashboard_screen.dart';
+
 
 // Premium palette + reusable glass loader (doesn't change functionality)
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
+import '../ui/app_icons.dart';
+
+import 'guard_dashboard_screen.dart';
+import 'new_visitor_screen.dart';
+import 'visitor_list_screen.dart';
+import 'guard_shell_screen.dart';
+
+
 
 class GuardLoginScreen extends StatefulWidget {
   const GuardLoginScreen({super.key});
@@ -57,13 +67,15 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => NewVisitorScreen(
+          builder: (_) => GuardShellScreen(
             guardId: guardId,
             guardName: guardName,
             societyId: societyId,
           ),
         ),
       );
+
+
     }
   }
 
@@ -121,7 +133,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                               ],
                             ),
                             child: const Icon(
-                              Icons.security_rounded,
+                              AppIcons.guard,
                               size: 34,
                               color: AppColors.primary,
                             ),

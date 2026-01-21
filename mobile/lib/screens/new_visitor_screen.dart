@@ -16,6 +16,7 @@ import 'visitor_list_screen.dart';
 // New UI system
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
+import '../ui/app_icons.dart';
 
 class NewVisitorScreen extends StatefulWidget {
   final String guardId;
@@ -217,7 +218,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                   ),
                   backgroundColor: AppColors.surface,
                 ),
-                icon: const Icon(Icons.camera_alt_outlined),
+                icon: const Icon(AppIcons.camera),
                 label: const Text(
                   "Take Photo",
                   style: TextStyle(fontWeight: FontWeight.w900),
@@ -375,7 +376,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               decoration: const InputDecoration(
                 labelText: "Flat No",
                 hintText: "e.g. A-101",
-                prefixIcon: Icon(Icons.home_outlined, color: AppColors.text2),
+                prefixIcon: Icon(AppIcons.flat, color: AppColors.text2),
                 border: InputBorder.none,
                 contentPadding:
                     EdgeInsets.symmetric(horizontal: 14, vertical: 14),
@@ -397,11 +398,11 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
           const SizedBox(height: 10),
           Row(
             children: [
-              _buildTypePill("GUEST", Icons.person_outline),
+              _buildTypePill("GUEST", AppIcons.guest),
               const SizedBox(width: 10),
-              _buildTypePill("DELIVERY", Icons.local_shipping_outlined),
+              _buildTypePill("DELIVERY", AppIcons.delivery),
               const SizedBox(width: 10),
-              _buildTypePill("CAB", Icons.local_taxi_outlined),
+              _buildTypePill("CAB", AppIcons.cab),
             ],
           ),
           const SizedBox(height: 14),
@@ -425,7 +426,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               ),
               decoration: const InputDecoration(
                 labelText: "Phone Number",
-                prefixIcon: Icon(Icons.phone_outlined, color: AppColors.text2),
+                prefixIcon: Icon(AppIcons.phone, color: AppColors.text2),
                 counterText: "",
                 border: InputBorder.none,
                 contentPadding:
