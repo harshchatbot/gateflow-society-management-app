@@ -5,7 +5,10 @@ import '../ui/floating_bottom_nav.dart'; // the file where SocietyBottomNav live
 import 'resident_dashboard_screen.dart';
 import 'resident_approvals_screen.dart';
 import 'resident_history_screen.dart';
+import 'resident_complaints_list_screen.dart';
 import 'resident_profile_screen.dart';
+import 'notice_board_screen.dart';
+import '../ui/app_colors.dart';
 
 class ResidentShellScreen extends StatefulWidget {
   final String residentId;
@@ -45,6 +48,16 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
       societyId: widget.societyId,
       flatNo: widget.flatNo,
     ),
+    ResidentComplaintsListScreen(
+      residentId: widget.residentId,
+      societyId: widget.societyId,
+      flatNo: widget.flatNo,
+    ),
+    NoticeBoardScreen(
+      societyId: widget.societyId,
+      themeColor: AppColors.success, // Green theme for residents
+      useScaffold: false, // Don't use Scaffold when used as tab
+    ),
     ResidentProfileScreen(
       residentId: widget.residentId,
       residentName: widget.residentName,
@@ -65,6 +78,8 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
           FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
           FloatingNavItem(icon: Icons.verified_rounded, label: "Approvals"),
           FloatingNavItem(icon: Icons.history_rounded, label: "History"),
+          FloatingNavItem(icon: Icons.report_problem_rounded, label: "Complaints"),
+          FloatingNavItem(icon: Icons.notifications_rounded, label: "Notices"),
           FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
         ],
       ),

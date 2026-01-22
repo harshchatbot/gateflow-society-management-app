@@ -6,6 +6,7 @@ import 'guard_dashboard_screen.dart';
 import 'new_visitor_screen.dart';
 import 'visitor_list_screen.dart';
 import 'guard_history_screen.dart';
+import 'notice_board_screen.dart';
 
 // UI logic
 import '../ui/app_colors.dart'; 
@@ -47,6 +48,11 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
       societyId: widget.societyId,
     ),
     GuardHistoryScreen(guardId: widget.guardId),
+    NoticeBoardScreen(
+      societyId: widget.societyId,
+      themeColor: AppColors.primary, // Blue theme for guards
+      useScaffold: false, // Don't use Scaffold when used as tab
+    ),
     ProfileScreen( // ✅ Removed the 'onLogout' parameter
         guardId: widget.guardId,
         guardName: widget.guardName,
@@ -75,6 +81,7 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
                 FloatingNavItem(icon: Icons.groups_rounded, label: "Visitors"),
                 FloatingNavItem(icon: Icons.qr_code_scanner, label: "Entry"),
                 FloatingNavItem(icon: Icons.history_rounded, label: "History"),
+                FloatingNavItem(icon: Icons.notifications_rounded, label: "Notices"),
                 FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
               ],
             ),

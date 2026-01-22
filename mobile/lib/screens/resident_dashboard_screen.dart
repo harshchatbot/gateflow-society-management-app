@@ -4,7 +4,9 @@ import '../ui/glass_loader.dart';
 import '../services/resident_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
+import 'resident_complaint_screen.dart';
 import 'resident_shell_screen.dart';
+import 'notice_board_screen.dart';
 
 /// Resident Dashboard Screen
 /// 
@@ -339,12 +341,67 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           },
         ),
         _buildActionCard(
+          icon: Icons.report_problem_rounded,
+          title: "Raise Complaint",
+          subtitle: "Report an issue",
+          color: AppColors.error,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ResidentComplaintScreen(
+                  residentId: widget.residentId,
+                  residentName: widget.residentName,
+                  societyId: widget.societyId,
+                  flatNo: widget.flatNo,
+                ),
+              ),
+            );
+          },
+        ),
+        _buildActionCard(
+          icon: Icons.inbox_rounded,
+          title: "My Complaints",
+          subtitle: "View all complaints",
+          color: AppColors.primary,
+          onTap: () {
+            // Navigate to complaints tab - handled by shell
+            // For now, show snackbar
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text("Use the Complaints tab below to view your complaints"),
+                backgroundColor: AppColors.success,
+                behavior: SnackBarBehavior.floating,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                margin: const EdgeInsets.all(16),
+              ),
+            );
+          },
+        ),
+        _buildActionCard(
           icon: Icons.history_rounded,
           title: "View History",
           subtitle: "Past decisions",
           color: AppColors.success,
           onTap: () {
             // Navigate to history tab - handled by shell
+          },
+        ),
+        _buildActionCard(
+          icon: Icons.notifications_rounded,
+          title: "Notice Board",
+          subtitle: "Society announcements",
+          color: AppColors.warning,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NoticeBoardScreen(
+                  societyId: widget.societyId,
+                  themeColor: AppColors.success,
+                ),
+              ),
+            );
           },
         ),
       ],

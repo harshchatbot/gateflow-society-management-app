@@ -4,6 +4,8 @@ import '../ui/glass_loader.dart';
 import '../services/admin_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
+import 'notice_board_screen.dart';
+import 'admin_manage_notices_screen.dart';
 
 /// Admin Dashboard Screen
 /// 
@@ -13,12 +15,14 @@ class AdminDashboardScreen extends StatefulWidget {
   final String adminId;
   final String adminName;
   final String societyId;
+  final Function(int)? onTabNavigate; // Callback to navigate to tabs
 
   const AdminDashboardScreen({
     super.key,
     required this.adminId,
     required this.adminName,
     required this.societyId,
+    this.onTabNavigate,
   });
 
   @override
@@ -38,6 +42,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     _loadStats();
+  }
+
+  void _navigateToTab(int index) {
+    if (widget.onTabNavigate != null) {
+      widget.onTabNavigate!(index);
+    } else {
+      // Fallback: Try to find AdminShellScreen in the widget tree
+      final context = this.context;
+      // Navigate using a key or context - for now show message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Navigate to tab $index"),
+          backgroundColor: AppColors.admin,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    }
   }
 
   Future<void> _loadStats() async {
@@ -135,19 +158,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Text("Welcome back,", style: TextStyle(color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.w600, fontSize: 14)),
-              Text(widget.adminName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 24)),
+              Text(
+                "Welcome back,",
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                widget.adminName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 24,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.settings_rounded, color: Colors.white),
+          icon: const Icon(Icons.person_rounded, color: Colors.white),
           onPressed: () {
-            // TODO: Admin settings
+            // Navigate to profile - handled by parent shell
+            // For now, show a message
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text("Admin settings coming soon!"),
+                content: const Text("Use the Profile tab below to view your account"),
                 backgroundColor: AppColors.admin,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -176,12 +220,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             child: const Icon(Icons.business_rounded, color: Colors.white),
           ),
           const SizedBox(width: 15),
-          Expanded(
+              Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(widget.societyId, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18)),
-                const Text("Admin Portal Active", style: TextStyle(color: Colors.white70, fontSize: 12)),
+                Text(
+                  widget.societyId,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 18,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  "Admin Portal Active",
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
@@ -199,7 +262,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       crossAxisCount: 2,
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 1.5,
+      childAspectRatio: 1.4, // Slightly adjusted to prevent overflow
       children: [
         _StatCard(
           label: "Residents",
@@ -248,7 +311,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       crossAxisCount: 2,
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 1.8,
+      childAspectRatio: 1.3, // Adjusted to give more height for text
       children: [
         _ActionItem(
           icon: Icons.people_rounded,
@@ -256,16 +319,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           subtitle: "View & manage residents",
           color: AppColors.admin,
           onTap: () {
-            // TODO: Navigate to manage residents
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text("Manage Residents coming soon!"),
-                backgroundColor: AppColors.admin,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.all(16),
-              ),
-            );
+            // Navigate to Residents tab (index 1)
+            _navigateToTab(1);
           },
         ),
         _ActionItem(
@@ -274,16 +329,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           subtitle: "View & manage guards",
           color: AppColors.primary,
           onTap: () {
-            // TODO: Navigate to manage guards
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text("Manage Guards coming soon!"),
-                backgroundColor: AppColors.admin,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.all(16),
-              ),
-            );
+            // Navigate to Guards tab (index 2)
+            _navigateToTab(2);
           },
         ),
         _ActionItem(
@@ -292,10 +339,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           subtitle: "View & manage flats",
           color: AppColors.success,
           onTap: () {
-            // TODO: Navigate to manage flats
+            // Navigate to Flats - show message for now (no flats screen yet)
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: const Text("Manage Flats coming soon!"),
+                content: const Text("Flats management coming soon!"),
                 backgroundColor: AppColors.admin,
                 behavior: SnackBarBehavior.floating,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -305,21 +352,33 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           },
         ),
         _ActionItem(
-          icon: Icons.history_rounded,
-          title: "Visitor Logs",
-          subtitle: "View all visitor entries",
+          icon: Icons.report_problem_rounded,
+          title: "Manage Complaints",
+          subtitle: "View & resolve complaints",
+          color: AppColors.error,
+          onTap: () {
+            // Navigate to Complaints tab (index 3)
+            _navigateToTab(3);
+          },
+        ),
+        _ActionItem(
+          icon: Icons.notifications_rounded,
+          title: "Notice Board",
+          subtitle: "View & manage notices",
           color: AppColors.warning,
           onTap: () {
-            // TODO: Navigate to visitor logs
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text("Visitor Logs coming soon!"),
-                backgroundColor: AppColors.admin,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.all(16),
-              ),
-            );
+            // Navigate to Notices tab (index 4)
+            _navigateToTab(4);
+          },
+        ),
+        _ActionItem(
+          icon: Icons.edit_note_rounded,
+          title: "Manage Notices",
+          subtitle: "Create & edit notices",
+          color: AppColors.admin,
+          onTap: () {
+            // Navigate to Notices tab (index 4) - manage notices can be accessed from there
+            _navigateToTab(4);
           },
         ),
       ],
@@ -358,11 +417,35 @@ class _StatCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: color, size: 24),
           const SizedBox(height: 10),
-          Text(value, style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 20)),
-          Text(label, style: const TextStyle(color: AppColors.text2, fontWeight: FontWeight.bold, fontSize: 11)),
+          Flexible(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: AppColors.text,
+                fontWeight: FontWeight.w900,
+                fontSize: 20,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: AppColors.text2,
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+              ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
         ],
       ),
     );
@@ -405,7 +488,8 @@ class _ActionItem extends StatelessWidget {
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.all(10),
@@ -415,23 +499,29 @@ class _ActionItem extends StatelessWidget {
               ),
               child: Icon(icon, color: color, size: 24),
             ),
-            const SizedBox(height: 12),
+            const Spacer(),
             Text(
               title,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
                 color: AppColors.text,
+                height: 1.2,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Text(
               subtitle,
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 12,
                 color: AppColors.text2,
                 fontWeight: FontWeight.w500,
+                height: 1.2,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

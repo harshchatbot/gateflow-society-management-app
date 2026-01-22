@@ -96,6 +96,26 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
           _error = result.error ?? "Failed to load guards";
         });
         AppLogger.w("Failed to load guards: ${result.error}");
+        // Show error snackbar for better visibility
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                result.error ?? "Failed to load guards",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.all(16),
+              action: SnackBarAction(
+                label: "Retry",
+                textColor: Colors.white,
+                onPressed: _loadGuards,
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       AppLogger.e("Error loading guards", error: e);
@@ -104,6 +124,23 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
           _isLoading = false;
           _error = "Connection error. Please try again.";
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              "Connection error. Please try again.",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+            action: SnackBarAction(
+              label: "Retry",
+              textColor: Colors.white,
+              onPressed: _loadGuards,
+            ),
+          ),
+        );
       }
     }
   }

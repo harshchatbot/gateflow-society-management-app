@@ -4,6 +4,7 @@ import '../services/visitor_service.dart';
 import '../ui/glass_loader.dart';
 import '../core/storage.dart';          // Added missing import
 import '../models/visitor.dart';      // Added missing import
+import 'notice_board_screen.dart';
 
 class GuardDashboardScreen extends StatefulWidget {
   final String guardId;
@@ -251,7 +252,22 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
       children: [
         _QuickAction(label: "New Entry", icon: Icons.person_add_rounded, tint: AppColors.primary, onTap: widget.onTapNewEntry),
         _QuickAction(label: "Visitors", icon: Icons.groups_rounded, tint: AppColors.success, onTap: widget.onTapVisitors),
-        _QuickAction(label: "Deliveries", icon: Icons.local_shipping_rounded, tint: AppColors.warning),
+        _QuickAction(
+          label: "Notices",
+          icon: Icons.notifications_rounded,
+          tint: AppColors.warning,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => NoticeBoardScreen(
+                  societyId: widget.societyId,
+                  themeColor: AppColors.primary,
+                ),
+              ),
+            );
+          },
+        ),
       ],
     );
   }

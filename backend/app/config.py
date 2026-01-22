@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     SHEET_VISITORS: str = "Visitors"
     SHEET_RESIDENTS: str = "Residents"
     SHEET_ADMINS: str = "Admins"
+    SHEET_COMPLAINTS: str = "Complaints"
+    SHEET_NOTICES: str = "Notices"
 
     GOOGLE_SERVICE_ACCOUNT_FILE: str = "credentials.json"
 

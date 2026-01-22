@@ -135,6 +135,60 @@ class SheetsClient:
         except HttpError as e:
             raise Exception(f"Error updating sheet {sheet_name}: {str(e)}")
 
+    def _delete_row(self, sheet_name: str, row_index: int) -> Dict:
+        """
+        Delete a row from a sheet
+        row_index: 1-based row index (1 = header row, 2 = first data row, etc.)
+        """
+        try:
+            # Get sheet ID
+            sheet_metadata = (
+                self.service.spreadsheets()
+                .get(spreadsheetId=self.spreadsheet_id)
+                .execute()
+            )
+            
+            sheet_id = None
+            for sheet in sheet_metadata.get("sheets", []):
+                if sheet["properties"]["title"] == sheet_name:
+                    sheet_id = sheet["properties"]["sheetId"]
+                    break
+            
+            if sheet_id is None:
+                raise ValueError(f"Sheet '{sheet_name}' not found")
+            
+            # Delete the row using batchUpdate
+            request_body = {
+                "requests": [
+                    {
+                        "deleteDimension": {
+                            "range": {
+                                "sheetId": sheet_id,
+                                "dimension": "ROWS",
+                                "startIndex": row_index - 1,  # 0-based index
+                                "endIndex": row_index,  # endIndex is exclusive
+                            }
+                        }
+                    }
+                ]
+            }
+            
+            result = (
+                self.service.spreadsheets()
+                .batchUpdate(
+                    spreadsheetId=self.spreadsheet_id,
+                    body=request_body,
+                )
+                .execute()
+            )
+            
+            logger.info(f"Deleted row {row_index} from sheet '{sheet_name}'")
+            return result
+        except HttpError as e:
+            raise Exception(f"Error deleting row from sheet {sheet_name}: {str(e)}")
+        except Exception as e:
+            raise Exception(f"Error deleting row from sheet {sheet_name}: {str(e)}")
+
     # Flats operations
     def get_flats(self, society_id: Optional[str] = None) -> List[Dict]:
         """Get all flats, optionally filtered by society_id"""

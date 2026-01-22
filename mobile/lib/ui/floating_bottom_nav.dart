@@ -104,9 +104,9 @@ class SocietyBottomNav extends StatelessWidget {
   }
 
   List<Widget> _buildRowTabs() {
-    // If center button is OFF -> show first 4 items normally (or all items if less)
+    // If center button is OFF -> show all items (up to 6 for admin/resident)
     if (!showCenterButton) {
-      final count = items.length >= 4 ? 4 : items.length;
+      final count = items.length >= 6 ? 6 : items.length;
       return List.generate(count, (i) => _buildTab(i));
     }
 
