@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'admin_dashboard_screen.dart';
+import 'admin_manage_residents_screen.dart';
+import 'admin_manage_guards_screen.dart';
 import '../ui/app_colors.dart';
 import '../ui/floating_bottom_nav.dart';
 
@@ -39,9 +41,14 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
             adminName: widget.adminName,
             societyId: widget.societyId,
           ),
-          // TODO: Add other admin screens here
-          Center(child: Text("Manage Residents (Coming Soon)", style: TextStyle(color: AppColors.text2))),
-          Center(child: Text("Manage Guards (Coming Soon)", style: TextStyle(color: AppColors.text2))),
+          AdminManageResidentsScreen(
+            adminId: widget.adminId,
+            societyId: widget.societyId,
+          ),
+          AdminManageGuardsScreen(
+            adminId: widget.adminId,
+            societyId: widget.societyId,
+          ),
           Center(child: Text("Visitor Logs (Coming Soon)", style: TextStyle(color: AppColors.text2))),
         ],
       ),
@@ -50,6 +57,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         onTap: (index) {
           setState(() => _currentIndex = index);
         },
+        showCenterButton: false, // No center button for admin
         items: const [
           FloatingNavItem(icon: Icons.dashboard_rounded, label: "Dashboard"),
           FloatingNavItem(icon: Icons.people_rounded, label: "Residents"),
