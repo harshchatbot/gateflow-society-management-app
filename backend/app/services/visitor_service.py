@@ -200,6 +200,93 @@ class VisitorService:
 
         return self._dict_to_visitor_response(visitor_data)
 
+
+
+    def _pick_resident_phone(flat: dict) -> Optional[str]:
+        """
+        Flat dict coming from Google Sheets may have different key names
+        depending on your mapping. Try all likely keys safely.
+        """
+        if not flat:
+            return None
+
+        candidates = [
+            flat.get("resident_phone"),
+            flat.get("residentPhone"),
+            flat.get("Resident Phone"),
+            flat.get("ResidentPhone"),
+            flat.get("phone"),
+            flat.get("Phone"),
+            flat.get("mobile"),
+            flat.get("Mobile"),
+        ]
+
+        for p in candidates:
+            if isinstance(p, str) and p.strip():
+                return p.strip()
+
+        return None
+
+
+    async def _best_effort_send_whatsapp_approval(
+        visitor_service,
+        society_id: str,
+        flat_id: Optional[str],
+        flat_no: Optional[str],
+        visitor: VisitorResponse,
+    ):
+        """
+        Best-effort WhatsApp notification to resident.
+
+        - VisitorResponse doesn't contain resident_phone in your schema,
+        so we resolve the flat again using existing _resolve_flat().
+        - Does NOT raise errors; it will not break existing create flows.
+        """
+        try:
+            # ✅ Resolve flat to get resident phone
+            flat = visitor_service._resolve_flat(
+                society_id=society_id,
+                flat_id=flat_id,
+                flat_no=flat_no,
+            )
+
+            resident_phone = _pick_resident_phone(flat)
+            if not resident_phone:
+                logger.warning(
+                    f"WHATSAPP_SKIP | resident_phone not found in flat dict keys={list(flat.keys())}"
+                )
+                return
+
+            resident_phone = _normalize_wa_phone(resident_phone)
+
+            msg = (
+                f"GateFlow: New entry request\n"
+                f"Flat: {visitor.flat_no}\n"
+                f"Type: {visitor.visitor_type}\n"
+                f"Visitor: {visitor.visitor_phone}\n"
+                f"Request ID: {visitor.visitor_id}\n\n"
+                f"Reply YES to approve or NO to reject."
+            )
+
+            wa = get_whatsapp_service()
+            await wa.send_text(to_phone_e164_no_plus=resident_phone, text=msg)
+            logger.info(f"WHATSAPP_SENT | to={resident_phone} visitor_id={visitor.visitor_id}")
+
+        except HTTPException as he:
+            # Flat resolve can raise HTTPException; don't break create flow
+            logger.warning(
+                f"WHATSAPP_SKIP_HTTP | visitor_id={getattr(visitor,'visitor_id','UNKNOWN')} "
+                f"status={he.status_code} detail={he.detail}"
+            )
+        except Exception as e:
+            # Best effort only
+            logger.warning(
+                f"WHATSAPP_SEND_FAILED | visitor_id={getattr(visitor,'visitor_id','UNKNOWN')} err={str(e)}"
+            )
+
+
+
+
     def create_visitor_with_photo(
         self,
         flat_id: Optional[str],

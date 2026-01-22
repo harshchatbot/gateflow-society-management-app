@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     SHEET_FLATS: str = "Flats"
     SHEET_GUARDS: str = "Guards"
     SHEET_VISITORS: str = "Visitors"
+    SHEET_RESIDENTS: str = "Residents"
 
     GOOGLE_SERVICE_ACCOUNT_FILE: str = "credentials.json"
 
@@ -27,6 +28,14 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
+
+
+    # ✅ Add WhatsApp fields (so env vars are accepted)
+    WHATSAPP_TOKEN: Optional[str] = None
+    WHATSAPP_PHONE_NUMBER_ID: Optional[str] = None
+    WHATSAPP_API_VERSION: Optional[str] = "v21.0"
+    WHATSAPP_WABA: Optional[str] = None
+    WHATSAPP_VERIFY_TOKEN: Optional[str] = None    
 
 
 settings = Settings()

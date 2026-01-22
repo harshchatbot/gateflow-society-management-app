@@ -1,40 +1,68 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'core/theme.dart';
 import 'core/storage.dart';
-import 'screens/guard_login_screen.dart';
-import 'screens/guard_shell_screen.dart'; // Correct relative path
+
+import 'screens/guard_shell_screen.dart';
+import 'screens/resident_shell_screen.dart';
+import 'screens/role_select_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await dotenv.load(fileName: "assets/.env"); 
-  
-  final session = await Storage.getGuardSession();
-  
+
+  // Load env (API base URL etc.)
+  await dotenv.load(fileName: "assets/.env");
+
+  // Check saved sessions
+  final residentSession = await Storage.getResidentSession();
+  final guardSession = await Storage.getGuardSession();
+
   Widget startScreen;
-  if (session != null) {
-    startScreen = GuardShellScreen(
-      guardId: session['guard_id'] ?? 'Unknown',
-      guardName: session['guard_name'] ?? 'Guard',
-      societyId: session['society_id'] ?? 'Society',
+
+  // 1️⃣ Resident session has highest priority
+  if (residentSession != null) {
+    startScreen = ResidentShellScreen(
+      residentId: residentSession.residentId,
+      residentName: residentSession.residentName,
+      societyId: residentSession.societyId,
+      flatNo: residentSession.flatNo,
     );
-  } else {
-    startScreen = const GuardLoginScreen();
   }
-  
+  // 2️⃣ Guard session
+  else if (guardSession != null) {
+    startScreen = GuardShellScreen(
+      guardId: guardSession.guardId,
+      guardName: guardSession.guardName.isNotEmpty
+          ? guardSession.guardName
+          : "Guard",
+      societyId: guardSession.societyId.isNotEmpty
+          ? guardSession.societyId
+          : "Society",
+    );
+  }
+  // 3️⃣ No session → role selection
+  else {
+    startScreen = const RoleSelectScreen();
+  }
+
   runApp(MyApp(initialScreen: startScreen));
 }
 
 class MyApp extends StatelessWidget {
   final Widget initialScreen;
-  const MyApp({super.key, required this.initialScreen});
+
+  const MyApp({
+    super.key,
+    required this.initialScreen,
+  });
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'GateFlow',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(), 
+      theme: AppTheme.light(),
       home: initialScreen,
     );
   }

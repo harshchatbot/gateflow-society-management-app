@@ -16,11 +16,23 @@ class SocietyBottomNav extends StatelessWidget {
   final ValueChanged<int> onTap;
   final List<FloatingNavItem> items;
 
+  // NEW (backward-compatible)
+  final bool showCenterButton;
+  final int centerIndex;
+  final IconData centerIcon;
+  final double centerGapWidth;
+
   const SocietyBottomNav({
     super.key,
     required this.currentIndex,
     required this.onTap,
     required this.items,
+
+    // Defaults keep your Guard behaviour unchanged
+    this.showCenterButton = true,
+    this.centerIndex = 2,
+    this.centerIcon = Icons.qr_code_scanner,
+    this.centerGapWidth = 70,
   });
 
   @override
@@ -31,7 +43,7 @@ class SocietyBottomNav extends StatelessWidget {
         alignment: Alignment.bottomCenter,
         clipBehavior: Clip.none,
         children: [
-          // 1. The Glass Background Bar
+          // 1) Glass Background Bar
           ClipRRect(
             borderRadius: BorderRadius.circular(30),
             child: BackdropFilter(
@@ -52,54 +64,68 @@ class SocietyBottomNav extends StatelessWidget {
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildTab(0), // Home
-                    _buildTab(1), // Visitors
-                    const SizedBox(width: 70), // Center Gap
-                    _buildTab(3), // Profile (Index 3 in your list)
-                  ],
+                  children: _buildRowTabs(),
                 ),
               ),
             ),
           ),
 
-          // 2. The Floating Action Button (Index 2 in your list)
-          Positioned(
-            bottom: 25,
-            child: GestureDetector(
-              onTap: () => onTap(2), // Switches to Index 2 (NewVisitorScreen)
-              child: Container(
-                width: 65,
-                height: 65,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFF2F6BFF), Color(0xFF0047FF)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF2F6BFF).withOpacity(0.4),
-                      blurRadius: 15,
-                      offset: const Offset(0, 8),
+          // 2) Center FAB (optional)
+          if (showCenterButton)
+            Positioned(
+              bottom: 25,
+              child: GestureDetector(
+                onTap: () => onTap(centerIndex),
+                child: Container(
+                  width: 65,
+                  height: 65,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF2F6BFF), Color(0xFF0047FF)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
                     ),
-                  ],
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF2F6BFF).withOpacity(0.4),
+                        blurRadius: 15,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Icon(centerIcon, color: Colors.white, size: 30),
                 ),
-                child: const Icon(Icons.qr_code_scanner, color: Colors.white, size: 30),
               ),
             ),
-          ),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildRowTabs() {
+    // If center button is OFF -> show first 4 items normally (or all items if less)
+    if (!showCenterButton) {
+      final count = items.length >= 4 ? 4 : items.length;
+      return List.generate(count, (i) => _buildTab(i));
+    }
+
+    // If center button is ON (guard style)
+    // Layout stays exactly same: 0,1, GAP, 3
+    return [
+      _buildTab(0),
+      _buildTab(1),
+      SizedBox(width: centerGapWidth),
+      _buildTab(3),
+    ];
   }
 
   Widget _buildTab(int index) {
     // Safety check to prevent red screen if list is too short during reload
     if (index >= items.length) return const SizedBox.shrink();
 
-    bool isSelected = currentIndex == index;
+    final isSelected = currentIndex == index;
+
     return GestureDetector(
       onTap: () => onTap(index),
       behavior: HitTestBehavior.opaque,
@@ -111,7 +137,9 @@ class SocietyBottomNav extends StatelessWidget {
             curve: Curves.easeInOut,
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isSelected ? const Color(0xFF2F6BFF).withOpacity(0.1) : Colors.transparent,
+              color: isSelected
+                  ? const Color(0xFF2F6BFF).withOpacity(0.1)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(

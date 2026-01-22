@@ -20,10 +20,115 @@ import logging
 
 from app.models.schemas import VisitorStatusUpdateRequest
 
+# ✅ WhatsApp service (best-effort send, non-breaking)
+from app.services.whatsapp_service import get_whatsapp_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _normalize_wa_phone(phone: str) -> str:
+    """
+    WhatsApp Cloud API expects E.164 without '+'.
+    Example: '+919876543210' -> '919876543210'
+    """
+    if not phone:
+        return phone
+    return str(phone).strip().replace("+", "").replace(" ", "")
+
+
+def _pick_resident_phone(resident: dict) -> Optional[str]:
+    """
+    Resident dict may come with normalized lowercase headers (client.py does that).
+    Try likely keys safely.
+    """
+    if not resident:
+        return None
+
+    candidates = [
+        resident.get("resident_phone"),
+        resident.get("residentphone"),
+        resident.get("phone"),
+        resident.get("mobile"),
+    ]
+    for p in candidates:
+        if isinstance(p, str) and p.strip():
+            return p.strip()
+    return None
+
+
+async def _best_effort_send_whatsapp_approval(
+    visitor_service,
+    society_id: str,
+    flat_id: Optional[str],
+    flat_no: Optional[str],
+    visitor: VisitorResponse,
+):
+    """
+    Best-effort WhatsApp notification to resident.
+
+    - Does NOT raise errors; it will not break existing create flows.
+    - Prefer Residents tab (society_id + flat_no) for resident_phone.
+    - Fallback to _resolve_flat() if you later store resident_phone in Flats.
+    """
+    try:
+        target_flat_no = flat_no or visitor.flat_no
+
+        # ✅ 1) Preferred: lookup resident in Residents sheet (NEW MVP way)
+        resident = None
+        try:
+            resident = visitor_service.sheets_client.get_resident_by_flat_no(
+                society_id=society_id,
+                flat_no=target_flat_no,
+                active_only=True,
+                whatsapp_opt_in_only=True,
+            )
+        except Exception as e:
+            logger.warning(f"RESIDENT_LOOKUP_FAIL | society_id={society_id} flat_no={target_flat_no} err={e}")
+
+        resident_phone = _pick_resident_phone(resident) if resident else None
+
+        # ✅ 2) Fallback: resolve from Flats (if resident_phone exists there)
+        if not resident_phone:
+            try:
+                flat = visitor_service._resolve_flat(
+                    society_id=society_id,
+                    flat_id=flat_id,
+                    flat_no=target_flat_no,
+                )
+                resident_phone = flat.get("resident_phone")
+            except Exception as e:
+                # don't break flow
+                logger.warning(f"FLAT_RESOLVE_FALLBACK_FAIL | society_id={society_id} flat_no={target_flat_no} err={e}")
+
+        if not resident_phone:
+            logger.warning(
+                f"WHATSAPP_SKIP | resident_phone not found for society_id={society_id} flat_no={target_flat_no}"
+            )
+            return
+
+        resident_phone = _normalize_wa_phone(resident_phone)
+
+        # ✅ Send template (Approve/Reject)
+        wa = get_whatsapp_service()
+        await wa.send_approval_template(
+            to_phone_e164_no_plus=resident_phone,
+            template_name="gateflow_entry_approval",
+            language_code="en_US",
+            flat_no=visitor.flat_no,
+            visitor_type=visitor.visitor_type,
+            visitor_phone=visitor.visitor_phone,
+            visitor_id=visitor.visitor_id,
+        )
+
+        logger.info(f"WHATSAPP_SENT | to={resident_phone} visitor_id={visitor.visitor_id}")
+
+    except Exception as e:
+        # Best effort only - do not fail the API
+        logger.warning(
+            f"WHATSAPP_SEND_FAILED | visitor_id={getattr(visitor, 'visitor_id', 'UNKNOWN')} err={str(e)}"
+        )
 
 
 @router.post(
@@ -63,6 +168,16 @@ async def create_visitor(request: VisitorCreateRequest):
             visitor_phone=request.visitor_phone,
             guard_id=request.guard_id,
         )
+
+        # ✅ WhatsApp send (best-effort, non-breaking)
+        await _best_effort_send_whatsapp_approval(
+            visitor_service=visitor_service,
+            society_id=visitor.society_id,
+            flat_id=request.flat_id,
+            flat_no=getattr(request, "flat_no", None),
+            visitor=visitor,
+        )
+
         return visitor
 
     except HTTPException:
@@ -130,6 +245,15 @@ async def create_visitor_with_photo(
             photo_path=rel_path,
         )
 
+        # ✅ WhatsApp send (best-effort, non-breaking)
+        await _best_effort_send_whatsapp_approval(
+            visitor_service=visitor_service,
+            society_id=visitor.society_id,
+            flat_id=flat_id,
+            flat_no=flat_no,
+            visitor=visitor,
+        )
+
         return visitor
 
     except HTTPException:
@@ -161,8 +285,6 @@ async def get_visitors_by_flat_no(guard_id: str, flat_no: str):
     visitor_service = get_visitor_service()
     visitors = visitor_service.get_visitors_by_flat_no(guard_id=guard_id, flat_no=flat_no)
     return VisitorListResponse(visitors=visitors, count=len(visitors))
-
-
 
 
 @router.post(

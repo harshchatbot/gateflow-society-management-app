@@ -89,3 +89,25 @@ class FlatListResponse(BaseModel):
     """List of flats response"""
     flats: list[FlatResponse]
     count: int
+
+
+# -----------------------------
+# Resident Models (MVP PIN Login)
+# -----------------------------
+
+class ResidentLoginRequest(BaseModel):
+    """Resident login request (PIN-based MVP)"""
+    society_id: str = Field(..., description="Society code/ID")
+    phone: str = Field(..., description="Resident phone number")
+    pin: str = Field(..., description="Resident PIN", min_length=4)
+
+
+class ResidentLoginResponse(BaseModel):
+    """Resident login response"""
+    resident_id: str
+    resident_name: str
+    society_id: str
+    flat_id: Optional[str] = None
+    flat_no: Optional[str] = None
+    phone: Optional[str] = None
+    token: Optional[str] = None  # For future JWT implementation

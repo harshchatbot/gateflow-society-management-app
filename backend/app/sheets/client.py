@@ -328,6 +328,67 @@ class SheetsClient:
 
 
 
+    def get_visitors_by_flat(
+        self,
+        society_id: str,
+        flat_no: str,
+        status: str = "PENDING",
+        limit: int = 50,
+    ) -> List[Dict]:
+        """
+        Get visitors for a given society_id + flat_no.
+        status options:
+          - "PENDING"
+          - "APPROVED"
+          - "REJECTED"
+          - "ALL_NON_PENDING" (everything except PENDING)
+          - "ALL" (no status filter)
+        """
+        rows = self._get_sheet_values(settings.SHEET_VISITORS)
+        if not rows or len(rows) < 2:
+            return []
+
+        headers = rows[0]
+        visitors: List[Dict] = []
+
+        target = self._normalize_flat_no(flat_no)
+
+        for row in rows[1:]:
+            if len(row) < len(headers):
+                row.extend([""] * (len(headers) - len(row)))
+
+            v = dict(zip(headers, row))
+
+            if (v.get("society_id") or "").strip() != society_id:
+                continue
+
+            v_flat = self._normalize_flat_no(v.get("flat_no") or "")
+            if v_flat != target:
+                continue
+
+            v_status = (v.get("status") or "").strip().upper()
+
+            if status == "ALL":
+                pass
+            elif status == "ALL_NON_PENDING":
+                if v_status == "PENDING":
+                    continue
+            else:
+                if v_status != status.upper():
+                    continue
+
+            visitors.append(v)
+
+        visitors.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+
+        if limit and len(visitors) > limit:
+            visitors = visitors[:limit]
+
+        return visitors
+
+
+
+
     def _normalize_flat_no(self, flat_no: str) -> str:
         """
         Normalize flat numbers for tolerant matching.
@@ -430,6 +491,217 @@ class SheetsClient:
                 self._update_sheet(settings.SHEET_VISITORS, range_name, [row])
 
                 return dict(zip(headers, row))
+
+        return None
+
+
+
+        # -----------------------------
+    # Residents operations (NEW)
+    # -----------------------------
+    def get_residents(self, society_id: Optional[str] = None) -> List[Dict]:
+        """
+        Get all residents, optionally filtered by society_id.
+        Enforces:
+        - active == TRUE
+        - whatsapp_opt_in == TRUE (if column exists)
+        """
+        rows = self._get_sheet_values(settings.SHEET_RESIDENTS)
+        if not rows or len(rows) < 2:
+            return []
+
+        # Normalize headers to lowercase for safety
+        headers_raw = rows[0]
+        headers = [str(h).strip().lower() for h in headers_raw]
+        residents: List[Dict] = []
+
+        for row in rows[1:]:
+            if len(row) < len(headers):
+                row.extend([""] * (len(headers) - len(row)))
+
+            r = dict(zip(headers, row))
+
+            if society_id and (r.get("society_id") or "").strip() != society_id:
+                continue
+
+            # active check
+            active_val = str(r.get("active") or "").strip().lower()
+            if active_val and active_val != "true":
+                continue
+
+            # whatsapp_opt_in check (only if column present)
+            opt_in_val = str(r.get("whatsapp_opt_in") or "").strip().lower()
+            if opt_in_val and opt_in_val != "true":
+                continue
+
+            residents.append(r)
+
+        return residents
+
+    def get_resident_by_flat_no(
+        self,
+        society_id: str,
+        flat_no: str,
+        active_only: bool = True,
+        whatsapp_opt_in_only: bool = True,
+    ) -> Optional[Dict]:
+        """
+        Resolve resident by society_id + flat_no (tolerant match like flats).
+        Returns first matching resident.
+        """
+        rows = self._get_sheet_values(settings.SHEET_RESIDENTS)
+        if not rows or len(rows) < 2:
+            return None
+
+        headers = [str(h).strip().lower() for h in rows[0]]
+        target = self._normalize_flat_no(flat_no)
+
+        for row in rows[1:]:
+            if len(row) < len(headers):
+                row.extend([""] * (len(headers) - len(row)))
+
+            r = dict(zip(headers, row))
+
+            if (r.get("society_id") or "").strip() != society_id:
+                continue
+
+            r_flat_no = self._normalize_flat_no(r.get("flat_no") or "")
+            if r_flat_no != target:
+                continue
+
+            if active_only:
+                active_val = str(r.get("active") or "").strip().lower()
+                if active_val and active_val != "true":
+                    return None
+
+            if whatsapp_opt_in_only:
+                opt_in_val = str(r.get("whatsapp_opt_in") or "").strip().lower()
+                if opt_in_val and opt_in_val != "true":
+                    return None
+
+            return r
+
+        return None
+
+    def upsert_resident_fcm_token(
+        self,
+        society_id: str,
+        flat_no: str,
+        resident_id: str,
+        fcm_token: str,
+    ) -> bool:
+        """
+        Save resident FCM token into Residents sheet.
+        Requires column header: fcm_token (recommended)
+        """
+        rows = self._get_sheet_values(settings.SHEET_RESIDENTS)
+        if not rows or len(rows) < 2:
+            return False
+
+        headers = [str(h).strip().lower() for h in rows[0]]
+        header_map = {h: i for i, h in enumerate(headers)}
+
+        # Ensure required columns exist
+        if "resident_id" not in header_map:
+            raise ValueError("Residents sheet missing 'resident_id' header")
+
+        # If fcm_token column doesn't exist, we should fail clearly
+        if "fcm_token" not in header_map:
+            raise ValueError("Residents sheet missing 'fcm_token' header (please add it)")
+
+        target_flat = self._normalize_flat_no(flat_no)
+
+        for idx, row in enumerate(rows[1:], start=2):  # sheet row number
+            if len(row) < len(headers):
+                row.extend([""] * (len(headers) - len(row)))
+
+            r = dict(zip(headers, row))
+
+            if (r.get("society_id") or "").strip() != society_id:
+                continue
+
+            if self._normalize_flat_no(r.get("flat_no") or "") != target_flat:
+                continue
+
+            # Match resident_id if provided (more strict)
+            if resident_id and str(r.get("resident_id") or "").strip() != str(resident_id).strip():
+                continue
+
+            # Update token in row
+            row[header_map["fcm_token"]] = fcm_token
+
+            # Write back full row
+            end_col_letter = chr(ord("A") + len(headers) - 1)
+            range_name = f"A{idx}:{end_col_letter}{idx}"
+
+            self._update_sheet(settings.SHEET_RESIDENTS, range_name, [row])
+            return True
+
+        return False
+    
+
+
+    def get_resident_by_phone_and_pin(
+        self,
+        society_id: str,
+        phone: str,
+        pin: str,
+        active_only: bool = True,
+    ) -> Optional[Dict]:
+        """
+        Find resident by society_id + (resident_phone OR phone) + resident_pin.
+
+        Additive, tolerant implementation:
+        - Works whether the sheet uses `resident_phone` or `phone`
+        - Enforces active_only if active column exists and has a value
+        - Does NOT enforce whatsapp_opt_in
+        """
+        rows = self._get_sheet_values(settings.SHEET_RESIDENTS)
+        if not rows or len(rows) < 2:
+            return None
+
+        headers = [str(h).strip().lower() for h in rows[0]]
+        header_set = set(headers)
+
+        if "society_id" not in header_set:
+            raise ValueError("Residents sheet missing 'society_id' header")
+        if "resident_pin" not in header_set:
+            raise ValueError("Residents sheet missing 'resident_pin' header")
+
+        # Phone column: prefer resident_phone, else phone
+        phone_col = None
+        if "resident_phone" in header_set:
+            phone_col = "resident_phone"
+        elif "phone" in header_set:
+            phone_col = "phone"
+        else:
+            raise ValueError("Residents sheet missing 'resident_phone' or 'phone' header")
+
+        target_society = (society_id or "").strip()
+        target_phone = (phone or "").strip()
+        target_pin = (pin or "").strip()
+
+        for row in rows[1:]:
+            if len(row) < len(headers):
+                row.extend([""] * (len(headers) - len(row)))
+
+            r = dict(zip(headers, row))
+
+            if (r.get("society_id") or "").strip() != target_society:
+                continue
+
+            if (r.get("resident_phone") or "").strip() != target_phone:
+                continue
+
+            if (r.get("resident_pin") or "").strip() != target_pin:
+                continue
+
+            if active_only:
+                active_val = str(r.get("active") or "").strip().lower()
+                if active_val and active_val != "true":
+                    return None
+
+            return r
 
         return None
 

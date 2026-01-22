@@ -1,41 +1,93 @@
 import 'package:flutter/material.dart';
-import 'package:gateflow/core/theme.dart';
 
 class StatusChip extends StatelessWidget {
-  final String label;
+  /// Backward compatible:
+  /// - Some screens use StatusChip(label: "APPROVED")
+  /// - Others use StatusChip(status: "APPROVED")
+  final String? label;
+  final String? status;
 
-  const StatusChip({super.key, required this.label});
+  final bool compact;
+
+  const StatusChip({
+    super.key,
+    this.label,
+    this.status,
+    this.compact = false,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = _colorForStatus(label, theme);
+    final raw = (status ?? label ?? "").trim();
+    final s = raw.toUpperCase();
+
+    final bg = _bgColor(s);
+    final fg = _textColor(s);
+    final text = _label(s);
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 8 : 10,
+        vertical: compact ? 4 : 6,
+      ),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.4)),
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: fg.withOpacity(0.18)),
       ),
       child: Text(
-        label.toUpperCase(),
+        text,
         style: TextStyle(
-          color: color,
+          fontSize: compact ? 11 : 12,
           fontWeight: FontWeight.w700,
-          letterSpacing: 0.4,
+          color: fg,
         ),
       ),
     );
   }
 
-  Color _colorForStatus(String status, ThemeData theme) {
-    switch (status.toUpperCase()) {
-      case 'APPROVED':
-        return AppTheme.success;
-      case 'REJECTED':
-        return AppTheme.error;
+  String _label(String s) {
+    switch (s) {
+      case "APPROVED":
+        return "APPROVED";
+      case "REJECTED":
+        return "REJECTED";
+      case "PENDING":
+        return "PENDING";
+      case "LEAVE_AT_GATE":
+        return "LEAVE AT GATE";
       default:
-        return theme.colorScheme.primary;
+        return s.isEmpty ? "STATUS" : s;
+    }
+  }
+
+  Color _bgColor(String s) {
+    switch (s) {
+      case "APPROVED":
+        return Colors.green.withOpacity(0.12);
+      case "REJECTED":
+        return Colors.red.withOpacity(0.12);
+      case "PENDING":
+        return Colors.orange.withOpacity(0.14);
+      case "LEAVE_AT_GATE":
+        return Colors.blue.withOpacity(0.12);
+      default:
+        return Colors.grey.withOpacity(0.12);
+    }
+  }
+
+  Color _textColor(String s) {
+    switch (s) {
+      case "APPROVED":
+        return Colors.green.shade800;
+      case "REJECTED":
+        return Colors.red.shade700;
+      case "PENDING":
+        return Colors.orange.shade800;
+      case "LEAVE_AT_GATE":
+        return Colors.blue.shade700;
+      default:
+        return Colors.grey.shade700;
     }
   }
 }
