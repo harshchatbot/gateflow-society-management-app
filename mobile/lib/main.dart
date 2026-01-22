@@ -1,16 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 import 'core/theme.dart';
 import 'core/storage.dart';
+import 'services/notification_service.dart';
 
 import 'screens/guard_shell_screen.dart';
 import 'screens/resident_shell_screen.dart';
 import 'screens/admin_shell_screen.dart';
 import 'screens/role_select_screen.dart';
 
+// Background message handler (must be top-level)
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Handle background messages
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase
+  try {
+    await Firebase.initializeApp();
+    // Set background message handler
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    // Firebase not configured - continue without notifications
+    print("Firebase initialization failed: $e");
+  }
+
+  // Initialize notification service
+  try {
+    await NotificationService().initialize();
+  } catch (e) {
+    print("Notification service initialization failed: $e");
+  }
 
   // Load env (API base URL etc.)
   await dotenv.load(fileName: "assets/.env");

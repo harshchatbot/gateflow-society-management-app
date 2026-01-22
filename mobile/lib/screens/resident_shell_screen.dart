@@ -9,6 +9,7 @@ import 'resident_complaints_list_screen.dart';
 import 'resident_profile_screen.dart';
 import 'notice_board_screen.dart';
 import '../ui/app_colors.dart';
+import '../services/notification_service.dart';
 
 class ResidentShellScreen extends StatefulWidget {
   final String residentId;
@@ -30,6 +31,29 @@ class ResidentShellScreen extends StatefulWidget {
 
 class _ResidentShellScreenState extends State<ResidentShellScreen> {
   int _index = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _subscribeToNotifications();
+  }
+
+  Future<void> _subscribeToNotifications() async {
+    try {
+      final notificationService = NotificationService();
+      // Note: We need flat_id, but we only have flat_no
+      // For MVP, we'll subscribe to society topic only
+      // In production, you'd fetch flat_id from backend
+      await notificationService.subscribeUserTopics(
+        societyId: widget.societyId,
+        flatId: null, // TODO: Get flat_id from backend
+        role: "resident",
+      );
+    } catch (e) {
+      // Notification subscription failed, continue anyway
+      print("Failed to subscribe to notifications: $e");
+    }
+  }
 
   late final List<Widget> _screens = [
     ResidentDashboardScreen(

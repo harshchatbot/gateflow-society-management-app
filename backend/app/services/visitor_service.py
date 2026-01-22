@@ -198,6 +198,39 @@ class VisitorService:
         # Log approval stub to resident phone
         self._log_approval_request(flat, visitor_data)
 
+        # Send push notification to resident
+        try:
+            from app.services.notification_service import get_notification_service
+            notification_service = get_notification_service()
+            
+            # Get resident FCM token (if stored)
+            # For MVP, we'll send to topic for the flat or get token from resident record
+            resident_phone = flat.get("resident_phone", "")
+            flat_no = resolved_flat_no
+            
+            # Try to get FCM token from resident record
+            # For now, send to flat-specific topic
+            topic = f"flat_{resolved_flat_id}"
+            
+            notification_service.send_to_topic(
+                topic=topic,
+                title="🚪 New Visitor Entry",
+                body=f"Visitor {visitor_type} at {flat_no}. Phone: {visitor_phone}",
+                data={
+                    "type": "visitor",
+                    "visitor_id": visitor_id,
+                    "flat_id": resolved_flat_id,
+                    "flat_no": flat_no,
+                    "visitor_type": visitor_type,
+                    "status": VisitorStatus.PENDING.value,
+                },
+                sound="notification_sound",
+            )
+            logger.info(f"Notification sent for new visitor: {visitor_id}")
+        except Exception as e:
+            # Don't fail visitor creation if notification fails
+            logger.warning(f"Failed to send notification for visitor {visitor_id}: {e}")
+
         return self._dict_to_visitor_response(visitor_data)
 
 

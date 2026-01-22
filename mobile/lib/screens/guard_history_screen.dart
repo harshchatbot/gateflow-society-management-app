@@ -47,6 +47,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
     });
 
     try {
+      AppLogger.i("Loading guard history", data: {"guardId": widget.guardId});
       final result = await _visitorService.getTodayVisitors(guardId: widget.guardId);
 
       if (!mounted) return;
@@ -67,21 +68,33 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
         setState(() {
           _visitors = historyVisitors;
           _isLoading = false;
+          _error = null;
         });
-        AppLogger.i("Loaded ${_visitors.length} history visitors");
+        AppLogger.i("Loaded ${_visitors.length} history visitors", data: {
+          "total": allVisitors.length,
+          "history": historyVisitors.length,
+        });
       } else {
-        setState(() {
-          _isLoading = false;
-          _error = result.error?.userMessage ?? "Failed to load history";
+        final errorMsg = result.error?.userMessage ?? "Failed to load history";
+        AppLogger.w("Failed to load history", error: result.error?.technicalMessage, data: {
+          "userMessage": errorMsg,
+          "guardId": widget.guardId,
         });
-        AppLogger.w("Failed to load history: ${result.error?.userMessage}");
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _error = errorMsg;
+          });
+        }
       }
-    } catch (e) {
-      AppLogger.e("Error loading history", error: e);
+    } catch (e, stackTrace) {
+      AppLogger.e("Error loading history", error: e, stackTrace: stackTrace, data: {
+        "guardId": widget.guardId,
+      });
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = "Connection error. Please try again.";
+          _error = "Connection error. Please check your network and try again.";
         });
       }
     }

@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
 import '../services/admin_service.dart';
+import '../services/complaint_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import 'notice_board_screen.dart';
 import 'admin_manage_notices_screen.dart';
+import '../widgets/admin_notification_drawer.dart';
 
 /// Admin Dashboard Screen
 /// 
@@ -37,11 +39,53 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Map<String, dynamic>? _stats;
   bool _isLoading = false;
   String? _error;
+  
+  late final ComplaintService _complaintService = ComplaintService(
+    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+  );
+  
+  int _notificationCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadStats();
+    _loadNotificationCount();
+  }
+
+  Future<void> _loadNotificationCount() async {
+    try {
+      final result = await _complaintService.getAllComplaints(societyId: widget.societyId);
+      if (result.isSuccess && result.data != null) {
+        final pendingCount = result.data!.where((c) {
+          final status = (c['status'] ?? '').toString().toUpperCase();
+          return status == 'PENDING' || status == 'IN_PROGRESS';
+        }).length;
+        
+        if (mounted) {
+          setState(() {
+            _notificationCount = pendingCount;
+          });
+        }
+      }
+    } catch (e) {
+      AppLogger.e("Error loading notification count", error: e);
+    }
+  }
+
+  void _showNotificationDrawer() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => AdminNotificationDrawer(
+        societyId: widget.societyId,
+        adminId: widget.adminId,
+      ),
+    ).then((_) {
+      // Refresh notification count when drawer closes
+      _loadNotificationCount();
+    });
   }
 
   void _navigateToTab(int index) {
@@ -183,6 +227,40 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ],
           ),
+        ),
+        // Notification Bell Icon
+        Stack(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_rounded, color: Colors.white),
+              onPressed: _showNotificationDrawer,
+            ),
+            if (_notificationCount > 0)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: AppColors.error,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Text(
+                    _notificationCount > 9 ? "9+" : _notificationCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
         ),
         IconButton(
           icon: const Icon(Icons.person_rounded, color: Colors.white),

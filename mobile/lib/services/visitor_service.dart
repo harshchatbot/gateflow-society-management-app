@@ -123,11 +123,14 @@ class VisitorService {
   Future<Result<List<Visitor>>> getTodayVisitors({required String guardId}) async {
     final path = "/api/visitors/today/$guardId";
     try {
-      AppLogger.i("API GET $path");
+      AppLogger.i("API GET $path", data: {"guardId": guardId});
 
       final res = await _api.get(path);
 
-      AppLogger.i("API GET $path status=${res.statusCode} data=${res.data}");
+      AppLogger.i("API GET $path status=${res.statusCode}", data: {
+        "response_type": res.data.runtimeType.toString(),
+        "has_data": res.data != null,
+      });
 
       final data = _asMap(res.data);
 

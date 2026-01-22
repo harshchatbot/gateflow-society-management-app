@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     SHEET_NOTICES: str = "Notices"
 
     GOOGLE_SERVICE_ACCOUNT_FILE: str = "credentials.json"
+    FIREBASE_SERVICE_ACCOUNT_PATH: str
+
 
     
     # API Settings

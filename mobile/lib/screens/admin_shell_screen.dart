@@ -7,6 +7,7 @@ import 'admin_profile_screen.dart';
 import 'notice_board_screen.dart';
 import '../ui/app_colors.dart';
 import '../ui/floating_bottom_nav.dart';
+import '../services/notification_service.dart';
 
 /// Admin Shell Screen
 /// 
@@ -32,6 +33,27 @@ class AdminShellScreen extends StatefulWidget {
 class _AdminShellScreenState extends State<AdminShellScreen> {
   int _currentIndex = 0;
   final Map<int, bool> _screenInitialized = {}; // Track which screens have been initialized
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize dashboard immediately
+    _screenInitialized[0] = true;
+    _subscribeToNotifications();
+  }
+
+  Future<void> _subscribeToNotifications() async {
+    try {
+      final notificationService = NotificationService();
+      await notificationService.subscribeUserTopics(
+        societyId: widget.societyId,
+        role: "admin",
+      );
+    } catch (e) {
+      // Notification subscription failed, continue anyway
+      print("Failed to subscribe to notifications: $e");
+    }
+  }
 
   void _onTabChanged(int index) {
     setState(() {
@@ -89,13 +111,6 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
       default:
         return Container(color: AppColors.bg);
     }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    // Initialize dashboard immediately
-    _screenInitialized[0] = true;
   }
 
   @override

@@ -54,6 +54,11 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     });
 
     try {
+      AppLogger.i("Loading notices", data: {
+        "societyId": widget.societyId,
+        "activeOnly": true,
+      });
+      
       final result = await _service.getNotices(
         societyId: widget.societyId,
         activeOnly: true, // Only show active notices
@@ -62,20 +67,35 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       if (!mounted) return;
 
       if (result.isSuccess && result.data != null) {
+        final noticesList = result.data!;
+        AppLogger.i("Notices loaded successfully", data: {
+          "count": noticesList.length,
+          "societyId": widget.societyId,
+          "sample_notices": noticesList.take(3).map((n) => {
+            "notice_id": n['notice_id']?.toString() ?? 'N/A',
+            "title": n['title']?.toString() ?? 'N/A',
+            "notice_type": n['notice_type']?.toString() ?? 'N/A',
+            "status": n['status']?.toString() ?? n['is_active']?.toString() ?? 'N/A',
+          }).toList(),
+        });
         setState(() {
-          _notices = result.data!;
+          _notices = noticesList;
           _isLoading = false;
         });
-        AppLogger.i("Loaded ${_notices.length} notices");
       } else {
+        final errorMsg = result.error ?? "Failed to load notices";
+        AppLogger.w("Failed to load notices", error: errorMsg, data: {
+          "societyId": widget.societyId,
+        });
         setState(() {
           _isLoading = false;
-          _error = result.error ?? "Failed to load notices";
+          _error = errorMsg;
         });
-        AppLogger.w("Failed to load notices: ${result.error}");
       }
-    } catch (e) {
-      AppLogger.e("Error loading notices", error: e);
+    } catch (e, stackTrace) {
+      AppLogger.e("Error loading notices", error: e, stackTrace: stackTrace, data: {
+        "societyId": widget.societyId,
+      });
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -144,34 +164,57 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         ],
                       ),
                     ),
-                    // Manage button for admins
-                    if (widget.adminId != null)
-                      IconButton(
-                        icon: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: widget.themeColor.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Icon(Icons.edit_note_rounded, color: widget.themeColor, size: 20),
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => AdminManageNoticesScreen(
-                                adminId: widget.adminId!,
-                                adminName: widget.adminName ?? "Admin",
-                                societyId: widget.societyId,
-                              ),
+                    // Action buttons (Refresh + Manage for admins)
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Refresh button (for all users)
+                        IconButton(
+                          icon: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: widget.themeColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ).then((_) {
-                            // Refresh notices when returning from manage screen
-                            _loadNotices();
-                          });
-                        },
-                        tooltip: "Manage Notices",
-                      ),
+                            child: Icon(
+                              Icons.refresh_rounded,
+                              color: widget.themeColor,
+                              size: 20,
+                            ),
+                          ),
+                          onPressed: _isLoading ? null : _loadNotices,
+                          tooltip: "Refresh",
+                        ),
+                        // Manage button (for admins only)
+                        if (widget.adminId != null)
+                          IconButton(
+                            icon: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: widget.themeColor.withOpacity(0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(Icons.edit_note_rounded, color: widget.themeColor, size: 20),
+                            ),
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => AdminManageNoticesScreen(
+                                    adminId: widget.adminId!,
+                                    adminName: widget.adminName ?? "Admin",
+                                    societyId: widget.societyId,
+                                  ),
+                                ),
+                              ).then((_) {
+                                // Refresh notices when returning from manage screen
+                                _loadNotices();
+                              });
+                            },
+                            tooltip: "Manage Notices",
+                          ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -354,42 +397,63 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     }
 
     if (_filteredNotices.isEmpty && !_isLoading) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: widget.themeColor.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.notifications_none_rounded,
-                size: 64,
-                color: widget.themeColor,
+      return RefreshIndicator(
+        onRefresh: _loadNotices,
+        color: widget.themeColor,
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            height: MediaQuery.of(context).size.height * 0.6,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: widget.themeColor.withOpacity(0.1),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.notifications_none_rounded,
+                      size: 64,
+                      color: widget.themeColor,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _selectedFilter == null ? "No notices" : "No ${_selectedFilter!.toLowerCase()} notices",
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.text,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "New notices from the society will appear here",
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: AppColors.text2,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: _loadNotices,
+                    icon: const Icon(Icons.refresh_rounded),
+                    label: const Text("Refresh"),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: widget.themeColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              _selectedFilter == null ? "No notices" : "No ${_selectedFilter!.toLowerCase()} notices",
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w900,
-                color: AppColors.text,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              "New notices from the society will appear here",
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.text2,
-                fontWeight: FontWeight.w500,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       );
     }

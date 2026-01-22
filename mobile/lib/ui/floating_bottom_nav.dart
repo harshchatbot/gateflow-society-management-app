@@ -106,17 +106,30 @@ class SocietyBottomNav extends StatelessWidget {
   List<Widget> _buildRowTabs() {
     // If center button is OFF -> show all items (up to 6 for admin/resident)
     if (!showCenterButton) {
-      final count = items.length >= 6 ? 6 : items.length;
-      return List.generate(count, (i) => _buildTab(i));
+      // Show all items
+      return List.generate(items.length, (i) => _buildTab(i));
     }
 
     // If center button is ON (guard style)
-    // Layout stays exactly same: 0,1, GAP, 3
+    // Layout: 0,1, GAP, 3,4 (showing Home, Visitors, [GAP], History, Profile)
+    // Note: Guard has 5 tabs total (Entry is center button at index 2)
+    if (items.length == 5) {
+      return [
+        _buildTab(0), // Home
+        _buildTab(1), // Visitors
+        SizedBox(width: centerGapWidth), // Gap for center button
+        _buildTab(3), // History
+        _buildTab(4), // Profile
+      ];
+    }
+    // Fallback for 6 tabs (if needed in future)
     return [
-      _buildTab(0),
-      _buildTab(1),
-      SizedBox(width: centerGapWidth),
-      _buildTab(3),
+      _buildTab(0), // Home
+      _buildTab(1), // Visitors
+      SizedBox(width: centerGapWidth), // Gap for center button
+      _buildTab(3), // History
+      _buildTab(4), // Notices
+      _buildTab(5), // Profile
     ];
   }
 
@@ -125,38 +138,47 @@ class SocietyBottomNav extends StatelessWidget {
     if (index >= items.length) return const SizedBox.shrink();
 
     final isSelected = currentIndex == index;
+    // When center button is ON (guard), we show 5 tabs (0,1, gap, 3,4,5) so need compact layout
+    // When center button is OFF (admin/resident), we show all 6 tabs
+    final needsCompactLayout = showCenterButton && items.length >= 6;
 
-    return GestureDetector(
-      onTap: () => onTap(index),
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? const Color(0xFF2F6BFF).withOpacity(0.1)
-                  : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
+    return Expanded(
+      child: GestureDetector(
+        onTap: () => onTap(index),
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              padding: EdgeInsets.all(needsCompactLayout ? 6 : 8),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? const Color(0xFF2F6BFF).withOpacity(0.1)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                items[index].icon,
+                color: isSelected ? const Color(0xFF2F6BFF) : Colors.grey.shade500,
+                size: needsCompactLayout ? 22 : 26,
+              ),
             ),
-            child: Icon(
-              items[index].icon,
-              color: isSelected ? const Color(0xFF2F6BFF) : Colors.grey.shade500,
-              size: 26,
+            const SizedBox(height: 2),
+            Text(
+              items[index].label,
+              style: TextStyle(
+                fontSize: needsCompactLayout ? 8 : 10,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? const Color(0xFF2F6BFF) : Colors.grey.shade600,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
-          ),
-          Text(
-            items[index].label,
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? const Color(0xFF2F6BFF) : Colors.grey.shade600,
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

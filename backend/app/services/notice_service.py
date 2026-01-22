@@ -3,7 +3,7 @@ Notice service for managing society notices/announcements
 """
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict, List
 from app.sheets.client import get_sheets_client
 from app.config import settings
@@ -200,6 +200,30 @@ class NoticeService:
                 logger.error(f"Headers: {headers}")
                 raise Exception(f"Failed to append notice to sheet: {str(e)}")
 
+            # Send push notification to all users in the society
+            try:
+                from app.services.notification_service import get_notification_service
+                notification_service = get_notification_service()
+                
+                # Send to topic (all users subscribed to this society)
+                topic = f"society_{society_id}"
+                notification_service.send_to_topic(
+                    topic=topic,
+                    title="📢 New Notice",
+                    body=f"{title}",
+                    data={
+                        "type": "notice",
+                        "notice_id": notice_id,
+                        "society_id": society_id,
+                        "notice_type": notice_type,
+                    },
+                    sound="notification_sound",
+                )
+                logger.info(f"Notification sent for new notice: {notice_id}")
+            except Exception as e:
+                # Don't fail notice creation if notification fails
+                logger.warning(f"Failed to send notification for notice {notice_id}: {e}")
+
             return notice_data
         except ValueError as e:
             # Re-raise ValueError as-is (sheet doesn't exist, etc.)
@@ -287,9 +311,20 @@ class NoticeService:
                     )
                     if expiry_date and expiry_date.strip():
                         try:
-                            expiry = datetime.fromisoformat(expiry_date.strip().replace("Z", "+00:00"))
-                            if datetime.utcnow() > expiry:
-                                logger.debug(f"Row {idx}: Skipping - expired")
+                            # Parse expiry date with timezone awareness
+                            expiry_str = expiry_date.strip()
+                            if expiry_str.endswith("Z"):
+                                expiry = datetime.fromisoformat(expiry_str.replace("Z", "+00:00"))
+                            else:
+                                expiry = datetime.fromisoformat(expiry_str)
+                            
+                            # Ensure both datetimes are timezone-aware
+                            if expiry.tzinfo is None:
+                                expiry = expiry.replace(tzinfo=timezone.utc)
+                            
+                            now_utc = datetime.now(timezone.utc)
+                            if now_utc > expiry:
+                                logger.debug(f"Row {idx}: Skipping - expired (expiry={expiry}, now={now_utc})")
                                 continue  # Skip expired notices
                         except Exception as e:
                             logger.warning(f"Row {idx}: Error parsing expiry_date '{expiry_date}': {e}")
