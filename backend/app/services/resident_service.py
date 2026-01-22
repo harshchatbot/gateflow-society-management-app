@@ -39,6 +39,34 @@ class ResidentService:
             "active": str(r.get("active") or "").strip().lower() == "true",
         }
 
+    def get_resident_profile(self, society_id: str, flat_no: str, phone: Optional[str] = None) -> Dict:
+        """Alias for get_profile for router compatibility"""
+        return self.get_profile(society_id=society_id, flat_no=flat_no, phone=phone)
+
+    def get_pending_approvals(self, society_id: str, flat_no: str) -> List[Dict]:
+        """Get pending approvals for a flat"""
+        return self.pending_approvals(society_id=society_id, flat_no=flat_no)
+
+    def decide_visitor(self, payload) -> Dict:
+        """Approve/reject visitor - wrapper for decide method"""
+        return self.decide(
+            society_id=payload.society_id,
+            flat_no=payload.flat_no,
+            resident_id=payload.resident_id,
+            visitor_id=payload.visitor_id,
+            decision=payload.decision,
+            note=payload.note or "",
+        )
+
+    def upsert_fcm_token(self, payload) -> None:
+        """Upsert FCM token - wrapper for save_fcm_token"""
+        return self.save_fcm_token(
+            society_id=payload.society_id,
+            flat_no=payload.flat_no,
+            resident_id=payload.resident_id,
+            fcm_token=payload.fcm_token,
+        )
+
     def pending_approvals(self, society_id: str, flat_no: str) -> List[Dict]:
         return self.sheets.get_visitors_by_flat(
             society_id=society_id,
@@ -54,6 +82,10 @@ class ResidentService:
             status="ALL_NON_PENDING",
             limit=limit,
         )
+
+    def get_history(self, society_id: str, flat_no: str, limit: int = 50) -> List[Dict]:
+        """Alias for history"""
+        return self.history(society_id=society_id, flat_no=flat_no, limit=limit)
 
     def decide(
         self,
@@ -127,6 +159,77 @@ class ResidentService:
             # Support both resident_phone and phone column names
             "phone": (str(r.get("resident_phone") or r.get("phone") or phone).strip() or None),
             "token": None,
+        }
+
+    def update_profile(
+        self,
+        resident_id: str,
+        society_id: str,
+        flat_no: str,
+        resident_name: Optional[str] = None,
+        resident_phone: Optional[str] = None,
+    ) -> Dict:
+        """
+        Update resident profile information (name, phone).
+        """
+        updated = self.sheets.update_resident_profile(
+            resident_id=resident_id,
+            society_id=society_id,
+            flat_no=flat_no,
+            resident_name=resident_name,
+            resident_phone=resident_phone,
+        )
+        
+        if not updated:
+            raise HTTPException(status_code=404, detail="Resident not found")
+        
+        # Return updated profile
+        return self.get_profile(society_id=society_id, flat_no=flat_no)
+
+    async def upload_profile_image(
+        self,
+        resident_id: str,
+        society_id: str,
+        flat_no: str,
+        file,
+    ) -> Dict:
+        """
+        Upload resident profile image.
+        For MVP, we'll store the file path/URL in the Residents sheet.
+        """
+        import os
+        import uuid
+        from datetime import datetime
+        
+        # Create uploads directory if it doesn't exist
+        upload_dir = "uploads/residents"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Generate unique filename
+        file_ext = os.path.splitext(file.filename)[1] or ".jpg"
+        filename = f"{resident_id}_{uuid.uuid4().hex[:8]}{file_ext}"
+        file_path = os.path.join(upload_dir, filename)
+        
+        # Save file
+        with open(file_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+        
+        # Update resident record with image path
+        updated = self.sheets.update_resident_image(
+            resident_id=resident_id,
+            society_id=society_id,
+            flat_no=flat_no,
+            image_path=file_path,
+        )
+        
+        if not updated:
+            raise HTTPException(status_code=404, detail="Resident not found")
+        
+        return {
+            "ok": True,
+            "image_path": file_path,
+            "message": "Profile image uploaded successfully",
         }
 
 

@@ -3,6 +3,10 @@ import '../ui/app_colors.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
 import 'role_select_screen.dart';
+import 'resident_notification_settings_screen.dart';
+import 'resident_edit_phone_screen.dart';
+import 'resident_edit_image_screen.dart';
+import 'resident_edit_account_screen.dart';
 
 /// Resident Profile Screen
 /// 
@@ -21,6 +25,7 @@ class ResidentProfileScreen extends StatefulWidget {
   final String residentName;
   final String societyId;
   final String flatNo;
+  final String? residentPhone;
 
   const ResidentProfileScreen({
     super.key,
@@ -28,6 +33,7 @@ class ResidentProfileScreen extends StatefulWidget {
     required this.residentName,
     required this.societyId,
     required this.flatNo,
+    this.residentPhone,
   });
 
   @override
@@ -49,17 +55,30 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         ),
         content: const Text("Are you sure you want to logout?"),
         actions: [
-          TextButton(
+          OutlinedButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text("Cancel"),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppColors.border),
+              foregroundColor: AppColors.text,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ),
+          const SizedBox(width: 8),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text("Logout"),
+            child: const Text(
+              "Logout",
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
           ),
         ],
       ),
@@ -307,12 +326,15 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             icon: Icons.notifications_outlined,
             title: "Notifications",
             subtitle: "Manage notification preferences",
-            onTap: () {
-              // TODO: Navigate to notification settings
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Notification settings coming soon"),
-                  behavior: SnackBarBehavior.floating,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ResidentNotificationSettingsScreen(
+                    residentId: widget.residentId,
+                    societyId: widget.societyId,
+                    flatNo: widget.flatNo,
+                  ),
                 ),
               );
             },
@@ -322,14 +344,67 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             icon: Icons.phone_outlined,
             title: "Phone Number",
             subtitle: "Update your phone number",
-            onTap: () {
-              // TODO: Navigate to phone update
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("Phone update coming soon"),
-                  behavior: SnackBarBehavior.floating,
+            onTap: () async {
+              final updatedPhone = await Navigator.push<String>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ResidentEditPhoneScreen(
+                    residentId: widget.residentId,
+                    currentPhone: widget.residentPhone ?? "",
+                    societyId: widget.societyId,
+                    flatNo: widget.flatNo,
+                  ),
                 ),
               );
+              if (updatedPhone != null && mounted) {
+                // Refresh profile if needed
+                setState(() {});
+              }
+            },
+          ),
+          const Divider(height: 24),
+          _buildSettingItem(
+            icon: Icons.person_outline,
+            title: "Account Information",
+            subtitle: "Edit your name and details",
+            onTap: () async {
+              final updated = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ResidentEditAccountScreen(
+                    residentId: widget.residentId,
+                    residentName: widget.residentName,
+                    societyId: widget.societyId,
+                    flatNo: widget.flatNo,
+                  ),
+                ),
+              );
+              if (updated == true && mounted) {
+                // Refresh profile if needed
+                setState(() {});
+              }
+            },
+          ),
+          const Divider(height: 24),
+          _buildSettingItem(
+            icon: Icons.image_outlined,
+            title: "Profile Picture",
+            subtitle: "Upload or change your photo",
+            onTap: () async {
+              final updated = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ResidentEditImageScreen(
+                    residentId: widget.residentId,
+                    societyId: widget.societyId,
+                    flatNo: widget.flatNo,
+                  ),
+                ),
+              );
+              if (updated == true && mounted) {
+                // Refresh profile if needed
+                setState(() {});
+              }
             },
           ),
         ],

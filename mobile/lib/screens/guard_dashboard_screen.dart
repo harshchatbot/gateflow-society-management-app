@@ -163,6 +163,45 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             ],
           ),
         ),
+        // Notification Bell Icon
+        Stack(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.notifications_rounded, color: Colors.white),
+              onPressed: () {
+                // Navigate to visitor list to see pending approvals
+                if (widget.onTapVisitors != null) {
+                  widget.onTapVisitors!();
+                }
+              },
+            ),
+            if (pendingCount > 0)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: AppColors.error,
+                    shape: BoxShape.circle,
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 18,
+                    minHeight: 18,
+                  ),
+                  child: Text(
+                    pendingCount > 9 ? "9+" : pendingCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
         IconButton(
           icon: const Icon(Icons.tune_rounded, color: Colors.white),
           onPressed: () => _showSettingsSheet(context),

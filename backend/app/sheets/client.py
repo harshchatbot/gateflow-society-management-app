@@ -4,6 +4,7 @@ Handles all interactions with Google Sheets
 """
 
 import os
+import logging
 from typing import List, Dict, Optional
 
 from google.oauth2 import service_account
@@ -11,6 +12,8 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 from app.config import settings
+
+logger = logging.getLogger(__name__)
 
 settings.GOOGLE_SERVICE_ACCOUNT_FILE
 
@@ -705,6 +708,119 @@ class SheetsClient:
 
         return None
 
+    def update_resident_profile(
+        self,
+        resident_id: str,
+        society_id: str,
+        flat_no: str,
+        resident_name: Optional[str] = None,
+        resident_phone: Optional[str] = None,
+    ) -> bool:
+        """
+        Update resident profile information in Residents sheet.
+        """
+        rows = self._get_sheet_values(settings.SHEET_RESIDENTS)
+        if not rows or len(rows) < 2:
+            return False
+
+        headers = [str(h).strip().lower() for h in rows[0]]
+        header_map = {h: i for i, h in enumerate(headers)}
+
+        if "resident_id" not in header_map:
+            raise ValueError("Residents sheet missing 'resident_id' header")
+
+        target_flat = self._normalize_flat_no(flat_no)
+
+        for idx, row in enumerate(rows[1:], start=2):
+            if len(row) < len(headers):
+                row.extend([""] * (len(headers) - len(row)))
+
+            r = dict(zip(headers, row))
+
+            if (r.get("society_id") or "").strip() != society_id:
+                continue
+
+            if self._normalize_flat_no(r.get("flat_no") or "") != target_flat:
+                continue
+
+            if str(r.get("resident_id") or "").strip() != str(resident_id).strip():
+                continue
+
+            # Update fields if provided
+            if resident_name is not None and "resident_name" in header_map:
+                row[header_map["resident_name"]] = resident_name.strip()
+
+            if resident_phone is not None:
+                # Try both column names
+                if "resident_phone" in header_map:
+                    row[header_map["resident_phone"]] = resident_phone.strip()
+                elif "phone" in header_map:
+                    row[header_map["phone"]] = resident_phone.strip()
+
+            # Write back full row
+            end_col_letter = chr(ord("A") + len(headers) - 1)
+            range_name = f"A{idx}:{end_col_letter}{idx}"
+
+            self._update_sheet(settings.SHEET_RESIDENTS, range_name, [row])
+            return True
+
+        return False
+
+    def update_resident_image(
+        self,
+        resident_id: str,
+        society_id: str,
+        flat_no: str,
+        image_path: str,
+    ) -> bool:
+        """
+        Update resident profile image path in Residents sheet.
+        """
+        rows = self._get_sheet_values(settings.SHEET_RESIDENTS)
+        if not rows or len(rows) < 2:
+            return False
+
+        headers = [str(h).strip().lower() for h in rows[0]]
+        header_map = {h: i for i, h in enumerate(headers)}
+
+        if "resident_id" not in header_map:
+            raise ValueError("Residents sheet missing 'resident_id' header")
+
+        # Check if image column exists, if not we'll add it
+        if "profile_image" not in header_map and "image_path" not in header_map:
+            # For MVP, we'll just log a warning - column should be added manually
+            logger.warning("Residents sheet missing 'profile_image' or 'image_path' column")
+            return False
+
+        image_col = header_map.get("profile_image") or header_map.get("image_path")
+        target_flat = self._normalize_flat_no(flat_no)
+
+        for idx, row in enumerate(rows[1:], start=2):
+            if len(row) < len(headers):
+                row.extend([""] * (len(headers) - len(row)))
+
+            r = dict(zip(headers, row))
+
+            if (r.get("society_id") or "").strip() != society_id:
+                continue
+
+            if self._normalize_flat_no(r.get("flat_no") or "") != target_flat:
+                continue
+
+            if str(r.get("resident_id") or "").strip() != str(resident_id).strip():
+                continue
+
+            # Update image path
+            row[image_col] = image_path
+
+            # Write back full row
+            end_col_letter = chr(ord("A") + len(headers) - 1)
+            range_name = f"A{idx}:{end_col_letter}{idx}"
+
+            self._update_sheet(settings.SHEET_RESIDENTS, range_name, [row])
+            return True
+
+        return False
 
 
 # Singleton instance

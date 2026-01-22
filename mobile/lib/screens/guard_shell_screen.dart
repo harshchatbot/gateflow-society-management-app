@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'guard_dashboard_screen.dart';
 import 'new_visitor_screen.dart';
 import 'visitor_list_screen.dart';
+import 'guard_history_screen.dart';
 
 // UI logic
 import '../ui/app_colors.dart'; 
 import 'guard_profile_screen.dart';
-import 'guard_login_screen.dart';
 
 
 
@@ -46,7 +46,7 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
       guardName: widget.guardName,
       societyId: widget.societyId,
     ),
-    const Center(child: Text("History Screen")), // Added 4th screen
+    GuardHistoryScreen(guardId: widget.guardId),
     ProfileScreen( // ✅ Removed the 'onLogout' parameter
         guardId: widget.guardId,
         guardName: widget.guardName,
