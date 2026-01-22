@@ -1,0 +1,173 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import '../core/app_logger.dart';
+
+class ApiResult<T> {
+  final bool isSuccess;
+  final T? data;
+  final String? error;
+
+  ApiResult.success(this.data)
+      : isSuccess = true,
+        error = null;
+
+  ApiResult.failure(this.error)
+      : isSuccess = false,
+        data = null;
+}
+
+class AdminService {
+  final String baseUrl;
+
+  AdminService({required this.baseUrl});
+
+  Uri _uri(String path, [Map<String, String>? query]) {
+    return Uri.parse("$baseUrl$path").replace(queryParameters: query);
+  }
+
+  Future<ApiResult<Map<String, dynamic>>> login({
+    required String societyId,
+    required String adminId,
+    required String pin,
+  }) async {
+    try {
+      final body = jsonEncode({
+        "society_id": societyId,
+        "admin_id": adminId,
+        "pin": pin,
+      });
+
+      AppLogger.i("Admin login request", data: {"society_id": societyId, "admin_id": adminId});
+
+      final res = await http
+          .post(
+            _uri("/api/admins/login"),
+            headers: {"Content-Type": "application/json"},
+            body: body,
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw TimeoutException("Request timeout after 10 seconds");
+            },
+          );
+
+      AppLogger.i("Admin login response", data: {"status": res.statusCode, "body": res.body});
+
+      if (res.statusCode == 200) {
+        return ApiResult.success(jsonDecode(res.body) as Map<String, dynamic>);
+      }
+      return ApiResult.failure("Login failed: ${res.statusCode} ${res.body}");
+    } on TimeoutException catch (e) {
+      AppLogger.e("Admin login timeout error", error: e);
+      return ApiResult.failure("Request timeout. Please check your connection and try again.");
+    } on SocketException catch (e) {
+      AppLogger.e("Admin login socket error", error: e);
+      return ApiResult.failure("Cannot connect to server. Please check your network connection.");
+    } catch (e) {
+      AppLogger.e("Admin login error", error: e);
+      return ApiResult.failure("Connection error: ${e.toString()}");
+    }
+  }
+
+  Future<ApiResult<Map<String, dynamic>>> getStats({
+    required String societyId,
+  }) async {
+    try {
+      final uri = _uri("/api/admins/stats", {"society_id": societyId});
+      AppLogger.i("Admin getStats request", data: {"society_id": societyId});
+
+      final res = await http.get(uri).timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw TimeoutException("Request timeout after 10 seconds");
+            },
+          );
+
+      if (res.statusCode == 200) {
+        return ApiResult.success(jsonDecode(res.body) as Map<String, dynamic>);
+      }
+      return ApiResult.failure("Failed to load stats: ${res.statusCode} ${res.body}");
+    } on TimeoutException catch (e) {
+      AppLogger.e("Admin getStats timeout error", error: e);
+      return ApiResult.failure("Request timeout. Please check your connection and try again.");
+    } on SocketException catch (e) {
+      AppLogger.e("Admin getStats socket error", error: e);
+      return ApiResult.failure("Cannot connect to server. Please check your network connection.");
+    } catch (e) {
+      AppLogger.e("Admin getStats error", error: e);
+      return ApiResult.failure("Connection error: ${e.toString()}");
+    }
+  }
+
+  Future<ApiResult<List<dynamic>>> getResidents({
+    required String societyId,
+  }) async {
+    try {
+      final uri = _uri("/api/admins/residents", {"society_id": societyId});
+      final res = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        return ApiResult.success(jsonDecode(res.body) as List<dynamic>);
+      }
+      return ApiResult.failure("Failed to load residents: ${res.statusCode}");
+    } catch (e) {
+      AppLogger.e("Admin getResidents error", error: e);
+      return ApiResult.failure("Connection error: ${e.toString()}");
+    }
+  }
+
+  Future<ApiResult<List<dynamic>>> getGuards({
+    required String societyId,
+  }) async {
+    try {
+      final uri = _uri("/api/admins/guards", {"society_id": societyId});
+      final res = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        return ApiResult.success(jsonDecode(res.body) as List<dynamic>);
+      }
+      return ApiResult.failure("Failed to load guards: ${res.statusCode}");
+    } catch (e) {
+      AppLogger.e("Admin getGuards error", error: e);
+      return ApiResult.failure("Connection error: ${e.toString()}");
+    }
+  }
+
+  Future<ApiResult<List<dynamic>>> getFlats({
+    required String societyId,
+  }) async {
+    try {
+      final uri = _uri("/api/admins/flats", {"society_id": societyId});
+      final res = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        return ApiResult.success(jsonDecode(res.body) as List<dynamic>);
+      }
+      return ApiResult.failure("Failed to load flats: ${res.statusCode}");
+    } catch (e) {
+      AppLogger.e("Admin getFlats error", error: e);
+      return ApiResult.failure("Connection error: ${e.toString()}");
+    }
+  }
+
+  Future<ApiResult<List<dynamic>>> getVisitors({
+    required String societyId,
+    int limit = 100,
+  }) async {
+    try {
+      final uri = _uri("/api/admins/visitors", {
+        "society_id": societyId,
+        "limit": limit.toString(),
+      });
+      final res = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        return ApiResult.success(jsonDecode(res.body) as List<dynamic>);
+      }
+      return ApiResult.failure("Failed to load visitors: ${res.statusCode}");
+    } catch (e) {
+      AppLogger.e("Admin getVisitors error", error: e);
+      return ApiResult.failure("Connection error: ${e.toString()}");
+    }
+  }
+}

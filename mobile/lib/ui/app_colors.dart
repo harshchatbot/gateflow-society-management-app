@@ -8,6 +8,10 @@ class AppColors {
   static const Color success = Color(0xFF22C55E);
   static const Color warning = Color(0xFFF59E0B);
   static const Color error = Color(0xFFEF4444);
+  
+  // Admin theme (purple/violet)
+  static const Color admin = Color(0xFF8B5CF6); // Purple
+  static const Color adminSoft = Color(0xFFEDE9FE);
 
   static const Color bg = Color(0xFFF9FAFB);
   static const Color surface = Color(0xFFFFFFFF);

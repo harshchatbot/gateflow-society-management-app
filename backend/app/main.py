@@ -6,7 +6,7 @@ Guard-first visitor management system
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import guards, visitors , residents
+from app.routers import guards, visitors , residents, admins
 
 import logging
 
@@ -42,6 +42,7 @@ app.include_router(guards.router, prefix="/api/guards", tags=["guards"])
 app.include_router(visitors.router, prefix="/api/visitors", tags=["visitors"])
 app.include_router(whatsapp_webhook.router )
 app.include_router(residents.router )
+app.include_router(admins.router )
 
 @app.get("/")
 async def root():

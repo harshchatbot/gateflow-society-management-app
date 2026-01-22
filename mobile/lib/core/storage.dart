@@ -26,6 +26,20 @@ class ResidentSession {
   });
 }
 
+class AdminSession {
+  final String adminId;
+  final String adminName;
+  final String societyId;
+  final String role;
+
+  AdminSession({
+    required this.adminId,
+    required this.adminName,
+    required this.societyId,
+    required this.role,
+  });
+}
+
 class Storage {
   // Keys
   static const String _kGuardId = "guard_id";
@@ -36,6 +50,11 @@ class Storage {
   static const String _kResidentName = "resident_name";
   static const String _kResidentSocietyId = "resident_society_id";
   static const String _kResidentFlatNo = "resident_flat_no";
+
+  static const String _kAdminId = "admin_id";
+  static const String _kAdminName = "admin_name";
+  static const String _kAdminSocietyId = "admin_society_id";
+  static const String _kAdminRole = "admin_role";
 
   static Future<SharedPreferences> _prefs() async {
     return SharedPreferences.getInstance();
@@ -129,8 +148,54 @@ class Storage {
     return (prefs.getString(_kResidentId) ?? "").isNotEmpty;
   }
 
+  // -----------------------------
+  // Admin session
+  // -----------------------------
+  static Future<void> saveAdminSession({
+    required String adminId,
+    required String adminName,
+    required String societyId,
+    required String role,
+  }) async {
+    final prefs = await _prefs();
+    await prefs.setString(_kAdminId, adminId);
+    await prefs.setString(_kAdminName, adminName);
+    await prefs.setString(_kAdminSocietyId, societyId);
+    await prefs.setString(_kAdminRole, role);
+  }
+
+  static Future<void> clearAdminSession() async {
+    final prefs = await _prefs();
+    await prefs.remove(_kAdminId);
+    await prefs.remove(_kAdminName);
+    await prefs.remove(_kAdminSocietyId);
+    await prefs.remove(_kAdminRole);
+  }
+
+  static Future<AdminSession?> getAdminSession() async {
+    final prefs = await _prefs();
+    final adminId = prefs.getString(_kAdminId);
+    final adminName = prefs.getString(_kAdminName);
+    final societyId = prefs.getString(_kAdminSocietyId);
+    final role = prefs.getString(_kAdminRole);
+
+    if (adminId == null || adminId.isEmpty) return null;
+    return AdminSession(
+      adminId: adminId,
+      adminName: adminName ?? "",
+      societyId: societyId ?? "",
+      role: role ?? "ADMIN",
+    );
+  }
+
+  static Future<bool> hasAdminSession() async {
+    final prefs = await _prefs();
+    return (prefs.getString(_kAdminId) ?? "").isNotEmpty;
+  }
+
   static Future<void> clearAllSessions() async {
     await clearGuardSession();
     await clearResidentSession();
+    await clearAdminSession();
   }
 }

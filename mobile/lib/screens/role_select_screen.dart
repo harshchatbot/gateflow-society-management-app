@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'guard_login_screen.dart';
 import 'resident_login_screen.dart';
+import 'admin_login_screen.dart';
 import '../widgets/powered_by_footer.dart';
 import '../ui/app_colors.dart';
 
@@ -92,6 +93,23 @@ class RoleSelectScreen extends StatelessWidget {
                             Navigator.push(
                               context,
                               MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        _RoleCard(
+                          title: "Admin",
+                          subtitle: "Manage society, residents, guards & flats",
+                          icon: Icons.admin_panel_settings_rounded,
+                          iconColor: AppColors.admin,
+                          gradientColors: [
+                            AppColors.admin.withOpacity(0.1),
+                            AppColors.admin.withOpacity(0.05),
+                          ],
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
                             );
                           },
                         ),

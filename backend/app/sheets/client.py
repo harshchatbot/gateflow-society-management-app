@@ -823,6 +823,46 @@ class SheetsClient:
         return False
 
 
+
+
+    # -----------------------------
+    # Admins operations (NEW)
+    # -----------------------------
+    def get_admins(self, society_id: Optional[str] = None) -> List[Dict]:
+        """
+        Get all admins from Admins sheet, optionally filtered by society_id.
+        Enforces active == true if column exists.
+        Expected headers (case-insensitive):
+          admin_id, society_id, admin_name, phone, pin, role, active
+        """
+        rows = self._get_sheet_values(settings.SHEET_ADMINS)
+        if not rows or len(rows) < 2:
+            return []
+
+        headers = [str(h).strip().lower() for h in rows[0]]
+        admins: List[Dict] = []
+
+        for row in rows[1:]:
+            if len(row) < len(headers):
+                row.extend([""] * (len(headers) - len(row)))
+
+            a = dict(zip(headers, row))
+
+            # society filter
+            if society_id and (a.get("society_id") or "").strip() != society_id:
+                continue
+
+            # active filter (only if present)
+            active_val = str(a.get("active") or "").strip().lower()
+            if active_val and active_val != "true":
+                continue
+
+            admins.append(a)
+
+        return admins
+    
+
+
 # Singleton instance
 _sheets_client: Optional[SheetsClient] = None
 

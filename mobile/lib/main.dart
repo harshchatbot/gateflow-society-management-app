@@ -6,6 +6,7 @@ import 'core/storage.dart';
 
 import 'screens/guard_shell_screen.dart';
 import 'screens/resident_shell_screen.dart';
+import 'screens/admin_shell_screen.dart';
 import 'screens/role_select_screen.dart';
 
 Future<void> main() async {
@@ -17,6 +18,7 @@ Future<void> main() async {
   // Check saved sessions
   final residentSession = await Storage.getResidentSession();
   final guardSession = await Storage.getGuardSession();
+  final adminSession = await Storage.getAdminSession();
 
   Widget startScreen;
 
@@ -41,7 +43,16 @@ Future<void> main() async {
           : "Society",
     );
   }
-  // 3️⃣ No session → role selection
+  // 3️⃣ Admin session
+  else if (adminSession != null) {
+    startScreen = AdminShellScreen(
+      adminId: adminSession.adminId,
+      adminName: adminSession.adminName,
+      societyId: adminSession.societyId,
+      role: adminSession.role,
+    );
+  }
+  // 4️⃣ No session → role selection
   else {
     startScreen = const RoleSelectScreen();
   }
