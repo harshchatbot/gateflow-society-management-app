@@ -10,6 +10,7 @@ import '../ui/glass_loader.dart';
 /// Edit Account Information Screen
 /// 
 /// Allows residents to update their name and other account details.
+/// Theme: Green/Success theme (matching resident login and dashboard)
 class ResidentEditAccountScreen extends StatefulWidget {
   final String residentId;
   final String residentName;
@@ -65,16 +66,23 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
         AppLogger.i("Account updated successfully");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              "Account updated successfully",
-              style: TextStyle(fontWeight: FontWeight.bold),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  "Account updated successfully",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
         );
-        Navigator.of(context).pop(true); // Return true to indicate update
+        Navigator.of(context).pop(true);
       } else {
         AppLogger.e("Failed to update account", error: result.error);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -86,6 +94,7 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -101,6 +110,7 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -118,7 +128,10 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
       appBar: AppBar(
         title: const Text(
           "Edit Account",
-          style: TextStyle(fontWeight: FontWeight.w900),
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 20,
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -139,23 +152,51 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Account Information",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.text,
-                    ),
+                  // Header Section
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.person_rounded,
+                          color: AppColors.success,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Account Information",
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.text,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Update your account details",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.text2,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Update your account details",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.text2,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 28),
+                  
+                  // Name Input
                   AppTextField(
                     controller: _nameController,
                     label: "Full Name",
@@ -172,80 +213,128 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  // Read-only fields
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Flat Number",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.text2,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.flatNo,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.text,
-                          ),
-                        ),
-                      ],
-                    ),
+                  
+                  // Read-only Info Cards
+                  _buildInfoCard(
+                    icon: Icons.home_rounded,
+                    label: "Flat Number",
+                    value: widget.flatNo,
+                    iconColor: AppColors.success,
                   ),
                   const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "Society ID",
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.text2,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.societyId,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.text,
-                          ),
-                        ),
-                      ],
-                    ),
+                  _buildInfoCard(
+                    icon: Icons.apartment_rounded,
+                    label: "Society ID",
+                    value: widget.societyId,
+                    iconColor: AppColors.success,
                   ),
+                  
                   const SizedBox(height: 32),
-                  PrimaryButton(
-                    text: "Save Changes",
-                    onPressed: _handleSave,
-                    isLoading: _isLoading,
-                    icon: Icons.save_rounded,
+                  
+                  // Save Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: _isLoading ? null : _handleSave,
+                      icon: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Icon(Icons.save_rounded, size: 22),
+                      label: Text(
+                        _isLoading ? "Saving..." : "Save Changes",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
           if (_isLoading) const GlassLoader(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard({
+    required IconData icon,
+    required String label,
+    required String value,
+    required Color iconColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.text2,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.text,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.lock_rounded,
+            size: 16,
+            color: AppColors.textMuted,
+          ),
         ],
       ),
     );

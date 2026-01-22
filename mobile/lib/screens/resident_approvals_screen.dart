@@ -3,8 +3,8 @@ import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
 import '../services/resident_service.dart';
 import '../core/app_logger.dart';
+import '../core/env.dart';
 import '../widgets/status_chip.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 /// Resident Approvals Screen
 /// 
@@ -13,10 +13,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 /// - Approve/Reject buttons for each request
 /// - Calls backend decision API on action
 /// 
-/// Differences from Guard screens:
-/// - No visitor creation (guards only)
-/// - Focus on decision-making (approve/reject)
-/// - Simpler UI - just list + actions
+/// Theme: Green/Success theme (matching resident login)
 class ResidentApprovalsScreen extends StatefulWidget {
   final String residentId;
   final String societyId;
@@ -35,12 +32,13 @@ class ResidentApprovalsScreen extends StatefulWidget {
 
 class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
   late final ResidentService _service = ResidentService(
-    baseUrl: dotenv.env["API_BASE_URL"] ?? "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
   );
 
   List<dynamic> _pendingVisitors = [];
   bool _isLoading = false;
   String? _error;
+  String? _processingVisitorId;
 
   @override
   void initState() {
@@ -89,7 +87,10 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
 
   Future<void> _handleDecision(String visitorId, String decision) async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _processingVisitorId = visitorId;
+    });
 
     try {
       final result = await _service.decide(
@@ -108,27 +109,44 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              decision == "APPROVED" ? "Visitor approved" : "Visitor rejected",
-              style: const TextStyle(fontWeight: FontWeight.bold),
+            content: Row(
+              children: [
+                Icon(
+                  decision == "APPROVED" ? Icons.check_circle : Icons.cancel,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  decision == "APPROVED" ? "Visitor approved successfully" : "Visitor rejected",
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
             backgroundColor: decision == "APPROVED" ? AppColors.success : AppColors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
         );
 
         // Reload approvals list
         _loadApprovals();
       } else {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _processingVisitorId = null;
+        });
         _showError(result.error ?? "Failed to process decision");
         AppLogger.e("Decision failed: ${result.error}");
       }
     } catch (e) {
       AppLogger.e("Error processing decision", error: e);
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _processingVisitorId = null;
+        });
         _showError("Connection error. Please try again.");
       }
     }
@@ -141,6 +159,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
         backgroundColor: AppColors.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: const EdgeInsets.all(16),
       ),
     );
   }
@@ -150,19 +169,34 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: AppColors.bg,
+        backgroundColor: Colors.white,
         elevation: 0,
         title: const Text(
           "Pending Approvals",
           style: TextStyle(
             color: AppColors.text,
             fontWeight: FontWeight.w900,
+            fontSize: 20,
           ),
         ),
         centerTitle: true,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(
+            height: 1,
+            color: AppColors.border,
+          ),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.refresh_rounded, color: AppColors.success, size: 20),
+            ),
             onPressed: _loadApprovals,
           ),
         ],
@@ -171,63 +205,113 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
         children: [
           if (_error != null)
             Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: AppColors.error),
-                  const SizedBox(height: 16),
-                  Text(
-                    _error!,
-                    style: const TextStyle(color: AppColors.text2),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _loadApprovals,
-                    child: const Text("Retry"),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      _error!,
+                      style: const TextStyle(
+                        color: AppColors.text2,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _loadApprovals,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text("Retry"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             )
           else if (_pendingVisitors.isEmpty && !_isLoading)
             Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.check_circle_outline, size: 64, color: AppColors.text2),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "No pending approvals",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.text2,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check_circle_outline,
+                        size: 64,
+                        color: AppColors.success,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "All visitor requests are processed",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.textMuted,
+                    const SizedBox(height: 24),
+                    const Text(
+                      "All caught up!",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.text,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 8),
+                    Text(
+                      "No pending approvals",
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: AppColors.text2,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      "All visitor requests are processed",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textMuted,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             )
           else
             RefreshIndicator(
               onRefresh: _loadApprovals,
+              color: AppColors.success,
               child: ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: _pendingVisitors.length,
                 itemBuilder: (context, index) {
                   final visitor = _pendingVisitors[index];
-                  return _buildVisitorCard(visitor);
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _buildVisitorCard(visitor),
+                  );
                 },
               ),
             ),
-          GlassLoader(show: _isLoading, message: "Loading approvals…"),
+          GlassLoader(show: _isLoading, message: "Processing…"),
         ],
       ),
     );
@@ -239,19 +323,22 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
     final visitorPhone = visitor['visitor_phone']?.toString() ?? '';
     final status = visitor['status']?.toString() ?? 'PENDING';
     final createdAt = visitor['created_at']?.toString() ?? '';
+    final isProcessing = _processingVisitorId == visitorId;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: AppColors.border.withOpacity(0.5),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 10,
-            offset: const Offset(0, 4),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -260,71 +347,103 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
         children: [
           // Header: Type + Status
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                visitorType,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.text,
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.person_rounded,
+                      size: 14,
+                      color: AppColors.success,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      visitorType,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: AppColors.success,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              StatusChip(label: status),
+              const Spacer(),
+              StatusChip(status: status, compact: true),
             ],
           ),
           const SizedBox(height: 12),
           
-          // Visitor Details
-          _buildDetailRow(Icons.phone_rounded, "Phone", visitorPhone),
-          const SizedBox(height: 8),
-          _buildDetailRow(Icons.access_time_rounded, "Requested", _formatDateTime(createdAt)),
+          // Visitor Details (Compact)
+          _buildCompactDetailRow(Icons.phone_rounded, visitorPhone),
+          const SizedBox(height: 6),
+          _buildCompactDetailRow(Icons.access_time_rounded, _formatDateTime(createdAt)),
           
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           
-          // Action Buttons
+          // Action Buttons (Compact)
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: _isLoading
+                child: OutlinedButton.icon(
+                  onPressed: isProcessing || _isLoading
                       ? null
                       : () => _handleDecision(visitorId, "REJECTED"),
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  label: const Text(
+                    "Reject",
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: BorderSide(color: AppColors.error),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    side: const BorderSide(color: AppColors.error, width: 1.5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                  ),
-                  child: const Text(
-                    "Reject",
-                    style: TextStyle(
-                      color: AppColors.error,
-                      fontWeight: FontWeight.w700,
-                    ),
+                    foregroundColor: AppColors.error,
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 flex: 2,
-                child: ElevatedButton(
-                  onPressed: _isLoading
+                child: ElevatedButton.icon(
+                  onPressed: isProcessing || _isLoading
                       ? null
                       : () => _handleDecision(visitorId, "APPROVED"),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    backgroundColor: AppColors.success,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                  icon: isProcessing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Icon(Icons.check_rounded, size: 18),
+                  label: Text(
+                    isProcessing ? "Processing..." : "Approve",
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  child: const Text(
-                    "Approve",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    backgroundColor: AppColors.success,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
@@ -336,27 +455,28 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value) {
+  Widget _buildCompactDetailRow(IconData icon, String value) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: AppColors.text2),
-        const SizedBox(width: 8),
-        Text(
-          "$label: ",
-          style: TextStyle(
-            fontSize: 13,
-            color: AppColors.text2,
-            fontWeight: FontWeight.w600,
+        Container(
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: AppColors.bg,
+            borderRadius: BorderRadius.circular(6),
           ),
+          child: Icon(icon, size: 14, color: AppColors.text2),
         ),
+        const SizedBox(width: 8),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
               color: AppColors.text,
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w600,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
@@ -367,7 +487,20 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
     if (dateTimeStr.isEmpty) return "Unknown";
     try {
       final dt = DateTime.parse(dateTimeStr);
-      return "${dt.day}/${dt.month}/${dt.year} ${dt.hour}:${dt.minute.toString().padLeft(2, '0')}";
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final dateDay = DateTime(dt.year, dt.month, dt.day);
+      
+      String dateStr;
+      if (dateDay == today) {
+        dateStr = "Today";
+      } else if (dateDay == today.subtract(const Duration(days: 1))) {
+        dateStr = "Yesterday";
+      } else {
+        dateStr = "${dt.day}/${dt.month}/${dt.year}";
+      }
+      
+      return "$dateStr • ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
     } catch (e) {
       return dateTimeStr;
     }

@@ -13,13 +13,10 @@ import 'resident_edit_account_screen.dart';
 /// Purpose: Display resident information and account settings
 /// - Shows resident details (name, flat, society)
 /// - Account information section
+/// - Settings section with navigation
 /// - Logout functionality
 /// 
-/// Differences from Guard Profile:
-/// - No duty status toggle (guards only)
-/// - No performance stats (guards only)
-/// - No operational tasks (guards only)
-/// - Simpler layout focused on resident info
+/// Theme: Green/Success theme (matching resident login and dashboard)
 class ResidentProfileScreen extends StatefulWidget {
   final String residentId;
   final String residentName;
@@ -125,16 +122,19 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
       backgroundColor: AppColors.bg,
       body: CustomScrollView(
         slivers: [
-          // Profile Header (similar to guard profile)
+          // Green Gradient Profile Header
           SliverAppBar(
             expandedHeight: 220,
             pinned: true,
-            backgroundColor: AppColors.primary,
+            backgroundColor: AppColors.success,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [AppColors.primary, Color(0xFF1E40AF)],
+                    colors: [
+                      AppColors.success,
+                      AppColors.success.withOpacity(0.7),
+                    ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -147,6 +147,13 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppColors.success.withOpacity(0.3),
+                            blurRadius: 20,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
                       ),
                       child: const CircleAvatar(
                         radius: 45,
@@ -187,7 +194,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                   _buildAccountInfoSection(),
                   const SizedBox(height: 20),
 
-                  // Settings Section (placeholder for future features)
+                  // Settings Section
                   _buildSettingsSection(),
                   const SizedBox(height: 30),
 
@@ -221,13 +228,30 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Account Information",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: AppColors.text,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.info_rounded,
+                  color: AppColors.success,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                "Account Information",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.text,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 20),
           _buildInfoRow(
@@ -266,12 +290,12 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
     return Row(
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppColors.primarySoft,
-            borderRadius: BorderRadius.circular(10),
+            color: AppColors.success.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, size: 20, color: AppColors.primary),
+          child: Icon(icon, size: 20, color: AppColors.success),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -309,21 +333,45 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Settings",
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: AppColors.text,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.settings_rounded,
+                  color: AppColors.success,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                "Settings",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.text,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           _buildSettingItem(
-            icon: Icons.notifications_outlined,
+            icon: Icons.notifications_rounded,
             title: "Notifications",
             subtitle: "Manage notification preferences",
             onTap: () async {
@@ -341,7 +389,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
           ),
           const Divider(height: 24),
           _buildSettingItem(
-            icon: Icons.phone_outlined,
+            icon: Icons.phone_rounded,
             title: "Phone Number",
             subtitle: "Update your phone number",
             onTap: () async {
@@ -357,14 +405,13 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                 ),
               );
               if (updatedPhone != null && mounted) {
-                // Refresh profile if needed
                 setState(() {});
               }
             },
           ),
           const Divider(height: 24),
           _buildSettingItem(
-            icon: Icons.person_outline,
+            icon: Icons.person_rounded,
             title: "Account Information",
             subtitle: "Edit your name and details",
             onTap: () async {
@@ -380,14 +427,13 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                 ),
               );
               if (updated == true && mounted) {
-                // Refresh profile if needed
                 setState(() {});
               }
             },
           ),
           const Divider(height: 24),
           _buildSettingItem(
-            icon: Icons.image_outlined,
+            icon: Icons.image_rounded,
             title: "Profile Picture",
             subtitle: "Upload or change your photo",
             onTap: () async {
@@ -402,7 +448,6 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                 ),
               );
               if (updated == true && mounted) {
-                // Refresh profile if needed
                 setState(() {});
               }
             },
@@ -421,11 +466,22 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          color: Colors.transparent,
+        ),
         child: Row(
           children: [
-            Icon(icon, color: AppColors.primary, size: 24),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: AppColors.success, size: 22),
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(

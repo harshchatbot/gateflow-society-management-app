@@ -8,7 +8,7 @@ import '../ui/glass_loader.dart';
 /// Notification Settings Screen
 /// 
 /// Allows residents to manage their notification preferences.
-/// For MVP, this is a placeholder that can be extended with FCM token management.
+/// Theme: Green/Success theme (matching resident login and dashboard)
 class ResidentNotificationSettingsScreen extends StatefulWidget {
   final String residentId;
   final String societyId;
@@ -50,13 +50,20 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text(
-            "Notification preferences saved",
-            style: TextStyle(fontWeight: FontWeight.bold),
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                "Notification preferences saved",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
         ),
       );
     } catch (e) {
@@ -71,6 +78,7 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -88,7 +96,10 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
       appBar: AppBar(
         title: const Text(
           "Notification Settings",
-          style: TextStyle(fontWeight: FontWeight.w900),
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 20,
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -107,191 +118,120 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  "Notification Preferences",
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.text,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  "Choose how you want to receive notifications",
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: AppColors.text2,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // Push Notifications
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
+                // Header Section
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.notifications_active_rounded,
+                        color: AppColors.success,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.notifications_rounded, color: AppColors.primary),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Push Notifications",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.text,
-                                ),
-                              ),
-                              Text(
-                                "Receive notifications on your device",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.text2,
-                                ),
-                              ),
-                            ],
+                          const Text(
+                            "Notification Preferences",
+                            style: TextStyle(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.text,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            "Choose how you want to receive notifications",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: AppColors.text2,
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ],
                       ),
-                      Switch.adaptive(
-                        value: _pushNotifications,
-                        onChanged: (value) {
-                          setState(() => _pushNotifications = value);
-                        },
-                        activeColor: AppColors.primary,
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 28),
+                
+                // Push Notifications Card
+                _buildNotificationCard(
+                  icon: Icons.notifications_rounded,
+                  title: "Push Notifications",
+                  subtitle: "Receive notifications on your device",
+                  value: _pushNotifications,
+                  onChanged: (value) {
+                    setState(() => _pushNotifications = value);
+                  },
+                  iconColor: AppColors.success,
                 ),
                 const SizedBox(height: 12),
-                // Email Notifications
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.email_rounded, color: AppColors.primary),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Email Notifications",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.text,
-                                ),
-                              ),
-                              Text(
-                                "Receive notifications via email",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.text2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Switch.adaptive(
-                        value: _emailNotifications,
-                        onChanged: (value) {
-                          setState(() => _emailNotifications = value);
-                        },
-                        activeColor: AppColors.primary,
-                      ),
-                    ],
-                  ),
+                
+                // Email Notifications Card
+                _buildNotificationCard(
+                  icon: Icons.email_rounded,
+                  title: "Email Notifications",
+                  subtitle: "Receive notifications via email",
+                  value: _emailNotifications,
+                  onChanged: (value) {
+                    setState(() => _emailNotifications = value);
+                  },
+                  iconColor: AppColors.primary,
                 ),
                 const SizedBox(height: 12),
-                // SMS Notifications
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.sms_rounded, color: AppColors.primary),
-                          const SizedBox(width: 12),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "SMS Notifications",
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.text,
-                                ),
-                              ),
-                              Text(
-                                "Receive notifications via SMS",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: AppColors.text2,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                      Switch.adaptive(
-                        value: _smsNotifications,
-                        onChanged: (value) {
-                          setState(() => _smsNotifications = value);
-                        },
-                        activeColor: AppColors.primary,
-                      ),
-                    ],
-                  ),
+                
+                // SMS Notifications Card
+                _buildNotificationCard(
+                  icon: Icons.sms_rounded,
+                  title: "SMS Notifications",
+                  subtitle: "Receive notifications via SMS",
+                  value: _smsNotifications,
+                  onChanged: (value) {
+                    setState(() => _smsNotifications = value);
+                  },
+                  iconColor: AppColors.warning,
                 ),
+                
                 const SizedBox(height: 32),
+                
+                // Save Button
                 SizedBox(
                   width: double.infinity,
-                  height: 52,
+                  height: 56,
                   child: ElevatedButton.icon(
                     onPressed: _isLoading ? null : _handleSave,
                     icon: _isLoading
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            ),
                           )
-                        : const Icon(Icons.save_rounded),
+                        : const Icon(Icons.save_rounded, size: 22),
                     label: Text(
                       _isLoading ? "Saving..." : "Save Preferences",
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
                       ),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
+                      backgroundColor: AppColors.success,
                       foregroundColor: Colors.white,
+                      elevation: 0,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(16),
                       ),
                     ),
                   ),
@@ -300,6 +240,86 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
             ),
           ),
           if (_isLoading) const GlassLoader(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required Color iconColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: value ? iconColor.withOpacity(0.3) : AppColors.border,
+          width: value ? 1.5 : 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: value
+                ? iconColor.withOpacity(0.08)
+                : Colors.black.withOpacity(0.03),
+            blurRadius: value ? 15 : 10,
+            offset: Offset(0, value ? 4 : 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Icon Container
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: iconColor.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, color: iconColor, size: 24),
+          ),
+          const SizedBox(width: 16),
+          
+          // Text Content
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: AppColors.text2,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Switch
+          Transform.scale(
+            scale: 1.1,
+            child: Switch.adaptive(
+              value: value,
+              onChanged: onChanged,
+              activeColor: iconColor,
+            ),
+          ),
         ],
       ),
     );

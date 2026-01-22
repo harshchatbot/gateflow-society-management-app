@@ -4,12 +4,12 @@ import '../core/app_logger.dart';
 import '../services/resident_service.dart';
 import '../core/env.dart';
 import '../widgets/app_text_field.dart';
-import '../widgets/primary_button.dart';
 import '../ui/glass_loader.dart';
 
 /// Edit Phone Number Screen
 /// 
 /// Allows residents to update their phone number.
+/// Theme: Green/Success theme (matching resident login and dashboard)
 class ResidentEditPhoneScreen extends StatefulWidget {
   final String residentId;
   final String currentPhone;
@@ -76,13 +76,20 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
         AppLogger.i("Phone number updated successfully");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text(
-              "Phone number updated successfully",
-              style: TextStyle(fontWeight: FontWeight.bold),
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                const Text(
+                  "Phone number updated successfully",
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
         );
         Navigator.of(context).pop(_phoneController.text.trim());
@@ -97,6 +104,7 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -112,6 +120,7 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
           ),
         );
       }
@@ -129,7 +138,10 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
       appBar: AppBar(
         title: const Text(
           "Update Phone Number",
-          style: TextStyle(fontWeight: FontWeight.w900),
+          style: TextStyle(
+            fontWeight: FontWeight.w900,
+            fontSize: 20,
+          ),
         ),
         backgroundColor: Colors.white,
         elevation: 0,
@@ -150,23 +162,51 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    "Phone Number",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.text,
-                    ),
+                  // Header Section
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.phone_rounded,
+                          color: AppColors.success,
+                          size: 24,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Phone Number",
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.text,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              "Update your phone number for notifications",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.text2,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Update your phone number for notifications",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: AppColors.text2,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 28),
+                  
+                  // Phone Input
                   AppTextField(
                     controller: _phoneController,
                     label: "Phone Number",
@@ -175,12 +215,42 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
                     keyboardType: TextInputType.phone,
                     validator: _validatePhone,
                   ),
+                  
                   const SizedBox(height: 32),
-                  PrimaryButton(
-                    text: "Update Phone Number",
-                    onPressed: _handleSave,
-                    isLoading: _isLoading,
-                    icon: Icons.save_rounded,
+                  
+                  // Update Button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: _isLoading ? null : _handleSave,
+                      icon: _isLoading
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : const Icon(Icons.save_rounded, size: 22),
+                      label: Text(
+                        _isLoading ? "Updating..." : "Update Phone Number",
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
