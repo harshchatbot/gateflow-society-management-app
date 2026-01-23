@@ -7,6 +7,11 @@ from typing import List, Optional
 from pydantic import BaseModel, Field
 from app.services.admin_service import get_admin_service
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+
 router = APIRouter(prefix="/api/admins", tags=["Admins"])
 
 
@@ -127,3 +132,46 @@ async def upload_profile_image(
         society_id=society_id,
         file=file,
     )
+
+
+class AdminRegisterRequest(BaseModel):
+    """Admin registration request"""
+    society_id: str = Field(..., description="Society ID")
+    admin_id: str = Field(..., description="Admin ID (unique identifier)")
+    admin_name: str = Field(..., description="Admin full name")
+    pin: str = Field(..., description="Admin PIN/password", min_length=4)
+    phone: Optional[str] = Field(None, description="Admin phone number")
+    role: str = Field("ADMIN", description="Admin role (president, secretary, etc.)")
+
+
+@router.post("/register", response_model=dict)
+def register_admin(payload: AdminRegisterRequest):
+    """
+    Register a new admin account.
+    """
+    admin_service = get_admin_service()
+    try:
+        admin = admin_service.create_admin(
+            society_id=payload.society_id,
+            admin_id=payload.admin_id,
+            admin_name=payload.admin_name,
+            pin=payload.pin,
+            phone=payload.phone,
+            role=payload.role,
+        )
+        return {
+            "ok": True,
+            "message": "Admin registered successfully",
+            "admin": admin,
+        }
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error registering admin: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to register admin"
+        )

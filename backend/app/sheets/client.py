@@ -961,6 +961,72 @@ class SheetsClient:
             admins.append(a)
 
         return admins
+
+    def create_admin(
+        self,
+        society_id: str,
+        admin_id: str,
+        admin_name: str,
+        pin: str,
+        phone: Optional[str] = None,
+        role: str = "ADMIN",
+    ) -> Dict:
+        """
+        Create a new admin in the Admins sheet.
+        Expected headers: admin_id, society_id, admin_name, phone, pin, role, active
+        """
+        rows = self._get_sheet_values(settings.SHEET_ADMINS)
+        if not rows or len(rows) < 1:
+            raise ValueError("Admins sheet is empty or missing headers")
+
+        headers = [str(h).strip() for h in rows[0]]
+        header_map = {h.lower(): i for i, h in enumerate(headers)}
+
+        # Check if admin_id already exists
+        for row in rows[1:]:
+            if len(row) < len(headers):
+                row.extend([""] * (len(headers) - len(row)))
+            r = dict(zip([h.lower() for h in headers], row))
+            if (r.get("admin_id") or "").strip().lower() == admin_id.strip().lower():
+                if (r.get("society_id") or "").strip() == society_id.strip():
+                    raise ValueError(f"Admin with ID '{admin_id}' already exists for this society")
+
+        # Build row data in the exact order of headers
+        row = []
+        for header in headers:
+            header_lower = header.lower()
+            if header_lower == "admin_id":
+                row.append(admin_id.strip())
+            elif header_lower == "society_id":
+                row.append(society_id.strip())
+            elif header_lower == "admin_name" or header_lower == "name":
+                row.append(admin_name.strip())
+            elif header_lower == "phone" or header_lower == "admin_phone":
+                row.append((phone or "").strip())
+            elif header_lower == "pin" or header_lower == "password":
+                row.append(pin.strip())
+            elif header_lower == "role":
+                row.append(role.strip().upper())
+            elif header_lower == "active":
+                row.append("TRUE")
+            else:
+                row.append("")  # Default empty for other columns
+
+        # Append to sheet
+        self._append_to_sheet(settings.SHEET_ADMINS, [row])
+
+        # Return created admin data
+        admin_data = {
+            "admin_id": admin_id.strip(),
+            "society_id": society_id.strip(),
+            "admin_name": admin_name.strip(),
+            "phone": (phone or "").strip(),
+            "role": role.strip().upper(),
+            "active": "TRUE",
+        }
+
+        logger.info(f"Admin created: {admin_id} for society {society_id}")
+        return admin_data
     
 
 

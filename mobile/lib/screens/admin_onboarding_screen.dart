@@ -1,88 +1,111 @@
 import 'package:flutter/material.dart';
-import '../core/storage.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../services/admin_service.dart';
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
 import 'admin_shell_screen.dart';
-import 'role_select_screen.dart';
-import 'admin_onboarding_screen.dart';
+import 'admin_login_screen.dart';
+import '../core/storage.dart';
 
-class AdminLoginScreen extends StatefulWidget {
-  const AdminLoginScreen({super.key});
+/// Admin Onboarding Screen
+/// 
+/// Allows new admins to register/create their account.
+/// Theme: Purple/Admin theme
+class AdminOnboardingScreen extends StatefulWidget {
+  const AdminOnboardingScreen({super.key});
 
   @override
-  State<AdminLoginScreen> createState() => _AdminLoginScreenState();
+  State<AdminOnboardingScreen> createState() => _AdminOnboardingScreenState();
 }
 
-class _AdminLoginScreenState extends State<AdminLoginScreen> {
+class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
   final _societyIdController = TextEditingController();
   final _adminIdController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _adminNameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _pinController = TextEditingController();
+  final _confirmPinController = TextEditingController();
+  
   late final AdminService _adminService = AdminService(
     baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
   );
+  
   bool _isLoading = false;
-  bool _obscurePassword = true;
+  bool _obscurePin = true;
+  bool _obscureConfirmPin = true;
+  String _selectedRole = "ADMIN";
+
+  final List<String> _roles = [
+    "ADMIN",
+    "PRESIDENT",
+    "SECRETARY",
+    "TREASURER",
+    "COMMITTEE",
+  ];
 
   @override
   void dispose() {
     _societyIdController.dispose();
     _adminIdController.dispose();
-    _passwordController.dispose();
+    _adminNameController.dispose();
+    _phoneController.dispose();
+    _pinController.dispose();
+    _confirmPinController.dispose();
     super.dispose();
   }
 
-  void _handleLogin() async {
+  void _handleRegister() async {
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
     final societyId = _societyIdController.text.trim();
     final adminId = _adminIdController.text.trim();
-    final pin = _passwordController.text.trim();
+    final adminName = _adminNameController.text.trim();
+    final phone = _phoneController.text.trim();
+    final pin = _pinController.text.trim();
 
     setState(() => _isLoading = true);
-    AppLogger.i("Admin login attempt", data: {
+    AppLogger.i("Admin registration attempt", data: {
       "society_id": societyId,
       "admin_id": adminId,
+      "role": _selectedRole,
     });
 
     try {
-      final result = await _adminService.login(
+      final result = await _adminService.register(
         societyId: societyId,
         adminId: adminId,
+        adminName: adminName,
         pin: pin,
+        phone: phone.isEmpty ? null : phone,
+        role: _selectedRole,
       );
 
       if (!mounted) return;
 
-      AppLogger.i("Admin login response", data: {
+      AppLogger.i("Admin registration response", data: {
         "success": result.isSuccess,
         "error": result.error,
       });
 
       if (result.isSuccess && result.data != null) {
         final data = result.data!;
-        AppLogger.i("Admin profile data received", data: data);
+        AppLogger.i("Admin registered successfully", data: data);
 
-        final String adminId = (data['admin_id'] ?? data['id'] ?? data['adminId'])?.toString() ?? "";
-        final String adminName = (data['admin_name'] ?? data['name'] ?? data['full_name'])?.toString() ?? "Admin";
-        final String realSocietyId = (data['society_id'] ?? data['societyId'])?.toString() ?? societyId;
-        final String role = (data['role'] ?? 'ADMIN')?.toString() ?? 'ADMIN';
+        // Extract admin info from response
+        final adminData = data['admin'] as Map<String, dynamic>? ?? data;
+        final String registeredAdminId = (adminData['admin_id'] ?? adminId).toString();
+        final String registeredAdminName = (adminData['admin_name'] ?? adminName).toString();
+        final String realSocietyId = (adminData['society_id'] ?? societyId).toString();
+        final String role = (adminData['role'] ?? _selectedRole).toString();
 
-        if (adminId.isEmpty) {
-          AppLogger.e("Admin profile invalid - missing admin_id");
-          setState(() => _isLoading = false);
-          _showError("Admin profile invalid (missing admin_id).");
-          return;
-        }
-
+        // Save session
         await Storage.saveAdminSession(
-          adminId: adminId,
-          adminName: adminName,
+          adminId: registeredAdminId,
+          adminName: registeredAdminName,
           societyId: realSocietyId,
           role: role,
         );
@@ -93,24 +116,48 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
         if (!mounted) return;
 
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                const Expanded(
+                  child: Text(
+                    "Account created successfully!",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.admin,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        // Navigate to admin shell
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (_) => AdminShellScreen(
-              adminId: adminId,
-              adminName: adminName,
+              adminId: registeredAdminId,
+              adminName: registeredAdminName,
               societyId: realSocietyId,
               role: role,
             ),
           ),
         );
       } else {
-        AppLogger.e("Admin login failed", error: result.error);
+        AppLogger.e("Admin registration failed", error: result.error);
         setState(() => _isLoading = false);
-        _showError(result.error ?? "Invalid credentials or unauthorized access");
+        _showError(result.error ?? "Registration failed. Please try again.");
       }
     } catch (e, stackTrace) {
-      AppLogger.e("Admin login exception", error: e, stackTrace: stackTrace);
+      AppLogger.e("Admin registration exception", error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() => _isLoading = false);
         _showError("Connection error. Please try again.");
@@ -159,7 +206,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           ),
           onPressed: () {
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+              MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
             );
           },
         ),
@@ -174,7 +221,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.admin.withOpacity(0.15), // Purple gradient for admin
+                    AppColors.admin.withOpacity(0.15),
                     AppColors.bg,
                     AppColors.bg,
                   ],
@@ -190,13 +237,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   const SizedBox(height: 20),
                   _buildBrandHeader(),
                   const SizedBox(height: 40),
-                  _buildLoginForm(),
+                  _buildRegistrationForm(),
                   const SizedBox(height: 24),
                 ],
               ),
             ),
           ),
-          GlassLoader(show: _isLoading, message: "Verifying Admin…"),
+          GlassLoader(show: _isLoading, message: "Creating Account…"),
         ],
       ),
     );
@@ -212,7 +259,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [AppColors.admin, Color(0xFF7C3AED)], // Purple gradient
+              colors: [AppColors.admin, Color(0xFF7C3AED)],
             ),
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
@@ -224,14 +271,14 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             ],
           ),
           child: const Icon(
-            Icons.admin_panel_settings_rounded,
+            Icons.person_add_rounded,
             size: 50,
             color: Colors.white,
           ),
         ),
         const SizedBox(height: 20),
         const Text(
-          "Admin Login",
+          "Admin Onboarding",
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w900,
@@ -241,7 +288,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          "Society Management Portal",
+          "Create your admin account",
           style: TextStyle(
             color: AppColors.text2,
             fontWeight: FontWeight.w600,
@@ -252,7 +299,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     );
   }
 
-  Widget _buildLoginForm() {
+  Widget _buildRegistrationForm() {
     return Container(
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
@@ -273,7 +320,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              "Enter your credentials",
+              "Fill in your details",
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -290,7 +337,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               textInputAction: TextInputAction.next,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return "Please enter your Society ID";
+                  return "Please enter Society ID";
                 }
                 return null;
               },
@@ -299,38 +346,174 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             _PremiumField(
               controller: _adminIdController,
               label: "Admin ID",
-              hint: "Enter your Admin ID",
+              hint: "Choose a unique Admin ID",
               icon: Icons.badge_rounded,
               textInputAction: TextInputAction.next,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return "Please enter your Admin ID";
+                  return "Please enter Admin ID";
+                }
+                if (value.trim().length < 3) {
+                  return "Admin ID must be at least 3 characters";
                 }
                 return null;
               },
             ),
             const SizedBox(height: 20),
             _PremiumField(
-              controller: _passwordController,
-              label: "Pin/Password",
-              hint: "Enter your pin/password",
+              controller: _adminNameController,
+              label: "Full Name",
+              hint: "Enter your full name",
+              icon: Icons.person_rounded,
+              textInputAction: TextInputAction.next,
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return "Please enter your name";
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
+            _PremiumField(
+              controller: _phoneController,
+              label: "Phone Number (Optional)",
+              hint: "e.g. 9876543210",
+              icon: Icons.phone_rounded,
+              textInputAction: TextInputAction.next,
+              keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value != null && value.trim().isNotEmpty) {
+                  if (value.trim().length < 10) {
+                    return "Please enter a valid phone number";
+                  }
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
+            // Role Selection
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Role",
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.text2,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.bg,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedRole,
+                    decoration: InputDecoration(
+                      prefixIcon: Container(
+                        margin: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.admin.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(Icons.admin_panel_settings_rounded, color: AppColors.admin, size: 20),
+                      ),
+                      hintText: "Select role",
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 18,
+                      ),
+                    ),
+                    items: _roles.map((role) {
+                      return DropdownMenuItem(
+                        value: role,
+                        child: Text(
+                          role,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.text,
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() => _selectedRole = value);
+                      }
+                    },
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            _PremiumField(
+              controller: _pinController,
+              label: "PIN/Password",
+              hint: "Create a secure PIN (min 4 digits)",
               icon: Icons.lock_rounded,
-              obscureText: _obscurePassword,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _handleLogin(),
+              obscureText: _obscurePin,
+              textInputAction: TextInputAction.next,
+              keyboardType: TextInputType.number,
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  _obscurePin ? Icons.visibility_outlined : Icons.visibility_off_outlined,
                   color: AppColors.text2,
                   size: 20,
                 ),
                 onPressed: () {
-                  setState(() => _obscurePassword = !_obscurePassword);
+                  setState(() => _obscurePin = !_obscurePin);
                 },
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return "Please enter your pin/password";
+                  return "Please enter a PIN";
+                }
+                if (value.trim().length < 4) {
+                  return "PIN must be at least 4 characters";
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
+            _PremiumField(
+              controller: _confirmPinController,
+              label: "Confirm PIN",
+              hint: "Re-enter your PIN",
+              icon: Icons.lock_outline_rounded,
+              obscureText: _obscureConfirmPin,
+              textInputAction: TextInputAction.done,
+              keyboardType: TextInputType.number,
+              onSubmitted: (_) => _handleRegister(),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscureConfirmPin ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  color: AppColors.text2,
+                  size: 20,
+                ),
+                onPressed: () {
+                  setState(() => _obscureConfirmPin = !_obscureConfirmPin);
+                },
+              ),
+              validator: (value) {
+                if (value == null || value.trim().isEmpty) {
+                  return "Please confirm your PIN";
+                }
+                if (value.trim() != _pinController.text.trim()) {
+                  return "PINs do not match";
                 }
                 return null;
               },
@@ -339,9 +522,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             SizedBox(
               height: 56,
               child: ElevatedButton(
-                onPressed: _isLoading ? null : _handleLogin,
+                onPressed: _isLoading ? null : _handleRegister,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.admin, // Purple button
+                  backgroundColor: AppColors.admin,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shadowColor: Colors.transparent,
@@ -350,7 +533,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   ),
                 ),
                 child: const Text(
-                  "LOGIN",
+                  "CREATE ACCOUNT",
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.2,
@@ -364,7 +547,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  "New admin? ",
+                  "Already have an account? ",
                   style: TextStyle(
                     color: AppColors.text2,
                     fontSize: 14,
@@ -373,12 +556,12 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 ),
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(builder: (_) => const AdminOnboardingScreen()),
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
                     );
                   },
                   child: const Text(
-                    "Create Account",
+                    "Login",
                     style: TextStyle(
                       color: AppColors.admin,
                       fontWeight: FontWeight.w900,
@@ -402,6 +585,7 @@ class _PremiumField extends StatelessWidget {
   final IconData icon;
   final bool obscureText;
   final TextInputAction textInputAction;
+  final TextInputType? keyboardType;
   final ValueChanged<String>? onSubmitted;
   final Widget? suffixIcon;
   final String? Function(String?)? validator;
@@ -413,6 +597,7 @@ class _PremiumField extends StatelessWidget {
     required this.icon,
     this.obscureText = false,
     required this.textInputAction,
+    this.keyboardType,
     this.onSubmitted,
     this.suffixIcon,
     this.validator,
@@ -450,6 +635,7 @@ class _PremiumField extends StatelessWidget {
             controller: controller,
             obscureText: obscureText,
             textInputAction: textInputAction,
+            keyboardType: keyboardType,
             onFieldSubmitted: onSubmitted,
             validator: validator,
             style: const TextStyle(
@@ -462,7 +648,7 @@ class _PremiumField extends StatelessWidget {
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.admin.withOpacity(0.15), // Purple for admin
+                  color: AppColors.admin.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: AppColors.admin, size: 20),

@@ -238,4 +238,59 @@ class AdminService {
       return ApiResult.failure("Connection error: ${e.toString()}");
     }
   }
+
+  Future<ApiResult<Map<String, dynamic>>> register({
+    required String societyId,
+    required String adminId,
+    required String adminName,
+    required String pin,
+    String? phone,
+    String role = "ADMIN",
+  }) async {
+    try {
+      final body = jsonEncode({
+        "society_id": societyId,
+        "admin_id": adminId,
+        "admin_name": adminName,
+        "pin": pin,
+        if (phone != null && phone.isNotEmpty) "phone": phone,
+        "role": role,
+      });
+
+      AppLogger.i("Admin registration request", data: {
+        "society_id": societyId,
+        "admin_id": adminId,
+        "role": role,
+      });
+
+      final res = await http
+          .post(
+            _uri("/api/admins/register"),
+            headers: {"Content-Type": "application/json"},
+            body: body,
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw TimeoutException("Request timeout after 10 seconds");
+            },
+          );
+
+      AppLogger.i("Admin registration response", data: {"status": res.statusCode, "body": res.body});
+
+      if (res.statusCode == 200) {
+        return ApiResult.success(jsonDecode(res.body) as Map<String, dynamic>);
+      }
+      return ApiResult.failure("Registration failed: ${res.statusCode} ${res.body}");
+    } on TimeoutException catch (e) {
+      AppLogger.e("Admin registration timeout error", error: e);
+      return ApiResult.failure("Request timeout. Please check your connection and try again.");
+    } on SocketException catch (e) {
+      AppLogger.e("Admin registration socket error", error: e);
+      return ApiResult.failure("Cannot connect to server. Please check your network connection.");
+    } catch (e) {
+      AppLogger.e("Admin registration error", error: e);
+      return ApiResult.failure("Connection error: ${e.toString()}");
+    }
+  }
 }

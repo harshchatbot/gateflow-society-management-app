@@ -130,6 +130,34 @@ class AdminService:
         )
         return visitors[:limit]
 
+    def create_admin(
+        self,
+        society_id: str,
+        admin_id: str,
+        admin_name: str,
+        pin: str,
+        phone: Optional[str] = None,
+        role: str = "ADMIN",
+    ) -> Dict:
+        """
+        Create a new admin account.
+        """
+        try:
+            return self.sheets.create_admin(
+                society_id=society_id,
+                admin_id=admin_id,
+                admin_name=admin_name,
+                pin=pin,
+                phone=phone,
+                role=role,
+            )
+        except ValueError as e:
+            logger.error(f"Error creating admin: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error creating admin: {e}")
+            raise
+
     async def upload_profile_image(
         self,
         admin_id: str,
