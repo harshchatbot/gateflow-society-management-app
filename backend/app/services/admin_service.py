@@ -129,3 +129,47 @@ class AdminService:
             reverse=True
         )
         return visitors[:limit]
+
+    async def upload_profile_image(
+        self,
+        admin_id: str,
+        society_id: str,
+        file,
+    ) -> Dict:
+        """
+        Upload admin profile image.
+        For MVP, we'll store the file path/URL in the Admins sheet.
+        """
+        import os
+        import uuid
+        
+        # Create uploads directory if it doesn't exist
+        upload_dir = "uploads/admins"
+        os.makedirs(upload_dir, exist_ok=True)
+        
+        # Generate unique filename
+        file_ext = os.path.splitext(file.filename)[1] or ".jpg"
+        filename = f"{admin_id}_{uuid.uuid4().hex[:8]}{file_ext}"
+        file_path = os.path.join(upload_dir, filename)
+        
+        # Save file
+        with open(file_path, "wb") as f:
+            content = await file.read()
+            f.write(content)
+        
+        # Update admin record with image path
+        updated = self.sheets.update_admin_image(
+            admin_id=admin_id,
+            society_id=society_id,
+            image_path=file_path,
+        )
+        
+        if not updated:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail="Admin not found")
+        
+        return {
+            "ok": True,
+            "image_path": file_path,
+            "message": "Profile image uploaded successfully",
+        }

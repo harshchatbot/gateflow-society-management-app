@@ -208,4 +208,34 @@ class AdminService {
       return ApiResult.failure("Connection error: ${e.toString()}");
     }
   }
+
+  Future<ApiResult<Map<String, dynamic>>> uploadProfileImage({
+    required String adminId,
+    required String societyId,
+    required String imagePath,
+  }) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        _uri("/api/admins/profile/image"),
+      );
+
+      request.fields['admin_id'] = adminId;
+      request.fields['society_id'] = societyId;
+
+      final file = await http.MultipartFile.fromPath('file', imagePath);
+      request.files.add(file);
+
+      final streamedResponse = await request.send();
+      final res = await http.Response.fromStream(streamedResponse);
+
+      if (res.statusCode == 200) {
+        return ApiResult.success(jsonDecode(res.body) as Map<String, dynamic>);
+      }
+      return ApiResult.failure("Upload failed: ${res.statusCode} ${res.body}");
+    } catch (e) {
+      AppLogger.e("Admin uploadProfileImage error", error: e);
+      return ApiResult.failure("Connection error: ${e.toString()}");
+    }
+  }
 }

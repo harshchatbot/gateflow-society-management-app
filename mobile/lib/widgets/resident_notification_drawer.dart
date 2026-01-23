@@ -1,30 +1,38 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
+import '../services/resident_service.dart';
 import '../services/complaint_service.dart';
 import '../services/notice_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 
-/// Admin Notification Drawer
+/// Resident Notification Drawer
 /// 
-/// Shows recent notifications for admins:
-/// - Pending complaints
+/// Shows recent notifications for residents:
+/// - Pending visitor approvals
 /// - Recent notices
-class AdminNotificationDrawer extends StatefulWidget {
+/// - Recent complaints
+class ResidentNotificationDrawer extends StatefulWidget {
   final String societyId;
-  final String adminId;
+  final String residentId;
+  final String flatNo;
 
-  const AdminNotificationDrawer({
+  const ResidentNotificationDrawer({
     super.key,
     required this.societyId,
-    required this.adminId,
+    required this.residentId,
+    required this.flatNo,
   });
 
   @override
-  State<AdminNotificationDrawer> createState() => _AdminNotificationDrawerState();
+  State<ResidentNotificationDrawer> createState() => _ResidentNotificationDrawerState();
 }
 
-class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
+class _ResidentNotificationDrawerState extends State<ResidentNotificationDrawer> {
+  late final ResidentService _residentService = ResidentService(
+    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+  );
+  
   late final ComplaintService _complaintService = ComplaintService(
     baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
   );
@@ -35,8 +43,9 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
 
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
-  int _pendingComplaintsCount = 0;
+  int _pendingApprovalsCount = 0;
   int _recentNoticesCount = 0;
+  int _recentComplaintsCount = 0;
 
   @override
   void initState() {
@@ -49,41 +58,39 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
     setState(() => _isLoading = true);
 
     try {
-      // Load pending complaints
-      final complaintsResult = await _complaintService.getAllComplaints(societyId: widget.societyId);
-      int pendingComplaints = 0;
-      List<Map<String, dynamic>> complaintNotifications = [];
+      // Load pending visitor approvals
+      final approvalsResult = await _residentService.getApprovals(
+        societyId: widget.societyId,
+        flatNo: widget.flatNo,
+      );
+      int pendingApprovals = 0;
+      List<Map<String, dynamic>> approvalNotifications = [];
 
-      if (complaintsResult.isSuccess && complaintsResult.data != null) {
-        final allComplaints = complaintsResult.data!;
-        pendingComplaints = allComplaints.where((c) {
-          final status = (c['status'] ?? '').toString().toUpperCase();
-          return status == 'PENDING' || status == 'IN_PROGRESS';
-        }).length;
-
-        // Get recent pending complaints (last 5)
-        final recentPending = allComplaints
-            .where((c) {
-              final status = (c['status'] ?? '').toString().toUpperCase();
-              return status == 'PENDING' || status == 'IN_PROGRESS';
-            })
+      if (approvalsResult.isSuccess && approvalsResult.data != null) {
+        final allApprovals = approvalsResult.data!;
+        pendingApprovals = allApprovals.length;
+        
+        // Get recent pending approvals (last 5)
+        approvalNotifications = allApprovals
             .take(5)
-            .map((c) => {
-              'type': 'complaint',
-              'id': c['complaint_id']?.toString() ?? '',
-              'title': c['title']?.toString() ?? 'Untitled Complaint',
-              'description': c['description']?.toString() ?? '',
-              'status': c['status']?.toString() ?? 'PENDING',
-              'created_at': c['created_at']?.toString() ?? '',
-              'flat_no': c['flat_no']?.toString() ?? '',
-              'resident_name': c['resident_name']?.toString() ?? 'Unknown',
+            .map((a) {
+              final visitorName = a['visitor_name']?.toString() ?? 
+                                 a['name']?.toString() ?? 
+                                 a['visitor_phone']?.toString() ?? 
+                                 'Visitor';
+              return {
+                'type': 'visitor',
+                'id': a['visitor_id']?.toString() ?? '',
+                'title': 'Visitor Approval Request',
+                'description': '$visitorName - ${a['visitor_type']?.toString() ?? 'Guest'}',
+                'status': a['status']?.toString() ?? 'PENDING',
+                'created_at': a['created_at']?.toString() ?? '',
+                'visitor_name': visitorName,
+                'visitor_type': a['visitor_type']?.toString() ?? 'GUEST',
+              };
             })
             .toList();
-        
-        complaintNotifications = recentPending;
       }
-
-      // Admin drawer: Only show notices and complaints (no visitors)
 
       // Load recent notices (created in last 24 hours)
       final noticesResult = await _noticeService.getNotices(
@@ -136,11 +143,52 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
             .toList();
       }
 
+      // Load recent complaints (created in last 7 days)
+      final complaintsResult = await _complaintService.getResidentComplaints(
+        societyId: widget.societyId,
+        flatNo: widget.flatNo,
+        residentId: widget.residentId,
+      );
+      List<Map<String, dynamic>> complaintNotifications = [];
+      int recentComplaints = 0;
+
+      if (complaintsResult.isSuccess && complaintsResult.data != null) {
+        final allComplaints = complaintsResult.data!;
+        final now = DateTime.now();
+        
+        // Get complaints from last 7 days
+        final recentComplaintsList = allComplaints.where((c) {
+          try {
+            final createdAt = c['created_at']?.toString() ?? '';
+            if (createdAt.isEmpty) return false;
+            final created = DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
+            final daysDiff = now.difference(created).inDays;
+            return daysDiff <= 7; // Complaints from last 7 days
+          } catch (e) {
+            return false;
+          }
+        }).toList();
+
+        recentComplaints = recentComplaintsList.length;
+        complaintNotifications = recentComplaintsList
+            .take(5)
+            .map((c) => {
+              'type': 'complaint',
+              'id': c['complaint_id']?.toString() ?? '',
+              'title': c['title']?.toString() ?? 'Untitled Complaint',
+              'description': c['description']?.toString() ?? '',
+              'status': c['status']?.toString() ?? 'PENDING',
+              'created_at': c['created_at']?.toString() ?? '',
+              'category': c['category']?.toString() ?? 'GENERAL',
+            })
+            .toList();
+      }
+
       // Combine and sort by created_at (most recent first)
-      // Admin: Only notices and complaints
       final allNotifications = [
-        ...complaintNotifications,
+        ...approvalNotifications,
         ...noticeNotifications,
+        ...complaintNotifications,
       ];
 
       allNotifications.sort((a, b) {
@@ -156,19 +204,21 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
       if (mounted) {
         setState(() {
           _notifications = allNotifications;
-          _pendingComplaintsCount = pendingComplaints;
+          _pendingApprovalsCount = pendingApprovals;
           _recentNoticesCount = recentNotices;
+          _recentComplaintsCount = recentComplaints;
           _isLoading = false;
         });
       }
 
-      AppLogger.i("Admin notifications loaded", data: {
-        "pending_complaints": pendingComplaints,
+      AppLogger.i("Resident notifications loaded", data: {
+        "pending_approvals": pendingApprovals,
         "recent_notices": recentNotices,
+        "recent_complaints": recentComplaints,
         "total_notifications": allNotifications.length,
       });
     } catch (e, stackTrace) {
-      AppLogger.e("Error loading admin notifications", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error loading resident notifications", error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -221,9 +271,9 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
       case 'visitor':
         return AppColors.primary;
       case 'notice':
-        return AppColors.admin;
+        return AppColors.success;
       default:
-        return AppColors.admin;
+        return AppColors.success;
     }
   }
 
@@ -250,10 +300,10 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.admin.withOpacity(0.15),
+                    color: AppColors.success.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.notifications_rounded, color: AppColors.admin, size: 24),
+                  child: const Icon(Icons.notifications_rounded, color: AppColors.success, size: 24),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
@@ -295,10 +345,10 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
               children: [
                 Expanded(
                   child: _buildSummaryCard(
-                    icon: Icons.report_problem_rounded,
-                    label: "Pending Complaints",
-                    count: _pendingComplaintsCount,
-                    color: AppColors.warning,
+                    icon: Icons.verified_rounded,
+                    label: "Pending Approvals",
+                    count: _pendingApprovalsCount,
+                    color: AppColors.primary,
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -307,7 +357,16 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                     icon: Icons.notifications_rounded,
                     label: "New Notices",
                     count: _recentNoticesCount,
-                    color: AppColors.admin,
+                    color: AppColors.success,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildSummaryCard(
+                    icon: Icons.report_problem_rounded,
+                    label: "My Complaints",
+                    count: _recentComplaintsCount,
+                    color: AppColors.warning,
                   ),
                 ),
               ],
@@ -318,7 +377,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.admin),
+                    child: CircularProgressIndicator(color: AppColors.success),
                   )
                 : _notifications.isEmpty
                     ? Center(
@@ -328,13 +387,13 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                             Container(
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: AppColors.admin.withOpacity(0.1),
+                                color: AppColors.success.withOpacity(0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
                                 Icons.notifications_none_rounded,
                                 size: 64,
-                                color: AppColors.admin,
+                                color: AppColors.success,
                               ),
                             ),
                             const SizedBox(height: 16),
@@ -359,7 +418,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                       )
                     : RefreshIndicator(
                         onRefresh: _loadNotifications,
-                        color: AppColors.admin,
+                        color: AppColors.success,
                         child: ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: _notifications.length,
@@ -531,12 +590,12 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    if (type == 'complaint' && notification['flat_no'] != null) ...[
+                    if (type == 'visitor' && notification['visitor_type'] != null) ...[
                       const SizedBox(width: 12),
-                      Icon(Icons.home_rounded, size: 12, color: AppColors.text2),
+                      Icon(Icons.category_rounded, size: 12, color: AppColors.text2),
                       const SizedBox(width: 4),
                       Text(
-                        "Flat ${notification['flat_no']}",
+                        notification['visitor_type'],
                         style: TextStyle(
                           fontSize: 11,
                           color: AppColors.text2,

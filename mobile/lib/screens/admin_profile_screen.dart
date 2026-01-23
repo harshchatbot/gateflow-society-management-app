@@ -3,6 +3,7 @@ import '../ui/app_colors.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
 import 'role_select_screen.dart';
+import 'admin_edit_image_screen.dart';
 
 /// Admin Profile Screen
 /// 
@@ -170,6 +171,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
+                  // Profile Image Section
+                  _buildProfileImageSection(),
+                  const SizedBox(height: 20),
+                  
                   // Account Information Section
                   _buildAccountInfoSection(),
                   const SizedBox(height: 20),
@@ -177,6 +182,92 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                   // Logout Button
                   _buildLogoutButton(),
                   const SizedBox(height: 120), // Bottom nav spacer
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfileImageSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.admin.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.image_rounded, size: 20, color: AppColors.admin),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                "Profile Picture",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.text,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          GestureDetector(
+            onTap: () async {
+              final updated = await Navigator.push<bool>(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => AdminEditImageScreen(
+                    adminId: widget.adminId,
+                    societyId: widget.societyId,
+                  ),
+                ),
+              );
+              if (updated == true && mounted) {
+                // Refresh profile if needed
+                setState(() {});
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.admin.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.admin.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.camera_alt_rounded, color: AppColors.admin, size: 22),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      "Upload or change your photo",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.text,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.text2),
                 ],
               ),
             ),

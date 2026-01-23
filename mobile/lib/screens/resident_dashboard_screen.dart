@@ -9,6 +9,7 @@ import '../core/env.dart';
 import 'resident_complaint_screen.dart';
 import 'resident_shell_screen.dart';
 import 'notice_board_screen.dart';
+import '../widgets/resident_notification_drawer.dart';
 
 /// Resident Dashboard Screen
 /// 
@@ -267,21 +268,20 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             IconButton(
               icon: const Icon(Icons.notifications_rounded, color: Colors.white),
               onPressed: () {
-                // Navigate to approvals tab
-                // This will be handled by the shell screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      _pendingCount > 0
-                          ? "You have $_pendingCount pending approval${_pendingCount > 1 ? 's' : ''}"
-                          : "No pending approvals",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    backgroundColor: AppColors.success,
-                    behavior: SnackBarBehavior.floating,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                // Show notification drawer
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  backgroundColor: Colors.transparent,
+                  builder: (context) => ResidentNotificationDrawer(
+                    societyId: widget.societyId,
+                    residentId: widget.residentId,
+                    flatNo: widget.flatNo,
                   ),
-                );
+                ).then((_) {
+                  // Refresh notification count when drawer closes
+                  _loadDashboardData();
+                });
               },
             ),
             if (_notificationCount > 0)

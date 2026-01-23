@@ -2,7 +2,7 @@
 Admin API routes
 """
 
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form
 from typing import List, Optional
 from pydantic import BaseModel, Field
 from app.services.admin_service import get_admin_service
@@ -110,3 +110,20 @@ def get_all_visitors(society_id: str, limit: int = 100):
     """
     admin_service = get_admin_service()
     return admin_service.get_all_visitors(society_id, limit=limit)
+
+
+@router.post("/profile/image")
+async def upload_profile_image(
+    admin_id: str = Form(...),
+    society_id: str = Form(...),
+    file: UploadFile = File(...),
+):
+    """
+    Upload admin profile image.
+    """
+    admin_service = get_admin_service()
+    return await admin_service.upload_profile_image(
+        admin_id=admin_id,
+        society_id=society_id,
+        file=file,
+    )

@@ -876,8 +876,55 @@ class SheetsClient:
 
         return False
 
+    def update_admin_image(
+        self,
+        admin_id: str,
+        society_id: str,
+        image_path: str,
+    ) -> bool:
+        """
+        Update admin profile image path in Admins sheet.
+        """
+        rows = self._get_sheet_values(settings.SHEET_ADMINS)
+        if not rows or len(rows) < 2:
+            return False
 
+        headers = [str(h).strip().lower() for h in rows[0]]
+        header_map = {h: i for i, h in enumerate(headers)}
 
+        if "admin_id" not in header_map:
+            raise ValueError("Admins sheet missing 'admin_id' header")
+
+        # Check if image column exists
+        if "profile_image" not in header_map and "image_path" not in header_map:
+            logger.warning("Admins sheet missing 'profile_image' or 'image_path' column")
+            return False
+
+        image_col = header_map.get("profile_image") or header_map.get("image_path")
+
+        for idx, row in enumerate(rows[1:], start=2):
+            if len(row) < len(headers):
+                row.extend([""] * (len(headers) - len(row)))
+
+            r = dict(zip(headers, row))
+
+            if (r.get("society_id") or "").strip() != society_id:
+                continue
+
+            if str(r.get("admin_id") or "").strip() != str(admin_id).strip():
+                continue
+
+            # Update image path
+            row[image_col] = image_path
+
+            # Write back full row
+            end_col_letter = chr(ord("A") + len(headers) - 1)
+            range_name = f"A{idx}:{end_col_letter}{idx}"
+
+            self._update_sheet(settings.SHEET_ADMINS, range_name, [row])
+            return True
+
+        return False
 
     # -----------------------------
     # Admins operations (NEW)
