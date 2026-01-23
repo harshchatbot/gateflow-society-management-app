@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../core/app_logger.dart';
@@ -17,12 +18,44 @@ class NotificationService {
   
   String? _fcmToken;
   bool _initialized = false;
+  
+  // Callback for when notification is received (to update counts)
+  Function(Map<String, dynamic>)? _onNotificationReceived;
+  
+  /// Set callback for notification received
+  void setOnNotificationReceived(Function(Map<String, dynamic>) callback) {
+    _onNotificationReceived = callback;
+  }
 
   /// Initialize notification service
   Future<void> initialize() async {
     if (_initialized) return;
 
     try {
+      // Check if Firebase is initialized
+      bool firebaseAvailable = false;
+      try {
+        // Try to get the default Firebase app
+        Firebase.app();
+        firebaseAvailable = true;
+        AppLogger.i("Firebase app already initialized");
+      } catch (e) {
+        // Firebase not initialized, try to initialize
+        try {
+          await Firebase.initializeApp();
+          firebaseAvailable = true;
+          AppLogger.i("Firebase initialized successfully");
+        } catch (e2) {
+          AppLogger.w("Firebase not available, skipping notification setup: $e2");
+          return;
+        }
+      }
+
+      if (!firebaseAvailable) {
+        AppLogger.w("Firebase not available, skipping notification setup");
+        return;
+      }
+
       // Request permissions
       NotificationSettings settings = await _fcm.requestPermission(
         alert: true,
@@ -37,6 +70,17 @@ class NotificationService {
         AppLogger.w("Notification permissions denied");
         return;
       }
+
+      // Create Android notification channel with sound BEFORE initializing
+      const androidChannel = AndroidNotificationChannel(
+        'gateflow_channel',
+        'GateFlow Notifications',
+        description: 'Notifications for visitor entries and notices',
+        importance: Importance.high,
+        playSound: true,
+        sound: RawResourceAndroidNotificationSound('notification_sound'),
+        enableVibration: true,
+      );
 
       // Initialize local notifications (for foreground notifications)
       const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -54,6 +98,11 @@ class NotificationService {
         initSettings,
         onDidReceiveNotificationResponse: _onNotificationTapped,
       );
+
+      // Create the notification channel (required for Android 8.0+)
+      await _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(androidChannel);
 
       // Get FCM token
       _fcmToken = await _fcm.getToken();
@@ -107,6 +156,7 @@ class NotificationService {
     AppLogger.i("Foreground notification received", data: {
       "title": message.notification?.title,
       "body": message.notification?.body,
+      "data": message.data,
     });
 
     // Show local notification with sound
@@ -115,6 +165,11 @@ class NotificationService {
       body: message.notification?.body ?? "",
       payload: message.data.toString(),
     );
+    
+    // Trigger notification count update callback if set
+    if (_onNotificationReceived != null && message.data.isNotEmpty) {
+      _onNotificationReceived!(message.data);
+    }
   }
 
   /// Handle background messages (app is in background/terminated)
@@ -174,7 +229,20 @@ class NotificationService {
 
   /// Subscribe to a topic (e.g., society-specific notifications)
   Future<void> subscribeToTopic(String topic) async {
+    if (!_initialized) {
+      AppLogger.w("Notification service not initialized, skipping topic subscription");
+      return;
+    }
+
     try {
+      // Verify Firebase is available
+      try {
+        await _fcm.getToken(); // This will fail if Firebase is not initialized
+      } catch (e) {
+        AppLogger.w("Firebase not available, skipping topic subscription");
+        return;
+      }
+
       await _fcm.subscribeToTopic(topic);
       AppLogger.i("Subscribed to topic", data: {"topic": topic});
     } catch (e) {
@@ -198,7 +266,21 @@ class NotificationService {
     String? flatId,
     String? role,
   }) async {
+    // Check if Firebase is initialized
+    if (!_initialized) {
+      AppLogger.w("Notification service not initialized, skipping topic subscription");
+      return;
+    }
+
     try {
+      // Verify Firebase is available
+      try {
+        await _fcm.getToken(); // This will fail if Firebase is not initialized
+      } catch (e) {
+        AppLogger.w("Firebase not available, skipping topic subscription");
+        return;
+      }
+
       // Subscribe to society topic (for notices)
       await subscribeToTopic("society_$societyId");
       

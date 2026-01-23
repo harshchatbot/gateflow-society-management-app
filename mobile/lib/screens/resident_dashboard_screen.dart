@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
 import '../services/resident_service.dart';
+import '../services/notice_service.dart';
+import '../services/notification_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import 'resident_complaint_screen.dart';
@@ -38,16 +40,32 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   late final ResidentService _service = ResidentService(
     baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
   );
+  
+  late final NoticeService _noticeService = NoticeService(
+    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+  );
 
   int _pendingCount = 0;
   int _approvedCount = 0;
   int _rejectedCount = 0;
+  int _notificationCount = 0; // Total notifications (approvals + notices)
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _loadDashboardData();
+    _setupNotificationListener();
+  }
+
+  void _setupNotificationListener() {
+    // Listen for new notifications to update count
+    final notificationService = NotificationService();
+    notificationService.setOnNotificationReceived((data) {
+      if (data['type'] == 'notice' || data['type'] == 'visitor') {
+        _loadDashboardData(); // Refresh data when notification received
+      }
+    });
   }
 
   Future<void> _loadDashboardData() async {
@@ -85,6 +103,30 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           return status == 'REJECTED';
         }).length;
       }
+
+      // Count recent notices (created in last 24 hours)
+      final noticesResult = await _noticeService.getNotices(
+        societyId: widget.societyId,
+        activeOnly: true,
+      );
+      int recentNotices = 0;
+      if (noticesResult.isSuccess && noticesResult.data != null) {
+        final now = DateTime.now();
+        recentNotices = noticesResult.data!.where((n) {
+          try {
+            final createdAt = n['created_at']?.toString() ?? '';
+            if (createdAt.isEmpty) return false;
+            final created = DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
+            final hoursDiff = now.difference(created).inHours;
+            return hoursDiff <= 24; // Notices from last 24 hours
+          } catch (e) {
+            return false;
+          }
+        }).length;
+      }
+
+      // Total notification count = pending approvals + recent notices
+      _notificationCount = _pendingCount + recentNotices;
 
       setState(() => _isLoading = false);
       AppLogger.i("Resident dashboard loaded", data: {
@@ -242,7 +284,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                 );
               },
             ),
-            if (_pendingCount > 0)
+            if (_notificationCount > 0)
               Positioned(
                 right: 8,
                 top: 8,
@@ -257,7 +299,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                     minHeight: 18,
                   ),
                   child: Text(
-                    _pendingCount > 9 ? "9+" : _pendingCount.toString(),
+                    _notificationCount > 9 ? "9+" : _notificationCount.toString(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,

@@ -3,6 +3,8 @@ import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
 import '../services/admin_service.dart';
 import '../services/complaint_service.dart';
+import '../services/notice_service.dart';
+import '../services/notification_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import 'notice_board_screen.dart';
@@ -44,6 +46,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
   );
   
+  late final NoticeService _noticeService = NoticeService(
+    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+  );
+  
   int _notificationCount = 0;
 
   @override
@@ -51,22 +57,58 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     super.initState();
     _loadStats();
     _loadNotificationCount();
+    _setupNotificationListener();
+  }
+
+  void _setupNotificationListener() {
+    // Listen for new notifications to update count
+    final notificationService = NotificationService();
+    notificationService.setOnNotificationReceived((data) {
+      if (data['type'] == 'notice' || data['type'] == 'complaint') {
+        _loadNotificationCount(); // Refresh count when notification received
+      }
+    });
   }
 
   Future<void> _loadNotificationCount() async {
     try {
-      final result = await _complaintService.getAllComplaints(societyId: widget.societyId);
-      if (result.isSuccess && result.data != null) {
-        final pendingCount = result.data!.where((c) {
+      int totalCount = 0;
+      
+      // Count pending complaints
+      final complaintsResult = await _complaintService.getAllComplaints(societyId: widget.societyId);
+      if (complaintsResult.isSuccess && complaintsResult.data != null) {
+        final pendingComplaints = complaintsResult.data!.where((c) {
           final status = (c['status'] ?? '').toString().toUpperCase();
           return status == 'PENDING' || status == 'IN_PROGRESS';
         }).length;
-        
-        if (mounted) {
-          setState(() {
-            _notificationCount = pendingCount;
-          });
-        }
+        totalCount += pendingComplaints;
+      }
+      
+      // Count recent notices (created in last 24 hours)
+      final noticesResult = await _noticeService.getNotices(
+        societyId: widget.societyId,
+        activeOnly: true,
+      );
+      if (noticesResult.isSuccess && noticesResult.data != null) {
+        final now = DateTime.now();
+        final recentNotices = noticesResult.data!.where((n) {
+          try {
+            final createdAt = n['created_at']?.toString() ?? '';
+            if (createdAt.isEmpty) return false;
+            final created = DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
+            final hoursDiff = now.difference(created).inHours;
+            return hoursDiff <= 24; // Notices from last 24 hours
+          } catch (e) {
+            return false;
+          }
+        }).length;
+        totalCount += recentNotices;
+      }
+      
+      if (mounted) {
+        setState(() {
+          _notificationCount = totalCount;
+        });
       }
     } catch (e) {
       AppLogger.e("Error loading notification count", error: e);

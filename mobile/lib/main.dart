@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:firebase_messaging/firebase_messaging.dart'; // Keep this for FCM
+import 'firebase_options.dart'; // <--- The generated file
 
 import 'core/theme.dart';
 import 'core/storage.dart';
-import 'services/notification_service.dart';
+import 'services/notification_service.dart'; // Your notification service
 
 import 'screens/guard_shell_screen.dart';
 import 'screens/resident_shell_screen.dart';
@@ -13,42 +14,53 @@ import 'screens/admin_shell_screen.dart';
 import 'screens/role_select_screen.dart';
 
 // Background message handler (must be top-level)
+// IMPORTANT: This function must be defined at the top-level (not inside a class)
+// so that it can be invoked when the app is in the background or terminated.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Handle background messages
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform); // Initialize Firebase in background handler
+  print("Handling a background message: ${message.messageId}");
+  // You can process the message here, e.g., show a local notification
+  // For example: NotificationService().showNotification(message);
 }
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsFlutterBinding.ensureInitialized(); // Always call this first
 
-  // Initialize Firebase
+  // Load environment variables
   try {
-    await Firebase.initializeApp();
-    // Set background message handler
+    await dotenv.load(fileName: "assets/.env");
+  } catch (e) {
+    print("Warning: Could not load .env file: $e");
+  }
+
+  // Initialize Firebase App
+  // This is crucial for FCM and other Firebase services
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    print("Firebase initialized successfully.");
+
+    // Set up background message handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-  } catch (e) {
-    // Firebase not configured - continue without notifications
-    print("Firebase initialization failed: $e");
-  }
 
-  // Initialize notification service
-  try {
+    // Initialize notification service AFTER Firebase is initialized
     await NotificationService().initialize();
+    print("Notification service initialized.");
+
   } catch (e) {
-    print("Notification service initialization failed: $e");
+    print("Firebase initialization failed: $e");
+    print("Skipping notification service initialization (Firebase not available)");
   }
 
-  // Load env (API base URL etc.)
-  await dotenv.load(fileName: "assets/.env");
 
-  // Check saved sessions
+  // Determine the initial screen based on sessions
+  Widget startScreen;
   final residentSession = await Storage.getResidentSession();
   final guardSession = await Storage.getGuardSession();
   final adminSession = await Storage.getAdminSession();
 
-  Widget startScreen;
-
-  // 1️⃣ Resident session has highest priority
   if (residentSession != null) {
     startScreen = ResidentShellScreen(
       residentId: residentSession.residentId,
@@ -56,9 +68,7 @@ Future<void> main() async {
       societyId: residentSession.societyId,
       flatNo: residentSession.flatNo,
     );
-  }
-  // 2️⃣ Guard session
-  else if (guardSession != null) {
+  } else if (guardSession != null) {
     startScreen = GuardShellScreen(
       guardId: guardSession.guardId,
       guardName: guardSession.guardName.isNotEmpty
@@ -68,21 +78,18 @@ Future<void> main() async {
           ? guardSession.societyId
           : "Society",
     );
-  }
-  // 3️⃣ Admin session
-  else if (adminSession != null) {
+  } else if (adminSession != null) {
     startScreen = AdminShellScreen(
       adminId: adminSession.adminId,
       adminName: adminSession.adminName,
       societyId: adminSession.societyId,
       role: adminSession.role,
     );
-  }
-  // 4️⃣ No session → role selection
-  else {
+  } else {
     startScreen = const RoleSelectScreen();
   }
 
+  // Run your app with the determined startScreen
   runApp(MyApp(initialScreen: startScreen));
 }
 
