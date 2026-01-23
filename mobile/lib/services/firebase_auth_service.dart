@@ -182,4 +182,27 @@ class FirebaseAuthService {
       rethrow;
     }
   }
+
+  Future<UserCredential> signUpOrSignIn({
+  required String email,
+  required String password,
+}) async {
+  try {
+    return await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+  } on FirebaseAuthException catch (e) {
+    if (e.code == 'email-already-in-use') {
+      return await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+    }
+    rethrow;
+  }
+}
+
+
+
 }

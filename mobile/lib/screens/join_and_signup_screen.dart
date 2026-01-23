@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../services/invite_claim_service.dart';
 import 'guard_shell_screen.dart';
-// TODO: Resident shell later
+// TODO: Add ResidentShellScreen later
 
 class JoinAndSignupScreen extends StatefulWidget {
   const JoinAndSignupScreen({super.key});
@@ -53,11 +53,9 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
     final auth = FirebaseAuth.instance;
 
     try {
-      // Try login first
       return await auth.signInWithEmailAndPassword(email: email, password: pass);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
-        // If user doesn't exist, sign up
         return await auth.createUserWithEmailAndPassword(email: email, password: pass);
       }
       rethrow;
@@ -79,7 +77,7 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
       if (email.isEmpty) throw Exception("Enter email");
       if (pass.length < 6) throw Exception("Password must be at least 6 characters");
 
-      // 1) Resolve societyId
+      // 1) Resolve societyId from code
       final societyId = await _resolveSocietyId(code);
 
       // 2) Login or Signup
@@ -88,7 +86,7 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
       final user = FirebaseAuth.instance.currentUser;
       if (user == null) throw Exception("Auth failed");
 
-      // 3) Claim Invite (batch)
+      // 3) Claim invite (batch)
       final claimService = InviteClaimService();
       final result = await claimService.claimInviteForSociety(societyId: societyId);
 
@@ -96,11 +94,10 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
         throw Exception("No pending invite found for ${user.email}. Please contact admin.");
       }
 
-      // 4) Route based on role
       if (!mounted) return;
 
+      // 4) Route based on role
       if (result.systemRole == 'guard') {
-        // Optional: fetch member name if you store it later
         final db = FirebaseFirestore.instance;
         final memberSnap = await db
             .collection('societies')
@@ -108,6 +105,7 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
             .collection('members')
             .doc(user.uid)
             .get();
+
         final member = memberSnap.data() ?? {};
         final guardName = (member['name'] ?? 'Guard').toString();
 
@@ -123,7 +121,7 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
         return;
       }
 
-      // TODO: Resident Shell
+      // Resident shell not yet wired
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Joined as ${result.systemRole}. Resident UI pending.")),
       );

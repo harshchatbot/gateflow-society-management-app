@@ -33,88 +33,97 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   }
 
   void _handleLogin() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
+  if (!_formKey.currentState!.validate()) {
+    return;
+  }
+
+  final email = _emailController.text.trim();
+  final password = _passwordController.text.trim();
+
+  setState(() => _isLoading = true);
+  AppLogger.i("Admin login attempt", data: {"email": email});
+
+  try {
+    // Step 1: Sign in with Firebase Auth
+    final userCredential = await _authService.signInAdmin(
+      email: email,
+      password: password,
+    );
+
+    final uid = userCredential.user?.uid;
+    if (uid == null) {
+      throw Exception("Failed to sign in");
     }
 
-    final email = _emailController.text.trim(); // Email for admin login
-    final password = _passwordController.text.trim();
+    // Step 2: Get membership from Firestore (pointer -> society member)
+    final membership = await _firestore.getCurrentUserMembership();
+    if (membership == null) {
+      throw Exception("User membership not found");
+    }
 
-    setState(() => _isLoading = true);
-    AppLogger.i("Admin login attempt", data: {
-      "email": email,
+    final societyId = (membership['societyId'] as String?) ?? '';
+    final String systemRole = (membership['systemRole'] as String?)?.toLowerCase() ?? 'admin';
+    final societyRole = membership['societyRole'] as String?;
+    final name = membership['name'] as String? ?? 'Admin';
+
+    if (societyId.isEmpty) {
+      throw Exception("Society not resolved");
+    }
+
+    // ✅ allow admin OR super_admin
+    if (systemRole != 'admin' && systemRole != 'super_admin') {
+      throw Exception("User is not an admin");
+    }
+
+    // Step 3: Save Firebase session
+    await Storage.saveFirebaseSession(
+      uid: uid,
+      societyId: societyId,
+      systemRole: systemRole, // ✅ now defined
+      societyRole: societyRole,
+      name: name,
+    );
+
+    AppLogger.i("Admin login successful", data: {
+      'uid': uid,
+      'societyId': societyId,
+      'systemRole': systemRole,
+      'name': name,
     });
 
-    try {
-      // Step 1: Sign in with Firebase Auth
-      final userCredential = await _authService.signInAdmin(
-        email: email,
-        password: password,
-      );
-      final uid = userCredential.user?.uid;
-      if (uid == null) {
-        throw Exception("Failed to sign in");
-      }
+    setState(() => _isLoading = false);
+    if (!mounted) return;
 
-      // Step 2: Get membership from Firestore
-      final membership = await _firestore.getCurrentUserMembership();
-      if (membership == null) {
-        throw Exception("User membership not found");
-      }
-
-      final societyId = membership['societyId'] as String;
-      final systemRole = membership['systemRole'] as String? ?? 'admin';
-      final societyRole = membership['societyRole'] as String?;
-      final name = membership['name'] as String? ?? 'Admin';
-
-      if (systemRole != 'admin') {
-        throw Exception("User is not an admin");
-      }
-
-      // Step 3: Save Firebase session
-      await Storage.saveFirebaseSession(
-        uid: uid,
-        societyId: societyId,
-        systemRole: systemRole,
-        societyRole: societyRole,
-        name: name,
-      );
-
-      AppLogger.i("Admin login successful", data: {
-        'uid': uid,
-        'societyId': societyId,
-        'name': name,
-      });
-
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdminShellScreen(
+          adminId: uid,
+          adminName: name,
+          societyId: societyId,
+          role: (societyRole ?? 'ADMIN').toUpperCase(),
+        ),
+      ),
+    );
+  } catch (e, stackTrace) {
+    AppLogger.e("Admin login exception", error: e, stackTrace: stackTrace);
+    if (mounted) {
       setState(() => _isLoading = false);
 
-      if (!mounted) return;
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => AdminShellScreen(
-            adminId: uid,
-            adminName: name,
-            societyId: societyId,
-            role: societyRole ?? 'ADMIN',
-          ),
-        ),
-      );
-    } catch (e, stackTrace) {
-      AppLogger.e("Admin login exception", error: e, stackTrace: stackTrace);
-      if (mounted) {
-        setState(() => _isLoading = false);
-        String errorMsg = "Login failed. Please check your credentials.";
-        if (e.toString().contains('user-not-found') || e.toString().contains('wrong-password')) {
-          errorMsg = "Invalid email or password.";
-        } else if (e.toString().contains('network')) {
-          errorMsg = "Network error. Please check your connection.";
-        }
-        _showError(errorMsg);
+      String errorMsg = "Login failed. Please check your credentials.";
+      if (e.toString().contains('user-not-found') || e.toString().contains('wrong-password')) {
+        errorMsg = "Invalid email or password.";
+      } else if (e.toString().contains('network')) {
+        errorMsg = "Network error. Please check your connection.";
+      } else if (e.toString().toLowerCase().contains('membership')) {
+        errorMsg = "Your account is not linked to any society. Contact support.";
       }
+
+      _showError(errorMsg);
     }
   }
+}
+
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(

@@ -103,7 +103,8 @@ service cloud.firestore {
           && request.resource.data.status == "pending"
           && request.resource.data.active == true
           && request.resource.data.email is string
-          && request.resource.data.systemRole in ["guard", "resident"];
+          && request.resource.data.systemRole in ["guard", "resident", "admin"];
+
 
         // ✅ Claim invite: ONLY invited user can mark pending -> claimed
         allow update: if signedIn()

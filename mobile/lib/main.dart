@@ -15,6 +15,9 @@ import 'screens/resident_shell_screen.dart';
 import 'screens/admin_shell_screen.dart';
 import 'screens/role_select_screen.dart';
 
+import 'screens/join_and_signup_screen.dart';
+
+
 // Background message handler (must be top-level)
 // IMPORTANT: This function must be defined at the top-level (not inside a class)
 // so that it can be invoked when the app is in the background or terminated.
@@ -160,8 +163,7 @@ class MyApp extends StatelessWidget {
       title: 'GateFlow',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      //home: initialScreen,
-      home: const JoinAndSignupScreen(),
+      home: initialScreen,
     );
   }
 }
