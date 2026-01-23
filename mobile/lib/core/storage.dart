@@ -198,4 +198,69 @@ class Storage {
     await clearResidentSession();
     await clearAdminSession();
   }
+
+  // -----------------------------
+  // Firebase Session (NEW)
+  // -----------------------------
+  static const String _kUid = "firebase_uid";
+  static const String _kSocietyId = "firebase_society_id";
+  static const String _kSystemRole = "firebase_system_role";
+  static const String _kSocietyRole = "firebase_society_role";
+  static const String _kName = "firebase_name";
+  static const String _kFlatNo = "firebase_flat_no";
+
+  /// Save Firebase session (unified for all roles)
+  static Future<void> saveFirebaseSession({
+    required String uid,
+    required String societyId,
+    required String systemRole, // "admin" | "guard" | "resident"
+    String? societyRole,
+    required String name,
+    String? flatNo,
+  }) async {
+    final prefs = await _prefs();
+    await prefs.setString(_kUid, uid);
+    await prefs.setString(_kSocietyId, societyId);
+    await prefs.setString(_kSystemRole, systemRole);
+    if (societyRole != null) {
+      await prefs.setString(_kSocietyRole, societyRole);
+    }
+    await prefs.setString(_kName, name);
+    if (flatNo != null) {
+      await prefs.setString(_kFlatNo, flatNo);
+    }
+  }
+
+  /// Get Firebase session
+  static Future<Map<String, dynamic>?> getFirebaseSession() async {
+    final prefs = await _prefs();
+    final uid = prefs.getString(_kUid);
+    if (uid == null || uid.isEmpty) return null;
+
+    return {
+      'uid': uid,
+      'societyId': prefs.getString(_kSocietyId) ?? '',
+      'systemRole': prefs.getString(_kSystemRole) ?? '',
+      'societyRole': prefs.getString(_kSocietyRole),
+      'name': prefs.getString(_kName) ?? '',
+      'flatNo': prefs.getString(_kFlatNo),
+    };
+  }
+
+  /// Clear Firebase session
+  static Future<void> clearFirebaseSession() async {
+    final prefs = await _prefs();
+    await prefs.remove(_kUid);
+    await prefs.remove(_kSocietyId);
+    await prefs.remove(_kSystemRole);
+    await prefs.remove(_kSocietyRole);
+    await prefs.remove(_kName);
+    await prefs.remove(_kFlatNo);
+  }
+
+  /// Check if Firebase session exists
+  static Future<bool> hasFirebaseSession() async {
+    final prefs = await _prefs();
+    return (prefs.getString(_kUid) ?? "").isNotEmpty;
+  }
 }

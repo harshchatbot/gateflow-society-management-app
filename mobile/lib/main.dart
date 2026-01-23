@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart'; // Keep this for FCM
+import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart'; // <--- The generated file
 
 import 'core/theme.dart';
 import 'core/storage.dart';
 import 'services/notification_service.dart'; // Your notification service
+import 'services/firestore_service.dart';
 
 import 'screens/guard_shell_screen.dart';
 import 'screens/resident_shell_screen.dart';
@@ -55,38 +57,89 @@ Future<void> main() async {
   }
 
 
-  // Determine the initial screen based on sessions
+  // Determine the initial screen based on Firebase Auth + Firestore membership
   Widget startScreen;
-  final residentSession = await Storage.getResidentSession();
-  final guardSession = await Storage.getGuardSession();
-  final adminSession = await Storage.getAdminSession();
-
-  if (residentSession != null) {
-    startScreen = ResidentShellScreen(
-      residentId: residentSession.residentId,
-      residentName: residentSession.residentName,
-      societyId: residentSession.societyId,
-      flatNo: residentSession.flatNo,
-    );
-  } else if (guardSession != null) {
-    startScreen = GuardShellScreen(
-      guardId: guardSession.guardId,
-      guardName: guardSession.guardName.isNotEmpty
-          ? guardSession.guardName
-          : "Guard",
-      societyId: guardSession.societyId.isNotEmpty
-          ? guardSession.societyId
-          : "Society",
-    );
-  } else if (adminSession != null) {
-    startScreen = AdminShellScreen(
-      adminId: adminSession.adminId,
-      adminName: adminSession.adminName,
-      societyId: adminSession.societyId,
-      role: adminSession.role,
-    );
+  
+  // Check Firebase Auth first
+  final firebaseUser = FirebaseAuth.instance.currentUser;
+  if (firebaseUser != null) {
+    // User is signed in, get membership from Firestore
+    try {
+      final firestore = FirestoreService();
+      final membership = await firestore.getCurrentUserMembership();
+      
+      if (membership != null) {
+        final societyId = membership['societyId'] as String;
+        final systemRole = membership['systemRole'] as String? ?? '';
+        final name = membership['name'] as String? ?? '';
+        final flatNo = membership['flatNo'] as String?;
+        final societyRole = membership['societyRole'] as String?;
+        
+        if (systemRole == 'admin') {
+          startScreen = AdminShellScreen(
+            adminId: firebaseUser.uid,
+            adminName: name,
+            societyId: societyId,
+            role: societyRole ?? 'ADMIN',
+          );
+        } else if (systemRole == 'guard') {
+          startScreen = GuardShellScreen(
+            guardId: firebaseUser.uid,
+            guardName: name.isNotEmpty ? name : "Guard",
+            societyId: societyId.isNotEmpty ? societyId : "Society",
+          );
+        } else if (systemRole == 'resident' && flatNo != null) {
+          startScreen = ResidentShellScreen(
+            residentId: firebaseUser.uid,
+            residentName: name,
+            societyId: societyId,
+            flatNo: flatNo,
+          );
+        } else {
+          // Invalid membership, go to role select
+          startScreen = const RoleSelectScreen();
+        }
+      } else {
+        // No membership found, go to role select
+        startScreen = const RoleSelectScreen();
+      }
+    } catch (e) {
+      print("Error loading membership: $e");
+      startScreen = const RoleSelectScreen();
+    }
   } else {
-    startScreen = const RoleSelectScreen();
+    // Fallback to old session storage for backward compatibility during migration
+    final residentSession = await Storage.getResidentSession();
+    final guardSession = await Storage.getGuardSession();
+    final adminSession = await Storage.getAdminSession();
+
+    if (residentSession != null) {
+      startScreen = ResidentShellScreen(
+        residentId: residentSession.residentId,
+        residentName: residentSession.residentName,
+        societyId: residentSession.societyId,
+        flatNo: residentSession.flatNo,
+      );
+    } else if (guardSession != null) {
+      startScreen = GuardShellScreen(
+        guardId: guardSession.guardId,
+        guardName: guardSession.guardName.isNotEmpty
+            ? guardSession.guardName
+            : "Guard",
+        societyId: guardSession.societyId.isNotEmpty
+            ? guardSession.societyId
+            : "Society",
+      );
+    } else if (adminSession != null) {
+      startScreen = AdminShellScreen(
+        adminId: adminSession.adminId,
+        adminName: adminSession.adminName,
+        societyId: adminSession.societyId,
+        role: adminSession.role,
+      );
+    } else {
+      startScreen = const RoleSelectScreen();
+    }
   }
 
   // Run your app with the determined startScreen

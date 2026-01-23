@@ -281,12 +281,12 @@ class NotificationService {
         return;
       }
 
-      // Subscribe to society topic (for notices)
+      // Subscribe to society topic (for notices) - multi-tenant format
       await subscribeToTopic("society_$societyId");
       
-      // Subscribe to flat topic (for visitor entries) if resident
+      // Subscribe to flat topic (for visitor entries) if resident - multi-tenant format
       if (flatId != null && role == "resident") {
-        await subscribeToTopic("flat_$flatId");
+        await subscribeToTopic("flat_${societyId}_$flatId");
       }
       
       AppLogger.i("Subscribed to topics", data: {

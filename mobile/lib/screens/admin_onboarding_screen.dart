@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:confetti/confetti.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../services/admin_service.dart';
+import '../services/firebase_auth_service.dart';
+import '../services/firestore_service.dart';
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
 import 'admin_shell_screen.dart';
@@ -21,7 +24,10 @@ class AdminOnboardingScreen extends StatefulWidget {
 
 class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _societyIdController = TextEditingController();
+  final _societyCodeController = TextEditingController();
+  final _societyNameController = TextEditingController();
+  String? _selectedCity;
+  String? _selectedState;
   final _adminIdController = TextEditingController();
   final _adminNameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -31,13 +37,25 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   late final AdminService _adminService = AdminService(
     baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
   );
+  final FirebaseAuthService _authService = FirebaseAuthService();
+  final FirestoreService _firestore = FirestoreService();
   
   bool _isLoading = false;
+  bool _isLoadingLocations = false;
   bool _obscurePin = true;
   bool _obscureConfirmPin = true;
-  String _selectedRole = "ADMIN";
+  bool _isCreatingSociety = true;
+  String _selectedRole = "SUPER_ADMIN";
+
+  late ConfettiController _confettiController;
+
+  // Dynamic state & city lists loaded from Firestore
+  List<Map<String, String>> _stateOptions = [];
+  List<Map<String, String>> _cityOptions = [];
+  String? _selectedStateId;
 
   final List<String> _roles = [
+    "SUPER_ADMIN",
     "ADMIN",
     "PRESIDENT",
     "SECRETARY",
@@ -46,13 +64,51 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _loadStates();
+  }
+
+  Future<void> _loadStates() async {
+    setState(() {
+      _isLoadingLocations = true;
+      _stateOptions = [];
+      _cityOptions = [];
+      _selectedStateId = null;
+      _selectedState = null;
+      _selectedCity = null;
+    });
+    final states = await _firestore.getStatesList();
+    setState(() {
+      _stateOptions = states;
+      _isLoadingLocations = false;
+    });
+  }
+
+  Future<void> _loadCitiesForState(String stateId) async {
+    setState(() {
+      _isLoadingLocations = true;
+      _cityOptions = [];
+      _selectedCity = null;
+    });
+    final cities = await _firestore.getCitiesForState(stateId);
+    setState(() {
+      _cityOptions = cities;
+      _isLoadingLocations = false;
+    });
+  }
+
+  @override
   void dispose() {
-    _societyIdController.dispose();
+    _societyCodeController.dispose();
+    _societyNameController.dispose();
     _adminIdController.dispose();
     _adminNameController.dispose();
     _phoneController.dispose();
     _pinController.dispose();
     _confirmPinController.dispose();
+    _confettiController.dispose();
     super.dispose();
   }
 
@@ -61,106 +117,134 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
       return;
     }
 
-    final societyId = _societyIdController.text.trim();
-    final adminId = _adminIdController.text.trim();
+    final societyCode = _societyCodeController.text.trim().toUpperCase();
     final adminName = _adminNameController.text.trim();
+    final email = _adminIdController.text.trim(); // Use as email for admin
     final phone = _phoneController.text.trim();
     final pin = _pinController.text.trim();
 
     setState(() => _isLoading = true);
-    AppLogger.i("Admin registration attempt", data: {
-      "society_id": societyId,
-      "admin_id": adminId,
+    AppLogger.i("Admin onboarding attempt", data: {
+      "society_code": societyCode,
+      "email": email,
       "role": _selectedRole,
     });
 
     try {
-      final result = await _adminService.register(
-        societyId: societyId,
-        adminId: adminId,
-        adminName: adminName,
-        pin: pin,
-        phone: phone.isEmpty ? null : phone,
-        role: _selectedRole,
+      // Step 1: Create Firebase Auth account for admin
+      final userCredential = await _authService.createAdminAccount(
+        email: email,
+        password: pin,
       );
+      final uid = userCredential.user?.uid;
+      if (uid == null) {
+        throw Exception("Failed to create Firebase Auth account");
+      }
+
+      // Step 2: Resolve or create society
+      String societyId;
+      if (_isCreatingSociety) {
+        // Create a new society with name, city, state (from picklists)
+        final societyName = _societyNameController.text.trim();
+        final city = _selectedCity;
+        final state = _selectedState;
+
+        societyId = 'soc_${societyCode.toLowerCase()}';
+
+        await _firestore.createSociety(
+          societyId: societyId,
+          code: societyCode,
+          name: societyName,
+          city: city,
+          state: state,
+          createdByUid: uid,
+        );
+      } else {
+        // Join existing society via code
+        final existingSocietyId = await _firestore.getSocietyIdByCode(societyCode);
+        if (existingSocietyId == null) {
+          setState(() => _isLoading = false);
+          _showError("Society not found or inactive for this code.");
+          return;
+        }
+        societyId = existingSocietyId;
+      }
+
+      // Step 3: Create member document for this admin
+      await _firestore.setMember(
+        societyId: societyId,
+        uid: uid,
+        systemRole: 'admin',
+        societyRole: _selectedRole.toLowerCase(),
+        name: adminName,
+        phone: phone.isEmpty ? null : phone,
+        active: true,
+      );
+
+      // Step 4: Save Firebase session
+      await Storage.saveFirebaseSession(
+        uid: uid,
+        societyId: societyId,
+        systemRole: 'admin',
+        societyRole: _selectedRole,
+        name: adminName,
+      );
+
+      AppLogger.i("Admin onboarding successful", data: {
+        'uid': uid,
+        'societyId': societyId,
+      });
+
+      setState(() => _isLoading = false);
 
       if (!mounted) return;
 
-      AppLogger.i("Admin registration response", data: {
-        "success": result.isSuccess,
-        "error": result.error,
-      });
-
-      if (result.isSuccess && result.data != null) {
-        final data = result.data!;
-        AppLogger.i("Admin registered successfully", data: data);
-
-        // Extract admin info from response
-        final adminData = data['admin'] as Map<String, dynamic>? ?? data;
-        final String registeredAdminId = (adminData['admin_id'] ?? adminId).toString();
-        final String registeredAdminName = (adminData['admin_name'] ?? adminName).toString();
-        final String realSocietyId = (adminData['society_id'] ?? societyId).toString();
-        final String role = (adminData['role'] ?? _selectedRole).toString();
-
-        // Save session
-        await Storage.saveAdminSession(
-          adminId: registeredAdminId,
-          adminName: registeredAdminName,
-          societyId: realSocietyId,
-          role: role,
-        );
-
-        AppLogger.i("Admin session saved successfully");
-
-        setState(() => _isLoading = false);
-
-        if (!mounted) return;
-
-        // Show success message
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                const Expanded(
-                  child: Text(
-                    "Account created successfully!",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+      // Show success message
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  "Account created successfully!",
+                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-              ],
-            ),
-            backgroundColor: AppColors.admin,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
-            duration: const Duration(seconds: 2),
+              ),
+            ],
           ),
-        );
+          backgroundColor: AppColors.admin,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+          duration: const Duration(seconds: 2),
+        ),
+      );
 
-        // Navigate to admin shell
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AdminShellScreen(
-              adminId: registeredAdminId,
-              adminName: registeredAdminName,
-              societyId: realSocietyId,
-              role: role,
-            ),
+      // Navigate to admin shell
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AdminShellScreen(
+            adminId: uid, // Use UID as adminId
+            adminName: adminName,
+            societyId: societyId,
+            role: _selectedRole,
           ),
-        );
-      } else {
-        AppLogger.e("Admin registration failed", error: result.error);
-        setState(() => _isLoading = false);
-        _showError(result.error ?? "Registration failed. Please try again.");
-      }
+        ),
+      );
     } catch (e, stackTrace) {
-      AppLogger.e("Admin registration exception", error: e, stackTrace: stackTrace);
+      AppLogger.e("Admin onboarding exception", error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() => _isLoading = false);
-        _showError("Connection error. Please try again.");
+        String errorMsg = "Registration failed. Please try again.";
+        if (e.toString().contains('email-already-in-use')) {
+          errorMsg = "Email already registered. Please use login instead.";
+        } else if (e.toString().contains('weak-password')) {
+          errorMsg = "Password too weak. Please use at least 6 characters.";
+        }
+        _showError(errorMsg);
       }
     }
   }
@@ -243,7 +327,30 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               ),
             ),
           ),
-          GlassLoader(show: _isLoading, message: "Creating Account…"),
+          if (_isLoading || _isLoadingLocations)
+            GlassLoader(
+              show: true,
+              message: _isLoading ? "Creating your account…" : "Loading locations…",
+            ),
+          // Confetti celebration on successful new society creation
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              shouldLoop: false,
+              numberOfParticles: 25,
+              maxBlastForce: 18,
+              minBlastForce: 5,
+              gravity: 0.25,
+              colors: const [
+                AppColors.admin,
+                AppColors.success,
+                Colors.orangeAccent,
+                Colors.blueAccent,
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -328,16 +435,265 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 20),
+            // Toggle: Create vs Join society
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.bg,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Text(
+                        "Create society",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                      ),
+                      selected: _isCreatingSociety,
+                      onSelected: (v) {
+                        setState(() {
+                          _isCreatingSociety = true;
+                          // Ensure role value matches available items
+                          _selectedRole = "SUPER_ADMIN";
+                        });
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ChoiceChip(
+                      label: const Text(
+                        "Join society",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                      ),
+                      selected: !_isCreatingSociety,
+                      onSelected: (v) {
+                        setState(() {
+                          _isCreatingSociety = false;
+                          // When joining existing society, SUPER_ADMIN should not be used
+                          if (_selectedRole == "SUPER_ADMIN") {
+                            _selectedRole = "ADMIN";
+                          }
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            if (_isCreatingSociety) ...[
+              _PremiumField(
+                controller: _societyNameController,
+                label: "Society Name",
+                hint: "e.g. Kedia Amara",
+                icon: Icons.location_city_rounded,
+                textInputAction: TextInputAction.next,
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "Please enter Society Name";
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "State",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.text2,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.bg,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.02),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedState,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              prefixIcon: Icon(Icons.map_rounded, color: AppColors.admin),
+                            ),
+                            hint: const Text(
+                              "Select state",
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            items: _stateOptions
+                                .map((st) => DropdownMenuItem<String>(
+                                      value: st['name'],
+                                      child: Text(
+                                        st['name'] ?? '',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.text,
+                                        ),
+                                      ),
+                                    ))
+                                .toList(),
+                            validator: (value) {
+                              if (_isCreatingSociety && (value == null || value.isEmpty)) {
+                                return "Please select State";
+                              }
+                              return null;
+                            },
+                            onChanged: (value) {
+                              final stateMap = _stateOptions.firstWhere(
+                                  (st) => st['name'] == value,
+                                  orElse: () => {'id': '', 'name': ''});
+                              setState(() {
+                                _selectedState = value;
+                                _selectedStateId = stateMap['id'];
+                                _selectedCity = null;
+                              });
+                              if (_selectedStateId != null && _selectedStateId!.isNotEmpty) {
+                                _loadCitiesForState(_selectedStateId!);
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "City",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.text2,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.bg,
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(color: AppColors.border),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.02),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedCity,
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              prefixIcon: Icon(Icons.location_on_rounded, color: AppColors.admin),
+                            ),
+                            hint: const Text(
+                              "Select city",
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            items: _cityOptions
+                                .map((city) => DropdownMenuItem<String>(
+                                      value: city['name'],
+                                      child: Text(
+                                        city['name'] ?? '',
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.text,
+                                        ),
+                                      ),
+                                    ))
+                                .toList(),
+                            validator: (value) {
+                              if (_isCreatingSociety && (value == null || value.isEmpty)) {
+                                return "Please select City";
+                              }
+                              return null;
+                            },
+                            onChanged: _selectedStateId == null || _selectedStateId!.isEmpty
+                                ? null
+                                : (value) {
+                                    setState(() => _selectedCity = value);
+                                  },
+                            disabledHint: const Text(
+                              "Select state first",
+                              style: TextStyle(
+                                color: AppColors.textMuted,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+            ],
             _PremiumField(
-              controller: _societyIdController,
-              label: "Society ID",
-              hint: "e.g. SOC-001",
+              controller: _societyCodeController,
+              label: "Society Code",
+              hint: "e.g. SOC001 (unique code for your society)",
               icon: Icons.apartment_rounded,
               textInputAction: TextInputAction.next,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return "Please enter Society ID";
+                  return "Please enter Society Code";
                 }
                 return null;
               },
@@ -345,16 +701,17 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             const SizedBox(height: 20),
             _PremiumField(
               controller: _adminIdController,
-              label: "Admin ID",
-              hint: "Choose a unique Admin ID",
-              icon: Icons.badge_rounded,
+              label: "Email Address",
+              hint: "Your admin email (e.g. admin@example.com)",
+              icon: Icons.email_rounded,
               textInputAction: TextInputAction.next,
+              keyboardType: TextInputType.emailAddress,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return "Please enter Admin ID";
+                  return "Please enter your email";
                 }
-                if (value.trim().length < 3) {
-                  return "Admin ID must be at least 3 characters";
+                if (!value.contains('@')) {
+                  return "Please enter a valid email";
                 }
                 return null;
               },
@@ -396,7 +753,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "Role",
+                  _isCreatingSociety ? "Role (for new society creator)" : "Role",
                   style: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
@@ -437,11 +794,14 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                         vertical: 18,
                       ),
                     ),
-                    items: _roles.map((role) {
+                    items: (_isCreatingSociety
+                            ? ["SUPER_ADMIN"]
+                            : _roles.where((r) => r != "SUPER_ADMIN"))
+                        .map((role) {
                       return DropdownMenuItem(
                         value: role,
                         child: Text(
-                          role,
+                          role == "SUPER_ADMIN" ? "SUPER ADMIN" : role,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,

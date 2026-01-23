@@ -3,6 +3,8 @@ import '../core/storage.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../services/admin_service.dart';
+import '../services/firebase_auth_service.dart';
+import '../services/firestore_service.dart';
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
 import 'admin_shell_screen.dart';
@@ -24,6 +26,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   late final AdminService _adminService = AdminService(
     baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
   );
+  final FirebaseAuthService _authService = FirebaseAuthService();
+  final FirestoreService _firestore = FirestoreService();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -40,80 +44,81 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       return;
     }
 
-    final societyId = _societyIdController.text.trim();
-    final adminId = _adminIdController.text.trim();
+    final email = _adminIdController.text.trim(); // Email for admin login
     final pin = _passwordController.text.trim();
 
     setState(() => _isLoading = true);
     AppLogger.i("Admin login attempt", data: {
-      "society_id": societyId,
-      "admin_id": adminId,
+      "email": email,
     });
 
     try {
-      final result = await _adminService.login(
-        societyId: societyId,
-        adminId: adminId,
-        pin: pin,
+      // Step 1: Sign in with Firebase Auth
+      final userCredential = await _authService.signInAdmin(
+        email: email,
+        password: pin,
       );
+      final uid = userCredential.user?.uid;
+      if (uid == null) {
+        throw Exception("Failed to sign in");
+      }
+
+      // Step 2: Get membership from Firestore
+      final membership = await _firestore.getCurrentUserMembership();
+      if (membership == null) {
+        throw Exception("User membership not found");
+      }
+
+      final societyId = membership['societyId'] as String;
+      final systemRole = membership['systemRole'] as String? ?? 'admin';
+      final societyRole = membership['societyRole'] as String?;
+      final name = membership['name'] as String? ?? 'Admin';
+
+      if (systemRole != 'admin') {
+        throw Exception("User is not an admin");
+      }
+
+      // Step 3: Save Firebase session
+      await Storage.saveFirebaseSession(
+        uid: uid,
+        societyId: societyId,
+        systemRole: systemRole,
+        societyRole: societyRole,
+        name: name,
+      );
+
+      AppLogger.i("Admin login successful", data: {
+        'uid': uid,
+        'societyId': societyId,
+        'name': name,
+      });
+
+      setState(() => _isLoading = false);
 
       if (!mounted) return;
 
-      AppLogger.i("Admin login response", data: {
-        "success": result.isSuccess,
-        "error": result.error,
-      });
-
-      if (result.isSuccess && result.data != null) {
-        final data = result.data!;
-        AppLogger.i("Admin profile data received", data: data);
-
-        final String adminId = (data['admin_id'] ?? data['id'] ?? data['adminId'])?.toString() ?? "";
-        final String adminName = (data['admin_name'] ?? data['name'] ?? data['full_name'])?.toString() ?? "Admin";
-        final String realSocietyId = (data['society_id'] ?? data['societyId'])?.toString() ?? societyId;
-        final String role = (data['role'] ?? 'ADMIN')?.toString() ?? 'ADMIN';
-
-        if (adminId.isEmpty) {
-          AppLogger.e("Admin profile invalid - missing admin_id");
-          setState(() => _isLoading = false);
-          _showError("Admin profile invalid (missing admin_id).");
-          return;
-        }
-
-        await Storage.saveAdminSession(
-          adminId: adminId,
-          adminName: adminName,
-          societyId: realSocietyId,
-          role: role,
-        );
-
-        AppLogger.i("Admin session saved successfully");
-
-        setState(() => _isLoading = false);
-
-        if (!mounted) return;
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AdminShellScreen(
-              adminId: adminId,
-              adminName: adminName,
-              societyId: realSocietyId,
-              role: role,
-            ),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AdminShellScreen(
+            adminId: uid,
+            adminName: name,
+            societyId: societyId,
+            role: societyRole ?? 'ADMIN',
           ),
-        );
-      } else {
-        AppLogger.e("Admin login failed", error: result.error);
-        setState(() => _isLoading = false);
-        _showError(result.error ?? "Invalid credentials or unauthorized access");
-      }
+        ),
+      );
     } catch (e, stackTrace) {
       AppLogger.e("Admin login exception", error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() => _isLoading = false);
-        _showError("Connection error. Please try again.");
+        String errorMsg = "Login failed. Please check your credentials.";
+        if (e.toString().contains('user-not-found') || e.toString().contains('wrong-password')) {
+          errorMsg = "Invalid email or password.";
+        } else if (e.toString().contains('network')) {
+          errorMsg = "Network error. Please check your connection.";
+        }
+        _showError(errorMsg);
       }
     }
   }

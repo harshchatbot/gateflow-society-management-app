@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../core/app_logger.dart';
+import 'firestore_service.dart';
 
 class ApiResult<T> {
   final bool isSuccess;
@@ -77,29 +78,15 @@ class AdminService {
     required String societyId,
   }) async {
     try {
-      final uri = _uri("/api/admins/stats", {"society_id": societyId});
-      AppLogger.i("Admin getStats request", data: {"society_id": societyId});
-
-      final res = await http.get(uri).timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              throw TimeoutException("Request timeout after 10 seconds");
-            },
-          );
-
-      if (res.statusCode == 200) {
-        return ApiResult.success(jsonDecode(res.body) as Map<String, dynamic>);
-      }
-      return ApiResult.failure("Failed to load stats: ${res.statusCode} ${res.body}");
-    } on TimeoutException catch (e) {
-      AppLogger.e("Admin getStats timeout error", error: e);
-      return ApiResult.failure("Request timeout. Please check your connection and try again.");
-    } on SocketException catch (e) {
-      AppLogger.e("Admin getStats socket error", error: e);
-      return ApiResult.failure("Cannot connect to server. Please check your network connection.");
-    } catch (e) {
-      AppLogger.e("Admin getStats error", error: e);
-      return ApiResult.failure("Connection error: ${e.toString()}");
+      // Use Firestore for stats
+      final firestore = FirestoreService();
+      final stats = await firestore.getAdminStats(societyId: societyId);
+      
+      AppLogger.i("Admin stats fetched from Firestore", data: stats);
+      return ApiResult.success(stats);
+    } catch (e, stackTrace) {
+      AppLogger.e("Admin getStats error", error: e, stackTrace: stackTrace);
+      return ApiResult.failure("Failed to load stats: ${e.toString()}");
     }
   }
 

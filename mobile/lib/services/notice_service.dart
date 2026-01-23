@@ -1,9 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
-import 'package:http/http.dart' as http;
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../core/app_logger.dart';
+import '../core/storage.dart';
+import 'firestore_service.dart';
 
 class ApiResult<T> {
   final bool isSuccess;
@@ -20,13 +19,10 @@ class ApiResult<T> {
 }
 
 class NoticeService {
-  final String baseUrl;
+  final String baseUrl; // Kept for backward compatibility, not used
+  final FirestoreService _firestore = FirestoreService();
 
   NoticeService({required this.baseUrl});
-
-  Uri _uri(String path, [Map<String, String>? query]) {
-    return Uri.parse("$baseUrl$path").replace(queryParameters: query);
-  }
 
   Future<ApiResult<Map<String, dynamic>>> createNotice({
     required String societyId,
@@ -39,52 +35,49 @@ class NoticeService {
     String? expiryDate,
   }) async {
     try {
-      final body = jsonEncode({
-        "society_id": societyId,
-        "admin_id": adminId,
-        "admin_name": adminName,
-        "title": title,
-        "content": content,
-        "notice_type": noticeType,
-        "priority": priority,
-        if (expiryDate != null) "expiry_date": expiryDate,
-      });
-
-      AppLogger.i("Create notice request", data: {
-        "society_id": societyId,
-        "title": title,
-        "notice_type": noticeType,
-        "priority": priority,
-      });
-
-      final res = await http
-          .post(
-            _uri("/api/notices"),
-            headers: {"Content-Type": "application/json"},
-            body: body,
-          )
-          .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              throw TimeoutException("Request timeout after 10 seconds");
-            },
-          );
-
-      AppLogger.i("Create notice response", data: {"status": res.statusCode, "body": res.body});
-
-      if (res.statusCode == 200) {
-        return ApiResult.success(jsonDecode(res.body) as Map<String, dynamic>);
+      // Get current user UID
+      final session = await Storage.getFirebaseSession();
+      if (session == null || session['uid'] == null) {
+        return ApiResult.failure("User not authenticated");
       }
-      return ApiResult.failure("Failed to create notice: ${res.statusCode} ${res.body}");
-    } on TimeoutException catch (e) {
-      AppLogger.e("Create notice timeout error", error: e);
-      return ApiResult.failure("Request timeout. Please check your connection and try again.");
-    } on SocketException catch (e) {
-      AppLogger.e("Create notice socket error", error: e);
-      return ApiResult.failure("Cannot connect to server. Please check your network connection.");
-    } catch (e) {
-      AppLogger.e("Create notice error", error: e);
-      return ApiResult.failure("Connection error: ${e.toString()}");
+      final uid = session['uid'] as String;
+
+      // Parse expiry date if provided
+      Timestamp? expiryAt;
+      if (expiryDate != null && expiryDate.isNotEmpty) {
+        try {
+          final expiry = DateTime.parse(expiryDate);
+          expiryAt = Timestamp.fromDate(expiry);
+        } catch (e) {
+          AppLogger.w("Invalid expiry date format", data: {'expiryDate': expiryDate});
+        }
+      }
+
+      final noticeId = await _firestore.createNotice(
+        societyId: societyId,
+        title: title,
+        content: content,
+        noticeType: noticeType,
+        priority: priority,
+        createdByUid: uid,
+        createdByName: adminName,
+        expiryAt: expiryAt,
+      );
+
+      AppLogger.i("Notice created successfully", data: {'noticeId': noticeId});
+
+      return ApiResult.success({
+        'notice_id': noticeId,
+        'society_id': societyId,
+        'title': title,
+        'content': content,
+        'notice_type': noticeType,
+        'priority': priority,
+        'status': 'active',
+      });
+    } catch (e, stackTrace) {
+      AppLogger.e("Error creating notice", error: e, stackTrace: stackTrace);
+      return ApiResult.failure("Failed to create notice: ${e.toString()}");
     }
   }
 
@@ -93,39 +86,27 @@ class NoticeService {
     bool activeOnly = true,
   }) async {
     try {
-      final query = <String, String>{
-        "society_id": societyId,
-        "active_only": activeOnly.toString(),
-      };
-
-      final uri = _uri("/api/notices", query);
-      AppLogger.i("Get notices request", data: {"society_id": societyId, "active_only": activeOnly, "uri": uri.toString()});
-
-      final res = await http.get(uri).timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              throw TimeoutException("Request timeout after 10 seconds");
-            },
-          );
-
-      AppLogger.i("Get notices response", data: {"status": res.statusCode, "body_length": res.body.length});
-
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body) as List<dynamic>;
-        AppLogger.i("Get notices success", data: {"count": data.length});
-        return ApiResult.success(data);
+      // Get current user's system role for filtering
+      final session = await Storage.getFirebaseSession();
+      String? targetRole;
+      if (session != null) {
+        final systemRole = session['systemRole'] as String?;
+        if (systemRole != null) {
+          targetRole = systemRole; // "admin" | "guard" | "resident"
+        }
       }
-      AppLogger.w("Get notices failed", data: {"status": res.statusCode, "body": res.body});
-      return ApiResult.failure("Failed to load notices: ${res.statusCode} ${res.body}");
-    } on TimeoutException catch (e) {
-      AppLogger.e("Get notices timeout error", error: e);
-      return ApiResult.failure("Request timeout. Please check your connection and try again.");
-    } on SocketException catch (e) {
-      AppLogger.e("Get notices socket error", error: e);
-      return ApiResult.failure("Cannot connect to server. Please check your network connection.");
-    } catch (e) {
-      AppLogger.e("Get notices error", error: e);
-      return ApiResult.failure("Connection error: ${e.toString()}");
+
+      final notices = await _firestore.getNotices(
+        societyId: societyId,
+        activeOnly: activeOnly,
+        targetRole: targetRole,
+      );
+
+      AppLogger.i("Notices fetched successfully", data: {'count': notices.length});
+      return ApiResult.success(notices);
+    } catch (e, stackTrace) {
+      AppLogger.e("Error getting notices", error: e, stackTrace: stackTrace);
+      return ApiResult.failure("Failed to load notices: ${e.toString()}");
     }
   }
 
@@ -134,25 +115,23 @@ class NoticeService {
     required bool isActive,
   }) async {
     try {
-      final body = jsonEncode({
-        "is_active": isActive,
-      });
-
-      final res = await http
-          .put(
-            _uri("/api/notices/$noticeId/status"),
-            headers: {"Content-Type": "application/json"},
-            body: body,
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (res.statusCode == 200) {
-        return ApiResult.success(jsonDecode(res.body) as Map<String, dynamic>);
+      final session = await Storage.getFirebaseSession();
+      if (session == null || session['societyId'] == null) {
+        return ApiResult.failure("User not authenticated");
       }
-      return ApiResult.failure("Failed to update notice: ${res.statusCode}");
-    } catch (e) {
-      AppLogger.e("Update notice status error", error: e);
-      return ApiResult.failure("Connection error: ${e.toString()}");
+      final societyId = session['societyId'] as String;
+
+      await _firestore.updateNoticeStatus(
+        societyId: societyId,
+        noticeId: noticeId,
+        isActive: isActive,
+      );
+
+      AppLogger.i("Notice status updated", data: {'noticeId': noticeId, 'isActive': isActive});
+      return ApiResult.success({'ok': true, 'notice_id': noticeId, 'is_active': isActive});
+    } catch (e, stackTrace) {
+      AppLogger.e("Error updating notice status", error: e, stackTrace: stackTrace);
+      return ApiResult.failure("Failed to update notice: ${e.toString()}");
     }
   }
 
@@ -160,17 +139,22 @@ class NoticeService {
     required String noticeId,
   }) async {
     try {
-      final res = await http
-          .delete(_uri("/api/notices/$noticeId"))
-          .timeout(const Duration(seconds: 10));
-
-      if (res.statusCode == 200) {
-        return ApiResult.success(true);
+      final session = await Storage.getFirebaseSession();
+      if (session == null || session['societyId'] == null) {
+        return ApiResult.failure("User not authenticated");
       }
-      return ApiResult.failure("Failed to delete notice: ${res.statusCode}");
-    } catch (e) {
-      AppLogger.e("Delete notice error", error: e);
-      return ApiResult.failure("Connection error: ${e.toString()}");
+      final societyId = session['societyId'] as String;
+
+      await _firestore.deleteNotice(
+        societyId: societyId,
+        noticeId: noticeId,
+      );
+
+      AppLogger.i("Notice deleted", data: {'noticeId': noticeId});
+      return ApiResult.success(true);
+    } catch (e, stackTrace) {
+      AppLogger.e("Error deleting notice", error: e, stackTrace: stackTrace);
+      return ApiResult.failure("Failed to delete notice: ${e.toString()}");
     }
   }
 }
