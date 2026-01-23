@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
 import '../ui/app_colors.dart';
 import '../core/app_logger.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import '../ui/glass_loader.dart';
+import '../utils/csv_validators.dart';
 
 /// Super Admin Bulk Upload Screen
 ///
@@ -40,6 +41,12 @@ class _SuperAdminBulkUploadScreenState extends State<SuperAdminBulkUploadScreen>
   bool _isUploadingGuards = false;
   bool _isUploadingResidents = false;
   String? _lastUploadStatus;
+  
+  // Validation state
+  ValidationResult? _guardsValidationResult;
+  ValidationResult? _residentsValidationResult;
+  String? _selectedGuardsCsvPath;
+  String? _selectedResidentsCsvPath;
 
   @override
   Widget build(BuildContext context) {
@@ -203,8 +210,9 @@ class _SuperAdminBulkUploadScreenState extends State<SuperAdminBulkUploadScreen>
       title: "Guards",
       icon: Icons.security_rounded,
       onDownloadSample: _downloadGuardsSample,
-      onUpload: _uploadGuards,
+      onUpload: _validateAndUploadGuards,
       isUploading: _isUploadingGuards,
+      validationResult: _guardsValidationResult,
     );
   }
 
@@ -213,8 +221,9 @@ class _SuperAdminBulkUploadScreenState extends State<SuperAdminBulkUploadScreen>
       title: "Residents",
       icon: Icons.people_rounded,
       onDownloadSample: _downloadResidentsSample,
-      onUpload: _uploadResidents,
+      onUpload: _validateAndUploadResidents,
       isUploading: _isUploadingResidents,
+      validationResult: _residentsValidationResult,
     );
   }
 
@@ -224,6 +233,7 @@ class _SuperAdminBulkUploadScreenState extends State<SuperAdminBulkUploadScreen>
     required VoidCallback onDownloadSample,
     required VoidCallback onUpload,
     required bool isUploading,
+    ValidationResult? validationResult,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -287,7 +297,7 @@ class _SuperAdminBulkUploadScreenState extends State<SuperAdminBulkUploadScreen>
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: isUploading ? null : onUpload,
+                  onPressed: (isUploading || (validationResult != null && !validationResult.hasValidRows)) ? null : onUpload,
                   icon: const Icon(Icons.upload_rounded, size: 20),
                   label: const Text(
                     "Upload CSV",
@@ -305,6 +315,11 @@ class _SuperAdminBulkUploadScreenState extends State<SuperAdminBulkUploadScreen>
               ),
             ],
           ),
+          // Show validation summary if available
+          if (validationResult != null) ...[
+            const SizedBox(height: 16),
+            _buildValidationSummary(validationResult, title),
+          ],
         ],
       ),
     );
@@ -343,42 +358,19 @@ class _SuperAdminBulkUploadScreenState extends State<SuperAdminBulkUploadScreen>
 
   Future<void> _downloadGuardsSample() async {
     try {
-      // Generate sample CSV content
-      const csvContent = '''guardId,name,phone,pin,active
-G001,John Doe,9876543210,1234,TRUE
-G002,Jane Smith,9876543211,5678,TRUE
-G003,Bob Wilson,9876543212,9012,TRUE''';
+      // Generate sample CSV content (new format with email)
+      const csvContent = '''name,email,phone,shift,employeeId
+John Doe,john.doe@example.com,9876543210,Morning,G001
+Jane Smith,jane.smith@example.com,9876543211,Evening,G002
+Bob Wilson,bob.wilson@example.com,9876543212,Night,G003''';
 
-      await _saveFile('guards_sample.csv', csvContent);
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    "Guards sample CSV downloaded to Downloads folder",
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-      }
+      await _generateAndShareSample('guards_sample.csv', csvContent, 'Guards');
     } catch (e, stackTrace) {
-      AppLogger.e("Error downloading guards sample", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error generating guards sample", error: e, stackTrace: stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text("Failed to download sample. Please try again."),
+            content: const Text("Failed to generate sample. Please try again."),
             backgroundColor: AppColors.error,
           ),
         );
@@ -388,15 +380,54 @@ G003,Bob Wilson,9876543212,9012,TRUE''';
 
   Future<void> _downloadResidentsSample() async {
     try {
-      // Generate sample CSV content
-      const csvContent = '''flatNo,residentName,phone,pin,active
-A-101,Ramesh Kumar,9876543210,1234,TRUE
-A-102,Sunita Sharma,9876543211,5678,TRUE
-B-201,Rajesh Patel,9876543212,9012,TRUE
-B-202,Priya Singh,9876543213,3456,TRUE''';
+      // Generate sample CSV content (new format with email)
+      const csvContent = '''name,email,phone,flatNo,tower,role
+Ramesh Kumar,ramesh.kumar@example.com,9876543210,A-101,Tower A,owner
+Sunita Sharma,sunita.sharma@example.com,9876543211,A-102,Tower A,resident
+Rajesh Patel,rajesh.patel@example.com,9876543212,B-201,Tower B,owner
+Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
 
-      await _saveFile('residents_sample.csv', csvContent);
+      await _generateAndShareSample('residents_sample.csv', csvContent, 'Residents');
+    } catch (e, stackTrace) {
+      AppLogger.e("Error generating residents sample", error: e, stackTrace: stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text("Failed to generate sample. Please try again."),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Generate CSV sample and share it via system share sheet
+  /// 
+  /// Saves to app-specific temporary directory (no permissions needed)
+  /// and opens share sheet so admin can email/upload to Drive/WhatsApp
+  Future<void> _generateAndShareSample(String fileName, String content, String type) async {
+    try {
+      // Get app-specific temporary directory (no permissions needed)
+      final tempDir = await getTemporaryDirectory();
       
+      // Ensure directory exists
+      if (!await tempDir.exists()) {
+        await tempDir.create(recursive: true);
+      }
+
+      // Save CSV to temporary directory
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsString(content);
+      AppLogger.i("Sample CSV generated", data: {'path': file.path, 'type': type});
+
+      // Share the file via system share sheet
+      final xFile = XFile(file.path);
+      await Share.shareXFiles(
+        [xFile],
+        text: '$type sample CSV template',
+        subject: '$type Sample CSV - GateFlow',
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -406,7 +437,7 @@ B-202,Priya Singh,9876543213,3456,TRUE''';
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    "Residents sample CSV downloaded to Downloads folder",
+                    "Sample ready. Share it via email or Drive to edit on desktop.",
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -416,15 +447,294 @@ B-202,Priya Singh,9876543213,3456,TRUE''';
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 4),
           ),
         );
       }
     } catch (e, stackTrace) {
-      AppLogger.e("Error downloading residents sample", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error generating and sharing sample", error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  // ============================================
+  // Validation Summary Widget
+  // ============================================
+
+  Widget _buildValidationSummary(ValidationResult result, String type) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: result.hasValidRows 
+            ? AppColors.success.withOpacity(0.1)
+            : AppColors.error.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: result.hasValidRows 
+              ? AppColors.success.withOpacity(0.3)
+              : AppColors.error.withOpacity(0.3),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                result.hasValidRows ? Icons.check_circle_rounded : Icons.error_rounded,
+                color: result.hasValidRows ? AppColors.success : AppColors.error,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                "Validation Results",
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w800,
+                  color: result.hasValidRows ? AppColors.success : AppColors.error,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              _buildStatItem("Total", result.totalRows.toString(), AppColors.text2),
+              _buildStatItem("Valid", result.validCount.toString(), AppColors.success),
+              _buildStatItem("Invalid", result.invalidCount.toString(), AppColors.error),
+            ],
+          ),
+          if (result.invalidCount > 0) ...[
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () => _showValidationErrors(result, type),
+              icon: const Icon(Icons.error_outline_rounded, size: 18),
+              label: const Text(
+                "View Errors",
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.error,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ),
+          ],
+          if (result.warnings.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            ...result.warnings.take(2).map((warning) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(Icons.warning_amber_rounded, size: 16, color: AppColors.warning),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      warning,
+                      style: const TextStyle(fontSize: 12, color: AppColors.warning),
+                    ),
+                  ),
+                ],
+              ),
+            )),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w900,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: AppColors.text2,
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showValidationErrors(ValidationResult result, String type) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(
+          "$type Validation Errors",
+          style: const TextStyle(fontWeight: FontWeight.w900),
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "${result.invalidCount} row(s) have errors:",
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                ),
+                const SizedBox(height: 12),
+                ...result.invalidRows.map((error) => Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.error_rounded, size: 16, color: AppColors.error),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Row ${error.rowNumber}",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              color: AppColors.error,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        error.reason,
+                        style: const TextStyle(fontSize: 12, color: AppColors.text),
+                      ),
+                    ],
+                  ),
+                )),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.admin,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text("OK", style: TextStyle(fontWeight: FontWeight.w900)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ============================================
+  // Validate and Upload CSV
+  // ============================================
+
+  Future<void> _validateAndUploadGuards() async {
+    if (_guardsValidationResult == null || !_guardsValidationResult!.hasValidRows) {
+      // First, pick and validate file
+      await _pickAndValidateGuardsCsv();
+      return;
+    }
+    
+    // If validation passed, proceed with upload
+    await _uploadGuardsFromValidated();
+  }
+
+  Future<void> _validateAndUploadResidents() async {
+    if (_residentsValidationResult == null || !_residentsValidationResult!.hasValidRows) {
+      // First, pick and validate file
+      await _pickAndValidateResidentsCsv();
+      return;
+    }
+    
+    // If validation passed, proceed with upload
+    await _uploadResidentsFromValidated();
+  }
+
+  Future<void> _pickAndValidateGuardsCsv() async {
+    try {
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+      );
+
+      if (result == null || result.files.single.path == null) {
+        return; // User cancelled
+      }
+
+      final filePath = result.files.single.path!;
+      final file = File(filePath);
+      final content = await file.readAsString();
+
+      // Validate CSV
+      final validationResult = CsvValidators.validateGuardsCsv(content);
+      
+      setState(() {
+        _guardsValidationResult = validationResult;
+        _selectedGuardsCsvPath = filePath;
+      });
+
+      // Show validation results
+      if (validationResult.invalidCount > 0) {
+        _showValidationErrors(validationResult, 'Guards');
+      }
+
+      // If valid rows exist, ask user to confirm upload
+      if (validationResult.hasValidRows) {
+        final shouldUpload = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text(
+              "Ready to Upload",
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            content: Text(
+              "Found ${validationResult.validCount} valid guard(s). Proceed with upload?",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.admin,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text("Upload", style: TextStyle(fontWeight: FontWeight.w900)),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldUpload == true) {
+          await _uploadGuardsFromValidated();
+        }
+      }
+    } catch (e, stackTrace) {
+      AppLogger.e("Error validating guards CSV", error: e, stackTrace: stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text("Failed to download sample. Please try again."),
+            content: Text("Validation failed: ${e.toString()}"),
             backgroundColor: AppColors.error,
           ),
         );
@@ -432,63 +742,303 @@ B-202,Priya Singh,9876543213,3456,TRUE''';
     }
   }
 
-  Future<void> _saveFile(String fileName, String content) async {
+  Future<void> _pickAndValidateResidentsCsv() async {
     try {
-      // Request storage permission (for Android < 13)
-      if (Platform.isAndroid) {
-        final status = await Permission.storage.request();
-        if (!status.isGranted) {
-          // Try manage external storage for Android 11+
-          final manageStatus = await Permission.manageExternalStorage.request();
-          if (!manageStatus.isGranted) {
-            throw Exception("Storage permission denied. Please grant storage permission in settings.");
-          }
+      final result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+      );
+
+      if (result == null || result.files.single.path == null) {
+        return; // User cancelled
+      }
+
+      final filePath = result.files.single.path!;
+      final file = File(filePath);
+      final content = await file.readAsString();
+
+      // Validate CSV
+      final validationResult = CsvValidators.validateResidentsCsv(content);
+      
+      setState(() {
+        _residentsValidationResult = validationResult;
+        _selectedResidentsCsvPath = filePath;
+      });
+
+      // Show validation results
+      if (validationResult.invalidCount > 0) {
+        _showValidationErrors(validationResult, 'Residents');
+      }
+
+      // If valid rows exist, ask user to confirm upload
+      if (validationResult.hasValidRows) {
+        final shouldUpload = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: const Text(
+              "Ready to Upload",
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+            content: Text(
+              "Found ${validationResult.validCount} valid resident(s). Proceed with upload?",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Cancel"),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.admin,
+                  foregroundColor: Colors.white,
+                ),
+                child: const Text("Upload", style: TextStyle(fontWeight: FontWeight.w900)),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldUpload == true) {
+          await _uploadResidentsFromValidated();
         }
       }
-
-      // Get downloads directory
-      Directory? directory;
-      if (Platform.isAndroid) {
-        // For Android, try to get Downloads directory
-        try {
-          directory = Directory('/storage/emulated/0/Download');
-          if (!await directory.exists()) {
-            // Fallback to external storage directory
-            final extDir = await getExternalStorageDirectory();
-            if (extDir != null) {
-              directory = Directory('${extDir.path}/../Download');
-            } else {
-              directory = await getApplicationDocumentsDirectory();
-            }
-          }
-        } catch (e) {
-          // Fallback to app's external storage
-          directory = await getExternalStorageDirectory() ?? await getApplicationDocumentsDirectory();
-        }
-      } else {
-        directory = await getApplicationDocumentsDirectory();
-      }
-
-      if (directory == null) {
-        throw Exception("Could not access storage directory");
-      }
-
-      // Ensure directory exists
-      if (!await directory.exists()) {
-        await directory.create(recursive: true);
-      }
-
-      final file = File('${directory.path}/$fileName');
-      await file.writeAsString(content);
-      AppLogger.i("File saved", data: {'path': file.path});
     } catch (e, stackTrace) {
-      AppLogger.e("Error saving file", error: e, stackTrace: stackTrace);
-      rethrow;
+      AppLogger.e("Error validating residents CSV", error: e, stackTrace: stackTrace);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Validation failed: ${e.toString()}"),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
     }
   }
 
   // ============================================
-  // Upload CSV
+  // Upload CSV (using validated rows)
+  // ============================================
+
+  Future<void> _uploadGuardsFromValidated() async {
+    if (_guardsValidationResult == null || !_guardsValidationResult!.hasValidRows) {
+      return;
+    }
+
+    final validRows = _guardsValidationResult!.validRows;
+    setState(() => _isUploadingGuards = true);
+
+    try {
+      int successCount = 0;
+      int errorCount = 0;
+      final errors = <String>[];
+      final createdUsers = <Map<String, String>>[];
+
+      // Process each validated row
+      for (int i = 0; i < validRows.length; i++) {
+        final row = validRows[i];
+        final rowNumber = i + 1;
+
+        try {
+          final name = row['name']!;
+          final email = row['email']!;
+          final phone = row['phone']!;
+          
+          // Use employeeId as guardId if available, otherwise generate from email
+          final guardId = row['employeeid']?.isNotEmpty == true 
+              ? row['employeeid']!
+              : email.split('@').first.replaceAll(RegExp(r'[^a-zA-Z0-9]'), ''); // Use email prefix as guardId
+
+          // Create Firebase Auth account (using email directly)
+          // Generate a temporary password (last 4 digits of phone)
+          final tempPassword = phone.length >= 4 
+              ? phone.substring(phone.length - 4)
+              : phone;
+          
+          final userCredential = await _authService.createAdminAccount(
+            email: email,
+            password: tempPassword,
+          );
+
+          final uid = userCredential.user?.uid;
+          if (uid == null) {
+            errors.add("Row $rowNumber: Failed to create Firebase Auth account");
+            errorCount++;
+            continue;
+          }
+
+          // Create Firestore member document
+          await _firestore.setMember(
+            societyId: widget.societyId,
+            uid: uid,
+            systemRole: 'guard',
+            name: name,
+            phone: phone,
+            active: true,
+          );
+          
+          // Store additional guard metadata if needed (shift, employeeId)
+          // Note: You may want to add these to Firestore member document if needed
+          AppLogger.i("Guard metadata", data: {
+            'shift': row['shift'],
+            'employeeId': row['employeeid'],
+          });
+
+          // Track created user
+          createdUsers.add({
+            'userId': guardId,
+            'name': name,
+            'phone': phone,
+            'type': 'Guard',
+            'email': email,
+          });
+
+          successCount++;
+          AppLogger.i("Guard created via bulk upload", data: {'guardId': guardId, 'uid': uid, 'email': email});
+        } catch (e, stackTrace) {
+          AppLogger.e("Error processing guard row $rowNumber", error: e, stackTrace: stackTrace);
+          errors.add("Row $rowNumber: ${e.toString()}");
+          errorCount++;
+        }
+      }
+
+      setState(() {
+        _isUploadingGuards = false;
+        _lastUploadStatus = "Guards: $successCount successful, $errorCount failed";
+      });
+
+      if (mounted) {
+        _showUploadResults("Guards Upload", successCount, errorCount, errors);
+        
+        // Generate and share user credentials summary if users were created
+        if (successCount > 0 && createdUsers.isNotEmpty) {
+          await _generateAndShareUserCredentials(createdUsers, 'Guards');
+        }
+      }
+    } catch (e, stackTrace) {
+      AppLogger.e("Error uploading guards CSV", error: e, stackTrace: stackTrace);
+      setState(() => _isUploadingGuards = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Upload failed: ${e.toString()}"),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _uploadResidentsFromValidated() async {
+    if (_residentsValidationResult == null || !_residentsValidationResult!.hasValidRows) {
+      return;
+    }
+
+    final validRows = _residentsValidationResult!.validRows;
+    setState(() => _isUploadingResidents = true);
+
+    try {
+      int successCount = 0;
+      int errorCount = 0;
+      final errors = <String>[];
+      final createdUsers = <Map<String, String>>[];
+
+      // Process each validated row
+      for (int i = 0; i < validRows.length; i++) {
+        final row = validRows[i];
+        final rowNumber = i + 1;
+
+        try {
+          final name = row['name']!;
+          final email = row['email']!;
+          final phone = row['phone']!;
+          final flatNo = row['flatno']!;
+          final role = row['role'] ?? 'resident';
+
+          // Create Firebase Auth account (using email directly)
+          // Generate a temporary password (last 4 digits of phone)
+          final tempPassword = phone.length >= 4 
+              ? phone.substring(phone.length - 4)
+              : phone;
+          
+          final userCredential = await _authService.createAdminAccount(
+            email: email,
+            password: tempPassword,
+          );
+
+          final uid = userCredential.user?.uid;
+          if (uid == null) {
+            errors.add("Row $rowNumber: Failed to create Firebase Auth account");
+            errorCount++;
+            continue;
+          }
+
+          // Create Firestore member document
+          await _firestore.setMember(
+            societyId: widget.societyId,
+            uid: uid,
+            systemRole: 'resident',
+            societyRole: role,
+            name: name,
+            phone: phone,
+            flatNo: flatNo,
+            active: true,
+          );
+          
+          // Store additional resident metadata if needed (tower)
+          // Note: You may want to add tower to Firestore member document if needed
+          AppLogger.i("Resident metadata", data: {
+            'tower': row['tower'],
+          });
+
+          // Track created user
+          createdUsers.add({
+            'userId': flatNo,
+            'name': name,
+            'phone': phone,
+            'type': 'Resident',
+            'email': email,
+          });
+
+          successCount++;
+          AppLogger.i("Resident created via bulk upload", data: {'flatNo': flatNo, 'uid': uid, 'email': email});
+        } catch (e, stackTrace) {
+          AppLogger.e("Error processing resident row $rowNumber", error: e, stackTrace: stackTrace);
+          errors.add("Row $rowNumber: ${e.toString()}");
+          errorCount++;
+        }
+      }
+
+      setState(() {
+        _isUploadingResidents = false;
+        _lastUploadStatus = "Residents: $successCount successful, $errorCount failed";
+      });
+
+      if (mounted) {
+        _showUploadResults("Residents Upload", successCount, errorCount, errors);
+        
+        // Generate and share user credentials summary if users were created
+        if (successCount > 0 && createdUsers.isNotEmpty) {
+          await _generateAndShareUserCredentials(createdUsers, 'Residents');
+        }
+      }
+    } catch (e, stackTrace) {
+      AppLogger.e("Error uploading residents CSV", error: e, stackTrace: stackTrace);
+      setState(() => _isUploadingResidents = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Upload failed: ${e.toString()}"),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  // ============================================
+  // Legacy Upload Methods (kept for reference, but should use validated versions)
   // ============================================
 
   Future<void> _uploadGuards() async {
@@ -527,6 +1077,7 @@ B-202,Priya Singh,9876543213,3456,TRUE''';
       int successCount = 0;
       int errorCount = 0;
       final errors = <String>[];
+      final createdUsers = <Map<String, String>>[]; // Track created users for email summary
 
       for (int i = 1; i < csvData.length; i++) {
         final row = csvData[i];
@@ -573,6 +1124,18 @@ B-202,Priya Singh,9876543213,3456,TRUE''';
             active: isActive,
           );
 
+          // Track created user for email summary
+          createdUsers.add({
+            'userId': guardId,
+            'name': name,
+            'phone': phone.isEmpty ? 'N/A' : phone,
+            'type': 'Guard',
+            'email': FirebaseAuthService.getGuardEmail(
+              societyId: widget.societyId,
+              guardId: guardId,
+            ),
+          });
+
           successCount++;
           AppLogger.i("Guard created via bulk upload", data: {'guardId': guardId, 'uid': uid});
         } catch (e, stackTrace) {
@@ -589,6 +1152,11 @@ B-202,Priya Singh,9876543213,3456,TRUE''';
 
       if (mounted) {
         _showUploadResults("Guards Upload", successCount, errorCount, errors);
+        
+        // Generate and share user credentials summary if users were created
+        if (successCount > 0 && createdUsers.isNotEmpty) {
+          await _generateAndShareUserCredentials(createdUsers, 'Guards');
+        }
       }
     } catch (e, stackTrace) {
       AppLogger.e("Error uploading guards CSV", error: e, stackTrace: stackTrace);
@@ -640,6 +1208,7 @@ B-202,Priya Singh,9876543213,3456,TRUE''';
       int successCount = 0;
       int errorCount = 0;
       final errors = <String>[];
+      final createdUsers = <Map<String, String>>[]; // Track created users for email summary
 
       for (int i = 1; i < csvData.length; i++) {
         final row = csvData[i];
@@ -686,6 +1255,19 @@ B-202,Priya Singh,9876543213,3456,TRUE''';
             active: isActive,
           );
 
+          // Track created user for email summary
+          createdUsers.add({
+            'userId': flatNo,
+            'name': residentName,
+            'phone': phone,
+            'type': 'Resident',
+            'email': FirebaseAuthService.getResidentEmail(
+              societyId: widget.societyId,
+              flatNo: flatNo,
+              phone: phone,
+            ),
+          });
+
           successCount++;
           AppLogger.i("Resident created via bulk upload", data: {'flatNo': flatNo, 'uid': uid});
         } catch (e, stackTrace) {
@@ -702,6 +1284,11 @@ B-202,Priya Singh,9876543213,3456,TRUE''';
 
       if (mounted) {
         _showUploadResults("Residents Upload", successCount, errorCount, errors);
+        
+        // Generate and share user credentials summary if users were created
+        if (successCount > 0 && createdUsers.isNotEmpty) {
+          await _generateAndShareUserCredentials(createdUsers, 'Residents');
+        }
       }
     } catch (e, stackTrace) {
       AppLogger.e("Error uploading residents CSV", error: e, stackTrace: stackTrace);
@@ -714,6 +1301,117 @@ B-202,Priya Singh,9876543213,3456,TRUE''';
           ),
         );
       }
+    }
+  }
+
+  /// Generate user credentials summary CSV and share via email
+  /// 
+  /// Creates a CSV with user IDs, names, login credentials, and password reset instructions
+  /// Admin can email this to users or use it to send individual password reset emails
+  Future<void> _generateAndShareUserCredentials(
+    List<Map<String, String>> users,
+    String userType,
+  ) async {
+    try {
+      // Generate CSV content with user credentials
+      final csvBuffer = StringBuffer();
+      
+      // CSV Header
+      csvBuffer.writeln('User ID,Name,Phone,Email,Login Instructions,Password Reset');
+      
+      // Add each user's information
+      for (final user in users) {
+        final userId = user['userId'] ?? 'N/A';
+        final name = user['name'] ?? 'N/A';
+        final phone = user['phone'] ?? 'N/A';
+        final email = user['email'] ?? 'N/A';
+        final type = user['type'] ?? userType;
+        
+        // Login instructions based on user type
+        String loginInstructions;
+        if (type == 'Guard') {
+          loginInstructions = 'Use Guard ID: $userId and your PIN to login';
+        } else {
+          loginInstructions = 'Use Flat No: $userId, Phone: $phone, and your PIN to login';
+        }
+        
+        // Password reset instructions
+        final passwordReset = 'Contact society admin to reset password. Your User ID is: $userId';
+        
+        // Escape CSV values (handle commas and quotes)
+        String escapeCsv(String value) {
+          if (value.contains(',') || value.contains('"') || value.contains('\n')) {
+            return '"${value.replaceAll('"', '""')}"';
+          }
+          return value;
+        }
+        
+        csvBuffer.writeln([
+          escapeCsv(userId),
+          escapeCsv(name),
+          escapeCsv(phone),
+          escapeCsv(email),
+          escapeCsv(loginInstructions),
+          escapeCsv(passwordReset),
+        ].join(','));
+      }
+      
+      // Add footer with instructions
+      csvBuffer.writeln('');
+      csvBuffer.writeln('--- IMPORTANT INSTRUCTIONS ---');
+      csvBuffer.writeln('1. Share this file with users via email');
+      csvBuffer.writeln('2. Users can use their User ID and PIN to login');
+      csvBuffer.writeln('3. For password reset, users should contact society admin');
+      csvBuffer.writeln('4. User IDs are: ${users.map((u) => u['userId']).join(", ")}');
+      
+      final csvContent = csvBuffer.toString();
+      
+      // Save to temporary directory
+      final tempDir = await getTemporaryDirectory();
+      if (!await tempDir.exists()) {
+        await tempDir.create(recursive: true);
+      }
+      
+      final fileName = '${userType.toLowerCase()}_credentials_${DateTime.now().millisecondsSinceEpoch}.csv';
+      final file = File('${tempDir.path}/$fileName');
+      await file.writeAsString(csvContent);
+      AppLogger.i("User credentials CSV generated", data: {'path': file.path, 'userCount': users.length});
+      
+      // Share via email
+      final xFile = XFile(file.path);
+      await Share.shareXFiles(
+        [xFile],
+        text: '$userType Credentials - GateFlow\n\n${users.length} users created successfully.\n\nPlease share this file with users via email. Each user will receive their User ID and login instructions.',
+        subject: '$userType Account Credentials - GateFlow Bulk Upload',
+      );
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.email_rounded, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    "User credentials ready. Share via email to send password reset info.",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: AppColors.admin,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      AppLogger.e("Error generating user credentials", error: e, stackTrace: stackTrace);
+      // Don't show error to user - this is a nice-to-have feature
+      // The upload was successful, credentials sharing is optional
     }
   }
 
