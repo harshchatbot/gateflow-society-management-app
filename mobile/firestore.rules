@@ -1,0 +1,161 @@
+//deployed from cursor ai
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    // =========================
+    // ROOT POINTER: members/{uid}
+    // Used to resolve societyId WITHOUT collectionGroup queries
+    // =========================
+    match /members/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+
+      allow create: if signedIn()
+        && request.auth.uid == uid
+        && request.resource.data.uid == uid
+        && request.resource.data.active == true;
+
+      allow update: if signedIn() && request.auth.uid == uid;
+
+      allow delete: if false;
+    }
+
+    // Helpers for society membership under societies/{societyId}/members/{uid}
+    function memberPath(societyId) {
+      return /databases/$(database)/documents/societies/$(societyId)/members/$(request.auth.uid);
+    }
+
+    function isMember(societyId) {
+      return signedIn() && exists(memberPath(societyId));
+    }
+
+    function member(societyId) {
+      return get(memberPath(societyId));
+    }
+
+    function activeMember(societyId) {
+      return isMember(societyId) && member(societyId).data.active == true;
+    }
+
+    // ✅ treat super_admin as admin-equivalent
+    function isAdmin(societyId) {
+      return activeMember(societyId)
+        && (member(societyId).data.systemRole == "admin"
+            || member(societyId).data.systemRole == "super_admin");
+    }
+
+    // ------------------------
+    // Societies (multi-tenant root)
+    // ------------------------
+    match /societies/{societyId} {
+
+      // BOOTSTRAP: allow first-time society creation by the signed-in creator
+      allow create: if signedIn()
+        && request.resource.data.createdByUid == request.auth.uid
+        && request.resource.data.active == true;
+
+      // After creation, only active members can read the society doc
+      allow read: if activeMember(societyId);
+
+      // Only admin can update/delete society doc
+      allow update, delete: if isAdmin(societyId);
+
+      // ------------------------
+      // Members under society
+      // Invite → Self Signup → Claim Invite model
+      // ------------------------
+      match /members/{uid} {
+
+        // ✅ ONLY self-create (bootstrap admin OR claimed invite user)
+        allow create: if (
+          signedIn()
+          && uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.active == true
+          && request.resource.data.systemRole in ["admin", "super_admin", "guard", "resident"]
+        );
+
+        // Read: member can read self; admin can read all
+        allow read: if activeMember(societyId) && (uid == request.auth.uid || isAdmin(societyId));
+
+        // Update: member can update self; admin can update all
+        allow update: if activeMember(societyId) && (uid == request.auth.uid || isAdmin(societyId));
+
+        // Delete: admin only
+        allow delete: if isAdmin(societyId);
+      }
+
+      // ------------------------
+      // Invites (email-based onboarding)
+      // societies/{societyId}/invites/{inviteKey}
+      // ------------------------
+      match /invites/{inviteKey} {
+
+        // Admin can read all invites
+        // Invited user can read their own invite (by email match)
+        allow read: if isAdmin(societyId)
+          || (signedIn() && resource.data.email == request.auth.token.email);
+
+        // Admin creates invites ONLY
+        allow create: if isAdmin(societyId)
+          && request.resource.data.status == "pending"
+          && request.resource.data.active == true
+          && request.resource.data.email is string
+          && request.resource.data.systemRole in ["guard", "resident"];
+
+        // ✅ Claim invite: ONLY invited user can mark pending -> claimed
+        allow update: if signedIn()
+          && resource.data.status == "pending"
+          && resource.data.active == true
+          && resource.data.email == request.auth.token.email
+          && request.resource.data.status == "claimed"
+          && request.resource.data.claimedByUid == request.auth.uid;
+
+        // Optional: admin cleanup
+        allow delete: if isAdmin(societyId);
+      }
+
+      // Notices
+      match /notices/{id} {
+        allow read: if activeMember(societyId);
+        allow create, update, delete: if isAdmin(societyId);
+      }
+
+      // Complaints
+      match /complaints/{id} {
+        allow read: if activeMember(societyId);
+        allow create: if activeMember(societyId);
+        allow update, delete: if isAdmin(societyId);
+      }
+
+      // Visitors
+      match /visitors/{id} {
+        allow read: if activeMember(societyId);
+        allow create, update, delete: if isAdmin(societyId);
+      }
+
+      // Default deny for unknown collections under a society
+      match /{col}/{doc} {
+        allow read, write: if false;
+      }
+    }
+
+    // society code mapping for "join by code"
+    match /societyCodes/{code} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && request.resource.data.createdByUid == request.auth.uid
+        && request.resource.data.active == true;
+
+      allow update, delete: if false;
+    }
+
+    // Default deny everything else
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

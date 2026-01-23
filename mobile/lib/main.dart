@@ -160,7 +160,8 @@ class MyApp extends StatelessWidget {
       title: 'GateFlow',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      home: initialScreen,
+      //home: initialScreen,
+      home: const JoinAndSignupScreen(),
     );
   }
 }
