@@ -2,8 +2,8 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
-import '../services/visitor_service.dart';
 import '../services/firebase_auth_service.dart';
+import '../services/firestore_service.dart';
 
 // UI system
 import '../ui/app_colors.dart';
@@ -22,16 +22,16 @@ class GuardLoginScreen extends StatefulWidget {
 
 class _GuardLoginScreenState extends State<GuardLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _guardIdController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  final _visitorService = VisitorService();
   final FirebaseAuthService _authService = FirebaseAuthService();
+  final FirestoreService _firestore = FirestoreService();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _guardIdController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -41,52 +41,57 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
       return;
     }
 
-    final guardIdInput = _guardIdController.text.trim();
+    final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
     setState(() => _isLoading = true);
-    AppLogger.i("Guard login attempt", data: {"guard_id": guardIdInput});
+    AppLogger.i("Guard login attempt", data: {"email": email});
 
     try {
-      // Step 1: Get guard profile from backend (still source of truth for name & society)
-      final result = await _visitorService.getGuardProfile(guardIdInput);
-      AppLogger.i("Guard profile response", data: result.data);
-
-      if (!mounted) return;
-
-      if (!result.isSuccess || result.data == null) {
-        setState(() => _isLoading = false);
-        _showError(result.error?.userMessage ?? "Invalid Guard ID or unauthorized access");
-        AppLogger.e("Guard login failed (profile lookup)", error: result.error);
-        return;
+      // Step 1: Sign in with Firebase Auth
+      final userCredential = await _authService.signInAdmin(
+        email: email,
+        password: password,
+      );
+      final uid = userCredential.user?.uid;
+      if (uid == null) {
+        throw Exception("Failed to sign in");
       }
 
-      final data = result.data!;
+      // Step 2: Get membership from Firestore
+      final membership = await _firestore.getCurrentUserMembership();
+      if (membership == null) {
+        throw Exception("User membership not found");
+      }
 
-      final String realName = data['name']?.toString() ??
-          data['guard_name']?.toString() ??
-          data['full_name']?.toString() ??
-          "Unknown Guard";
+      final societyId = membership['societyId'] as String;
+      final systemRole = membership['systemRole'] as String? ?? 'guard';
+      final name = membership['name'] as String? ?? 'Guard';
 
-      final String realSocietyId = data['society_id']?.toString() ??
-          data['societyId']?.toString() ??
-          "unknown_society";
+      if (systemRole != 'guard') {
+        throw Exception("User is not a guard");
+      }
 
-      // Step 2: Sign in via Firebase Auth using deterministic email
-      final credential = await _authService.signInGuard(
-        societyId: realSocietyId,
-        guardId: guardIdInput,
-        pin: password,
+      // Step 3: Save Firebase session
+      await Storage.saveFirebaseSession(
+        uid: uid,
+        societyId: societyId,
+        systemRole: systemRole,
+        name: name,
       );
 
-      final uid = credential.user?.uid;
-      AppLogger.i("Guard Firebase sign-in successful", data: {'uid': uid, 'societyId': realSocietyId});
-
+      // Also save guard session for backward compatibility
       await Storage.saveGuardSession(
-        guardId: guardIdInput,
-        guardName: realName,
-        societyId: realSocietyId,
+        guardId: uid, // Use UID as guardId
+        guardName: name,
+        societyId: societyId,
       );
+
+      AppLogger.i("Guard login successful", data: {
+        'uid': uid,
+        'societyId': societyId,
+        'name': name,
+      });
 
       setState(() => _isLoading = false);
 
@@ -96,9 +101,9 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
         context,
         MaterialPageRoute(
           builder: (_) => GuardShellScreen(
-            guardId: guardIdInput,
-            guardName: realName,
-            societyId: realSocietyId,
+            guardId: uid, // Use UID as guardId
+            guardName: name,
+            societyId: societyId,
           ),
         ),
       );
@@ -106,7 +111,13 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
       AppLogger.e("Guard login exception", error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() => _isLoading = false);
-        _showError("Login failed. Please check your Guard ID and password.");
+        String errorMsg = "Login failed. Please check your credentials.";
+        if (e.toString().contains('user-not-found') || e.toString().contains('wrong-password')) {
+          errorMsg = "Invalid email or password.";
+        } else if (e.toString().contains('network')) {
+          errorMsg = "Network error. Please check your connection.";
+        }
+        _showError(errorMsg);
       }
     }
   }
@@ -276,14 +287,18 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
             ),
             const SizedBox(height: 28),
             _PremiumField(
-              controller: _guardIdController,
-              label: "Guard ID",
-              hint: "Enter your Guard ID",
-              icon: Icons.badge_rounded,
+              controller: _emailController,
+              label: "Email Address",
+              hint: "e.g. guard@example.com",
+              icon: Icons.email_rounded,
               textInputAction: TextInputAction.next,
+              keyboardType: TextInputType.emailAddress,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return "Please enter your Guard ID";
+                  return "Please enter your email";
+                }
+                if (!value.contains('@')) {
+                  return "Please enter a valid email";
                 }
                 return null;
               },
@@ -320,29 +335,46 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
               child: TextButton(
                 onPressed: _isLoading
                     ? null
-                    : () {
-                        // For guards we use deterministic emails (@gateflow.local)
-                        // which do not receive real emails, so we show guidance instead.
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            title: const Text(
-                              "Reset Guard Password",
-                              style: TextStyle(fontWeight: FontWeight.w900),
-                            ),
-                            content: const Text(
-                              "Please contact your society admin to reset your guard password/PIN. "
-                              "For security reasons, password reset is handled by the society.",
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text("OK"),
+                    : () async {
+                        final email = _emailController.text.trim();
+                        if (email.isEmpty || !email.contains('@')) {
+                          _showError("Please enter a valid email address first.");
+                          return;
+                        }
+                        try {
+                          await _authService.sendPasswordResetEmail(email: email);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Row(
+                                  children: [
+                                    Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                    SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        "Password reset email sent. Please check your inbox.",
+                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                backgroundColor: AppColors.success,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                margin: const EdgeInsets.all(16),
                               ),
-                            ],
-                          ),
-                        );
+                            );
+                          }
+                        } catch (e, stackTrace) {
+                          AppLogger.e("Error sending password reset email", error: e, stackTrace: stackTrace);
+                          if (mounted) {
+                            String errorMsg = "Failed to send reset email. Please try again.";
+                            if (e.toString().contains('user-not-found')) {
+                              errorMsg = "Email not found. Please check your email address.";
+                            }
+                            _showError(errorMsg);
+                          }
+                        }
                       },
                 child: const Text(
                   "Forgot password?",
@@ -406,6 +438,7 @@ class _PremiumField extends StatelessWidget {
   final ValueChanged<String>? onSubmitted;
   final Widget? suffixIcon;
   final String? Function(String?)? validator;
+  final TextInputType? keyboardType;
 
   const _PremiumField({
     required this.controller,
@@ -417,6 +450,7 @@ class _PremiumField extends StatelessWidget {
     this.onSubmitted,
     this.suffixIcon,
     this.validator,
+    this.keyboardType,
   });
 
   @override
@@ -450,6 +484,7 @@ class _PremiumField extends StatelessWidget {
           child: TextFormField(
             controller: controller,
             obscureText: obscureText,
+            keyboardType: keyboardType,
             textInputAction: textInputAction,
             onFieldSubmitted: onSubmitted,
             validator: validator,

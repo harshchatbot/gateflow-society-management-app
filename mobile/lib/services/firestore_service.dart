@@ -130,36 +130,47 @@ class FirestoreService {
   // ============================================
 
   /// Create or update member
+  /// Create or update member
   Future<void> setMember({
     required String societyId,
     required String uid,
-    required String systemRole, // "admin" | "guard" | "resident"
+    required String systemRole, // "admin" | "guard" | "resident" | "super_admin"
     String? societyRole, // "president" | "secretary" | "treasurer" | "committee" | null
     required String name,
     String? phone,
     String? flatNo,
     bool active = true,
   }) async {
+  try {
+    // --------------------------------------------
+    // 1) SOCIETY MEMBER DOC (source of truth)
+    // societies/{societyId}/members/{uid}
+    // --------------------------------------------
+    await _memberRef(societyId, uid).set({
+      'uid': uid,
+      'systemRole': systemRole,
+      'societyRole': societyRole,
+      'name': name,
+      'phone': phone,
+      'flatNo': flatNo,
+      'active': active,
+
+      // ✅ createdAt should not be overwritten repeatedly
+      'updatedAt': FieldValue.serverTimestamp(),
+      'createdAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    // --------------------------------------------
+    // 2) ROOT POINTER (members/{uid})
+    // Used for login resolution in your old flow.
+    //
+    // IMPORTANT:
+    // Your current rules ONLY allow the user to write their own pointer doc.
+    // During bulk upload (admin writing new user's pointer) it will be denied.
+    //
+    // So we try it, and if permission denied -> skip without failing whole upload.
+    // --------------------------------------------
     try {
-      await _memberRef(societyId, uid).set({
-        'uid': uid,
-        'systemRole': systemRole,
-        'societyRole': societyRole,
-        'name': name,
-        'phone': phone,
-        'flatNo': flatNo,
-        'active': active,
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
-
-
-
-
-      // --------------------------------------------
-      // ROOT POINTER (Option 1)
-      // members/{uid} → used for login resolution
-      // --------------------------------------------
       await _firestore.collection('members').doc(uid).set({
         'uid': uid,
         'societyId': societyId,
@@ -167,38 +178,37 @@ class FirestoreService {
         'societyRole': societyRole,
         'active': active,
         'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
+    } catch (e) {
+      // ✅ Don't block society member creation if root pointer is forbidden
+      // This will happen for bulk upload unless you update rules.
+      final msg = e.toString();
+      final isPermissionDenied =
+          msg.contains('permission-denied') || msg.contains('PERMISSION_DENIED');
 
-
-
-
-      AppLogger.i('Member set', data: {
-        'societyId': societyId,
-        'uid': uid,
-        'systemRole': systemRole,
-      });
-    } catch (e, stackTrace) {
-      AppLogger.e('Error setting member', error: e, stackTrace: stackTrace);
-      rethrow;
-    }
-  }
-
-  /// Get member document
-  Future<Map<String, dynamic>?> getMember({
-    required String societyId,
-    required String uid,
-  }) async {
-    try {
-      final doc = await _memberRef(societyId, uid).get();
-      if (doc.exists) {
-        return doc.data() as Map<String, dynamic>?;
+      if (isPermissionDenied) {
+        AppLogger.i('Root pointer write skipped (permission-denied)', data: {
+          'uid': uid,
+          'societyId': societyId,
+        });
+      } else {
+        // if it's some other error, rethrow
+        rethrow;
       }
-      return null;
-    } catch (e, stackTrace) {
-      AppLogger.e('Error getting member', error: e, stackTrace: stackTrace);
-      return null;
     }
+
+    AppLogger.i('Member set', data: {
+      'societyId': societyId,
+      'uid': uid,
+      'systemRole': systemRole,
+    });
+  } catch (e, stackTrace) {
+    AppLogger.e('Error setting member', error: e, stackTrace: stackTrace);
+    rethrow;
   }
+}
+
 
   
 
