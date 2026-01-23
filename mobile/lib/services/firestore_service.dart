@@ -706,5 +706,40 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
       AppLogger.e('Error getting admin stats', error: e, stackTrace: stackTrace);
       rethrow;
     }
+
   }
+
+  Future<void> createInvite({
+  required String societyId,
+  required String email,
+  required String systemRole, // admin|guard|resident
+  String? societyRole,
+  String? flatNo,
+}) async {
+  final cleanedEmail = email.trim().toLowerCase();
+  final ref = _firestore
+      .collection('societies')
+      .doc(societyId)
+      .collection('invites')
+      .doc();
+
+  await ref.set({
+    'email': cleanedEmail,
+    'systemRole': systemRole.toLowerCase(),
+    'societyRole': societyRole,
+    'flatNo': flatNo,
+    'status': 'pending',
+    'active': true,
+    'createdAt': FieldValue.serverTimestamp(),
+  });
+
+  AppLogger.i('Invite created', data: {
+    'societyId': societyId,
+    'email': cleanedEmail,
+    'systemRole': systemRole,
+  });
+}
+
+
+
 }

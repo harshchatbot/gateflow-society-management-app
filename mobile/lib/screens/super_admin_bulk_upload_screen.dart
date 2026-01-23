@@ -13,6 +13,11 @@ import '../ui/glass_loader.dart';
 import '../utils/csv_validators.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';   // FirebaseFirestore, FieldValue, SetOptions
+import 'package:firebase_auth/firebase_auth.dart';       // FirebaseAuth
+import '../core/invite_utils.dart';                       // normalizeEmail, inviteKeyFromEmail
+
+
 // ✅ ADDED
 import 'package:firebase_core/firebase_core.dart';
 import '../firebase_options.dart'; // adjust path if needed
@@ -952,30 +957,47 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
           }
 
           // Create Firestore member document (runs as super admin session, not switched)
-          await _firestore.setMember(
-            societyId: widget.societyId,
-            uid: uid,
-            systemRole: 'guard',
-            name: name,
-            phone: phone,
-            active: true,
-          );
+          // ✅ Invite-only model: bulk upload writes ONLY invites.
+          // The guard will "claim" after login using InviteClaimService.
+          final emailNorm = normalizeEmail(email);
+          final inviteKey = inviteKeyFromEmail(emailNorm);
+          final societyRole = (row['societyrole'] ?? '').toString().trim().toLowerCase();
+          final flatNo   = (row['flatno'] ?? '').toString().trim();
 
-          AppLogger.i("Guard metadata", data: {
-            'shift': row['shift'],
-            'employeeId': row['employeeid'],
+
+          final inviteRef = FirebaseFirestore.instance
+              .collection('societies')
+              .doc(widget.societyId)
+              .collection('invites')
+              .doc(inviteKey);
+
+          await inviteRef.set({
+            'email': emailNorm,
+            'systemRole': 'resident',
+            'societyRole': societyRole.isEmpty ? null : societyRole,
+            'flatNo': flatNo.isEmpty ? null : flatNo,
+            'status': 'pending',
+            'active': true,
+            'createdAt': FieldValue.serverTimestamp(),
           });
 
+
           createdUsers.add({
-            'userId': guardId,
+            'inviteKey': inviteKeyFromEmail(email),
             'name': name,
             'phone': phone,
             'type': 'Guard',
             'email': email,
+            'status': 'pending',
           });
 
+
           successCount++;
-          AppLogger.i("Guard created via bulk upload", data: {'guardId': guardId, 'uid': uid, 'email': email});
+          AppLogger.i("Guard invite created via bulk upload", data: {
+            'inviteKey': inviteKeyFromEmail(email),
+            'email': email,
+          });
+
         } catch (e, stackTrace) {
           AppLogger.e("Error processing guard row $rowNumber", error: e, stackTrace: stackTrace);
           errors.add("Row $rowNumber: ${e.toString()}");
@@ -1056,28 +1078,51 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
             continue;
           }
 
-          await _firestore.setMember(
-            societyId: widget.societyId,
-            uid: uid,
-            systemRole: 'resident',
-            societyRole: role,
-            name: name,
-            phone: phone,
-            flatNo: flatNo,
-            active: true,
-          );
+          final emailNorm = normalizeEmail(email);
+final inviteKey = inviteKeyFromEmail(emailNorm);
 
-          AppLogger.i("Resident metadata", data: {
+final inviteRef = FirebaseFirestore.instance
+    .collection('societies')
+    .doc(widget.societyId)
+    .collection('invites')
+    .doc(inviteKey);
+
+        await inviteRef.set({
+          'email': emailNorm,
+          'systemRole': 'resident',
+          'societyRole': role,                 // e.g. president/secretary/etc or null
+          'flatNo': flatNo.isEmpty ? null : flatNo,
+          'status': 'pending',
+          'active': true,
+          'createdAt': FieldValue.serverTimestamp(),
+          'createdByUid': FirebaseAuth.instance.currentUser?.uid,
+
+          // Optional metadata (helps admin UI before claim)
+          'meta': {
+            'name': name,
+            'phone': phone,
             'tower': row['tower'],
-          });
+          },
+        }, SetOptions(merge: true));
+
+        AppLogger.i("Resident invite created via bulk upload", data: {
+          'inviteKey': inviteKey,
+          'email': emailNorm,
+          'flatNo': flatNo,
+          'role': role,
+        });
+
 
           createdUsers.add({
-            'userId': flatNo,
+            'inviteKey': inviteKey,
             'name': name,
             'phone': phone,
             'type': 'Resident',
-            'email': email,
+            'email': emailNorm,
+            'flatNo': flatNo,
+            'status': 'pending',
           });
+
 
           successCount++;
           AppLogger.i("Resident created via bulk upload", data: {'flatNo': flatNo, 'uid': uid, 'email': email});

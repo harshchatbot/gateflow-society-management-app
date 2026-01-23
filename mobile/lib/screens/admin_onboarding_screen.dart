@@ -13,6 +13,8 @@ import '../ui/glass_loader.dart';
 import 'admin_shell_screen.dart';
 import 'admin_login_screen.dart';
 import '../core/storage.dart';
+import '../services/invite_bulk_upload_service.dart';
+
 
 /// Admin Onboarding Screen
 ///
@@ -195,17 +197,28 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           createdByUid: uid,
         );
 
-        await _firestore.setMember(
-          societyId: societyId,
-          uid: uid,
-          systemRole: 'super_admin',
-          societyRole: 'super_admin',
-          name: adminName,
-          phone: phone.isEmpty ? null : phone,
-          active: true,
-        );
 
-        await _setRootPointer(uid: uid, societyId: societyId, systemRole: 'super_admin');
+
+      final result = await InviteBulkUploadService().pickCsvAndUploadInvites(
+        societyId: societyId,
+      );
+
+      AppLogger.i(
+        "Bulk invite upload done",
+        data: {
+          'processed': result.processed,
+          'created': result.created,
+          'skipped': result.skipped,
+          'errors': result.errors.length,
+        },
+      );
+
+      await _setRootPointer(
+        uid: uid,
+        societyId: societyId,
+        systemRole: 'super_admin',
+      );
+
 
         // If you want confetti only for new society creation:
         _confettiController.play();
@@ -482,6 +495,40 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
       ],
     );
   }
+
+  Future<void> _uploadInvitesCsv({
+      required String societyId,
+    }) async {
+      try {
+        setState(() => _isLoading = true);
+
+        final result = await InviteBulkUploadService().pickCsvAndUploadInvites(
+          societyId: societyId,
+        );
+
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        final msg =
+            "Processed: ${result.processed} | Created: ${result.created} | Skipped: ${result.skipped}";
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg)),
+        );
+
+        if (result.errors.isNotEmpty) {
+          // optional: log errors
+          AppLogger.w("Bulk invite upload errors", data: {"errors": result.errors});
+        }
+      } catch (e, st) {
+        AppLogger.e("Bulk invite upload failed", error: e, stackTrace: st);
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        _showError("Upload failed: ${e.toString()}");
+      }
+    }
+
+
+
 
   Widget _buildRegistrationForm() {
     return Container(
