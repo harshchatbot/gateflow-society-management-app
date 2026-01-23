@@ -5,6 +5,7 @@ import '../core/storage.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../services/resident_service.dart';
+import '../services/firebase_auth_service.dart';
 
 // UI system
 import '../ui/app_colors.dart';
@@ -31,6 +32,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
     baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
   );
 
+  final FirebaseAuthService _authService = FirebaseAuthService();
   bool _isLoading = false;
 
   @override
@@ -89,6 +91,25 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
           setState(() => _isLoading = false);
           _showError("Resident profile invalid (missing resident_id).");
           return;
+        }
+
+        // Step 2: Sign in via Firebase Auth using deterministic email + PIN (phone required)
+        if (phone.isEmpty) {
+          AppLogger.w("Resident login without phone - Firebase Auth sign-in skipped");
+        } else {
+          try {
+            final credential = await _authService.signInResident(
+              societyId: realSocietyId,
+              flatNo: realFlatNo,
+              phone: phone,
+              pin: phone, // For now, phone acts as PIN/password in deterministic account
+            );
+            AppLogger.i("Resident Firebase sign-in successful",
+                data: {'uid': credential.user?.uid, 'societyId': realSocietyId});
+          } catch (e, stackTrace) {
+            AppLogger.e("Resident Firebase sign-in failed (continuing with session only)",
+                error: e, stackTrace: stackTrace);
+          }
         }
 
         await Storage.saveResidentSession(
@@ -323,18 +344,59 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
             const SizedBox(height: 20),
             _PremiumField(
               controller: _phoneController,
-              label: "Phone (optional)",
+              label: "Phone / PIN",
               hint: "e.g. 98765xxxxx",
               icon: Icons.phone_rounded,
               textInputAction: TextInputAction.done,
               keyboardType: TextInputType.phone,
               onSubmitted: (_) => _handleLogin(),
               validator: (value) {
-                // Optional field, no validation needed
+                if (value == null || value.trim().isEmpty) {
+                  return "Please enter your phone/PIN";
+                }
                 return null;
               },
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _isLoading
+                    ? null
+                    : () {
+                        // Deterministic alias email, so we show guidance instead of real reset email.
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            title: const Text(
+                              "Reset Resident PIN",
+                              style: TextStyle(fontWeight: FontWeight.w900),
+                            ),
+                            content: const Text(
+                              "Please contact your society admin to reset your resident PIN/phone login. "
+                              "For security reasons, PIN reset is handled centrally.",
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text("OK"),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                child: const Text(
+                  "Forgot password?",
+                  style: TextStyle(
+                    color: AppColors.success,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               height: 56,
               child: ElevatedButton(

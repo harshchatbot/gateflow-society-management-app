@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
-import '../core/env.dart';
-import '../services/admin_service.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import '../ui/app_colors.dart';
@@ -20,12 +18,8 @@ class AdminLoginScreen extends StatefulWidget {
 
 class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _societyIdController = TextEditingController();
-  final _adminIdController = TextEditingController();
+  final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  late final AdminService _adminService = AdminService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
-  );
   final FirebaseAuthService _authService = FirebaseAuthService();
   final FirestoreService _firestore = FirestoreService();
   bool _isLoading = false;
@@ -33,8 +27,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
   @override
   void dispose() {
-    _societyIdController.dispose();
-    _adminIdController.dispose();
+    _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -44,8 +37,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       return;
     }
 
-    final email = _adminIdController.text.trim(); // Email for admin login
-    final pin = _passwordController.text.trim();
+    final email = _emailController.text.trim(); // Email for admin login
+    final password = _passwordController.text.trim();
 
     setState(() => _isLoading = true);
     AppLogger.i("Admin login attempt", data: {
@@ -56,7 +49,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       // Step 1: Sign in with Firebase Auth
       final userCredential = await _authService.signInAdmin(
         email: email,
-        password: pin,
+        password: password,
       );
       final uid = userCredential.user?.uid;
       if (uid == null) {
@@ -288,28 +281,17 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             ),
             const SizedBox(height: 28),
             _PremiumField(
-              controller: _societyIdController,
-              label: "Society ID",
-              hint: "e.g. SOC-001",
-              icon: Icons.apartment_rounded,
+              controller: _emailController,
+              label: "Email address",
+              hint: "e.g. admin@example.com",
+              icon: Icons.email_rounded,
               textInputAction: TextInputAction.next,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return "Please enter your Society ID";
+                  return "Please enter your email";
                 }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            _PremiumField(
-              controller: _adminIdController,
-              label: "Admin ID",
-              hint: "Enter your Admin ID",
-              icon: Icons.badge_rounded,
-              textInputAction: TextInputAction.next,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return "Please enter your Admin ID";
+                if (!value.contains('@')) {
+                  return "Please enter a valid email";
                 }
                 return null;
               },
@@ -317,8 +299,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             const SizedBox(height: 20),
             _PremiumField(
               controller: _passwordController,
-              label: "Pin/Password",
-              hint: "Enter your pin/password",
+              label: "Password",
+              hint: "Enter your password",
               icon: Icons.lock_rounded,
               obscureText: _obscurePassword,
               textInputAction: TextInputAction.done,
@@ -335,12 +317,54 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return "Please enter your pin/password";
+                  return "Please enter your password";
                 }
                 return null;
               },
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _isLoading
+                    ? null
+                    : () async {
+                        final email = _emailController.text.trim();
+                        if (email.isEmpty || !email.contains('@')) {
+                          _showError("Enter a valid email above, then tap Forgot Password.");
+                          return;
+                        }
+                        try {
+                          await _authService.sendPasswordResetEmail(email: email);
+                          if (!mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: const Text(
+                                "Password reset link sent to your email.",
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              backgroundColor: AppColors.success,
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              margin: const EdgeInsets.all(16),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          _showError("Could not send reset email. Please check the email or try again.");
+                        }
+                      },
+                child: const Text(
+                  "Forgot password?",
+                  style: TextStyle(
+                    color: AppColors.admin,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               height: 56,
               child: ElevatedButton(

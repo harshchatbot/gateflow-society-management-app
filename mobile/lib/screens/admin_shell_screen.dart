@@ -31,6 +31,7 @@ class AdminShellScreen extends StatefulWidget {
 }
 
 class _AdminShellScreenState extends State<AdminShellScreen> {
+  // This index tracks which *screen* is visible in the IndexedStack (0-5)
   int _currentIndex = 0;
   final Map<int, bool> _screenInitialized = {}; // Track which screens have been initialized
 
@@ -55,12 +56,40 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     }
   }
 
-  void _onTabChanged(int index) {
+  /// Navigate to a specific screen index in the IndexedStack.
+  /// Used by dashboard quick actions (e.g., Manage Residents, Guards, Complaints, Notices).
+  void _navigateToScreen(int screenIndex) {
     setState(() {
-      _currentIndex = index;
+      _currentIndex = screenIndex;
       // Mark screen as initialized when first viewed
-      _screenInitialized[index] = true;
+      _screenInitialized[screenIndex] = true;
     });
+  }
+
+  /// Handle taps from the bottom navigation bar.
+  /// Admin bottom nav only shows: Dashboard, Complaints, Notices, Profile.
+  /// We map these tab indices to the appropriate screen indices:
+  /// 0 -> Dashboard (screen 0)
+  /// 1 -> Complaints (screen 3)
+  /// 2 -> Notices (screen 4)
+  /// 3 -> Profile (screen 5)
+  void _onBottomNavTap(int tabIndex) {
+    switch (tabIndex) {
+      case 0:
+        _navigateToScreen(0);
+        break;
+      case 1:
+        _navigateToScreen(3);
+        break;
+      case 2:
+        _navigateToScreen(4);
+        break;
+      case 3:
+        _navigateToScreen(5);
+        break;
+      default:
+        _navigateToScreen(0);
+    }
   }
 
   Widget _buildScreen(int index) {
@@ -76,7 +105,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           adminId: widget.adminId,
           adminName: widget.adminName,
           societyId: widget.societyId,
-          onTabNavigate: _onTabChanged,
+          onTabNavigate: _navigateToScreen,
         );
       case 1:
         return AdminManageResidentsScreen(
@@ -122,13 +151,18 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         children: List.generate(6, (index) => _buildScreen(index)),
       ),
       bottomNavigationBar: SocietyBottomNav(
-        currentIndex: _currentIndex,
-        onTap: _onTabChanged,
+        // Map current screen index back to the tab index for highlighting
+        currentIndex: _currentIndex == 0
+            ? 0
+            : _currentIndex == 3
+                ? 1
+                : _currentIndex == 4
+                    ? 2
+                    : 3,
+        onTap: _onBottomNavTap,
         showCenterButton: false, // No center button for admin
         items: const [
           FloatingNavItem(icon: Icons.dashboard_rounded, label: "Dashboard"),
-          FloatingNavItem(icon: Icons.people_rounded, label: "Residents"),
-          FloatingNavItem(icon: Icons.shield_rounded, label: "Guards"),
           FloatingNavItem(icon: Icons.report_problem_rounded, label: "Complaints"),
           FloatingNavItem(icon: Icons.notifications_rounded, label: "Notices"),
           FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),

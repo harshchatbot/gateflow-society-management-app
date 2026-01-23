@@ -66,6 +66,18 @@ class FirebaseAuthService {
     }
   }
 
+  /// Send password reset email for admin (email/password accounts).
+  Future<void> sendPasswordResetEmail({required String email}) async {
+    try {
+      AppLogger.i('Sending password reset email', data: {'email': email});
+      await _auth.sendPasswordResetEmail(email: email);
+      AppLogger.i('Password reset email sent', data: {'email': email});
+    } catch (e, stackTrace) {
+      AppLogger.e('Error sending password reset email', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
   /// Generate deterministic email for guard
   static String getGuardEmail({
     required String societyId,

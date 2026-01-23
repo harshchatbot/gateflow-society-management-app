@@ -153,6 +153,25 @@ class FirestoreService {
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
+
+
+
+      // --------------------------------------------
+      // ROOT POINTER (Option 1)
+      // members/{uid} → used for login resolution
+      // --------------------------------------------
+      await _firestore.collection('members').doc(uid).set({
+        'uid': uid,
+        'societyId': societyId,
+        'systemRole': systemRole,
+        'societyRole': societyRole,
+        'active': active,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+
+
+
       AppLogger.i('Member set', data: {
         'societyId': societyId,
         'uid': uid,
@@ -181,34 +200,7 @@ class FirestoreService {
     }
   }
 
-  /// Get current user's membership (checks all societies)
-  Future<Map<String, dynamic>?> getCurrentUserMembership() async {
-    final uid = currentUid;
-    if (uid == null) return null;
-
-    try {
-      // Query all societies for this user's membership
-      final societiesSnapshot = await _firestore.collection('societies').get();
-      
-      for (var societyDoc in societiesSnapshot.docs) {
-        final memberDoc = await _membersRef(societyDoc.id).doc(uid).get();
-        if (memberDoc.exists) {
-          final memberData = memberDoc.data() as Map<String, dynamic>?;
-          if (memberData?['active'] == true) {
-            return {
-              'societyId': societyDoc.id,
-              'uid': uid,
-              ...?memberData,
-            };
-          }
-        }
-      }
-      return null;
-    } catch (e, stackTrace) {
-      AppLogger.e('Error getting current user membership', error: e, stackTrace: stackTrace);
-      return null;
-    }
-  }
+  
 
   // ============================================
   // LOCATION METADATA (States & Cities)
@@ -219,45 +211,89 @@ class FirestoreService {
   /// Collection: states
   ///   - docId: stateId (e.g. RJ)
   ///   - fields: { name: \"Rajasthan\" }
-  Future<List<Map<String, String>>> getStatesList() async {
-    try {
-      final snapshot = await _firestore.collection('states').orderBy('name').get();
-      if (snapshot.docs.isEmpty) {
-        // Fallback basic list if no config in Firestore
-        final fallback = [
-          {'id': 'RJ', 'name': 'Rajasthan'},
-          {'id': 'MH', 'name': 'Maharashtra'},
-          {'id': 'KA', 'name': 'Karnataka'},
-          {'id': 'DL', 'name': 'Delhi'},
-          {'id': 'GJ', 'name': 'Gujarat'},
-          {'id': 'UP', 'name': 'Uttar Pradesh'},
-          {'id': 'MP', 'name': 'Madhya Pradesh'},
-        ];
-        AppLogger.w('No states found in Firestore, using fallback list', data: {'count': fallback.length});
-        return fallback;
-      }
-      final states = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>? ?? {};
-        final name = (data['name'] as String?) ?? doc.id;
-        return {'id': doc.id, 'name': name};
-      }).toList();
-      AppLogger.i('States fetched from Firestore', data: {'count': states.length});
-      return states;
-    } catch (e, stackTrace) {
-      AppLogger.e('Error getting states list', error: e, stackTrace: stackTrace);
-      // On error, still return fallback so UI works
-      final fallback = [
-        {'id': 'RJ', 'name': 'Rajasthan'},
-        {'id': 'MH', 'name': 'Maharashtra'},
-        {'id': 'KA', 'name': 'Karnataka'},
-        {'id': 'DL', 'name': 'Delhi'},
-        {'id': 'GJ', 'name': 'Gujarat'},
-        {'id': 'UP', 'name': 'Uttar Pradesh'},
-        {'id': 'MP', 'name': 'Madhya Pradesh'},
-      ];
-      return fallback;
+  // Get current user's membership using ROOT POINTER doc: members/{uid}
+// ثم (optional) validate against societies/{societyId}/members/{uid}
+Future<Map<String, dynamic>?> getCurrentUserMembership() async {
+  final uid = currentUid;
+  if (uid == null) return null;
+
+  try {
+    // 1) Read root pointer: members/{uid}
+    final pointerDoc =
+        await _firestore.collection('members').doc(uid).get();
+
+    if (!pointerDoc.exists) {
+      AppLogger.w('Membership pointer not found', data: {'uid': uid});
+      return null;
     }
+
+    final pointer = pointerDoc.data() as Map<String, dynamic>? ?? {};
+
+    // Support both active/status styles (depending on your schema)
+    final bool isActive = pointer['active'] == true ||
+        (pointer['status']?.toString().toUpperCase() == 'ACTIVE');
+
+    if (!isActive) {
+      AppLogger.w('Membership pointer inactive', data: {'uid': uid, ...pointer});
+      return null;
+    }
+
+    final societyId = pointer['societyId']?.toString();
+    if (societyId == null || societyId.isEmpty) {
+      AppLogger.e('Membership pointer missing societyId', error: pointer);
+      return null;
+    }
+
+    // 2) Optional: validate actual society membership doc exists & active
+    // This is useful if pointer exists but society member doc got deleted.
+    final societyMemberDoc = await _firestore
+        .collection('societies')
+        .doc(societyId)
+        .collection('members')
+        .doc(uid)
+        .get();
+
+    if (!societyMemberDoc.exists) {
+      AppLogger.w(
+        'Society member doc missing though pointer exists',
+        data: {'uid': uid, 'societyId': societyId},
+      );
+      return null;
+    }
+
+    final societyMember = societyMemberDoc.data() as Map<String, dynamic>? ?? {};
+
+    final bool societyActive = societyMember['active'] == true ||
+        (societyMember['status']?.toString().toUpperCase() == 'ACTIVE');
+
+    if (!societyActive) {
+      AppLogger.w(
+        'Society member doc inactive',
+        data: {'uid': uid, 'societyId': societyId, ...societyMember},
+      );
+      return null;
+    }
+
+    final result = {
+      'uid': uid,
+      'societyId': societyId,
+      ...societyMember, // prefer society member fields as source of truth
+      // Keep pointer fields too if you want:
+      // '_pointer': pointer,
+    };
+
+    AppLogger.i('Current user membership resolved (pointer)', data: result);
+    return result;
+  } catch (e, stackTrace) {
+    AppLogger.e(
+      'Error getting current user membership (pointer)',
+      error: e,
+      stackTrace: stackTrace,
+    );
+    return null;
   }
+}
+
 
   /// Get cities for a given state from Firestore (dynamic).
   /// Expected structure:
@@ -305,6 +341,46 @@ class FirestoreService {
       return fallback;
     }
   }
+
+  Future<List<Map<String, String>>> getStatesList() async {
+  try {
+    final snapshot = await _firestore
+        .collection('states')
+        .orderBy('name')
+        .get();
+
+    if (snapshot.docs.isEmpty) {
+      final fallback = [
+        {'id': 'RJ', 'name': 'Rajasthan'},
+        {'id': 'MH', 'name': 'Maharashtra'},
+        {'id': 'KA', 'name': 'Karnataka'},
+        {'id': 'DL', 'name': 'Delhi'},
+      ];
+      AppLogger.w('No states found, using fallback', data: {'count': fallback.length});
+      return fallback;
+    }
+
+    final states = snapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>? ?? {};
+      final name = (data['name'] as String?) ?? doc.id;
+      return {'id': doc.id, 'name': name};
+    }).toList();
+
+    AppLogger.i('States fetched from Firestore', data: {'count': states.length});
+    return states;
+  } catch (e, stackTrace) {
+    AppLogger.e('Error getting states list', error: e, stackTrace: stackTrace);
+
+    // fallback on error
+    return [
+      {'id': 'RJ', 'name': 'Rajasthan'},
+      {'id': 'MH', 'name': 'Maharashtra'},
+      {'id': 'KA', 'name': 'Karnataka'},
+      {'id': 'DL', 'name': 'Delhi'},
+    ];
+  }
+}
+
 
   // ============================================
   // NOTICE OPERATIONS

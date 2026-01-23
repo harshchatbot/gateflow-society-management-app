@@ -1,7 +1,9 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../core/storage.dart';
+import '../core/app_logger.dart';
 import '../services/visitor_service.dart';
+import '../services/firebase_auth_service.dart';
 
 // UI system
 import '../ui/app_colors.dart';
@@ -10,7 +12,6 @@ import '../ui/app_icons.dart';
 
 import 'guard_shell_screen.dart';
 import 'role_select_screen.dart';
-import '../core/app_logger.dart';
 
 class GuardLoginScreen extends StatefulWidget {
   const GuardLoginScreen({super.key});
@@ -24,6 +25,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
   final _guardIdController = TextEditingController();
   final _passwordController = TextEditingController();
   final _visitorService = VisitorService();
+  final FirebaseAuthService _authService = FirebaseAuthService();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -46,60 +48,65 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
     AppLogger.i("Guard login attempt", data: {"guard_id": guardIdInput});
 
     try {
+      // Step 1: Get guard profile from backend (still source of truth for name & society)
       final result = await _visitorService.getGuardProfile(guardIdInput);
-      
-      AppLogger.i("Login API Response", data: result.data);
+      AppLogger.i("Guard profile response", data: result.data);
 
       if (!mounted) return;
 
-      if (result.isSuccess && result.data != null) {
-        final data = result.data!;
-
-        final String realName = data['name']?.toString() ?? 
-                             data['guard_name']?.toString() ?? 
-                             data['full_name']?.toString() ?? 
-                             "Unknown Guard";
-
-        final String realSociety = data['society_id']?.toString() ?? 
-                                  data['society_name']?.toString() ?? 
-                                  "Unknown Society";
-
-        AppLogger.i("Guard login successful", data: {
-          "guard_id": guardIdInput,
-          "name": realName,
-          "society": realSociety,
-        });
-
-        await Storage.saveGuardSession(
-          guardId: guardIdInput,
-          guardName: realName,
-          societyId: realSociety,
-        );
-
-        setState(() => _isLoading = false);
-
-        if (!mounted) return;
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => GuardShellScreen(
-              guardId: guardIdInput,
-              guardName: realName,
-              societyId: realSociety,
-            ),
-          ),
-        );
-      } else {
+      if (!result.isSuccess || result.data == null) {
         setState(() => _isLoading = false);
         _showError(result.error?.userMessage ?? "Invalid Guard ID or unauthorized access");
-        AppLogger.e("Guard login failed", error: result.error);
+        AppLogger.e("Guard login failed (profile lookup)", error: result.error);
+        return;
       }
+
+      final data = result.data!;
+
+      final String realName = data['name']?.toString() ??
+          data['guard_name']?.toString() ??
+          data['full_name']?.toString() ??
+          "Unknown Guard";
+
+      final String realSocietyId = data['society_id']?.toString() ??
+          data['societyId']?.toString() ??
+          "unknown_society";
+
+      // Step 2: Sign in via Firebase Auth using deterministic email
+      final credential = await _authService.signInGuard(
+        societyId: realSocietyId,
+        guardId: guardIdInput,
+        pin: password,
+      );
+
+      final uid = credential.user?.uid;
+      AppLogger.i("Guard Firebase sign-in successful", data: {'uid': uid, 'societyId': realSocietyId});
+
+      await Storage.saveGuardSession(
+        guardId: guardIdInput,
+        guardName: realName,
+        societyId: realSocietyId,
+      );
+
+      setState(() => _isLoading = false);
+
+      if (!mounted) return;
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => GuardShellScreen(
+            guardId: guardIdInput,
+            guardName: realName,
+            societyId: realSocietyId,
+          ),
+        ),
+      );
     } catch (e, stackTrace) {
       AppLogger.e("Guard login exception", error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() => _isLoading = false);
-        _showError("Connection error. Please try again.");
+        _showError("Login failed. Please check your Guard ID and password.");
       }
     }
   }
@@ -307,7 +314,47 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 12),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _isLoading
+                    ? null
+                    : () {
+                        // For guards we use deterministic emails (@gateflow.local)
+                        // which do not receive real emails, so we show guidance instead.
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                            title: const Text(
+                              "Reset Guard Password",
+                              style: TextStyle(fontWeight: FontWeight.w900),
+                            ),
+                            content: const Text(
+                              "Please contact your society admin to reset your guard password/PIN. "
+                              "For security reasons, password reset is handled by the society.",
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text("OK"),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                child: const Text(
+                  "Forgot password?",
+                  style: TextStyle(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               height: 56,
               child: ElevatedButton(

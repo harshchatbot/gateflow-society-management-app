@@ -4,6 +4,7 @@ import '../core/storage.dart';
 import '../core/app_logger.dart';
 import 'role_select_screen.dart';
 import 'admin_edit_image_screen.dart';
+import 'super_admin_bulk_upload_screen.dart';
 
 /// Admin Profile Screen
 /// 
@@ -178,6 +179,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                   // Account Information Section
                   _buildAccountInfoSection(),
                   const SizedBox(height: 20),
+
+                  // Bulk Upload Section (Super Admin only)
+                  if (widget.role.toUpperCase() == 'SUPER_ADMIN') ...[
+                    _buildBulkUploadSection(),
+                    const SizedBox(height: 20),
+                  ],
 
                   // Logout Button
                   _buildLogoutButton(),
@@ -396,6 +403,99 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBulkUploadSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.admin.withOpacity(0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.upload_file_rounded, size: 20, color: AppColors.admin),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Text(
+                  "Bulk Upload Members",
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.text,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            "Upload guards and residents in bulk using CSV files. Download sample templates to get started.",
+            style: TextStyle(
+              fontSize: 13,
+              color: AppColors.text2,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 20),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SuperAdminBulkUploadScreen(
+                    societyId: widget.societyId,
+                    adminId: widget.adminId,
+                  ),
+                ),
+              );
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.admin.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.admin.withOpacity(0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.upload_file_rounded, color: AppColors.admin, size: 22),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      "Open Bulk Upload",
+                      style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.text,
+                      ),
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.text2),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
