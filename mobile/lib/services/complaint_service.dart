@@ -134,6 +134,7 @@ class ComplaintService {
         status: status,
         resolvedByUid: resolvedBy ?? uid,
         resolvedByName: resolvedBy != null ? resolvedBy : name,
+        adminResponse: adminResponse,
       );
 
       AppLogger.i("Complaint status updated", data: {'complaintId': complaintId, 'status': status});

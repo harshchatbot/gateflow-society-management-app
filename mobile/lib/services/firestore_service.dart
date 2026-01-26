@@ -710,6 +710,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     required String status,
     String? resolvedByUid,
     String? resolvedByName,
+    String? adminResponse,
   }) async {
     try {
       final normalizedStatus = status.trim().toLowerCase();
@@ -722,6 +723,12 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         // compat
         'updated_at': FieldValue.serverTimestamp(),
       };
+
+      // Store admin response if provided
+      if (adminResponse != null && adminResponse.trim().isNotEmpty) {
+        updateData['adminResponse'] = adminResponse.trim();
+        updateData['admin_response'] = adminResponse.trim();
+      }
 
       if (normalizedStatus == 'resolved' && resolvedByUid != null) {
         updateData['resolvedAt'] = FieldValue.serverTimestamp();

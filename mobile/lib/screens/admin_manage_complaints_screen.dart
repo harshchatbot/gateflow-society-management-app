@@ -709,27 +709,27 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                 ),
               ],
               const SizedBox(height: 20),
-              if (status == "PENDING" || status == "IN_PROGRESS")
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      Navigator.pop(context);
-                      _showStatusUpdateDialog(complaint);
-                    },
-                    icon: const Icon(Icons.edit_rounded),
-                    label: const Text(
-                      "Update Status",
-                      style: TextStyle(fontWeight: FontWeight.w900),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.admin,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
+              // Show update button for all statuses (allows reopening RESOLVED complaints)
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showStatusUpdateDialog(complaint);
+                  },
+                  icon: const Icon(Icons.edit_rounded),
+                  label: Text(
+                    status == "RESOLVED" ? "Reopen/Update" : "Update Status",
+                    style: const TextStyle(fontWeight: FontWeight.w900),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.admin,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
+              ),
             ],
           ),
         ),
@@ -765,7 +765,9 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: ["IN_PROGRESS", "RESOLVED", "REJECTED"].map((status) {
+                  children: (currentStatus == "RESOLVED" 
+                    ? ["PENDING", "IN_PROGRESS", "REJECTED"] 
+                    : ["IN_PROGRESS", "RESOLVED", "REJECTED"]).map((status) {
                     final isSelected = selectedStatus == status;
                     return GestureDetector(
                       onTap: () {
@@ -877,6 +879,50 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
               color: AppColors.text,
               fontWeight: FontWeight.w700,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showCloseConfirmation(Map<String, dynamic> complaint) {
+    final complaintId = (complaint['complaint_id'] ?? '').toString();
+    final title = (complaint['title'] ?? 'Untitled').toString();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          "Close Complaint",
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+        content: Text(
+          "Are you sure you want to mark this complaint as closed?\n\n\"$title\"",
+          style: const TextStyle(fontSize: 15),
+        ),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.pop(context),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppColors.border),
+              foregroundColor: AppColors.text,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text("Cancel", style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _updateComplaintStatus(complaintId, "RESOLVED", null);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.success,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text("Close", style: TextStyle(fontWeight: FontWeight.w900)),
           ),
         ],
       ),
