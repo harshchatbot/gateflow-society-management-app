@@ -140,31 +140,58 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
     });
 
     try {
-      final snap = await FirebaseFirestore.instance
+      final membersCol = FirebaseFirestore.instance
           .collection('societies')
           .doc(widget.societyId)
-          .collection('members')
+          .collection('members');
+
+      // ✅ Keep existing admin pending logic EXACTLY the same
+      final adminSnap = await membersCol
           .where('systemRole', isEqualTo: 'admin')
           .where('active', isEqualTo: false)
           .get();
 
-      final list = snap.docs.map((d) {
+      final adminList = adminSnap.docs.map((d) {
         final data = d.data();
         return {
           ...data,
-          'uid': d.id, // docId is uid
+          'uid': d.id,
         };
       }).toList();
 
+      // ✅ ADD resident pending query (does not affect admin flow)
+      final residentSnap = await membersCol
+          .where('systemRole', isEqualTo: 'resident')
+          .where('active', isEqualTo: false)
+          .get();
+
+      final residentList = residentSnap.docs.map((d) {
+        final data = d.data();
+        return {
+          ...data,
+          'uid': d.id,
+        };
+      }).toList();
+
+      // ✅ Merge: admins first, then residents (no change to admin data)
+      final merged = [...adminList, ...residentList];
+
       if (!mounted) return;
       setState(() {
-        _pendingSignups = list;
+        _pendingSignups = merged;
         _isLoading = false;
       });
 
-      AppLogger.i("Loaded ${_pendingSignups.length} pending admin signups (members)");
+      AppLogger.i(
+        "Loaded pending signups (members)",
+        data: {
+          "admins": adminList.length,
+          "residents": residentList.length,
+          "total": merged.length,
+        },
+      );
     } catch (e, st) {
-      AppLogger.e("Error loading pending admin signups (members)", error: e, stackTrace: st);
+      AppLogger.e("Error loading pending signups (members)", error: e, stackTrace: st);
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -172,6 +199,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
       });
     }
   }
+
 
 
 
@@ -703,13 +731,24 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
     );
   }
 
+  
   Widget _buildPendingSignupCard(Map<String, dynamic> signup) {
     final name = signup['name'] ?? 'Unknown';
     final email = signup['email'] ?? '';
     final phone = signup['phone'] ?? '';
+
+    final systemRole = (signup['systemRole'] ?? '').toString().toLowerCase(); // "admin" | "resident"
+    final flatNo = (signup['flatNo'] ?? '').toString();
+
+    // Keep existing admin label logic as-is
     final societyRole = (signup['societyRole'] ?? 'ADMIN').toString().toUpperCase();
+
     final createdAt = signup['createdAt']; // Timestamp
 
+    // ✅ Minimal additive UI: show RESIDENT for residents, keep admin role badge unchanged
+    final roleBadgeText = systemRole == 'resident'
+        ? "Role: RESIDENT"
+        : "Role: ${societyRole.toUpperCase()}";
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -773,12 +812,26 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                         ),
                       ),
                     ],
+
+                    // ✅ Only for residents (additive, no admin behavior change)
+                    if (systemRole == 'resident' && flatNo.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        "Flat: ${flatNo.toUpperCase()}",
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: AppColors.text2,
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
             ],
           ),
+
           const SizedBox(height: 12),
+
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
@@ -786,7 +839,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              "Role: ${societyRole.toString().toUpperCase()}",
+              roleBadgeText,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
@@ -794,6 +847,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
               ),
             ),
           ),
+
           if (createdAt != null) ...[
             const SizedBox(height: 8),
             Text(
@@ -803,6 +857,8 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
           ],
 
           const SizedBox(height: 16),
+
+          // ✅ Buttons unchanged — existing approve/reject flows remain intact
           Row(
             children: [
               Expanded(
@@ -833,6 +889,8 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
       ),
     );
   }
+
+
 
   String _formatDate(String dateStr) {
     try {

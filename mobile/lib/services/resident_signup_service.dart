@@ -39,15 +39,20 @@ class ResidentSignupService {
     required String password,
   }) async {
     try {
-      // Normalize inputs
       final normalizedEmail = email.trim().toLowerCase();
       final normalizedPhone = phone.trim();
       final normalizedFlatNo = flatNo.trim().toUpperCase();
 
-      if (societyId.trim().isEmpty) {
+      // Normalize code
+      String normalizedCode = societyCode.trim().toUpperCase();
+      if (normalizedCode.startsWith('SOC_')) {
+        normalizedCode = normalizedCode.substring(4);
+      }
+
+      if (normalizedCode.isEmpty) {
         return Result.failure(AppError(
           userMessage: "Invalid society. Please check society code.",
-          technicalMessage: "societyId is empty",
+          technicalMessage: "societyCode is empty",
         ));
       }
 
@@ -65,67 +70,125 @@ class ResidentSignupService {
         ));
       }
 
-      AppLogger.i("Creating resident signup request", data: {
+      // 1) Resolve societyId from societyCodes/{CODE}
+      final codeSnap = await _firestore
+          .collection('societyCodes')
+          .doc(normalizedCode)
+          .get();
+
+      if (!codeSnap.exists) {
+        return Result.failure(AppError(
+          userMessage: "Invalid society code. Please check and try again.",
+          technicalMessage: "societyCodes/$normalizedCode not found",
+        ));
+      }
+
+      final codeData = codeSnap.data()!;
+      final societyId = codeData['societyId'] as String?;
+      final isActive = codeData['active'] as bool? ?? true;
+
+      if (societyId == null || societyId.trim().isEmpty || !isActive) {
+        return Result.failure(AppError(
+          userMessage: "Society is inactive or invalid. Please contact support.",
+          technicalMessage: "societyId missing or inactive for code=$normalizedCode",
+        ));
+      }
+
+      AppLogger.i("Creating resident signup", data: {
+        "societyId": societyId,
+        "societyCode": normalizedCode,
+        "email": normalizedEmail,
+        "flatNo": normalizedFlatNo,
+      });
+
+      // 2) Create Firebase Auth user
+      UserCredential userCredential;
+      try {
+        userCredential = await _auth.createUserWithEmailAndPassword(
+          email: normalizedEmail,
+          password: password,
+        );
+      } catch (e) {
+        if (e.toString().contains('email-already-in-use')) {
+          return Result.failure(AppError(
+            userMessage: "An account with this email already exists. Please login instead.",
+            technicalMessage: "Email already in use: $normalizedEmail",
+          ));
+        }
+        return Result.failure(AppError(
+          userMessage: "Failed to create account. Please try again.",
+          technicalMessage: e.toString(),
+        ));
+      }
+
+      final uid = userCredential.user?.uid;
+      if (uid == null) {
+        return Result.failure(AppError(
+          userMessage: "Failed to create account",
+          technicalMessage: "UID is null after auth creation",
+        ));
+      }
+
+      // 3) Create society member doc (active=false)
+      final societyMemberRef = _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('members')
+          .doc(uid);
+
+      final memberData = {
+        'uid': uid,
+        'societyId': societyId,
+        'systemRole': 'resident', // lowercase
+        'active': false,          // pending
+        'name': name.trim(),
+        'email': normalizedEmail,
+        'phone': normalizedPhone.isEmpty ? null : normalizedPhone,
+        'flatNo': normalizedFlatNo,
+        'createdAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      // 4) Root pointer (keep in sync)
+      final rootPointerRef = _firestore.collection('members').doc(uid);
+      final pointerData = {
+        'uid': uid,
+        'societyId': societyId,
+        'systemRole': 'resident',
+        'active': false,
+        'name': name.trim(),
+        'email': normalizedEmail,
+        'phone': normalizedPhone.isEmpty ? null : normalizedPhone,
+        'flatNo': normalizedFlatNo,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      final batch = _firestore.batch();
+      batch.set(societyMemberRef, memberData, SetOptions(merge: true));
+      batch.set(rootPointerRef, pointerData, SetOptions(merge: true));
+      await batch.commit();
+
+      AppLogger.i("Resident signup created successfully", data: {
+        "uid": uid,
         "societyId": societyId,
         "email": normalizedEmail,
         "flatNo": normalizedFlatNo,
       });
 
-      // ✅ Deterministic id prevents duplicates WITHOUT querying
-      // One pending request per (email + flat) per society
-      final signupId = "${normalizedEmail}__${normalizedFlatNo}"
-          .replaceAll("/", "_")
-          .replaceAll("#", "_")
-          .replaceAll("?", "_");
-
-      final now = FieldValue.serverTimestamp();
-
-      // ✅ create() fails if document already exists
-      final docRef = _residentSignupsRef(societyId).doc(signupId);
-
-      await docRef.set({
-        'signup_id': signupId,
-        'society_id': societyId,
-        'name': name.trim(),
-        'email': normalizedEmail,
-        'phone': normalizedPhone,
-        'flat_no': normalizedFlatNo,
-        'status': 'PENDING',
-        'password': password, // temporary, until approval
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: false));
-
-
-      AppLogger.i("Resident signup request created", data: {
-        "signupId": signupId,
-        "societyId": societyId,
-        "email": normalizedEmail,
-      });
-
-      return Result.success(signupId);
+      return Result.success(uid);
     } on FirebaseException catch (e) {
-      // Handle "already exists" nicely
-      if (e.code == 'already-exists') {
-        return Result.failure(AppError(
-          userMessage: "A signup request is already pending for this email & flat.",
-          technicalMessage: "Signup already exists for email=$email flat=$flatNo societyId=$societyId",
-        ));
-      }
-
       final err = _mapFirebaseError(e);
-      AppLogger.e("createSignupRequest FirebaseException", error: err.technicalMessage);
+      AppLogger.e("Resident createSignupRequest FirebaseException", error: err.technicalMessage);
       return Result.failure(err);
-    } catch (e, stackTrace) {
-      final err = AppError(
+    } catch (e, st) {
+      AppLogger.e("Resident createSignupRequest unknown error", error: e, stackTrace: st);
+      return Result.failure(AppError(
         userMessage: "Failed to create signup request",
         technicalMessage: e.toString(),
-      );
-      AppLogger.e("createSignupRequest unknown error",
-          error: err.technicalMessage, stackTrace: stackTrace);
-      return Result.failure(err);
+      ));
     }
   }
+
 
 
   /// Get pending signup requests (for admin)

@@ -81,13 +81,14 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
 
     try {
       final result = await _signupService.createSignupRequest(
-        societyId: _societyId!,
+        societyCode: _societyCodeController.text.trim(),
         name: _nameController.text.trim(),
         email: _emailController.text.trim(),
         phone: _phoneController.text.trim(),
         flatNo: _flatNoController.text.trim(),
         password: _passwordController.text,
       );
+
 
       if (!mounted) return;
 
