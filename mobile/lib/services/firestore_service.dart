@@ -517,7 +517,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
   // COMPLAINT OPERATIONS
   // ============================================
 
-  /// Create complaint
+  /// Create complaint (writes BOTH camelCase + snake_case for compatibility)
   Future<String> createComplaint({
     required String societyId,
     required String flatNo,
@@ -529,19 +529,39 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
   }) async {
     try {
       final complaintRef = _complaintsRef(societyId).doc();
+
+      final normalizedFlat = flatNo.trim().toUpperCase();
+      final now = FieldValue.serverTimestamp();
+
       await complaintRef.set({
-        'flatNo': flatNo,
+        // ✅ canonical (camelCase)
+        'flatNo': normalizedFlat,
         'residentUid': residentUid,
-        'residentName': residentName,
-        'category': category,
-        'title': title,
-        'description': description,
+        'residentName': residentName.trim(),
+        'category': category.trim(),
+        'title': title?.trim(),
+        'description': description.trim(),
         'status': 'pending',
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
+        'createdAt': now,
+        'updatedAt': now,
+
+        // ✅ compatibility (snake_case)
+        'flat_no': normalizedFlat,
+        'resident_uid': residentUid,
+        'resident_name': residentName.trim(),
+        'created_at': now,
+        'updated_at': now,
+        'society_id': societyId,
+        'complaint_id': complaintRef.id,
       });
 
-      AppLogger.i('Complaint created', data: {'complaintId': complaintRef.id, 'societyId': societyId});
+      AppLogger.i('Complaint created', data: {
+        'complaintId': complaintRef.id,
+        'societyId': societyId,
+        'flatNo': normalizedFlat,
+        'residentUid': residentUid,
+      });
+
       return complaintRef.id;
     } catch (e, stackTrace) {
       AppLogger.e('Error creating complaint', error: e, stackTrace: stackTrace);
@@ -549,78 +569,146 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     }
   }
 
-  /// Get resident complaints
+  /// Get resident complaints (supports BOTH schemas)
   Future<List<Map<String, dynamic>>> getResidentComplaints({
     required String societyId,
     required String flatNo,
     String? residentUid,
   }) async {
     try {
-      Query query = _complaintsRef(societyId).where('flatNo', isEqualTo: flatNo);
-      
-      if (residentUid != null) {
-        query = query.where('residentUid', isEqualTo: residentUid);
+      final normalizedFlat = flatNo.trim().toUpperCase();
+
+      // We cannot OR-filter easily across different field names.
+      // ✅ Strategy: fetch latest N complaints for society, then filter client-side.
+      // (Small societies -> fine; later we can normalize data to remove this.)
+      final snapshot = await _complaintsRef(societyId)
+          .orderBy('createdAt', descending: true)
+          .limit(200)
+          .get()
+          .catchError((_) async {
+        // Fallback if createdAt missing in some docs
+        return await _complaintsRef(societyId).limit(200).get();
+      });
+
+      final results = <Map<String, dynamic>>[];
+
+      for (final doc in snapshot.docs) {
+        final data = (doc.data() as Map<String, dynamic>);
+
+        final docFlat = (data['flatNo'] ?? data['flat_no'])?.toString().trim().toUpperCase();
+        final docResident = (data['residentUid'] ?? data['resident_uid'])?.toString();
+
+        if (docFlat != normalizedFlat) continue;
+        if (residentUid != null && docResident != residentUid) continue;
+
+        final createdTs = (data['createdAt'] ?? data['created_at']);
+        final updatedTs = (data['updatedAt'] ?? data['updated_at']);
+        final resolvedTs = (data['resolvedAt'] ?? data['resolved_at']);
+
+        results.add({
+          'complaint_id': doc.id,
+
+          // ✅ normalized output keys (snake_case for UI consistency)
+          'society_id': societyId,
+          'flat_no': docFlat,
+          'resident_uid': docResident,
+          'resident_name': (data['residentName'] ?? data['resident_name'])?.toString(),
+          'category': data['category']?.toString(),
+          'title': data['title']?.toString(),
+          'description': data['description']?.toString(),
+          'status': (data['status'] ?? 'pending')?.toString().toLowerCase(),
+
+          // keep originals too (optional, harmless)
+          ...data,
+
+          'created_at': (createdTs is Timestamp) ? createdTs.toDate().toIso8601String() : null,
+          'updated_at': (updatedTs is Timestamp) ? updatedTs.toDate().toIso8601String() : null,
+          'resolved_at': (resolvedTs is Timestamp) ? resolvedTs.toDate().toIso8601String() : null,
+        });
       }
 
-      query = query.orderBy('createdAt', descending: true);
+      // ✅ Client-side sort fallback
+      results.sort((a, b) {
+        final aDate = DateTime.tryParse((a['created_at'] ?? '') as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate = DateTime.tryParse((b['created_at'] ?? '') as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bDate.compareTo(aDate);
+      });
 
-      final snapshot = await query.get();
-      
-      final complaints = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return {
-          'complaint_id': doc.id,
-          ...data,
-          'created_at': (data['createdAt'] as Timestamp?)?.toDate().toIso8601String(),
-          'updated_at': (data['updatedAt'] as Timestamp?)?.toDate().toIso8601String(),
-          'resolved_at': (data['resolvedAt'] as Timestamp?)?.toDate().toIso8601String(),
-        };
-      }).toList();
-
-      AppLogger.i('Resident complaints fetched', data: {'count': complaints.length});
-      return complaints;
+      AppLogger.i('Resident complaints fetched', data: {'count': results.length});
+      return results;
     } catch (e, stackTrace) {
       AppLogger.e('Error getting resident complaints', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Get all complaints (admin)
+  /// Get all complaints (admin) (supports BOTH schemas)
   Future<List<Map<String, dynamic>>> getAllComplaints({
     required String societyId,
     String? status,
   }) async {
     try {
-      Query query = _complaintsRef(societyId);
-      
-      if (status != null && status.isNotEmpty) {
-        query = query.where('status', isEqualTo: status);
+      final normalizedStatus = status?.trim().toLowerCase();
+
+      final snapshot = await _complaintsRef(societyId)
+          .orderBy('createdAt', descending: true)
+          .limit(500)
+          .get()
+          .catchError((_) async {
+        // Fallback if createdAt missing in some docs
+        return await _complaintsRef(societyId).limit(500).get();
+      });
+
+      final results = <Map<String, dynamic>>[];
+
+      for (final doc in snapshot.docs) {
+        final data = (doc.data() as Map<String, dynamic>);
+        final st = (data['status'] ?? 'pending')?.toString().toLowerCase();
+
+        if (normalizedStatus != null && normalizedStatus.isNotEmpty && st != normalizedStatus) {
+          continue;
+        }
+
+        final createdTs = (data['createdAt'] ?? data['created_at']);
+        final updatedTs = (data['updatedAt'] ?? data['updated_at']);
+        final resolvedTs = (data['resolvedAt'] ?? data['resolved_at']);
+
+        results.add({
+          'complaint_id': doc.id,
+
+          // ✅ normalized output keys (snake_case)
+          'society_id': societyId,
+          'flat_no': (data['flatNo'] ?? data['flat_no'])?.toString().trim().toUpperCase(),
+          'resident_uid': (data['residentUid'] ?? data['resident_uid'])?.toString(),
+          'resident_name': (data['residentName'] ?? data['resident_name'])?.toString(),
+          'category': data['category']?.toString(),
+          'title': data['title']?.toString(),
+          'description': data['description']?.toString(),
+          'status': st,
+
+          ...data,
+
+          'created_at': (createdTs is Timestamp) ? createdTs.toDate().toIso8601String() : null,
+          'updated_at': (updatedTs is Timestamp) ? updatedTs.toDate().toIso8601String() : null,
+          'resolved_at': (resolvedTs is Timestamp) ? resolvedTs.toDate().toIso8601String() : null,
+        });
       }
 
-      query = query.orderBy('createdAt', descending: true);
+      results.sort((a, b) {
+        final aDate = DateTime.tryParse((a['created_at'] ?? '') as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate = DateTime.tryParse((b['created_at'] ?? '') as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return bDate.compareTo(aDate);
+      });
 
-      final snapshot = await query.get();
-      
-      final complaints = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>;
-        return {
-          'complaint_id': doc.id,
-          ...data,
-          'created_at': (data['createdAt'] as Timestamp?)?.toDate().toIso8601String(),
-          'updated_at': (data['updatedAt'] as Timestamp?)?.toDate().toIso8601String(),
-          'resolved_at': (data['resolvedAt'] as Timestamp?)?.toDate().toIso8601String(),
-        };
-      }).toList();
-
-      AppLogger.i('All complaints fetched', data: {'count': complaints.length});
-      return complaints;
+      AppLogger.i('All complaints fetched', data: {'count': results.length});
+      return results;
     } catch (e, stackTrace) {
       AppLogger.e('Error getting all complaints', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
 
-  /// Update complaint status
+  /// Update complaint status (updates BOTH schemas)
   Future<void> updateComplaintStatus({
     required String societyId,
     required String complaintId,
@@ -629,21 +717,33 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     String? resolvedByName,
   }) async {
     try {
+      final normalizedStatus = status.trim().toLowerCase();
+
       final updateData = <String, dynamic>{
-        'status': status,
+        // canonical
+        'status': normalizedStatus,
         'updatedAt': FieldValue.serverTimestamp(),
+
+        // compat
+        'updated_at': FieldValue.serverTimestamp(),
       };
 
-      if (status == 'resolved' && resolvedByUid != null) {
+      if (normalizedStatus == 'resolved' && resolvedByUid != null) {
         updateData['resolvedAt'] = FieldValue.serverTimestamp();
+        updateData['resolved_at'] = FieldValue.serverTimestamp();
+
         updateData['resolvedByUid'] = resolvedByUid;
+        updateData['resolved_by_uid'] = resolvedByUid;
+
         if (resolvedByName != null) {
           updateData['resolvedByName'] = resolvedByName;
+          updateData['resolved_by_name'] = resolvedByName;
         }
       }
 
       await _complaintsRef(societyId).doc(complaintId).update(updateData);
-      AppLogger.i('Complaint status updated', data: {'complaintId': complaintId, 'status': status});
+
+      AppLogger.i('Complaint status updated', data: {'complaintId': complaintId, 'status': normalizedStatus});
     } catch (e, stackTrace) {
       AppLogger.e('Error updating complaint status', error: e, stackTrace: stackTrace);
       rethrow;
