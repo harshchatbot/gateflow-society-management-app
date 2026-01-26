@@ -856,7 +856,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
     final phone = (signup['phone'] ?? signup['mobile'] ?? 'N/A').toString();
     final flatNo = (signup['flatNo'] ?? signup['flat_no'] ?? 'N/A').toString();
 
-    final signupId = (signup['signup_id'] ?? signup['id'] ?? '').toString();
+    final signupId = (signup['signup_id'] ?? signup['uid'] ?? signup['id'] ?? '').toString();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

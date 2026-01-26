@@ -13,6 +13,7 @@ import '../ui/glass_loader.dart';
 import '../ui/app_icons.dart';
 
 import 'resident_shell_screen.dart';
+import 'resident_pending_approval_screen.dart';
 import 'role_select_screen.dart';
 import 'resident_signup_screen.dart';
 
@@ -67,10 +68,11 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
         throw Exception("Failed to sign in (uid null)");
       }
 
-      // 2) Get membership
+      // 2) Get membership (now returns even if active=false)
       Map<String, dynamic>? membership =
           await _firestore.getCurrentUserMembership();
         debugPrint("membership : ${membership}");
+      
       // 3) If membership missing -> attempt invite claim -> retry membership
       if (membership == null) {
         AppLogger.w(
@@ -97,6 +99,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
       final systemRole = (membership['systemRole'] as String?)?.trim() ?? 'resident';
       final name = (membership['name'] as String?)?.trim() ?? 'Resident';
       final flatNo = (membership['flatNo'] as String?)?.trim() ?? '';
+      final bool isActive = membership['active'] == true;
 
       if (societyId.isEmpty) {
         throw Exception("Membership missing societyId.");
@@ -104,6 +107,21 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
 
       if (systemRole != 'resident') {
         throw Exception("User is not a resident (role=$systemRole).");
+      }
+
+      // 5) Check if resident is pending approval (active == false)
+      if (!isActive && systemRole == 'resident') {
+        // Resident has pending approval, redirect to pending approval screen
+        setState(() => _isLoading = false);
+        if (!mounted) return;
+        
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ResidentPendingApprovalScreen(email: email),
+          ),
+        );
+        return;
       }
 
       // 5) Save session

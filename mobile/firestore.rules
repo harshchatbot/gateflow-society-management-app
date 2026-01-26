@@ -28,12 +28,15 @@ service cloud.firestore {
 
     // ✅ allow:
     // - user updating their own pointer
-    // - OR super_admin updating pointer of someone in the same society
+    // - OR admin/super_admin updating pointer of someone in the same society (for approval)
     allow update: if signedIn() && (
       request.auth.uid == uid
       || (
         request.resource.data.societyId is string
-        && isSuperAdminOfSociety(request.resource.data.societyId)
+        && (
+          isSuperAdminOfSociety(request.resource.data.societyId)
+          || isAdminOfSociety(request.resource.data.societyId)
+        )
       )
     );
 
@@ -135,7 +138,7 @@ service cloud.firestore {
         );
 
 
-        // Delete: admin only
+        // Delete: admin/super_admin can delete members (for rejection)
         allow delete: if isAdmin(societyId);
       }
 
@@ -290,6 +293,16 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/societies/$(societyId)/members/$(request.auth.uid))
         && get(/databases/$(database)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.active == true
         && get(/databases/$(database)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.systemRole == "super_admin";
+    }
+
+    function isAdminOfSociety(societyId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/societies/$(societyId)/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.active == true
+        && (
+          get(/databases/$(database)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.systemRole == "admin"
+          || get(/databases/$(database)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.systemRole == "super_admin"
+        );
     }
 
 

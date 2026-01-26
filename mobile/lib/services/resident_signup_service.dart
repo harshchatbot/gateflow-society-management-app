@@ -192,13 +192,18 @@ class ResidentSignupService {
 
 
   /// Get pending signup requests (for admin)
+  /// Queries members with active=false and systemRole=resident
   Future<Result<List<Map<String, dynamic>>>> getPendingSignups({
     required String societyId,
   }) async {
     try {
-      final querySnapshot = await _residentSignupsRef(societyId)
-          .where('status', isEqualTo: 'PENDING')
-          .orderBy('created_at', descending: true)
+      // Query members with active=false and systemRole=resident (new flow)
+      final querySnapshot = await _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('members')
+          .where('systemRole', isEqualTo: 'resident')
+          .where('active', isEqualTo: false)
           .get();
 
       final List<Map<String, dynamic>> signups = [];
@@ -208,26 +213,35 @@ class ResidentSignupService {
         
         // Convert Firestore Timestamp to ISO string
         DateTime createdAt;
-        if (data['created_at'] is Timestamp) {
+        if (data['createdAt'] is Timestamp) {
+          createdAt = (data['createdAt'] as Timestamp).toDate();
+        } else if (data['created_at'] is Timestamp) {
           createdAt = (data['created_at'] as Timestamp).toDate();
         } else {
           createdAt = DateTime.now();
         }
 
         signups.add({
-          'signup_id': data['signup_id'] ?? doc.id,
-          'society_id': data['society_id'] ?? societyId,
+          'signup_id': data['uid'] ?? doc.id, // Use uid as signup_id for consistency
+          'society_id': data['societyId'] ?? societyId,
           'name': data['name'] ?? '',
           'email': data['email'] ?? '',
           'phone': data['phone'] ?? '',
-          'flat_no': data['flat_no'] ?? '',
-          'status': data['status'] ?? 'PENDING',
+          'flat_no': data['flatNo'] ?? data['flat_no'] ?? '',
+          'status': 'PENDING',
           'created_at': createdAt.toIso8601String(),
-          'password': data['password'], // Include password for account creation
+          'uid': data['uid'] ?? doc.id, // Include uid for approval
         });
       }
 
-      AppLogger.i("Found ${signups.length} pending signups");
+      // Sort by createdAt descending (in memory since we removed orderBy to avoid index)
+      signups.sort((a, b) {
+        final aTime = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime(0);
+        final bTime = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime(0);
+        return bTime.compareTo(aTime);
+      });
+
+      AppLogger.i("Found ${signups.length} pending resident signups (from members)");
       return Result.success(signups);
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
@@ -244,106 +258,83 @@ class ResidentSignupService {
   }
 
   /// Approve a signup request (for admin)
-  /// This will:
-  /// 1. Create Firebase Auth account
-  /// 2. Create member record
-  /// 3. Update signup status to APPROVED
+  /// New flow: Resident already has Firebase Auth account and member doc with active=false
+  /// Just need to set active=true
   Future<Result<Map<String, dynamic>>> approveSignup({
     required String societyId,
-    required String signupId,
+    required String signupId, // This is now the uid
     required String adminUid,
   }) async {
     try {
-      final signupRef = _residentSignupsRef(societyId).doc(signupId);
-      final signupDoc = await signupRef.get();
-
-      if (!signupDoc.exists) {
-        return Result.failure(AppError(
-          userMessage: "Signup request not found",
-          technicalMessage: "Signup $signupId not found in society $societyId",
-        ));
-      }
-
-      final signupData = signupDoc.data() as Map<String, dynamic>;
+      // signupId is now the uid (from the new flow)
+      final uid = signupId;
       
-      if (signupData['status'] != 'PENDING') {
+      final memberRef = _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('members')
+          .doc(uid);
+
+      final memberDoc = await memberRef.get();
+
+      if (!memberDoc.exists) {
         return Result.failure(AppError(
-          userMessage: "Signup request is not pending",
-          technicalMessage: "Signup $signupId has status: ${signupData['status']}",
+          userMessage: "Resident not found",
+          technicalMessage: "Member $uid not found in society $societyId",
         ));
       }
 
-      final email = signupData['email'] as String;
-      final password = signupData['password'] as String;
-      final name = signupData['name'] as String;
-      final phone = signupData['phone'] as String;
-      final flatNo = signupData['flat_no'] as String;
+      final memberData = memberDoc.data() as Map<String, dynamic>;
+      
+      if (memberData['active'] == true) {
+        return Result.failure(AppError(
+          userMessage: "Resident is already approved",
+          technicalMessage: "Member $uid is already active",
+        ));
+      }
+
+      if (memberData['systemRole'] != 'resident') {
+        return Result.failure(AppError(
+          userMessage: "User is not a resident",
+          technicalMessage: "Member $uid has systemRole: ${memberData['systemRole']}",
+        ));
+      }
 
       AppLogger.i("Approving resident signup", data: {
-        "signupId": signupId,
-        "email": email,
-        "flatNo": flatNo,
+        "uid": uid,
+        "societyId": societyId,
+        "email": memberData['email'],
       });
 
-      // 1. Create Firebase Auth account
-      UserCredential userCredential;
+      // Update member document to active=true
+      await memberRef.update({
+        'active': true,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Update root pointer (optional - wrap in try-catch since rules may restrict)
       try {
-        userCredential = await _auth.createUserWithEmailAndPassword(
-          email: email,
-          password: password,
-        );
+        await _firestore.collection('members').doc(uid).update({
+          'active': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        });
       } catch (e) {
-        // If user already exists, try to sign in and get the user
-        if (e.toString().contains('email-already-in-use')) {
-          // User exists, sign in to get the user
-          userCredential = await _auth.signInWithEmailAndPassword(
-            email: email,
-            password: password,
-          );
-        } else {
-          rethrow;
-        }
+        // Root pointer update failed (permission issue) - not critical since society member doc is source of truth
+        AppLogger.w("Root pointer update failed (non-critical)", data: {
+          "uid": uid,
+          "error": e.toString(),
+        });
       }
-
-      final uid = userCredential.user?.uid;
-      if (uid == null) {
-        throw Exception("Failed to create user account");
-      }
-
-      // 2. Create member record using FirestoreService
-      final firestoreService = FirestoreService();
-      await firestoreService.setMember(
-        societyId: societyId,
-        uid: uid,
-        systemRole: 'resident',
-        name: name,
-        phone: phone,
-        email: email, // Include email
-        flatNo: flatNo,
-        active: true,
-      );
-
-      // 3. Update signup status
-      final now = FieldValue.serverTimestamp();
-      await signupRef.update({
-        'status': 'APPROVED',
-        'approved_by': adminUid,
-        'approved_at': now,
-        'updated_at': now,
-        // Remove password from document for security
-        'password': FieldValue.delete(),
-      });
 
       AppLogger.i("Resident signup approved successfully", data: {
-        "signupId": signupId,
         "uid": uid,
-        "email": email,
+        "societyId": societyId,
       });
 
       return Result.success({
-        'signup_id': signupId,
+        'signup_id': uid,
         'uid': uid,
-        'email': email,
+        'email': memberData['email'] ?? '',
         'status': 'APPROVED',
       });
     } on FirebaseException catch (e) {
@@ -361,36 +352,48 @@ class ResidentSignupService {
   }
 
   /// Reject a signup request (for admin)
+  /// New flow: Delete member document and root pointer
   Future<Result<void>> rejectSignup({
     required String societyId,
-    required String signupId,
+    required String signupId, // This is now the uid
     required String adminUid,
     String? reason,
   }) async {
     try {
-      final signupRef = _residentSignupsRef(societyId).doc(signupId);
-      final signupDoc = await signupRef.get();
+      // signupId is now the uid (from the new flow)
+      final uid = signupId;
+      
+      final memberRef = _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('members')
+          .doc(uid);
 
-      if (!signupDoc.exists) {
+      final memberDoc = await memberRef.get();
+
+      if (!memberDoc.exists) {
         return Result.failure(AppError(
-          userMessage: "Signup request not found",
-          technicalMessage: "Signup $signupId not found in society $societyId",
+          userMessage: "Resident not found",
+          technicalMessage: "Member $uid not found in society $societyId",
         ));
       }
 
-      final now = FieldValue.serverTimestamp();
-      await signupRef.update({
-        'status': 'REJECTED',
-        'rejected_by': adminUid,
-        'rejected_at': now,
-        'rejection_reason': reason,
-        'updated_at': now,
-        // Remove password from document for security
-        'password': FieldValue.delete(),
-      });
+      // Delete member document
+      await memberRef.delete();
+
+      // Delete root pointer (optional - wrap in try-catch since rules may restrict)
+      try {
+        await _firestore.collection('members').doc(uid).delete();
+      } catch (e) {
+        // Root pointer delete failed (permission issue) - not critical since society member doc is source of truth
+        AppLogger.w("Root pointer delete failed (non-critical)", data: {
+          "uid": uid,
+          "error": e.toString(),
+        });
+      }
 
       AppLogger.i("Resident signup rejected", data: {
-        "signupId": signupId,
+        "uid": uid,
         "reason": reason,
       });
 

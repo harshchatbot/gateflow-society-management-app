@@ -254,23 +254,13 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
 
     final pointer = pointerDoc.data() as Map<String, dynamic>? ?? {};
 
-    // Support both active/status styles (depending on your schema)
-    final bool isActive = pointer['active'] == true ||
-        (pointer['status']?.toString().toUpperCase() == 'ACTIVE');
-
-    if (!isActive) {
-      AppLogger.w('Membership pointer inactive', data: {'uid': uid, ...pointer});
-      return null;
-    }
-
     final societyId = pointer['societyId']?.toString();
     if (societyId == null || societyId.isEmpty) {
       AppLogger.e('Membership pointer missing societyId', error: pointer);
       return null;
     }
 
-    // 2) Optional: validate actual society membership doc exists & active
-    // This is useful if pointer exists but society member doc got deleted.
+    // 2) Get actual society membership doc (even if inactive - needed for pending approval check)
     final societyMemberDoc = await _firestore
         .collection('societies')
         .doc(societyId)
@@ -288,17 +278,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
 
     final societyMember = societyMemberDoc.data() as Map<String, dynamic>? ?? {};
 
-    final bool societyActive = societyMember['active'] == true ||
-        (societyMember['status']?.toString().toUpperCase() == 'ACTIVE');
-
-    if (!societyActive) {
-      AppLogger.w(
-        'Society member doc inactive',
-        data: {'uid': uid, 'societyId': societyId, ...societyMember},
-      );
-      return null;
-    }
-
+    // Return membership even if inactive (caller can check active status)
     final result = {
       'uid': uid,
       'societyId': societyId,
