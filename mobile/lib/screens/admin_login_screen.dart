@@ -8,6 +8,9 @@ import '../ui/glass_loader.dart';
 import 'admin_shell_screen.dart';
 import 'role_select_screen.dart';
 import 'admin_onboarding_screen.dart';
+import 'admin_signup_screen.dart';
+import 'admin_pending_approval_screen.dart';
+import '../services/admin_signup_service.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -22,6 +25,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final _passwordController = TextEditingController();
   final FirebaseAuthService _authService = FirebaseAuthService();
   final FirestoreService _firestore = FirestoreService();
+  final AdminSignupService _signupService = AdminSignupService();
   bool _isLoading = false;
   bool _obscurePassword = true;
 
@@ -51,20 +55,38 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     );
 
     final uid = userCredential.user?.uid;
+    final userEmail = userCredential.user?.email ?? email;
     if (uid == null) {
       throw Exception("Failed to sign in");
     }
 
     // Step 2: Get membership from Firestore (pointer -> society member)
     final membership = await _firestore.getCurrentUserMembership();
+    
+    // Step 2a: If no membership, check for pending admin signup
     if (membership == null) {
-      throw Exception("User membership not found");
+      // User has no membership - redirect to pending approval screen
+      if (userEmail != null) {
+        setState(() => _isLoading = false);
+        if (!mounted) return;
+        
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AdminPendingApprovalScreen(email: userEmail),
+          ),
+        );
+        return;
+      }
+      
+      throw Exception("User membership not found and no email available");
     }
 
     final societyId = (membership['societyId'] as String?) ?? '';
     final String systemRole = (membership['systemRole'] as String?)?.toLowerCase() ?? 'admin';
     final societyRole = membership['societyRole'] as String?;
     final name = membership['name'] as String? ?? 'Admin';
+    final bool isActive = membership['active'] == true;
 
     if (societyId.isEmpty) {
       throw Exception("Society not resolved");
@@ -73,6 +95,21 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     // ✅ allow admin OR super_admin
     if (systemRole != 'admin' && systemRole != 'super_admin') {
       throw Exception("User is not an admin");
+    }
+    
+    // Step 2b: Check if admin is pending approval (active == false)
+    if (!isActive && systemRole == 'admin') {
+      // User has pending approval, redirect to pending approval screen
+      setState(() => _isLoading = false);
+      if (!mounted) return;
+      
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AdminPendingApprovalScreen(email: userEmail ?? email),
+        ),
+      );
+      return;
     }
 
     // Step 3: Save Firebase session
@@ -102,6 +139,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           adminName: name,
           societyId: societyId,
           role: (societyRole ?? 'ADMIN').toUpperCase(),
+          systemRole: systemRole, // Pass systemRole to shell
         ),
       ),
     );
@@ -398,29 +436,51 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Column(
               children: [
-                Text(
-                  "New admin? ",
-                  style: TextStyle(
-                    color: AppColors.text2,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "New admin? ",
+                      style: TextStyle(
+                        color: AppColors.text2,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const AdminSignupScreen()),
+                        );
+                      },
+                      child: const Text(
+                        "Sign Up",
+                        style: TextStyle(
+                          color: AppColors.admin,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 8),
                 TextButton(
                   onPressed: () {
-                    Navigator.of(context).push(
+                    Navigator.push(
+                      context,
                       MaterialPageRoute(builder: (_) => const AdminOnboardingScreen()),
                     );
                   },
-                  child: const Text(
-                    "Create Account",
+                  child: Text(
+                    "Create New Society (Super Admin)",
                     style: TextStyle(
-                      color: AppColors.admin,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
+                      color: AppColors.admin.withOpacity(0.8),
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
                     ),
                   ),
                 ),

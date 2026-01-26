@@ -16,21 +16,31 @@ service cloud.firestore {
     // Used to resolve societyId WITHOUT collectionGroup queries
     // =========================
     match /members/{uid} {
-      allow read: if signedIn() && request.auth.uid == uid;
+    // user can read their own pointer
+    allow read: if signedIn() && request.auth.uid == uid;
 
-      // user can create their own pointer
-      allow create: if signedIn()
-        && request.auth.uid == uid
-        && request.resource.data.uid == uid
-        && request.resource.data.active == true
-        // allow any of these because claim writes guard/resident too
-        && request.resource.data.systemRole in ["admin", "super_admin", "guard", "resident"];
+    // user can create their own pointer
+    allow create: if signedIn()
+      && request.auth.uid == uid
+      && request.resource.data.uid == uid
+      && request.resource.data.systemRole in ["admin", "super_admin", "guard", "resident"]
+      && (request.resource.data.active == true || request.resource.data.active == false);
 
-      // user can update their own pointer
-      allow update: if signedIn() && request.auth.uid == uid;
+    // ✅ allow:
+    // - user updating their own pointer
+    // - OR super_admin updating pointer of someone in the same society
+    allow update: if signedIn() && (
+      request.auth.uid == uid
+      || (
+        request.resource.data.societyId is string
+        && isSuperAdminOfSociety(request.resource.data.societyId)
+      )
+    );
 
-      allow delete: if false;
-    }
+    allow delete: if false;
+  }
+
+
 
     // Helpers for society membership under societies/{societyId}/members/{uid}
     function memberPath(societyId) {
@@ -56,6 +66,24 @@ service cloud.firestore {
             || member(societyId).data.systemRole == "super_admin");
     }
 
+    // ✅ Check if user is super admin
+    function isSuperAdmin(societyId) {
+      return activeMember(societyId)
+        && member(societyId).data.systemRole == "super_admin";
+    }
+
+    // ✅ STEP B: ADD THIS HELPER HERE
+    function canReadMemberDoc(societyId, uid) {
+      return signedIn()
+        && (
+          // user can read own member doc even if inactive
+          (request.auth.uid == uid
+            && exists(/databases/$(database)/documents/societies/$(societyId)/members/$(uid)))
+          // admin can read all
+          || isAdmin(societyId)
+        );
+    }
+
     // ------------------------
     // Societies (multi-tenant root)
     // ------------------------
@@ -78,20 +106,34 @@ service cloud.firestore {
       // ------------------------
       match /members/{uid} {
 
-        // ✅ ONLY self-create (bootstrap admin OR claimed invite user)
+        // ✅ Self-create: allow active=true (bootstrap) OR active=false (pending signup)
         allow create: if signedIn()
           && uid == request.auth.uid
           && request.resource.data.uid == request.auth.uid
-          && request.resource.data.active == true
+          && (request.resource.data.active == true || request.resource.data.active == false)
           && request.resource.data.systemRole in ["admin", "super_admin", "guard", "resident"];
 
-        // Read: member can read self; admin can read all
-        allow read: if activeMember(societyId)
+        // Read: member can read self (even if inactive); admin can read all
+        allow read: if signedIn()
           && (uid == request.auth.uid || isAdmin(societyId));
 
         // Update: member can update self; admin can update all
-        allow update: if activeMember(societyId)
-          && (uid == request.auth.uid || isAdmin(societyId));
+        // Update:
+        // - Self can update own member doc even if inactive (profile-only)
+        // - Admin can update any member (approval, role, etc.)
+        allow update: if signedIn() && (
+          // Self update (even if inactive) — but cannot change role or active
+          (
+            uid == request.auth.uid
+            && request.resource.data.uid == resource.data.uid
+            && request.resource.data.societyId == resource.data.societyId
+            && request.resource.data.systemRole == resource.data.systemRole
+            && request.resource.data.active == resource.data.active
+          )
+          // Admin / Super Admin update
+          || isAdmin(societyId)
+        );
+
 
         // Delete: admin only
         allow delete: if isAdmin(societyId);
@@ -188,6 +230,36 @@ service cloud.firestore {
       }
 
       // ------------------------
+      // Resident Signups
+      // Anyone can create signup requests (unauthenticated allowed)
+      // Admins can read and update (approve/reject) signup requests
+      // ------------------------
+      match /residentSignups/{id} {
+        // Anyone can create a signup request (unauthenticated allowed)
+        // Just validate required fields and status
+        allow create: if request.resource.data.status == "PENDING"
+          && request.resource.data.society_id == societyId
+          && request.resource.data.keys().hasAll(["name", "email", "phone", "flat_no", "password", "signup_id", "society_id"]);
+        
+        // Only admins can read signup requests
+        allow read: if isAdmin(societyId);
+        
+        // Only admins can update signup requests (approve/reject)
+        allow update: if isAdmin(societyId)
+          && (
+            // Can only update status to APPROVED or REJECTED
+            request.resource.data.status in ["APPROVED", "REJECTED"]
+            // Must have approved_by or rejected_by field
+            && (request.resource.data.keys().hasAny(["approved_by", "rejected_by"]))
+          );
+        
+        // No one can delete signup requests (keep for audit trail)
+        allow delete: if false;
+      }
+
+      // Note: adminSignups collection removed - admins now use member documents with active=false
+
+      // ------------------------
       // Flats (admin writes, members read)  ✅ moved inside society scope
       // ------------------------
       match /flats/{id} {
@@ -212,6 +284,14 @@ service cloud.firestore {
       // keep locked for now
       allow update, delete: if false;
     }
+
+    function isSuperAdminOfSociety(societyId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/societies/$(societyId)/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.active == true
+        && get(/databases/$(database)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.systemRole == "super_admin";
+    }
+
 
     // Default deny everything else
     match /{document=**} {

@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../core/app_logger.dart';
+import 'package:flutter/foundation.dart';
+
+
 
 /// FirestoreService - Multi-tenant Firestore operations
 /// 
@@ -78,8 +81,9 @@ class FirestoreService {
       // Create society document
       await _societyRef(societyId).set(societyData);
 
-      // Create society code mapping
-      await _societyCodesRef.doc(code).set({
+      // Create society code mapping (normalize to uppercase for consistency)
+      final normalizedCode = code.trim().toUpperCase();
+      await _societyCodesRef.doc(normalizedCode).set({
         'societyId': societyId,
         'active': true,
         'createdAt': FieldValue.serverTimestamp(),
@@ -95,9 +99,18 @@ class FirestoreService {
   }
 
   /// Get society by code
+  /// Handles codes with or without SOC_ prefix (e.g., "AMARA" or "SOC_AMARA" both work)
   Future<String?> getSocietyIdByCode(String code) async {
     try {
-      final doc = await _societyCodesRef.doc(code).get();
+      // Normalize code: strip SOC_ prefix if present, then uppercase
+      String normalizedCode = code.trim().toUpperCase();
+      
+      // Remove SOC_ prefix if present (case-insensitive)
+      if (normalizedCode.startsWith('SOC_')) {
+        normalizedCode = normalizedCode.substring(4); // Remove "SOC_" (4 characters)
+      }
+      
+      final doc = await _societyCodesRef.doc(normalizedCode).get();
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>?;
         if (data != null && data['active'] == true) {
@@ -138,6 +151,7 @@ class FirestoreService {
     String? societyRole, // "president" | "secretary" | "treasurer" | "committee" | null
     required String name,
     String? phone,
+    String? email,
     String? flatNo,
     bool active = true,
   }) async {
@@ -152,6 +166,7 @@ class FirestoreService {
       'societyRole': societyRole,
       'name': name,
       'phone': phone,
+      'email': email,
       'flatNo': flatNo,
       'active': active,
 
@@ -839,6 +854,89 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     'systemRole': systemRole,
   });
 }
+
+
+
+
+
+
+  /// Resolve societyId from a society code (case-insensitive)
+  /// Handles codes with or without SOC_ prefix (e.g., "AMARA" or "SOC_AMARA" both work)
+  Future<String?> getSocietyByCode(String societyCode) async {
+    try {
+      // Normalize code: strip SOC_ prefix if present, then uppercase
+      String normalized = societyCode.trim().toUpperCase();
+      
+      // Remove SOC_ prefix if present (case-insensitive)
+      if (normalized.startsWith('SOC_')) {
+        normalized = normalized.substring(4); // Remove "SOC_" (4 characters)
+      }
+      
+      if (normalized.isEmpty) return null;
+
+      debugPrint("getSocietyByCode | normalized=$normalized (original=$societyCode)");
+
+      // ✅ Use societyCodes mapping doc: /societyCodes/AMARA -> { societyId: "soc_amara", active: true }
+      final doc = await _firestore.collection('societyCodes').doc(normalized).get();
+
+      if (!doc.exists) {
+        debugPrint("getSocietyByCode | not found: $normalized");
+        return null;
+      }
+
+      final data = doc.data() as Map<String, dynamic>;
+
+      // Optional: block inactive codes
+      final isActive = data['active'] == true;
+      if (!isActive) {
+        debugPrint("getSocietyByCode | inactive code: $normalized");
+        return null;
+      }
+
+      final societyId = data['societyId']?.toString();
+      debugPrint("getSocietyByCode | societyId=$societyId");
+
+      if (societyId == null || societyId.isEmpty) return null;
+      return societyId;
+    } catch (e, st) {
+      AppLogger.e("getSocietyByCode failed", error: e, stackTrace: st);
+      debugPrint("getSocietyByCode failed: $e");
+      return null;
+    }
+  }
+
+
+
+
+
+
+  Future<List<Map<String, dynamic>>> getMembers({
+    required String societyId,
+    String? systemRole,
+  }) async {
+    Query query = _firestore
+        .collection('societies')
+        .doc(societyId)
+        .collection('members');
+
+    if (systemRole != null && systemRole.isNotEmpty) {
+      query = query.where('systemRole', isEqualTo: systemRole);
+    }
+
+    final snap = await query.get();
+    return snap.docs.map((d) {
+      final data = d.data() as Map<String, dynamic>;
+      return {
+        'id': d.id,
+        ...data,
+        // extra aliases so UI works with old keys too
+        'resident_id': data['uid'] ?? d.id,
+        'resident_name': data['name'] ?? data['residentName'],
+        'flat_no': data['flatNo'] ?? data['flat_no'],
+        'resident_phone': data['phone'] ?? data['mobile'],
+      };
+    }).toList();
+  }
 
 
 

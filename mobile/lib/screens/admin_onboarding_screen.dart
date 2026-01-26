@@ -197,27 +197,26 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           createdByUid: uid,
         );
 
+        // Create super admin member record with all details
+        await _firestore.setMember(
+          societyId: societyId,
+          uid: uid,
+          systemRole: 'super_admin',
+          societyRole: _selectedRole.toLowerCase(),
+          name: adminName,
+          phone: phone.isEmpty ? null : phone,
+          email: email, // Include email from form
+          active: true,
+        );
 
+        await _setRootPointer(
+          uid: uid,
+          societyId: societyId,
+          systemRole: 'super_admin',
+        );
 
-      final result = await InviteBulkUploadService().pickCsvAndUploadInvites(
-        societyId: societyId,
-      );
-
-      AppLogger.i(
-        "Bulk invite upload done",
-        data: {
-          'processed': result.processed,
-          'created': result.created,
-          'skipped': result.skipped,
-          'errors': result.errors.length,
-        },
-      );
-
-      await _setRootPointer(
-        uid: uid,
-        societyId: societyId,
-        systemRole: 'super_admin',
-      );
+        // Note: Bulk invite upload can be done later from the dashboard
+        // Removed automatic file picker to avoid disrupting onboarding flow
 
 
         // If you want confetti only for new society creation:
@@ -257,6 +256,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             .set({
           'name': adminName,
           'phone': phone.isEmpty ? null : phone,
+          'email': email, // Include email
           'societyRole': _selectedRole.toLowerCase(),
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
@@ -474,23 +474,29 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           ),
         ),
         const SizedBox(height: 20),
-        const Text(
-          "Admin Onboarding",
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w900,
-            color: AppColors.text,
-            letterSpacing: -1,
+          Text(
+            _isCreatingSociety 
+              ? "Society And Super Admin Onboarding"
+              : "Join Society",
+            style: const TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: AppColors.text,
+              letterSpacing: -1,
+            ),
+            textAlign: TextAlign.center,
           ),
-        ),
         const SizedBox(height: 8),
         Text(
-          "Create your admin account",
+          _isCreatingSociety
+              ? "Set up your society and become super admin"
+              : "Claim your admin invite to join",
           style: TextStyle(
             color: AppColors.text2,
             fontWeight: FontWeight.w600,
             fontSize: 15,
           ),
+          textAlign: TextAlign.center,
         ),
       ],
     );

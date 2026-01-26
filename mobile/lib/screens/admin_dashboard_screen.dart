@@ -9,6 +9,7 @@ import '../core/app_logger.dart';
 import '../core/env.dart';
 import 'notice_board_screen.dart';
 import 'admin_manage_notices_screen.dart';
+import 'admin_manage_admins_screen.dart';
 import '../widgets/admin_notification_drawer.dart';
 
 /// Admin Dashboard Screen
@@ -19,6 +20,7 @@ class AdminDashboardScreen extends StatefulWidget {
   final String adminId;
   final String adminName;
   final String societyId;
+  final String? systemRole; // admin or super_admin
   final Function(int)? onTabNavigate; // Callback to navigate to tabs
 
   const AdminDashboardScreen({
@@ -26,6 +28,7 @@ class AdminDashboardScreen extends StatefulWidget {
     required this.adminId,
     required this.adminName,
     required this.societyId,
+    this.systemRole,
     this.onTabNavigate,
   });
 
@@ -501,6 +504,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             _navigateToTab(4);
           },
         ),
+        // Only show "Manage Admins" for super admins
+        if (widget.systemRole?.toLowerCase() == 'super_admin')
+          _ActionItem(
+            icon: Icons.admin_panel_settings_rounded,
+            title: "Manage Admins",
+            subtitle: "Approve admin signups",
+            color: AppColors.admin,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AdminManageAdminsScreen(
+                    adminId: widget.adminId,
+                    societyId: widget.societyId,
+                    systemRole: widget.systemRole,
+                  ),
+                ),
+              );
+            },
+          ),
       ],
     );
   }
