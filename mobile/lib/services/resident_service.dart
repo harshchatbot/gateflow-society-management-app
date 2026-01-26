@@ -106,18 +106,21 @@ class ResidentService {
     int limit = 50,
   }) async {
     try {
-      final res = await http.get(_uri("/api/residents/history", {
-        "society_id": societyId,
-        "flat_no": flatNo,
-        "limit": "$limit",
-      }));
-      if (res.statusCode == 200) {
-        return ApiResult.success(jsonDecode(res.body) as List<dynamic>);
+      // Use Firebase directly instead of backend API
+      final result = await _firebaseVisitorService.getHistory(
+        societyId: societyId,
+        flatNo: flatNo,
+        limit: limit,
+      );
+      
+      if (result.isSuccess && result.data != null) {
+        return ApiResult.success(result.data!);
+      } else {
+        return ApiResult.failure(result.error?.userMessage ?? "Failed to load history");
       }
-      return ApiResult.failure("History failed: ${res.statusCode} ${res.body}");
     } catch (e) {
       debugPrint("getHistory error: $e");
-      return ApiResult.failure("Connection error");
+      return ApiResult.failure("Connection error: ${e.toString()}");
     }
   }
 

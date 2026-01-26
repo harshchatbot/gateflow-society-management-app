@@ -1,23 +1,23 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
-import '../services/resident_service.dart';
-import '../services/notice_service.dart';
+import '../services/resident_service.dart' as resident;
 import '../services/notification_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import 'resident_complaint_screen.dart';
-import 'resident_shell_screen.dart';
 import 'notice_board_screen.dart';
 import '../widgets/resident_notification_drawer.dart';
+import '../services/firestore_service.dart';
 
 /// Resident Dashboard Screen
-/// 
+///
 /// Purpose: Overview screen for residents showing:
 /// - Welcome message with resident info
 /// - Quick stats (pending approvals count)
 /// - Quick action cards to navigate to Approvals/History
-/// 
+///
 /// Theme: Green/Success theme (matching resident login)
 class ResidentDashboardScreen extends StatefulWidget {
   final String residentId;
@@ -38,12 +38,14 @@ class ResidentDashboardScreen extends StatefulWidget {
 }
 
 class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
-  late final ResidentService _service = ResidentService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
-  );
-  
-  late final NoticeService _noticeService = NoticeService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+  // 🔹 Firestore (new, for notices)
+  final FirestoreService _firestore = FirestoreService();
+
+  // 🔹 Existing backend service (leave untouched)
+  late final resident.ResidentService _service = resident.ResidentService(
+    baseUrl: Env.apiBaseUrl.isNotEmpty
+        ? Env.apiBaseUrl
+        : "http://192.168.29.195:8000",
   );
 
   int _pendingCount = 0;
@@ -69,31 +71,84 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     });
   }
 
+  // ✅ Helper: Load notices from Firestore and return as List<Map<String,dynamic>>
+  Future<List<Map<String, dynamic>>> _loadNoticesList() async {
+    try {
+      final raw = await _firestore.getNotices(
+        societyId: widget.societyId,
+        activeOnly: true,
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          AppLogger.w("getNotices timeout");
+          return <Map<String, dynamic>>[]; // Return correct type
+        },
+      );
+
+      return raw.map<Map<String, dynamic>>((n) {
+        return Map<String, dynamic>.from(n as Map);
+      }).toList();
+    } catch (e, st) {
+      AppLogger.e("Error loading notices (Firestore)", error: e, stackTrace: st);
+      return <Map<String, dynamic>>[];
+    }
+  }
+
   Future<void> _loadDashboardData() async {
     if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
-      // Load pending approvals
-      final approvalsResult = await _service.getApprovals(
-        societyId: widget.societyId,
-        flatNo: widget.flatNo,
-      );
+      // Load pending approvals with timeout
+      resident.ApiResult<List<dynamic>>? approvalsResult;
+      try {
+        approvalsResult = await _service
+            .getApprovals(
+              societyId: widget.societyId,
+              flatNo: widget.flatNo,
+            )
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                AppLogger.w("getApprovals timeout");
+                return resident.ApiResult.failure("Request timeout");
+              },
+            );
+      } catch (e) {
+        AppLogger.e("Error loading approvals", error: e);
+        approvalsResult = resident.ApiResult.failure("Failed to load approvals");
+      }
 
-      // Load history for stats
-      final historyResult = await _service.getHistory(
-        societyId: widget.societyId,
-        flatNo: widget.flatNo,
-        limit: 100,
-      );
+      // Load history for stats with timeout
+      resident.ApiResult<List<dynamic>>? historyResult;
+      try {
+        historyResult = await _service
+            .getHistory(
+              societyId: widget.societyId,
+              flatNo: widget.flatNo,
+              limit: 100,
+            )
+            .timeout(
+              const Duration(seconds: 10),
+              onTimeout: () {
+                AppLogger.w("getHistory timeout");
+                return resident.ApiResult.failure("Request timeout");
+              },
+            );
+      } catch (e) {
+        AppLogger.e("Error loading history", error: e);
+        historyResult = resident.ApiResult.failure("Failed to load history");
+      }
 
       if (!mounted) return;
 
-      if (approvalsResult.isSuccess && approvalsResult.data != null) {
+      if (approvalsResult != null &&
+          approvalsResult.isSuccess &&
+          approvalsResult.data != null) {
         _pendingCount = approvalsResult.data!.length;
       }
 
-      if (historyResult.isSuccess && historyResult.data != null) {
+      if (historyResult != null && historyResult.isSuccess && historyResult.data != null) {
         final history = historyResult.data!;
         _approvedCount = history.where((item) {
           final status = item['status']?.toString().toUpperCase() ?? '';
@@ -105,35 +160,44 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         }).length;
       }
 
-      // Count recent notices (created in last 24 hours)
-      final noticesResult = await _noticeService.getNotices(
-        societyId: widget.societyId,
-        activeOnly: true,
-      );
+      // ✅ Count recent notices (created in last 24 hours) via Firestore list
       int recentNotices = 0;
-      if (noticesResult.isSuccess && noticesResult.data != null) {
+      try {
+        final noticesList = await _loadNoticesList();
         final now = DateTime.now();
-        recentNotices = noticesResult.data!.where((n) {
+
+        recentNotices = noticesList.where((n) {
           try {
-            final createdAt = n['created_at']?.toString() ?? '';
-            if (createdAt.isEmpty) return false;
-            final created = DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
+            // Prefer 'created_at' if your notice docs use snake_case
+            final createdAtStr = (n['created_at'] ?? n['createdAt'])?.toString() ?? '';
+            if (createdAtStr.isEmpty) return false;
+
+            // If stored as ISO string
+            final created = DateTime.parse(createdAtStr.replaceAll("Z", "+00:00"));
             final hoursDiff = now.difference(created).inHours;
-            return hoursDiff <= 24; // Notices from last 24 hours
-          } catch (e) {
+            return hoursDiff <= 24;
+          } catch (_) {
+            // If createdAt is Timestamp or invalid format, skip gracefully
             return false;
           }
         }).length;
+      } catch (e) {
+        AppLogger.e("Error counting notices", error: e);
+        // Continue without notices count
       }
 
       // Total notification count = pending approvals + recent notices
       _notificationCount = _pendingCount + recentNotices;
 
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+
       AppLogger.i("Resident dashboard loaded", data: {
         "pending": _pendingCount,
         "approved": _approvedCount,
         "rejected": _rejectedCount,
+        "notices": recentNotices,
       });
     } catch (e) {
       AppLogger.e("Error loading dashboard data", error: e);
@@ -178,7 +242,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                   const SizedBox(height: 20),
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 20),
-                  
+
                   // Stats Row
                   Row(
                     children: [
@@ -226,7 +290,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
               ),
             ),
           ),
-          
+
           if (_isLoading) GlassLoader(show: true, message: "Loading Dashboard…"),
         ],
       ),

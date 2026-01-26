@@ -420,4 +420,95 @@ class FirebaseVisitorService {
       return Result.failure(err);
     }
   }
+
+  /// Get visitor history (APPROVED/REJECTED) for a flat
+  /// Returns list of visitors with status = "APPROVED" or "REJECTED" for the given flat_no
+  Future<Result<List<Map<String, dynamic>>>> getHistory({
+    required String societyId,
+    required String flatNo,
+    int limit = 100,
+  }) async {
+    try {
+      final visitorsRef = _visitorsRef(societyId);
+      final normalizedFlatNo = flatNo.trim().toUpperCase();
+      
+      AppLogger.i("Fetching visitor history", data: {
+        "societyId": societyId,
+        "flatNo": normalizedFlatNo,
+        "limit": limit,
+      });
+
+      // Query for APPROVED or REJECTED visitors
+      // Note: Using whereIn with orderBy requires a composite index
+      // To avoid index requirement, we query without orderBy and sort in memory
+      final querySnapshot = await visitorsRef
+          .where('flat_no', isEqualTo: normalizedFlatNo)
+          .where('status', whereIn: ['APPROVED', 'REJECTED'])
+          .get();
+      
+      // Sort in memory by createdAt descending and limit
+      final sortedDocs = querySnapshot.docs.toList()
+        ..sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          final aTime = aData['createdAt'] as Timestamp?;
+          final bTime = bData['createdAt'] as Timestamp?;
+          if (aTime == null && bTime == null) return 0;
+          if (aTime == null) return 1;
+          if (bTime == null) return -1;
+          return bTime.compareTo(aTime); // Descending order
+        });
+      
+      final limitedDocs = sortedDocs.take(limit).toList();
+
+      final List<Map<String, dynamic>> visitors = [];
+      
+      for (var doc in limitedDocs) {
+        final data = doc.data() as Map<String, dynamic>;
+        
+        // Convert Firestore Timestamp to ISO string for compatibility
+        DateTime createdAt;
+        if (data['createdAt'] is Timestamp) {
+          createdAt = (data['createdAt'] as Timestamp).toDate();
+        } else {
+          createdAt = DateTime.now();
+        }
+
+        DateTime? approvedAt;
+        if (data['approved_at'] is Timestamp) {
+          approvedAt = (data['approved_at'] as Timestamp).toDate();
+        }
+        
+        // Format data to match backend API response format
+        visitors.add({
+          'visitor_id': data['visitor_id'] ?? doc.id,
+          'society_id': data['society_id'] ?? societyId,
+          'flat_no': data['flat_no'] ?? normalizedFlatNo,
+          'visitor_type': data['visitor_type'] ?? 'GUEST',
+          'visitor_phone': data['visitor_phone'] ?? '',
+          'status': data['status'] ?? '',
+          'created_at': createdAt.toIso8601String(),
+          'approved_at': approvedAt?.toIso8601String(),
+          'approved_by': data['approved_by'],
+          'guard_id': data['guard_uid'] ?? '',
+          'photo_url': data['photo_url'],
+          'note': data['note'],
+        });
+      }
+
+      AppLogger.i("Found ${visitors.length} history entries");
+      return Result.success(visitors);
+    } on FirebaseException catch (e) {
+      final err = _mapFirebaseError(e);
+      AppLogger.e("getHistory FirebaseException", error: err.technicalMessage);
+      return Result.failure(err);
+    } catch (e, stackTrace) {
+      final err = AppError(
+        userMessage: "Failed to load history",
+        technicalMessage: e.toString(),
+      );
+      AppLogger.e("getHistory unknown error", error: err.technicalMessage, stackTrace: stackTrace);
+      return Result.failure(err);
+    }
+  }
 }
