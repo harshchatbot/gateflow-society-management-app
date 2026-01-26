@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'firebase_visitor_service.dart';
 
 class ApiResult<T> {
   final bool isSuccess;
@@ -21,6 +22,7 @@ class ApiResult<T> {
 class ResidentService {
   // ✅ Change this if you already have a baseUrl in dotenv/service
   final String baseUrl;
+  final FirebaseVisitorService _firebaseVisitorService = FirebaseVisitorService();
 
   ResidentService({required this.baseUrl});
 
@@ -81,17 +83,20 @@ class ResidentService {
     required String flatNo,
   }) async {
     try {
-      final res = await http.get(_uri("/api/residents/approvals", {
-        "society_id": societyId,
-        "flat_no": flatNo,
-      }));
-      if (res.statusCode == 200) {
-        return ApiResult.success(jsonDecode(res.body) as List<dynamic>);
+      // Use Firebase directly instead of backend API
+      final result = await _firebaseVisitorService.getPendingApprovals(
+        societyId: societyId,
+        flatNo: flatNo,
+      );
+      
+      if (result.isSuccess && result.data != null) {
+        return ApiResult.success(result.data!);
+      } else {
+        return ApiResult.failure(result.error?.userMessage ?? "Failed to load approvals");
       }
-      return ApiResult.failure("Approvals failed: ${res.statusCode} ${res.body}");
     } catch (e) {
       debugPrint("getApprovals error: $e");
-      return ApiResult.failure("Connection error");
+      return ApiResult.failure("Connection error: ${e.toString()}");
     }
   }
 
@@ -125,28 +130,23 @@ class ResidentService {
     String note = "",
   }) async {
     try {
-      final body = jsonEncode({
-        "society_id": societyId,
-        "flat_no": flatNo,
-        "resident_id": residentId,
-        "visitor_id": visitorId,
-        "decision": decision,
-        "note": note,
-      });
-
-      final res = await http.post(
-        _uri("/api/residents/decision"),
-        headers: {"Content-Type": "application/json"},
-        body: body,
+      // Use Firebase directly instead of backend API
+      final result = await _firebaseVisitorService.updateVisitorStatus(
+        societyId: societyId,
+        visitorId: visitorId,
+        status: decision,
+        residentId: residentId,
+        note: note,
       );
-
-      if (res.statusCode == 200) {
-        return ApiResult.success(jsonDecode(res.body) as Map<String, dynamic>);
+      
+      if (result.isSuccess && result.data != null) {
+        return ApiResult.success(result.data!);
+      } else {
+        return ApiResult.failure(result.error?.userMessage ?? "Failed to process decision");
       }
-      return ApiResult.failure("Decision failed: ${res.statusCode} ${res.body}");
     } catch (e) {
       debugPrint("decide error: $e");
-      return ApiResult.failure("Connection error");
+      return ApiResult.failure("Connection error: ${e.toString()}");
     }
   }
 

@@ -113,4 +113,54 @@ class InviteClaimService {
       systemRole: systemRole,
     );
   }
+
+    /// Auto-claim across societies (no societyId needed).
+  /// Uses collectionGroup('invites') and finds email match.
+  Future<InviteClaimResult> claimInviteAuto() async {
+    final user = _auth.currentUser;
+    if (user == null) throw Exception("Not logged in");
+
+    final email = user.email;
+    if (email == null || email.trim().isEmpty) {
+      throw Exception("User has no email");
+    }
+
+    final emailNorm = normalizeEmail(email);
+
+    final qs = await _db
+        .collectionGroup('invites')
+        .where('email', isEqualTo: emailNorm)
+        .where('active', isEqualTo: true)
+        .where('status', isEqualTo: 'pending')
+        .limit(5)
+        .get();
+
+    if (qs.docs.isEmpty) {
+      return InviteClaimResult(claimed: false);
+    }
+
+    final doc = qs.docs.first;
+    final data = doc.data();
+
+    final inviteEmail = (data['email'] ?? '').toString().trim().toLowerCase();
+    if (inviteEmail != emailNorm) {
+      return InviteClaimResult(claimed: false);
+    }
+
+    // Path: societies/{societyId}/invites/{inviteKey}
+    final segments = doc.reference.path.split('/');
+    if (segments.length < 2) {
+      throw Exception("Invalid invite path: ${doc.reference.path}");
+    }
+
+    final societyId = segments[1];
+    if (societyId.trim().isEmpty) {
+      throw Exception("Unable to detect societyId from invite path");
+    }
+
+    return await claimInviteForSociety(societyId: societyId);
+  }
+
+
+
 }

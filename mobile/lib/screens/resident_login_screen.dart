@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 
 import '../core/storage.dart';
 import '../core/app_logger.dart';
-import '../core/env.dart';
-import '../services/resident_service.dart';
+import '../services/firestore_service.dart';
 import '../services/firebase_auth_service.dart';
+import '../services/invite_claim_service.dart';
 
 // UI system
 import '../ui/app_colors.dart';
@@ -24,128 +24,127 @@ class ResidentLoginScreen extends StatefulWidget {
 
 class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _societyIdController = TextEditingController();
-  final _flatNoController = TextEditingController();
-  final _phoneController = TextEditingController();
-
-  late final ResidentService _residentService = ResidentService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
-  );
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   final FirebaseAuthService _authService = FirebaseAuthService();
+  final FirestoreService _firestore = FirestoreService();
   bool _isLoading = false;
+  bool _obscurePassword = true;
 
   @override
   void dispose() {
-    _societyIdController.dispose();
-    _flatNoController.dispose();
-    _phoneController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
   void _handleLogin() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
-    final societyId = _societyIdController.text.trim();
-    final flatNo = _flatNoController.text.trim().toUpperCase();
-    final phone = _phoneController.text.trim();
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
 
     setState(() => _isLoading = true);
-    AppLogger.i("Resident login attempt", data: {
-      "society_id": societyId,
-      "flat_no": flatNo,
-      "has_phone": phone.isNotEmpty,
-    });
+    AppLogger.i("Resident login attempt", data: {"email": email});
 
     try {
-      final result = await _residentService.getProfile(
-        societyId: societyId,
-        flatNo: flatNo,
-        phone: phone.isEmpty ? null : phone,
+      // 1) Firebase Auth sign-in
+      final userCredential = await _authService.signInResidentWithEmail(
+        email: email,
+        password: password,
       );
+
+      final user = userCredential.user;
+      final uid = user?.uid;
+
+      debugPrint("Logged in email: ${user?.email}");
+
+      if (uid == null) {
+        debugPrint("uid is null${uid}");
+
+        throw Exception("Failed to sign in (uid null)");
+      }
+
+      // 2) Get membership
+      Map<String, dynamic>? membership =
+          await _firestore.getCurrentUserMembership();
+        debugPrint("membership : ${membership}");
+      // 3) If membership missing -> attempt invite claim -> retry membership
+      if (membership == null) {
+        AppLogger.w(
+          "Membership not found after login. Trying invite claim...",
+          data: {"uid": uid, "email": email},
+        );
+
+        final claimRes = await InviteClaimService().claimInviteAuto();
+
+        if (!claimRes.claimed) {
+          throw Exception(
+            "No membership found and no pending invite available for this email.",
+          );
+        }
+
+        membership = await _firestore.getCurrentUserMembership();
+        if (membership == null) {
+          throw Exception("Membership still not found after invite claim.");
+        }
+      }
+
+      // 4) Extract membership data
+      final societyId = (membership['societyId'] as String?)?.trim() ?? '';
+      final systemRole = (membership['systemRole'] as String?)?.trim() ?? 'resident';
+      final name = (membership['name'] as String?)?.trim() ?? 'Resident';
+      final flatNo = (membership['flatNo'] as String?)?.trim() ?? '';
+
+      if (societyId.isEmpty) {
+        throw Exception("Membership missing societyId.");
+      }
+
+      if (systemRole != 'resident') {
+        throw Exception("User is not a resident (role=$systemRole).");
+      }
+
+      // 5) Save session
+      await Storage.saveFirebaseSession(
+        uid: uid,
+        societyId: societyId,
+        systemRole: systemRole,
+        name: name,
+      );
+
+      AppLogger.i("Resident session saved successfully");
+
+      setState(() => _isLoading = false);
 
       if (!mounted) return;
 
-      AppLogger.i("Resident login response", data: {
-        "success": result.isSuccess,
-        "error": result.error,
-      });
-
-      if (result.isSuccess && result.data != null) {
-        final data = result.data!;
-        AppLogger.i("Resident profile data received", data: data);
-
-        final String residentId =
-            (data['resident_id'] ?? data['id'] ?? data['residentId'])?.toString() ?? "";
-        final String residentName =
-            (data['resident_name'] ?? data['name'] ?? data['full_name'])?.toString() ?? "Resident";
-        final String realSocietyId =
-            (data['society_id'] ?? data['societyId'])?.toString() ?? societyId;
-        final String realFlatNo =
-            (data['flat_no'] ?? data['flatNo'])?.toString() ?? flatNo;
-
-        if (residentId.isEmpty) {
-          AppLogger.e("Resident profile invalid - missing resident_id");
-          setState(() => _isLoading = false);
-          _showError("Resident profile invalid (missing resident_id).");
-          return;
-        }
-
-        // Step 2: Sign in via Firebase Auth using deterministic email + PIN (phone required)
-        if (phone.isEmpty) {
-          AppLogger.w("Resident login without phone - Firebase Auth sign-in skipped");
-        } else {
-          try {
-            final credential = await _authService.signInResident(
-              societyId: realSocietyId,
-              flatNo: realFlatNo,
-              phone: phone,
-              pin: phone, // For now, phone acts as PIN/password in deterministic account
-            );
-            AppLogger.i("Resident Firebase sign-in successful",
-                data: {'uid': credential.user?.uid, 'societyId': realSocietyId});
-          } catch (e, stackTrace) {
-            AppLogger.e("Resident Firebase sign-in failed (continuing with session only)",
-                error: e, stackTrace: stackTrace);
-          }
-        }
-
-        await Storage.saveResidentSession(
-          residentId: residentId,
-          residentName: residentName,
-          societyId: realSocietyId,
-          flatNo: realFlatNo,
-        );
-
-        AppLogger.i("Resident session saved successfully");
-
-        setState(() => _isLoading = false);
-
-        if (!mounted) return;
-
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ResidentShellScreen(
-              residentId: residentId,
-              residentName: residentName,
-              societyId: realSocietyId,
-              flatNo: realFlatNo,
-            ),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ResidentShellScreen(
+            residentId: uid,
+            residentName: name,
+            societyId: societyId,
+            flatNo: flatNo,
           ),
-        );
-      } else {
-        AppLogger.e("Resident login failed", error: result.error);
-        setState(() => _isLoading = false);
-        _showError(result.error ?? "Resident not found / unauthorized");
-      }
+        ),
+      );
     } catch (e, stackTrace) {
       AppLogger.e("Resident login exception", error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() => _isLoading = false);
-        _showError("Connection error: ${e.toString()}");
+        String errorMsg = "Login failed. Please try again.";
+        if (e.toString().contains('user-not-found')) {
+          errorMsg = "No account found with this email.";
+        } else if (e.toString().contains('wrong-password')) {
+          errorMsg = "Incorrect password. Please try again.";
+        } else if (e.toString().contains('invalid-email')) {
+          errorMsg = "Invalid email address.";
+        } else if (e.toString().contains('No membership found')) {
+          errorMsg = "No membership found. Please contact your society admin.";
+        }
+        _showError(errorMsg);
       }
     }
   }
@@ -228,7 +227,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
               ),
             ),
           ),
-          GlassLoader(show: _isLoading, message: "Verifying Resident…"),
+          GlassLoader(show: _isLoading, message: "Verifying Credentials…"),
         ],
       ),
     );
@@ -305,7 +304,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              "Enter your details",
+              "Enter your credentials",
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -315,44 +314,44 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
             ),
             const SizedBox(height: 28),
             _PremiumField(
-              controller: _societyIdController,
-              label: "Society ID",
-              hint: "e.g. SOC-001",
-              icon: Icons.apartment_rounded,
+              controller: _emailController,
+              label: "Email Address",
+              hint: "e.g. resident@example.com",
+              icon: Icons.email_rounded,
               textInputAction: TextInputAction.next,
+              keyboardType: TextInputType.emailAddress,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return "Please enter your Society ID";
+                  return "Please enter your email";
+                }
+                if (!value.contains('@')) {
+                  return "Please enter a valid email";
                 }
                 return null;
               },
             ),
             const SizedBox(height: 20),
             _PremiumField(
-              controller: _flatNoController,
-              label: "Flat No",
-              hint: "e.g. A-101",
-              icon: Icons.home_rounded,
-              textInputAction: TextInputAction.next,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return "Please enter your Flat No";
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            _PremiumField(
-              controller: _phoneController,
-              label: "Phone / PIN",
-              hint: "e.g. 98765xxxxx",
-              icon: Icons.phone_rounded,
+              controller: _passwordController,
+              label: "Password",
+              hint: "Enter your password",
+              icon: Icons.lock_rounded,
+              obscureText: _obscurePassword,
               textInputAction: TextInputAction.done,
-              keyboardType: TextInputType.phone,
               onSubmitted: (_) => _handleLogin(),
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  color: AppColors.text2,
+                  size: 20,
+                ),
+                onPressed: () {
+                  setState(() => _obscurePassword = !_obscurePassword);
+                },
+              ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return "Please enter your phone/PIN";
+                  return "Please enter your password";
                 }
                 return null;
               },
@@ -363,28 +362,39 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
               child: TextButton(
                 onPressed: _isLoading
                     ? null
-                    : () {
-                        // Deterministic alias email, so we show guidance instead of real reset email.
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                            title: const Text(
-                              "Reset Resident PIN",
-                              style: TextStyle(fontWeight: FontWeight.w900),
-                            ),
-                            content: const Text(
-                              "Please contact your society admin to reset your resident PIN/phone login. "
-                              "For security reasons, PIN reset is handled centrally.",
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text("OK"),
+                    : () async {
+                        final email = _emailController.text.trim();
+                        if (email.isEmpty || !email.contains('@')) {
+                          _showError("Please enter a valid email address first.");
+                          return;
+                        }
+                        try {
+                          await _authService.sendPasswordResetEmail(email: email);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: const Text(
+                                  "Password reset email sent! Check your inbox.",
+                                  style: TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                backgroundColor: AppColors.success,
+                                behavior: SnackBarBehavior.floating,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                margin: const EdgeInsets.all(16),
                               ),
-                            ],
-                          ),
-                        );
+                            );
+                          }
+                        } catch (e) {
+                          if (mounted) {
+                            String errorMsg = "Failed to send reset email.";
+                            if (e.toString().contains('user-not-found')) {
+                              errorMsg = "No account found with this email.";
+                            }
+                            _showError(errorMsg);
+                          }
+                        }
                       },
                 child: const Text(
                   "Forgot password?",
@@ -420,7 +430,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
                   ),
                 ),
                 child: const Text(
-                  "CONTINUE",
+                  "LOGIN",
                   style: TextStyle(
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.2,
@@ -448,6 +458,7 @@ class _PremiumField extends StatelessWidget {
   final ValueChanged<String>? onSubmitted;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
+  final Widget? suffixIcon;
 
   const _PremiumField({
     required this.controller,
@@ -459,6 +470,7 @@ class _PremiumField extends StatelessWidget {
     this.onSubmitted,
     this.keyboardType,
     this.validator,
+    this.suffixIcon,
   });
 
   @override
@@ -511,6 +523,7 @@ class _PremiumField extends StatelessWidget {
                 ),
                 child: Icon(icon, color: AppColors.success, size: 20),
               ),
+              suffixIcon: suffixIcon,
               hintText: hint,
               hintStyle: const TextStyle(
                 color: AppColors.textMuted,

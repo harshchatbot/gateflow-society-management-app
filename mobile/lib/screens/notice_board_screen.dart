@@ -5,6 +5,8 @@ import '../services/notice_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import 'admin_manage_notices_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 /// Notice Board Screen
 /// 
@@ -47,63 +49,180 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   }
 
   Future<void> _loadNotices() async {
-    if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-      _error = null;
+  if (!mounted) return;
+  setState(() {
+    _isLoading = true;
+    _error = null;
+  });
+
+  try {
+    AppLogger.i("Loading notices", data: {
+      "societyId": widget.societyId,
+      "activeOnly": true,
+      "source": "api_first",
     });
 
-    try {
-      AppLogger.i("Loading notices", data: {
+    // 1) Try API first
+    final result = await _service.getNotices(
+      societyId: widget.societyId,
+      activeOnly: true,
+    );
+
+    if (!mounted) return;
+
+    List<dynamic> noticesList = [];
+
+    if (result.isSuccess && result.data != null) {
+      noticesList = result.data!;
+      AppLogger.i("Notices fetched (API)", data: {
+        "count": noticesList.length,
         "societyId": widget.societyId,
-        "activeOnly": true,
       });
+    } else {
+      AppLogger.w("Notices API failed, trying Firestore fallback", error: result.error, data: {
+        "societyId": widget.societyId,
+      });
+    }
+
+    // 2) If API returned empty -> Firestore fallback for demo
+    if (noticesList.isEmpty) {
+      AppLogger.w("API returned 0 notices, using Firestore fallback", data: {
+        "societyId": widget.societyId,
+      });
+
+      // Try to get active notices - handle both 'status' and 'is_active' field names
+      Query query = FirebaseFirestore.instance
+          .collection('societies')
+          .doc(widget.societyId)
+          .collection('notices');
+
+      // Try status field first (new format)
+      Query activeQuery = query.where('status', isEqualTo: 'active');
       
-      final result = await _service.getNotices(
-        societyId: widget.societyId,
-        activeOnly: true, // Only show active notices
-      );
+      QuerySnapshot snap;
+      try {
+        snap = await activeQuery.orderBy('createdAt', descending: true).get();
+      } catch (e) {
+        // If orderBy fails (missing index), try without orderBy
+        AppLogger.w("OrderBy failed, trying without orderBy", error: e);
+        try {
+          snap = await activeQuery.get();
+        } catch (e2) {
+          // If status field doesn't work, try is_active field (old format)
+          AppLogger.w("Status field query failed, trying is_active field", error: e2);
+          snap = await query.where('is_active', isEqualTo: true).get();
+        }
+      }
 
-      if (!mounted) return;
+      // Normalize Firestore docs into the exact shape UI expects
+      noticesList = snap.docs.map((d) {
+        final m = d.data() as Map<String, dynamic>;
 
-      if (result.isSuccess && result.data != null) {
-        final noticesList = result.data!;
-        AppLogger.i("Notices loaded successfully", data: {
-          "count": noticesList.length,
-          "societyId": widget.societyId,
-          "sample_notices": noticesList.take(3).map((n) => {
+        // Check if notice is active (handle both status and is_active fields)
+        final status = (m["status"] ?? "").toString().toLowerCase();
+        final isActive = m["is_active"] == true || status == "active";
+        
+        // Skip inactive notices
+        if (!isActive) {
+          return null;
+        }
+
+        // Check expiry date if present
+        if (m["expiryAt"] != null) {
+          try {
+            Timestamp? expiryTimestamp;
+            if (m["expiryAt"] is Timestamp) {
+              expiryTimestamp = m["expiryAt"] as Timestamp;
+            } else if (m["expiry_date"] != null) {
+              // Try parsing expiry_date string
+              final expiryDate = DateTime.parse(m["expiry_date"].toString());
+              expiryTimestamp = Timestamp.fromDate(expiryDate);
+            }
+            
+            if (expiryTimestamp != null) {
+              final now = Timestamp.now();
+              if (expiryTimestamp.compareTo(now) < 0) {
+                // Notice has expired
+                return null;
+              }
+            }
+          } catch (e) {
+            AppLogger.w("Error checking expiry date", error: e);
+            // Continue if expiry check fails
+          }
+        }
+
+        // Ensure fields used by UI exist
+        String createdAtStr = "";
+        if (m["createdAt"] is Timestamp) {
+          createdAtStr = (m["createdAt"] as Timestamp).toDate().toUtc().toIso8601String();
+        } else if (m["created_at"] != null) {
+          createdAtStr = m["created_at"].toString();
+        } else {
+          createdAtStr = DateTime.now().toUtc().toIso8601String();
+        }
+
+        return <String, dynamic>{
+          "notice_id": (m["notice_id"] ?? m["id"] ?? d.id).toString(),
+          "title": (m["title"] ?? "Untitled").toString(),
+          "content": (m["content"] ?? m["message"] ?? "").toString(),
+          "notice_type": (m["noticeType"] ?? m["notice_type"] ?? "GENERAL").toString().toUpperCase(),
+          "created_at": createdAtStr,
+          "created_by_name": (m["createdByName"] ?? m["created_by_name"] ?? "Society Admin").toString(),
+          "status": (m["status"] ?? "active").toString(),
+        };
+      }).where((notice) => notice != null).cast<Map<String, dynamic>>().toList();
+
+      // Sort newest first (already sorted by Firestore query, but ensure consistency)
+      noticesList.sort((a, b) {
+        final da = (a["created_at"] ?? "").toString();
+        final db = (b["created_at"] ?? "").toString();
+        if (da.isEmpty || db.isEmpty) return 0;
+        try {
+          final dateA = DateTime.parse(da.replaceAll("Z", "+00:00"));
+          final dateB = DateTime.parse(db.replaceAll("Z", "+00:00"));
+          return dateB.compareTo(dateA);
+        } catch (e) {
+          return db.compareTo(da); // Fallback to string comparison
+        }
+      });
+
+      AppLogger.i("Notices fetched (Firestore fallback)", data: {
+        "count": noticesList.length,
+        "societyId": widget.societyId,
+      });
+    }
+
+    // 3) Update UI state
+    AppLogger.i("Notices loaded successfully", data: {
+      "count": noticesList.length,
+      "societyId": widget.societyId,
+      "sample_notices": noticesList.take(3).map((n) => {
             "notice_id": n['notice_id']?.toString() ?? 'N/A',
             "title": n['title']?.toString() ?? 'N/A',
             "notice_type": n['notice_type']?.toString() ?? 'N/A',
             "status": n['status']?.toString() ?? n['is_active']?.toString() ?? 'N/A',
           }).toList(),
-        });
-        setState(() {
-          _notices = noticesList;
-          _isLoading = false;
-        });
-      } else {
-        final errorMsg = result.error ?? "Failed to load notices";
-        AppLogger.w("Failed to load notices", error: errorMsg, data: {
-          "societyId": widget.societyId,
-        });
-        setState(() {
-          _isLoading = false;
-          _error = errorMsg;
-        });
-      }
-    } catch (e, stackTrace) {
-      AppLogger.e("Error loading notices", error: e, stackTrace: stackTrace, data: {
-        "societyId": widget.societyId,
+    });
+
+    if (!mounted) return;
+    setState(() {
+      _notices = noticesList;
+      _isLoading = false;
+    });
+  } catch (e, stackTrace) {
+    AppLogger.e("Error loading notices", error: e, stackTrace: stackTrace, data: {
+      "societyId": widget.societyId,
+    });
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+        _error = "Connection error. Please try again.";
       });
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _error = "Connection error. Please try again.";
-        });
-      }
     }
   }
+}
+
 
   List<dynamic> get _filteredNotices {
     if (_selectedFilter == null) return _notices;
@@ -128,65 +247,49 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
 
   Widget _buildScreen() {
     return Container(
-      color: const Color(0xFFF5F5F5), // Light grey background
+      color: AppColors.surface, // Use AppColors instead of hardcoded
       child: Stack(
         children: [
           Column(
             children: [
-              // Header Section
-              Container(
-                padding: const EdgeInsets.fromLTRB(20, 60, 20, 20),
-                color: Colors.white,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            "Notices",
-                            style: TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              color: AppColors.text,
+              // Header Section with SafeArea
+              SafeArea(
+                bottom: false,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+                  color: Colors.white,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Notices",
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.text,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "Society announcements & updates",
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: AppColors.text2,
-                              fontWeight: FontWeight.w500,
+                            const SizedBox(height: 4),
+                            Text(
+                              "Society announcements & updates",
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: AppColors.text2,
+                                fontWeight: FontWeight.w500,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Action buttons (Refresh + Manage for admins)
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Refresh button (for all users)
-                        IconButton(
-                          icon: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: widget.themeColor.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(
-                              Icons.refresh_rounded,
-                              color: widget.themeColor,
-                              size: 20,
-                            ),
-                          ),
-                          onPressed: _isLoading ? null : _loadNotices,
-                          tooltip: "Refresh",
+                          ],
                         ),
-                        // Manage button (for admins only)
-                        if (widget.adminId != null)
+                      ),
+                      // Action buttons (Refresh + Manage for admins)
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Refresh button (for all users)
                           IconButton(
                             icon: Container(
                               padding: const EdgeInsets.all(8),
@@ -194,28 +297,47 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                                 color: widget.themeColor.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
-                              child: Icon(Icons.edit_note_rounded, color: widget.themeColor, size: 20),
+                              child: Icon(
+                                Icons.refresh_rounded,
+                                color: widget.themeColor,
+                                size: 20,
+                              ),
                             ),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => AdminManageNoticesScreen(
-                                    adminId: widget.adminId!,
-                                    adminName: widget.adminName ?? "Admin",
-                                    societyId: widget.societyId,
-                                  ),
-                                ),
-                              ).then((_) {
-                                // Refresh notices when returning from manage screen
-                                _loadNotices();
-                              });
-                            },
-                            tooltip: "Manage Notices",
+                            onPressed: _isLoading ? null : _loadNotices,
+                            tooltip: "Refresh",
                           ),
-                      ],
-                    ),
-                  ],
+                          // Manage button (for admins only)
+                          if (widget.adminId != null)
+                            IconButton(
+                              icon: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: widget.themeColor.withOpacity(0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(Icons.edit_note_rounded, color: widget.themeColor, size: 20),
+                              ),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => AdminManageNoticesScreen(
+                                      adminId: widget.adminId!,
+                                      adminName: widget.adminName ?? "Admin",
+                                      societyId: widget.societyId,
+                                    ),
+                                  ),
+                                ).then((_) {
+                                  // Refresh notices when returning from manage screen
+                                  _loadNotices();
+                                });
+                              },
+                              tooltip: "Manage Notices",
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
 
@@ -265,6 +387,14 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         isSelected: _selectedFilter == "MAINTENANCE",
                         onTap: () => setState(() => _selectedFilter = "MAINTENANCE"),
                       ),
+                      const SizedBox(width: 12),
+                      _buildFilterChip(
+                        label: "Policy",
+                        icon: Icons.policy_rounded,
+                        filterValue: "POLICY",
+                        isSelected: _selectedFilter == "POLICY",
+                        onTap: () => setState(() => _selectedFilter = "POLICY"),
+                      ),
                     ],
                   ),
                 ),
@@ -293,7 +423,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     }
     
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: AppColors.surface,
       body: content,
     );
   }
@@ -322,8 +452,11 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       } else if (label == "Maintenance") {
         chipColor = const Color(0xFFE3F2FD); // Light blue
         iconColor = const Color(0xFF2196F3); // Blue
+      } else if (label == "Policy") {
+        chipColor = const Color(0xFFF3E5F5); // Light purple
+        iconColor = const Color(0xFF9C27B0); // Purple
       } else {
-        chipColor = const Color(0xFFF5F5F5); // Light grey
+        chipColor = AppColors.surface; // Use AppColors instead of hardcoded
         iconColor = AppColors.text2;
       }
     }
@@ -402,8 +535,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         color: widget.themeColor,
         child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: SizedBox(
-            height: MediaQuery.of(context).size.height * 0.6,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: MediaQuery.of(context).size.height * 0.5,
+            ),
             child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -703,8 +838,9 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF5F5F5),
+                  color: AppColors.surface,
                   borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border.withOpacity(0.3)),
                 ),
                 child: Text(
                   content,
@@ -752,22 +888,35 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   String _formatDateTime(String dateTimeStr) {
     if (dateTimeStr.isEmpty) return "Unknown";
     try {
-      final dt = DateTime.parse(dateTimeStr.replaceAll("Z", "+00:00")).toLocal();
+      // Handle both ISO8601 with Z and without
+      String normalized = dateTimeStr;
+      if (normalized.contains("Z") && !normalized.contains("+") && !normalized.contains("-", 10)) {
+        normalized = normalized.replaceAll("Z", "+00:00");
+      }
+      
+      final dt = DateTime.parse(normalized).toLocal();
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      final yesterday = DateTime(now.year, now.month, now.day - 1);
+      final yesterday = today.subtract(const Duration(days: 1));
       final dateOnly = DateTime(dt.year, dt.month, dt.day);
 
       if (dateOnly == today) {
-        return "Today";
+        // Show time if today
+        final hour = dt.hour;
+        final minute = dt.minute.toString().padLeft(2, '0');
+        final period = hour >= 12 ? 'PM' : 'AM';
+        final displayHour = hour > 12 ? hour - 12 : (hour == 0 ? 12 : hour);
+        return "Today, $displayHour:$minute $period";
       } else if (dateOnly == yesterday) {
         return "Yesterday";
       } else {
-        return "${dt.day}/${dt.month}/${dt.year}";
+        // Show date for older notices
+        final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return "${dt.day} ${months[dt.month - 1]} ${dt.year}";
       }
     } catch (e) {
       AppLogger.e("Error formatting date time", error: e, data: {"dateTimeStr": dateTimeStr});
-      return dateTimeStr;
+      return dateTimeStr.length > 10 ? dateTimeStr.substring(0, 10) : dateTimeStr;
     }
   }
 }

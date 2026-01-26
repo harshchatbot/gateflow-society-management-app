@@ -1,0 +1,67 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    // Helper function to check if user is a guard in the society
+    function isGuardInSociety(societyId) {
+      return isAuthenticated()
+        && exists(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid))
+        && get(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.systemRole == 'guard'
+        && get(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.active == true;
+    }
+    
+    // Visitor photos: societies/{societyId}/visitors/{visitorId}.jpg
+    match /societies/{societyId}/visitors/{visitorId}.jpg {
+      // Guards can upload visitor photos
+      allow write: if isGuardInSociety(societyId)
+        && request.resource.size < 5 * 1024 * 1024 // 5MB limit
+        && request.resource.contentType.matches('image/.*');
+      
+      // All authenticated members of the society can read visitor photos
+      allow read: if isAuthenticated()
+        && exists(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid))
+        && get(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.active == true;
+    }
+    
+    // Admin profile images: societies/{societyId}/admins/{adminId}.jpg
+    match /societies/{societyId}/admins/{adminId}.jpg {
+      // Admins can upload their own profile images
+      allow write: if isAuthenticated()
+        && request.auth.uid == adminId
+        && exists(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid))
+        && get(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.systemRole in ['admin', 'super_admin']
+        && request.resource.size < 2 * 1024 * 1024 // 2MB limit
+        && request.resource.contentType.matches('image/.*');
+      
+      // All authenticated members can read admin profile images
+      allow read: if isAuthenticated()
+        && exists(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid))
+        && get(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.active == true;
+    }
+    
+    // Resident profile images: societies/{societyId}/residents/{residentId}.jpg
+    match /societies/{societyId}/residents/{residentId}.jpg {
+      // Residents can upload their own profile images
+      allow write: if isAuthenticated()
+        && request.auth.uid == residentId
+        && exists(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid))
+        && get(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.systemRole == 'resident'
+        && request.resource.size < 2 * 1024 * 1024 // 2MB limit
+        && request.resource.contentType.matches('image/.*');
+      
+      // All authenticated members can read resident profile images
+      allow read: if isAuthenticated()
+        && exists(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid))
+        && get(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.active == true;
+    }
+    
+    // Default deny all other paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

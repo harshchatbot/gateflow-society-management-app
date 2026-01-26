@@ -8,7 +8,7 @@ import '../core/app_logger.dart';
 import '../core/app_error.dart';
 import '../core/storage.dart';
 import '../models/visitor.dart';
-import '../services/visitor_service.dart';
+import '../services/firebase_visitor_service.dart';
 
 import 'guard_login_screen.dart';
 
@@ -39,7 +39,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   // Controllers
   final _flatNoController = TextEditingController();
   final _visitorPhoneController = TextEditingController();
-  final _visitorService = VisitorService();
+  final _visitorService = FirebaseVisitorService();
   late ConfettiController _confettiController;
 
   final ImagePicker _picker = ImagePicker();
@@ -75,17 +75,17 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
     final result = (_visitorPhoto != null)
         ? await _visitorService.createVisitorWithPhoto(
+            societyId: widget.societyId,
             flatNo: _flatNoController.text.trim(),
             visitorType: _selectedVisitorType,
             visitorPhone: _visitorPhoneController.text.trim(),
-            guardId: widget.guardId,
             photoFile: _visitorPhoto!,
           )
         : await _visitorService.createVisitor(
+            societyId: widget.societyId,
             flatNo: _flatNoController.text.trim(),
             visitorType: _selectedVisitorType,
             visitorPhone: _visitorPhoneController.text.trim(),
-            guardId: widget.guardId,
           );
 
     if (!mounted) return;
@@ -348,7 +348,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
           const Text("Notification Sent!", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
           const Text("Resident has been alerted.", style: TextStyle(color: AppColors.text2)),
           const Divider(height: 32),
-          _buildInfoRow("Flat Number", v.flatId),
+          _buildInfoRow("Flat Number", v.flatNo),
           _buildInfoRow("Category", v.visitorType),
           _buildInfoRow("Status", v.status, isStatus: true),
           const SizedBox(height: 24),

@@ -4,6 +4,13 @@ service cloud.firestore {
 
     function signedIn() { return request.auth != null; }
 
+    // Helper: auth email lowercased (for invite matching)
+    function myEmail() {
+      return request.auth.token.email != null
+        ? request.auth.token.email.lower()
+        : "";
+    }
+
     // =========================
     // ROOT POINTER: members/{uid}
     // Used to resolve societyId WITHOUT collectionGroup queries
@@ -95,13 +102,22 @@ service cloud.firestore {
       // societies/{societyId}/invites/{inviteKey}
       // ------------------------
       match /invites/{inviteKey} {
-
-        // Admin can read all invites
-        // Invited user can read their own invite (by email match)
-        allow read: if isAdmin(societyId)
+        // ✅ Allow reads:
+        // - Direct access (get): Admin of this society OR email match
+        // - CollectionGroup queries (list): Email match only (societyId not available in collectionGroup context)
+        allow get: if isAdmin(societyId)
           || (signedIn()
               && request.auth.token.email != null
-              && resource.data.email == request.auth.token.email);
+              && resource.data.email is string
+              && resource.data.email.lower() == myEmail());
+        
+        // ✅ CollectionGroup queries: Only email-based access (no societyId context)
+        // Firestore evaluates this for each document - email must match user's email
+        // Query filters handle active/status, rule only needs to check email match
+        allow list: if signedIn()
+          && request.auth.token.email != null
+          && resource.data.email is string
+          && resource.data.email.lower() == myEmail();
 
         // Admin creates invites ONLY
         allow create: if isAdmin(societyId)
@@ -111,18 +127,19 @@ service cloud.firestore {
           && request.resource.data.systemRole in ["guard", "resident", "admin", "super_admin"];
 
         // ✅ Claim invite: ONLY invited user can mark pending -> claimed
-        // NOTE: this rule is strict and matches your claim batch update.
         allow update: if signedIn()
           && request.auth.token.email != null
           && resource.data.status == "pending"
           && resource.data.active == true
-          && resource.data.email == request.auth.token.email
+          && resource.data.email is string
+          && resource.data.email.lower() == myEmail()
           && request.resource.data.status == "claimed"
           && request.resource.data.claimedByUid == request.auth.uid;
 
         // Optional: admin cleanup
         allow delete: if isAdmin(societyId);
       }
+
 
       // ------------------------
       // Notices (admin writes, members read)
@@ -143,11 +160,31 @@ service cloud.firestore {
 
       // ------------------------
       // Visitors
-      // (keep as you had: only admin writes; members read)
+      // Guards can create visitors, all members can read
+      // Residents can update status (approve/reject) for their flat's visitors
       // ------------------------
       match /visitors/{id} {
         allow read: if activeMember(societyId);
-        allow create, update, delete: if isAdmin(societyId);
+        // Guards can create visitors
+        allow create: if activeMember(societyId)
+          && member(societyId).data.systemRole == "guard"
+          && request.resource.data.guard_uid == request.auth.uid
+          && request.resource.data.status == "PENDING";
+        // Residents can update visitor status (approve/reject) for visitors to their flat
+        allow update: if activeMember(societyId)
+          && (
+            // Admin can update any visitor
+            isAdmin(societyId)
+            // OR resident can update visitors to their flat (case-insensitive comparison)
+            || (
+              member(societyId).data.systemRole == "resident"
+              && resource.data.flat_no.upper() == member(societyId).data.flatNo.upper()
+              && request.resource.data.status in ["APPROVED", "REJECTED"]
+              && request.resource.data.approved_by == request.auth.uid
+            )
+          );
+        // Only admin can delete visitors
+        allow delete: if isAdmin(societyId);
       }
 
       // ------------------------

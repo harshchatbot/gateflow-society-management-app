@@ -5,6 +5,7 @@ Visitor API routes
 import os
 import uuid
 from typing import Optional
+from fastapi import Header
 
 from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form
 
@@ -191,20 +192,27 @@ async def create_visitor(request: VisitorCreateRequest):
         )
 
 
+
+
+
 @router.post(
     "/with-photo",
     response_model=VisitorResponse,
     status_code=status.HTTP_201_CREATED,
-    summary="Create visitor entry with photo",
-    description="Create a new visitor entry with a captured visitor photo (multipart/form-data).",
 )
 async def create_visitor_with_photo(
     flat_id: Optional[str] = Form(default=None),
     flat_no: Optional[str] = Form(default=None),
     visitor_type: str = Form(...),
     visitor_phone: str = Form(...),
+
+    # keep for backward compatibility, but we'll stop trusting it
     guard_id: str = Form(...),
+
     photo: UploadFile = File(...),
+
+    # ✅ NEW: read Authorization header
+    authorization: Optional[str] = Header(default=None),
 ):
     visitor_service = get_visitor_service()
 
@@ -213,6 +221,9 @@ async def create_visitor_with_photo(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Either flat_id or flat_no is required (e.g., flat_no='A-101').",
         )
+
+    # ✅ TEMP LOG (remove later)
+    logger.info(f"AUTH HEADER PRESENT? {bool(authorization)}")
 
     try:
         logger.info(
@@ -229,12 +240,15 @@ async def create_visitor_with_photo(
             ext = ".jpg"
 
         filename = f"{uuid.uuid4().hex}{ext}"
-        rel_path = f"visitors/{filename}"
+        rel_path = f"visitors/{filename}"   # ✅ MAKE SURE THIS EXISTS
         file_path = os.path.join("uploads", rel_path)
 
         async with aiofiles.open(file_path, "wb") as f:
             content = await photo.read()
             await f.write(content)
+
+
+        # ... keep your photo save code exactly same ...
 
         visitor = visitor_service.create_visitor_with_photo(
             flat_id=flat_id,
@@ -245,15 +259,7 @@ async def create_visitor_with_photo(
             photo_path=rel_path,
         )
 
-        # ✅ WhatsApp send (best-effort, non-breaking)
-        await _best_effort_send_whatsapp_approval(
-            visitor_service=visitor_service,
-            society_id=visitor.society_id,
-            flat_id=flat_id,
-            flat_no=flat_no,
-            visitor=visitor,
-        )
-
+        # ...
         return visitor
 
     except HTTPException:
@@ -265,6 +271,7 @@ async def create_visitor_with_photo(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create visitor entry with photo: {str(e)}",
         )
+
 
 
 @router.get("/today/{guard_id}", response_model=VisitorListResponse)

@@ -13,6 +13,12 @@ import '../ui/app_icons.dart';
 import 'guard_shell_screen.dart';
 import 'role_select_screen.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
+import '../services/invite_claim_service.dart'; // <-- adjust path as per your project
+import 'package:firebase_auth/firebase_auth.dart';
+
+
 class GuardLoginScreen extends StatefulWidget {
   const GuardLoginScreen({super.key});
 
@@ -36,10 +42,10 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
     super.dispose();
   }
 
+
+  
   void _handleLogin() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
@@ -48,31 +54,68 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
     AppLogger.i("Guard login attempt", data: {"email": email});
 
     try {
-      // Step 1: Sign in with Firebase Auth
+      // 1) Firebase Auth sign-in
       final userCredential = await _authService.signInAdmin(
         email: email,
         password: password,
       );
-      final uid = userCredential.user?.uid;
+
+      final user = userCredential.user;
+      final uid = user?.uid;
+
+      debugPrint("Logged in email: ${user?.email}");
+
       if (uid == null) {
-        throw Exception("Failed to sign in");
+        throw Exception("Failed to sign in (uid null)");
       }
 
-      // Step 2: Get membership from Firestore
-      final membership = await _firestore.getCurrentUserMembership();
+      // 2) Get membership
+      Map<String, dynamic>? membership =
+          await _firestore.getCurrentUserMembership();
+
+      // 3) If membership missing -> attempt invite claim -> retry membership
       if (membership == null) {
-        throw Exception("User membership not found");
+        AppLogger.w(
+          "Membership not found after login. Trying invite claim...",
+          data: {"uid": uid, "email": email},
+        );
+
+        // ✅ If you already added claimInviteAuto()
+        final claimRes = await InviteClaimService().claimInviteAuto();
+
+        // ❗If you DON'T have claimInviteAuto yet, comment the above line
+        // and use one of these instead:
+        //
+        // final claimRes = await InviteClaimService().claimInviteForSociety(
+        //   societyId: "<KNOWN_SOCIETY_ID>",
+        // );
+
+        if (!claimRes.claimed) {
+          throw Exception(
+            "No membership found and no pending invite available for this email.",
+          );
+        }
+
+        membership = await _firestore.getCurrentUserMembership();
+        if (membership == null) {
+          throw Exception("Membership still not found after invite claim.");
+        }
       }
 
-      final societyId = membership['societyId'] as String;
-      final systemRole = membership['systemRole'] as String? ?? 'guard';
-      final name = membership['name'] as String? ?? 'Guard';
+      // 4) Extract membership data
+      final societyId = (membership['societyId'] as String?)?.trim() ?? '';
+      final systemRole = (membership['systemRole'] as String?)?.trim() ?? 'guard';
+      final name = (membership['name'] as String?)?.trim() ?? 'Guard';
+
+      if (societyId.isEmpty) {
+        throw Exception("Membership missing societyId.");
+      }
 
       if (systemRole != 'guard') {
-        throw Exception("User is not a guard");
+        throw Exception("User is not a guard (role=$systemRole).");
       }
 
-      // Step 3: Save Firebase session
+      // 5) Save session
       await Storage.saveFirebaseSession(
         uid: uid,
         societyId: societyId,
@@ -80,9 +123,8 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
         name: name,
       );
 
-      // Also save guard session for backward compatibility
       await Storage.saveGuardSession(
-        guardId: uid, // Use UID as guardId
+        guardId: uid,
         guardName: name,
         societyId: societyId,
       );
@@ -91,36 +133,61 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
         'uid': uid,
         'societyId': societyId,
         'name': name,
+        'role': systemRole,
       });
 
-      setState(() => _isLoading = false);
-
       if (!mounted) return;
+      setState(() => _isLoading = false);
 
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
           builder: (_) => GuardShellScreen(
-            guardId: uid, // Use UID as guardId
+            guardId: uid,
             guardName: name,
             societyId: societyId,
           ),
         ),
       );
+    } on FirebaseAuthException catch (e, stackTrace) {
+      AppLogger.e("FirebaseAuthException", error: e, stackTrace: stackTrace);
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      String errorMsg = "Login failed. Please check your credentials.";
+      if (e.code == 'user-not-found' || e.code == 'wrong-password') {
+        errorMsg = "Invalid email or password.";
+      } else if (e.code == 'network-request-failed') {
+        errorMsg = "Network error. Please check your connection.";
+      }
+
+      _showError(errorMsg);
     } catch (e, stackTrace) {
       AppLogger.e("Guard login exception", error: e, stackTrace: stackTrace);
-      if (mounted) {
-        setState(() => _isLoading = false);
-        String errorMsg = "Login failed. Please check your credentials.";
-        if (e.toString().contains('user-not-found') || e.toString().contains('wrong-password')) {
-          errorMsg = "Invalid email or password.";
-        } else if (e.toString().contains('network')) {
-          errorMsg = "Network error. Please check your connection.";
-        }
-        _showError(errorMsg);
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      final msg = e.toString().toLowerCase();
+      String errorMsg;
+
+      if (msg.contains("no membership") || msg.contains("invite")) {
+        errorMsg =
+            "Your account is not linked to any society yet.\nAsk the admin to add your invite.";
+      } else if (msg.contains("network")) {
+        errorMsg = "Network error. Please check your connection.";
+      } else if (msg.contains("not a guard")) {
+        errorMsg = "This login is only for guards.";
+      } else {
+        errorMsg = "Login failed. Please try again.";
       }
+
+      _showError(errorMsg);
     }
   }
+
+
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(

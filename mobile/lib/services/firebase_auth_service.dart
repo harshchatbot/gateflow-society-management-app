@@ -161,7 +161,7 @@ class FirebaseAuthService {
     }
   }
 
-  /// Sign in resident (using deterministic email)
+  /// Sign in resident (using deterministic email - legacy method)
   Future<UserCredential> signInResident({
     required String societyId,
     required String flatNo,
@@ -174,6 +174,25 @@ class FirebaseAuthService {
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: pin,
+      );
+      AppLogger.i('Resident signed in', data: {'uid': credential.user?.uid});
+      return credential;
+    } catch (e, stackTrace) {
+      AppLogger.e('Error signing in resident', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Sign in resident with email and password (new method)
+  Future<UserCredential> signInResidentWithEmail({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      AppLogger.i('Signing in resident', data: {'email': email});
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
       );
       AppLogger.i('Resident signed in', data: {'uid': credential.user?.uid});
       return credential;
