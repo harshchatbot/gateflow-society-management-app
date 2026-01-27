@@ -120,13 +120,17 @@ service cloud.firestore {
         allow read: if signedIn()
           && (uid == request.auth.uid || isAdmin(societyId));
 
-        // Update: member can update self; admin can update all
         // Update:
         // - Self can update own member doc even if inactive (profile-only)
         // - Admin can update any member (approval, role, etc.)
         allow update: if signedIn() && (
-          // Self update (even if inactive) — but cannot change role or active
+          // Guards: allow self-profile updates (phone/email/photo/shift) without strict role checks
           (
+            uid == request.auth.uid
+            && member(societyId).data.systemRole == "guard"
+          )
+          // Other roles: Self update (even if inactive) — but cannot change role or active
+          || (
             uid == request.auth.uid
             && request.resource.data.uid == resource.data.uid
             && request.resource.data.societyId == resource.data.societyId

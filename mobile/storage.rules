@@ -43,6 +43,20 @@ service firebase.storage {
         && get(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.active == true;
     }
     
+    // Guard profile images: societies/{societyId}/guards/{guardId}.jpg
+    match /societies/{societyId}/guards/{guardId}.jpg {
+      // Guards can upload their own profile images
+      allow write: if isGuardInSociety(societyId)
+        && request.auth.uid == guardId
+        && request.resource.size < 2 * 1024 * 1024 // 2MB limit
+        && request.resource.contentType.matches('image/.*');
+      
+      // All authenticated members can read guard profile images
+      allow read: if isAuthenticated()
+        && exists(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid))
+        && get(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.active == true;
+    }
+    
     // Resident profile images: societies/{societyId}/residents/{residentId}.jpg
     match /societies/{societyId}/residents/{residentId}.jpg {
       // Residents can upload their own profile images

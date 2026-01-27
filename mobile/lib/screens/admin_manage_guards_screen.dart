@@ -1,4 +1,13 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:path_provider/path_provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:uuid/uuid.dart';
+
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
 import '../services/admin_service.dart';
@@ -162,6 +171,20 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
         ),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.admin.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.qr_code_rounded, color: AppColors.admin, size: 20),
+            ),
+            onPressed: () {
+              _showGuardJoinQr(context);
+            },
+          ),
+          const SizedBox(width: 4),
           IconButton(
             icon: Container(
               padding: const EdgeInsets.all(8),
@@ -621,5 +644,168 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
         ],
       ),
     );
+  }
+
+  void _showGuardJoinQr(BuildContext context) {
+    final expiry = DateTime.now().add(const Duration(hours: 1));
+
+    final payload = jsonEncode({
+      'type': 'guard_join_v1',
+      'societyId': widget.societyId,
+      'exp': expiry.millisecondsSinceEpoch,
+    });
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const Text(
+                "Guard Join QR",
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.text,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "Ask the guard to scan this QR from the Guard app within 24 hours.",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.text2,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.05),
+                      blurRadius: 20,
+                      offset: const Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: QrImageView(
+                  data: payload,
+                  version: QrVersions.auto,
+                  size: 220,
+                  backgroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "Valid until: ${expiry.toLocal()}",
+                style: TextStyle(
+                  color: AppColors.text2,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: AppColors.border),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: const Text(
+                        "Close",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.text2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await _shareGuardJoinQr(payload);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.admin,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.ios_share_rounded, size: 18),
+                      label: const Text(
+                        "Share QR",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _shareGuardJoinQr(String payload) async {
+    try {
+      final qrPainter = QrPainter(
+        data: payload,
+        version: QrVersions.auto,
+        gapless: true,
+        color: Colors.black,
+        emptyColor: Colors.white,
+      );
+
+      final imageData = await qrPainter.toImageData(
+        800,
+        format: ui.ImageByteFormat.png,
+      );
+      if (imageData == null) return;
+
+      final bytes = imageData.buffer.asUint8List();
+      final tmpDir = await getTemporaryDirectory();
+      final file = File('${tmpDir.path}/guard_join_qr.png');
+      await file.writeAsBytes(bytes);
+
+      await Share.shareXFiles(
+        [XFile(file.path)],
+        text: 'Guard Join QR for society ${widget.societyId}',
+      );
+    } catch (e, st) {
+      AppLogger.e("Share Guard Join QR failed", error: e, stackTrace: st);
+    }
   }
 }

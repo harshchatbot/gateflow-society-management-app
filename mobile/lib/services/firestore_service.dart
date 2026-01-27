@@ -153,6 +153,8 @@ class FirestoreService {
     String? phone,
     String? email,
     String? flatNo,
+    String? photoUrl,
+    String? shiftTimings,
     bool active = true,
   }) async {
   try {
@@ -168,6 +170,8 @@ class FirestoreService {
       'phone': phone,
       'email': email,
       'flatNo': flatNo,
+      'photoUrl': photoUrl,
+      'shiftTimings': shiftTimings,
       'active': active,
 
       // ✅ createdAt should not be overwritten repeatedly
@@ -923,6 +927,38 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         'resident_phone': data['phone'] ?? data['mobile'],
       };
     }).toList();
+  }
+
+  // ============================================
+  // GUARD PROFILE HELPERS
+  // ============================================
+
+  Future<void> updateGuardProfile({
+    required String societyId,
+    required String uid,
+    String? phone,
+    String? email,
+    String? photoUrl,
+    String? shiftTimings,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      if (phone != null) data['phone'] = phone;
+      if (email != null) data['email'] = email;
+      if (photoUrl != null) data['photoUrl'] = photoUrl;
+      if (shiftTimings != null) data['shiftTimings'] = shiftTimings;
+
+      await _memberRef(societyId, uid).update(data);
+      AppLogger.i('Guard profile updated', data: {
+        'societyId': societyId,
+        'uid': uid,
+      });
+    } catch (e, st) {
+      AppLogger.e('Error updating guard profile', error: e, stackTrace: st);
+      rethrow;
+    }
   }
 
 

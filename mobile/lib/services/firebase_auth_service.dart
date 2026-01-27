@@ -86,6 +86,18 @@ class FirebaseAuthService {
     return 'guard_${societyId}_$guardId@gateflow.local';
   }
 
+  /// Derive auth email for guard from a username (phone or email)
+  /// - If username contains '@' => treat as normal email (lowercased)
+  /// - Else => treat as phone and map to synthetic email
+  static String getGuardEmailFromUsername(String username) {
+    final raw = username.trim();
+    if (raw.contains('@')) {
+      return raw.toLowerCase();
+    }
+    final normalizedPhone = raw.replaceAll(RegExp(r'[^\d]'), '');
+    return 'guard_phone_$normalizedPhone@gateflow.local';
+  }
+
   /// Generate deterministic email for resident
   static String getResidentEmail({
     required String societyId,
@@ -118,6 +130,29 @@ class FirebaseAuthService {
     }
   }
 
+  /// Create guard account using a username (phone or email) + PIN
+  Future<UserCredential> createGuardAccountWithUsername({
+    required String username,
+    required String pin,
+  }) async {
+    try {
+      final email = getGuardEmailFromUsername(username);
+      AppLogger.i('Creating guard account (username)', data: {'email': email});
+      final credential = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: pin,
+      );
+      AppLogger.i('Guard account created (username)', data: {'uid': credential.user?.uid});
+      return credential;
+    } on FirebaseAuthException catch (e, st) {
+      AppLogger.e('Error creating guard account (username)', error: e, stackTrace: st);
+      rethrow;
+    } catch (e, st) {
+      AppLogger.e('Unknown error creating guard account (username)', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
   /// Sign in guard (using deterministic email)
   Future<UserCredential> signInGuard({
     required String societyId,
@@ -135,6 +170,26 @@ class FirebaseAuthService {
       return credential;
     } catch (e, stackTrace) {
       AppLogger.e('Error signing in guard', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Sign in guard using username (phone or email) + PIN
+  Future<UserCredential> signInGuardWithUsername({
+    required String username,
+    required String pin,
+  }) async {
+    try {
+      final email = getGuardEmailFromUsername(username);
+      AppLogger.i('Signing in guard (username)', data: {'email': email});
+      final credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: pin,
+      );
+      AppLogger.i('Guard signed in (username)', data: {'uid': credential.user?.uid});
+      return credential;
+    } catch (e, stackTrace) {
+      AppLogger.e('Error signing in guard (username)', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }

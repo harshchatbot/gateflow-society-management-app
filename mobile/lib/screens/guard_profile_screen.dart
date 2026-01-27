@@ -1,7 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:image_picker/image_picker.dart';
+
 import '../ui/app_colors.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
+import '../services/firestore_service.dart';
 import 'role_select_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -22,6 +29,53 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isOnDuty = true; // Duty Status Toggle
+  bool _isLoadingProfile = true;
+  String? _photoUrl;
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _shiftController = TextEditingController();
+  final TextEditingController _newPinController = TextEditingController();
+  final TextEditingController _confirmPinController = TextEditingController();
+  XFile? _localSelfie;
+  final _firestore = FirestoreService();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfile();
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _phoneController.dispose();
+    _shiftController.dispose();
+    _newPinController.dispose();
+    _confirmPinController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadProfile() async {
+    try {
+      final membership = await _firestore.getCurrentUserMembership();
+      if (membership != null && membership['uid'] == widget.guardId) {
+        setState(() {
+          _photoUrl = membership['photoUrl'] as String?;
+          _emailController.text = (membership['email'] ?? '') as String;
+          _phoneController.text = (membership['phone'] ?? '') as String;
+          _shiftController.text = (membership['shiftTimings'] ?? '') as String;
+        });
+      }
+    } catch (e, st) {
+      AppLogger.e("Load guard profile failed", error: e, stackTrace: st);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoadingProfile = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -47,10 +101,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const SizedBox(height: 40),
-                    const CircleAvatar(
-                      radius: 45,
-                      backgroundColor: Colors.white24,
-                      child: Icon(Icons.person, size: 50, color: Colors.white),
+                    GestureDetector(
+                      onTap: _pickAndUploadSelfie,
+                      child: CircleAvatar(
+                        radius: 45,
+                        backgroundColor: Colors.white24,
+                        backgroundImage: _localSelfie != null
+                            ? FileImage(File(_localSelfie!.path))
+                            : (_photoUrl != null && _photoUrl!.isNotEmpty
+                                ? NetworkImage(_photoUrl!)
+                                : null) as ImageProvider<Object>?,
+                        child: _localSelfie == null && (_photoUrl == null || _photoUrl!.isEmpty)
+                            ? const Icon(Icons.person, size: 50, color: Colors.white)
+                            : null,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -72,12 +136,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.all(20),
               child: Column(
                 children: [
+                  // 0. Account summary
+                  _buildAccountInfoSection(),
+                  const SizedBox(height: 20),
+
                   // 1. Duty Status & Shift Card
                   _buildDutyCard(),
                   const SizedBox(height: 20),
 
                   // 2. Performance Stats (Leaderboard Style)
                   _buildPerformanceStats(),
+                  const SizedBox(height: 25),
+
+                  // Profile & Contact
+                  _buildProfileForm(),
+                  const SizedBox(height: 25),
+
+                  // Password
+                  _buildPasswordCard(),
                   const SizedBox(height: 25),
 
                   // 3. Operational Tasks Grid
@@ -130,6 +206,376 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildAccountInfoSection() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withOpacity(0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(
+                  Icons.info_rounded,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
+                "Account Information",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.text,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _buildInfoRow(
+            icon: Icons.person_rounded,
+            label: "Name",
+            value: widget.guardName,
+          ),
+          const Divider(height: 24),
+          _buildInfoRow(
+            icon: Icons.badge_rounded,
+            label: "Guard ID",
+            value: widget.guardId,
+          ),
+          const Divider(height: 24),
+          _buildInfoRow(
+            icon: Icons.apartment_rounded,
+            label: "Society ID",
+            value: widget.societyId,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withOpacity(0.12),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Icon(icon, size: 20, color: AppColors.primary),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.text2,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: AppColors.text,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfileForm() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Contact & Shift",
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              color: AppColors.text,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _emailController,
+            decoration: const InputDecoration(
+              labelText: "Email",
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _phoneController,
+            decoration: const InputDecoration(
+              labelText: "Phone",
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _shiftController,
+            decoration: const InputDecoration(
+              labelText: "Shift timings (e.g. 8am–4pm)",
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: ElevatedButton(
+              onPressed: _saveProfile,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                "Save Profile",
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPasswordCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Change Password",
+            style: TextStyle(
+              fontWeight: FontWeight.w900,
+              fontSize: 16,
+              color: AppColors.text,
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _newPinController,
+            keyboardType: TextInputType.number,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: "New 4–6 digit password",
+            ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _confirmPinController,
+            keyboardType: TextInputType.number,
+            obscureText: true,
+            decoration: const InputDecoration(
+              labelText: "Confirm password",
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: OutlinedButton(
+              onPressed: _changePassword,
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppColors.primary),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: const Text(
+                "Update Password",
+                style: TextStyle(
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveProfile() async {
+    try {
+      await _firestore.updateGuardProfile(
+        societyId: widget.societyId,
+        uid: widget.guardId,
+        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
+        shiftTimings: _shiftController.text.trim().isEmpty ? null : _shiftController.text.trim(),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Profile updated",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        );
+      }
+    } catch (e, st) {
+      AppLogger.e("Save guard profile failed", error: e, stackTrace: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Failed to update profile",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickAndUploadSelfie() async {
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
+      if (picked == null) return;
+
+      setState(() {
+        _localSelfie = picked;
+      });
+
+      final storage = FirebaseStorage.instance;
+      final ref = storage.ref().child('societies/${widget.societyId}/guards/${widget.guardId}.jpg');
+      final file = File(picked.path);
+      final task = await ref.putFile(file);
+      final url = await task.ref.getDownloadURL();
+
+      await _firestore.updateGuardProfile(
+        societyId: widget.societyId,
+        uid: widget.guardId,
+        photoUrl: url,
+      );
+
+      setState(() {
+        _photoUrl = url;
+      });
+    } catch (e, st) {
+      AppLogger.e("Upload guard selfie failed", error: e, stackTrace: st);
+    }
+  }
+
+  Future<void> _changePassword() async {
+    final newPin = _newPinController.text.trim();
+    final confirm = _confirmPinController.text.trim();
+
+    if (newPin.length < 4 || newPin.length > 6 || int.tryParse(newPin) == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Password must be 4–6 digits",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+    if (newPin != confirm) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            "Passwords do not match",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) {
+        throw Exception("Not signed in");
+      }
+      await user.updatePassword(newPin);
+      _newPinController.clear();
+      _confirmPinController.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Password updated",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+        );
+      }
+    } catch (e, st) {
+      AppLogger.e("Update guard password failed", error: e, stackTrace: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Failed to update password. Please login again and retry.",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+    }
   }
 
   Widget _buildPerformanceStats() {

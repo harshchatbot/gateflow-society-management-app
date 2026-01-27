@@ -12,6 +12,7 @@ import '../ui/app_icons.dart';
 
 import 'guard_shell_screen.dart';
 import 'role_select_screen.dart';
+import 'guard_join_screen.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -28,7 +29,7 @@ class GuardLoginScreen extends StatefulWidget {
 
 class _GuardLoginScreenState extends State<GuardLoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   final FirebaseAuthService _authService = FirebaseAuthService();
   final FirestoreService _firestore = FirestoreService();
@@ -37,7 +38,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
 
   @override
   void dispose() {
-    _emailController.dispose();
+    _usernameController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -47,17 +48,17 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
   void _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final email = _emailController.text.trim();
+    final username = _usernameController.text.trim();
     final password = _passwordController.text.trim();
 
     setState(() => _isLoading = true);
-    AppLogger.i("Guard login attempt", data: {"email": email});
+    AppLogger.i("Guard login attempt", data: {"username": username});
 
     try {
-      // 1) Firebase Auth sign-in
-      final userCredential = await _authService.signInAdmin(
-        email: email,
-        password: password,
+      // 1) Firebase Auth sign-in using username (phone or email)
+      final userCredential = await _authService.signInGuardWithUsername(
+        username: username,
+        pin: password,
       );
 
       final user = userCredential.user;
@@ -77,7 +78,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
       if (membership == null) {
         AppLogger.w(
           "Membership not found after login. Trying invite claim...",
-          data: {"uid": uid, "email": email},
+          data: {"uid": uid, "username": username},
         );
 
         // ✅ If you already added claimInviteAuto()
@@ -354,18 +355,15 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
             ),
             const SizedBox(height: 28),
             _PremiumField(
-              controller: _emailController,
-              label: "Email Address",
-              hint: "e.g. guard@example.com",
-              icon: Icons.email_rounded,
+              controller: _usernameController,
+              label: "Phone or Email",
+              hint: "e.g. 9876543210 or guard@example.com",
+              icon: Icons.person_rounded,
               textInputAction: TextInputAction.next,
-              keyboardType: TextInputType.emailAddress,
+              keyboardType: TextInputType.text,
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return "Please enter your email";
-                }
-                if (!value.contains('@')) {
-                  return "Please enter a valid email";
+                  return "Please enter phone or email";
                 }
                 return null;
               },
@@ -403,13 +401,13 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                 onPressed: _isLoading
                     ? null
                     : () async {
-                        final email = _emailController.text.trim();
-                        if (email.isEmpty || !email.contains('@')) {
-                          _showError("Please enter a valid email address first.");
+                        final username = _usernameController.text.trim();
+                        if (username.isEmpty || !username.contains('@')) {
+                          _showError("Please enter a valid email address first to reset password.");
                           return;
                         }
                         try {
-                          await _authService.sendPasswordResetEmail(email: email);
+                          await _authService.sendPasswordResetEmail(email: username.trim());
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -483,6 +481,32 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                     letterSpacing: 1.2,
                     fontSize: 16,
                   ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: _isLoading
+                  ? null
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const GuardJoinScreen(),
+                        ),
+                      );
+                    },
+              icon: const Icon(
+                Icons.qr_code_scanner_rounded,
+                size: 18,
+                color: AppColors.primary,
+              ),
+              label: const Text(
+                "Join as Guard (Scan QR)",
+                style: TextStyle(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
                 ),
               ),
             ),
