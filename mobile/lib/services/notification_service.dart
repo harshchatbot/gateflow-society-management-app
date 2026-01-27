@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
 import '../core/app_logger.dart';
 import '../core/storage.dart';
 
@@ -21,10 +24,17 @@ class NotificationService {
   
   // Callback for when notification is received (to update counts)
   Function(Map<String, dynamic>)? _onNotificationReceived;
+  // Callback for when notification is tapped (for navigation)
+  Function(Map<String, dynamic>)? _onNotificationTap;
   
   /// Set callback for notification received
   void setOnNotificationReceived(Function(Map<String, dynamic>) callback) {
     _onNotificationReceived = callback;
+  }
+
+  /// Set callback for notification tap
+  void setOnNotificationTap(Function(Map<String, dynamic>) callback) {
+    _onNotificationTap = callback;
   }
 
   /// Initialize notification service
@@ -71,14 +81,13 @@ class NotificationService {
         return;
       }
 
-      // Create Android notification channel with sound BEFORE initializing
+      // Create Android notification channel BEFORE initializing
       const androidChannel = AndroidNotificationChannel(
-        'gateflow_channel',
-        'GateFlow Notifications',
+        'sentinel_channel',
+        'Sentinel Notifications',
         description: 'Notifications for visitor entries and notices',
         importance: Importance.high,
         playSound: true,
-        sound: RawResourceAndroidNotificationSound('notification_sound'),
         enableVibration: true,
       );
 
@@ -163,7 +172,7 @@ class NotificationService {
     await _showLocalNotification(
       title: message.notification?.title ?? "New Notification",
       body: message.notification?.body ?? "",
-      payload: message.data.toString(),
+      payload: message.data.isNotEmpty ? jsonEncode(message.data) : null,
     );
     
     // Trigger notification count update callback if set
@@ -178,8 +187,10 @@ class NotificationService {
       "title": message.notification?.title,
       "body": message.notification?.body,
     });
-    // Navigate to appropriate screen based on notification data
-    // This will be handled by the app's navigation logic
+    // Forward data to tap handler so screens can navigate appropriately
+    if (_onNotificationTap != null && message.data.isNotEmpty) {
+      _onNotificationTap!(message.data);
+    }
   }
 
   /// Show local notification with sound
@@ -189,13 +200,12 @@ class NotificationService {
     String? payload,
   }) async {
     const androidDetails = AndroidNotificationDetails(
-      'gateflow_channel',
-      'GateFlow Notifications',
+      'sentinel_channel',
+      'Sentinel Notifications',
       channelDescription: 'Notifications for visitor entries and notices',
       importance: Importance.high,
       priority: Priority.high,
       playSound: true,
-      sound: RawResourceAndroidNotificationSound('notification_sound'), // Custom sound
       enableVibration: true,
       showWhen: true,
     );
@@ -204,7 +214,6 @@ class NotificationService {
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
-      sound: 'notification_sound.caf', // Custom sound for iOS
     );
 
     const notificationDetails = NotificationDetails(
@@ -224,7 +233,17 @@ class NotificationService {
   /// Handle notification tap
   void _onNotificationTapped(NotificationResponse response) {
     AppLogger.i("Notification tapped", data: {"payload": response.payload});
-    // Navigate to appropriate screen based on payload
+
+    if (_onNotificationTap != null && response.payload != null) {
+      try {
+        final data = jsonDecode(response.payload!);
+        if (data is Map<String, dynamic>) {
+          _onNotificationTap!(data);
+        }
+      } catch (e, st) {
+        AppLogger.e("Failed to parse notification payload", error: e, stackTrace: st);
+      }
+    }
   }
 
   /// Subscribe to a topic (e.g., society-specific notifications)

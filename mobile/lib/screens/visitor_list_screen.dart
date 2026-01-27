@@ -125,6 +125,10 @@ class _VisitorListScreenState extends State<VisitorListScreen>
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.text),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text("Visitor Logs", style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w900)),
         centerTitle: true,
         actions: [

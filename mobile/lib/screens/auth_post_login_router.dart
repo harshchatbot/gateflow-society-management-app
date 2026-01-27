@@ -121,7 +121,7 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text("GateFlow")),
+      appBar: AppBar(title: const Text("Sentinel")),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(16),

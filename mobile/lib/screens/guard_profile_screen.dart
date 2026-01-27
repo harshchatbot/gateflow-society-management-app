@@ -653,13 +653,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
       height: 54,
       child: OutlinedButton.icon(
         onPressed: () async {
-          await Storage.clearGuardSession();
-          AppLogger.i("Guard session cleared - logout successful");
-          if (context.mounted) {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
-              (route) => false,
-            );
+          try {
+            // 1. Sign out from Firebase Auth
+            await FirebaseAuth.instance.signOut();
+            
+            // 2. Clear old session storage
+            await Storage.clearGuardSession();
+            
+            // 3. Clear Firebase session storage
+            await Storage.clearFirebaseSession();
+            
+            AppLogger.i("Guard session cleared - logout successful");
+            if (context.mounted) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+                (route) => false,
+              );
+            }
+          } catch (e) {
+            AppLogger.e("Error during guard logout", error: e);
+            // Still navigate to role select even if logout fails
+            if (context.mounted) {
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+                (route) => false,
+              );
+            }
           }
         },
         icon: const Icon(Icons.logout_rounded, color: AppColors.error),

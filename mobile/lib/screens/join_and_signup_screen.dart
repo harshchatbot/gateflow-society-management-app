@@ -135,7 +135,7 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Join GateFlow")),
+      appBar: AppBar(title: const Text("Join Sentinel")),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: ListView(

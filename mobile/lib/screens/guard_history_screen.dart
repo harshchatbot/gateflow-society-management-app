@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
-import '../services/visitor_service.dart';
+import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../models/visitor.dart';
 import '../widgets/status_chip.dart';
@@ -28,8 +29,9 @@ class GuardHistoryScreen extends StatefulWidget {
 }
 
 class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
-  final _visitorService = VisitorService();
-  List<Visitor> _visitors = [];
+  final FirestoreService _firestore = FirestoreService();
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  List<Map<String, dynamic>> _visitors = [];
   bool _isLoading = false;
   String? _error;
 
@@ -48,44 +50,89 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
 
     try {
       AppLogger.i("Loading guard history", data: {"guardId": widget.guardId});
-      final result = await _visitorService.getTodayVisitors(guardId: widget.guardId);
+      
+      // Get societyId from membership if not provided
+      String? societyId = widget.societyId;
+      if (societyId == null || societyId.isEmpty) {
+        final membership = await _firestore.getCurrentUserMembership();
+        societyId = membership?['societyId'] as String?;
+      }
 
-      if (!mounted) return;
+      if (societyId == null || societyId.isEmpty) {
+        throw Exception("Society ID not found");
+      }
 
-      if (result.isSuccess && result.data != null) {
-        // Filter out pending visitors to show only completed ones (history)
-        final allVisitors = result.data!;
-        final historyVisitors = allVisitors
-            .where((v) => v.status != 'PENDING')
-            .toList()
-          ..sort((a, b) {
-            // Sort by created_at descending (newest first)
-            final aTime = a.createdAt ?? DateTime(1970);
-            final bTime = b.createdAt ?? DateTime(1970);
-            return bTime.compareTo(aTime);
-          });
+      // Query Firestore for visitors created by this guard
+      // Query by guard_uid first, then filter by status in memory to avoid composite index
+      final visitorsRef = _db
+          .collection('societies')
+          .doc(societyId)
+          .collection('visitors');
 
+      QuerySnapshot querySnapshot;
+      try {
+        querySnapshot = await visitorsRef
+            .where('guard_uid', isEqualTo: widget.guardId)
+            .orderBy('createdAt', descending: true)
+            .limit(100)
+            .get()
+            .timeout(const Duration(seconds: 10));
+      } catch (e) {
+        AppLogger.w("getHistory timeout or error", error: e.toString());
+        // Return empty snapshot on error
+        querySnapshot = await visitorsRef
+            .where('guard_uid', isEqualTo: widget.guardId)
+            .limit(0)
+            .get();
+      }
+
+      // Filter out PENDING in memory and convert to list
+      final allVisitors = querySnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>?;
+        if (data == null) return null;
+        
+        final status = (data['status'] ?? 'PENDING').toString().toUpperCase();
+        if (status == 'PENDING') return null;
+        
+        return {
+          'visitor_id': doc.id,
+          ...data,
+        };
+      }).where((v) => v != null).cast<Map<String, dynamic>>().toList();
+
+      // Sort by createdAt descending (newest first)
+      allVisitors.sort((a, b) {
+        final aCreated = a['createdAt'];
+        final bCreated = b['createdAt'];
+        
+        DateTime aTime = DateTime(1970);
+        DateTime bTime = DateTime(1970);
+        
+        if (aCreated is Timestamp) {
+          aTime = aCreated.toDate();
+        } else if (aCreated is DateTime) {
+          aTime = aCreated;
+        }
+        
+        if (bCreated is Timestamp) {
+          bTime = bCreated.toDate();
+        } else if (bCreated is DateTime) {
+          bTime = bCreated;
+        }
+        
+        return bTime.compareTo(aTime);
+      });
+
+      if (mounted) {
         setState(() {
-          _visitors = historyVisitors;
+          _visitors = allVisitors;
           _isLoading = false;
           _error = null;
         });
         AppLogger.i("Loaded ${_visitors.length} history visitors", data: {
-          "total": allVisitors.length,
-          "history": historyVisitors.length,
-        });
-      } else {
-        final errorMsg = result.error?.userMessage ?? "Failed to load history";
-        AppLogger.w("Failed to load history", error: result.error?.technicalMessage, data: {
-          "userMessage": errorMsg,
           "guardId": widget.guardId,
+          "societyId": societyId,
         });
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-            _error = errorMsg;
-          });
-        }
       }
     } catch (e, stackTrace) {
       AppLogger.e("Error loading history", error: e, stackTrace: stackTrace, data: {
@@ -107,6 +154,10 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.text),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text(
           "Visitor History",
           style: TextStyle(
@@ -227,13 +278,67 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
     );
   }
 
-  Widget _buildVisitorCard(Visitor visitor) {
-    final visitorType = visitor.visitorType ?? 'GUEST';
-    final flatNo = visitor.flatNo ?? 'N/A';
-    final phone = visitor.visitorPhone ?? 'N/A';
-    final status = visitor.status ?? 'PENDING';
-    final createdAt = visitor.createdAt;
-    final photoUrl = visitor.photoUrl;
+  Visitor _mapToVisitor(Map<String, dynamic> data) {
+    // Parse createdAt
+    DateTime createdAt;
+    final createdAtValue = data['createdAt'];
+    if (createdAtValue is Timestamp) {
+      createdAt = createdAtValue.toDate();
+    } else if (createdAtValue is DateTime) {
+      createdAt = createdAtValue;
+    } else {
+      createdAt = DateTime.now();
+    }
+
+    // Parse approvedAt if exists
+    DateTime? approvedAt;
+    final approvedAtValue = data['approvedAt'] ?? data['approved_at'];
+    if (approvedAtValue != null) {
+      if (approvedAtValue is Timestamp) {
+        approvedAt = approvedAtValue.toDate();
+      } else if (approvedAtValue is DateTime) {
+        approvedAt = approvedAtValue;
+      }
+    }
+
+    return Visitor(
+      visitorId: data['visitor_id']?.toString() ?? '',
+      societyId: data['society_id']?.toString() ?? widget.societyId ?? '',
+      flatId: data['flat_id']?.toString() ?? data['flat_no']?.toString() ?? '',
+      flatNo: (data['flat_no'] ?? data['flatNo'] ?? '').toString(),
+      visitorType: (data['visitor_type'] ?? data['visitorType'] ?? 'GUEST').toString(),
+      visitorPhone: (data['visitor_phone'] ?? data['visitorPhone'] ?? '').toString(),
+      status: (data['status'] ?? 'PENDING').toString(),
+      createdAt: createdAt,
+      approvedAt: approvedAt,
+      approvedBy: data['approved_by']?.toString() ?? data['approvedBy']?.toString(),
+      guardId: data['guard_uid']?.toString() ?? data['guard_id']?.toString() ?? widget.guardId,
+      photoPath: data['photo_path']?.toString(),
+      photoUrl: data['photo_url']?.toString() ?? data['photoUrl']?.toString(),
+      note: data['note']?.toString(),
+    );
+  }
+
+  Widget _buildVisitorCard(Map<String, dynamic> visitorData) {
+    final visitorType = (visitorData['visitor_type'] ?? visitorData['visitorType'] ?? 'GUEST').toString();
+    final flatNo = (visitorData['flat_no'] ?? visitorData['flatNo'] ?? 'N/A').toString();
+    final phone = (visitorData['visitor_phone'] ?? visitorData['visitorPhone'] ?? 'N/A').toString();
+    final status = (visitorData['status'] ?? 'PENDING').toString();
+    final createdAt = visitorData['createdAt'];
+    final photoUrl = visitorData['photo_url'] ?? visitorData['photoUrl'];
+    
+    // Parse createdAt to DateTime for display
+    DateTime? createdDateTime;
+    if (createdAt != null) {
+      if (createdAt is Timestamp) {
+        createdDateTime = createdAt.toDate();
+      } else if (createdAt is DateTime) {
+        createdDateTime = createdAt;
+      }
+    }
+    final displayTime = createdDateTime != null 
+        ? _formatTime(createdDateTime)
+        : 'Recently';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -253,11 +358,13 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () async {
+            // Convert Map to Visitor object for VisitorDetailsScreen
+            final visitorObj = _mapToVisitor(visitorData);
             await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => VisitorDetailsScreen(
-                  visitor: visitor,
+                  visitor: visitorObj,
                   guardId: widget.guardId,
                 ),
               ),
@@ -398,42 +505,53 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                   ],
                 ),
 
-                if (createdAt != null) ...[
-                  const SizedBox(height: 16),
-                  const Divider(height: 1),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Icon(
-                          Icons.access_time_rounded,
-                          size: 14,
-                          color: AppColors.primary,
-                        ),
+                const SizedBox(height: 16),
+                const Divider(height: 1),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      const SizedBox(width: 8),
-                      Text(
-                        _formatDateTime(createdAt),
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.text2,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      child: const Icon(
+                        Icons.access_time_rounded,
+                        size: 14,
+                        color: AppColors.primary,
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      displayTime,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.text2,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
         ),
       ),
     );
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) return "Just now";
+    if (difference.inMinutes < 60) return "${difference.inMinutes}m ago";
+    if (difference.inHours < 24) return "${difference.inHours}h ago";
+    if (difference.inDays < 7) return "${difference.inDays}d ago";
+    
+    // Format: DD/MM/YYYY HH:MM
+    return "${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
   }
 
   String _formatDateTime(DateTime dateTime) {

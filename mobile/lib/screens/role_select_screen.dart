@@ -44,7 +44,7 @@ class RoleSelectScreen extends StatelessWidget {
                         const SizedBox(height: 40),
                         // Welcome Text
                         Text(
-                          "Welcome to GateFlow",
+                          "Welcome to Sentinel",
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.w900,
@@ -132,32 +132,45 @@ class RoleSelectScreen extends StatelessWidget {
     return Column(
       children: [
         Container(
-          width: 100,
-          height: 100,
+          width: 120,
+          height: 120,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.primary, Color(0xFF1E40AF)],
-            ),
-            borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
+                color: AppColors.primary.withOpacity(0.2),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
             ],
           ),
-          child: const Icon(
-            Icons.security_rounded,
-            size: 50,
-            color: Colors.white,
+          child: Image.asset(
+            'assets/images/logo.png',
+            width: 120,
+            height: 120,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              // Fallback to icon if image not found
+              return Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.primary, Color(0xFF1E40AF)],
+                  ),
+                  borderRadius: BorderRadius.circular(28),
+                ),
+                child: const Icon(
+                  Icons.shield_rounded,
+                  size: 60,
+                  color: Colors.white,
+                ),
+              );
+            },
           ),
         ),
         const SizedBox(height: 20),
         const Text(
-          "GateFlow",
+          "Sentinel",
           style: TextStyle(
             fontSize: 32,
             fontWeight: FontWeight.w900,

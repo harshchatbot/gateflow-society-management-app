@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../ui/app_colors.dart';
-import '../services/visitor_service.dart';
+import '../services/firestore_service.dart';
 import '../ui/glass_loader.dart';
-import '../core/storage.dart';          // Added missing import
-import '../models/visitor.dart';      // Added missing import
+import '../core/storage.dart';
+import '../core/app_logger.dart';
 import 'notice_board_screen.dart';
+import 'role_select_screen.dart';
 
 class GuardDashboardScreen extends StatefulWidget {
   final String guardId;
@@ -27,7 +29,8 @@ class GuardDashboardScreen extends StatefulWidget {
 }
 
 class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
-  final VisitorService _service = VisitorService();
+  final FirestoreService _firestore = FirestoreService();
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
   
   String _dynamicName = "";
   int todayCount = 0;
@@ -48,55 +51,135 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     setState(() => _isLoading = true);
 
     try {
-      // Parallel fetch: Profile + Today's Stats from your FastAPI Backend
-      final results = await Future.wait([
-        _service.getGuardProfile(widget.guardId),
-        _service.getTodayVisitors(guardId: widget.guardId),
-      ]);
+      // 1. Get guard profile from Firestore
+      final membership = await _firestore.getCurrentUserMembership();
+      if (membership != null && membership['name'] != null) {
+        _dynamicName = membership['name'] as String;
+        
+        // Sync to storage so Profile page updates too
+        Storage.saveGuardSession(
+          guardId: widget.guardId,
+          guardName: _dynamicName,
+          societyId: widget.societyId,
+        );
+      }
 
-      // Explicitly cast the results to avoid 'Object?' errors
-      final profileRes = results[0] as Result<Map<String, dynamic>>;
-      final visitorsRes = results[1] as Result<List<Visitor>>;
+      // 2. Get today's visitors from Firestore
+      // Query by guard_uid first, then filter by date in memory to avoid composite index requirement
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      final visitorsRef = _db
+          .collection('societies')
+          .doc(widget.societyId)
+          .collection('visitors');
+
+      QuerySnapshot querySnapshot;
+      try {
+        querySnapshot = await visitorsRef
+            .where('guard_uid', isEqualTo: widget.guardId)
+            .limit(100) // Limit to recent visitors
+            .get()
+            .timeout(const Duration(seconds: 10));
+      } catch (e) {
+        AppLogger.w("getTodayVisitors timeout or error", error: e.toString());
+        // Return empty snapshot on timeout/error
+        querySnapshot = await visitorsRef
+            .where('guard_uid', isEqualTo: widget.guardId)
+            .limit(0)
+            .get();
+      }
+
+      // Filter by today's date in memory
+      final todayVisitors = querySnapshot.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>?;
+        if (data == null) return false;
+        
+        final createdAt = data['createdAt'];
+        if (createdAt == null) return false;
+        
+        DateTime createdDate;
+        if (createdAt is Timestamp) {
+          createdDate = createdAt.toDate();
+        } else if (createdAt is DateTime) {
+          createdDate = createdAt;
+        } else {
+          return false;
+        }
+        
+        return createdDate.isAfter(startOfDay.subtract(const Duration(seconds: 1))) &&
+               createdDate.isBefore(endOfDay);
+      }).map((doc) {
+        final data = doc.data() as Map<String, dynamic>?;
+        return {
+          'status': data?['status'] ?? 'PENDING',
+        };
+      }).toList();
 
       if (mounted) {
         setState(() {
           _isLoading = false;
-          
-          // 1. Update Profile Name dynamically
-          if (profileRes.isSuccess && profileRes.data != null) {
-            _dynamicName = profileRes.data!['name'] ?? widget.guardName;
-            
-            // Sync to storage so Profile page updates too
-            Storage.saveGuardSession(
-              guardId: widget.guardId,
-              guardName: _dynamicName,
-              societyId: widget.societyId,
-            );
-          }
-          
-          // 2. Update Stats and filter by status
-          if (visitorsRes.isSuccess && visitorsRes.data != null) {
-            final List<Visitor> v = visitorsRes.data!;
-            todayCount = v.length;
-            
-            // Case-insensitive status check
-            pendingCount = v.where((x) => x.status.toUpperCase() == 'PENDING').length;
-            approvedCount = v.where((x) => x.status.toUpperCase() == 'APPROVED').length;
-          }
+          todayCount = todayVisitors.length;
+          pendingCount = todayVisitors.where((v) => (v['status'] as String).toUpperCase() == 'PENDING').length;
+          approvedCount = todayVisitors.where((v) => (v['status'] as String).toUpperCase() == 'APPROVED').length;
         });
       }
-    } catch (e) {
-      debugPrint("Dashboard Sync Error: $e");
-      if (mounted) setState(() => _isLoading = false);
+
+      AppLogger.i("Guard dashboard synced", data: {
+        "todayCount": todayCount,
+        "pendingCount": pendingCount,
+        "approvedCount": approvedCount,
+      });
+    } catch (e, stackTrace) {
+      AppLogger.e("Dashboard Sync Error", error: e, stackTrace: stackTrace);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _onWillPop() async {
+    // Show confirmation dialog when back is pressed on dashboard
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Exit App?'),
+        content: const Text('Do you want to exit the app?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+    if (shouldExit == true && context.mounted) {
+      // Navigate to role select instead of just popping
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+        (route) => false,
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: Stack(
-        children: [
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (!didPop) {
+          await _onWillPop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        body: Stack(
+          children: [
           // Background Gradient Header
           Positioned(
             left: 0, right: 0, top: 0, height: 260,
@@ -148,6 +231,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           
           if (_isLoading) GlassLoader(show: true, message: "Syncing Data..."),
         ],
+      ),
       ),
     );
   }

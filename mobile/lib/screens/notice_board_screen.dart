@@ -424,6 +424,14 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     
     return Scaffold(
       backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: AppColors.text),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
       body: content,
     );
   }

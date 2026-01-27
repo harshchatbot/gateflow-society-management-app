@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../ui/app_colors.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
@@ -77,8 +78,15 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     setState(() => _isLoggingOut = true);
 
     try {
-      // Clear admin session
+      // 1. Sign out from Firebase Auth
+      await FirebaseAuth.instance.signOut();
+      
+      // 2. Clear admin session
       await Storage.clearAdminSession();
+      
+      // 3. Clear Firebase session storage
+      await Storage.clearFirebaseSession();
+      
       AppLogger.i("Admin session cleared - logout successful");
 
       if (!mounted) return;

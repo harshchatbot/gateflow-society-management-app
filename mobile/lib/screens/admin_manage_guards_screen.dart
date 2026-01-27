@@ -368,7 +368,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
 
   Widget _buildGuardCard(Map<String, dynamic> guard) {
     final guardName = (guard['guard_name'] ?? guard['name'] ?? 'Unknown').toString();
-    final guardId = (guard['guard_id'] ?? 'N/A').toString();
+    final guardId = (guard['guard_id'] ?? guard['uid'] ?? guard['id'] ?? 'N/A').toString();
     final phone = (guard['phone'] ?? guard['guard_phone'] ?? 'N/A').toString();
     final role = (guard['role'] ?? 'GUARD').toString().toUpperCase();
     final active = (guard['active'] ?? 'TRUE').toString().toUpperCase() == 'TRUE';

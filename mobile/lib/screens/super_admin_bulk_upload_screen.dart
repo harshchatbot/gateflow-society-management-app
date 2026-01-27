@@ -495,7 +495,7 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
       await Share.shareXFiles(
         [xFile],
         text: '$type sample CSV template',
-        subject: '$type Sample CSV - GateFlow',
+        subject: '$type Sample CSV - Sentinel',
       );
 
       if (mounted) {
@@ -1249,8 +1249,8 @@ final inviteRef = FirebaseFirestore.instance
       await Share.shareXFiles(
         [xFile],
         text:
-            '$userType Credentials - GateFlow\n\n${users.length} users created successfully.\n\nPlease share this file with users via email. Each user will receive their User ID and login instructions.',
-        subject: '$userType Account Credentials - GateFlow Bulk Upload',
+            '$userType Credentials - Sentinel\n\n${users.length} users created successfully.\n\nPlease share this file with users via email. Each user will receive their User ID and login instructions.',
+        subject: '$userType Account Credentials - Sentinel Bulk Upload',
       );
 
       if (mounted) {

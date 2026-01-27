@@ -5,6 +5,9 @@ import '../services/complaint_service.dart';
 import '../services/notice_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
+import '../screens/resident_approvals_screen.dart';
+import '../screens/notice_board_screen.dart';
+import '../screens/resident_complaints_list_screen.dart';
 
 /// Resident Notification Drawer
 /// 
@@ -344,29 +347,76 @@ class _ResidentNotificationDrawerState extends State<ResidentNotificationDrawer>
             child: Row(
               children: [
                 Expanded(
-                  child: _buildSummaryCard(
-                    icon: Icons.verified_rounded,
-                    label: "Pending Approvals",
-                    count: _pendingApprovalsCount,
-                    color: AppColors.primary,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ResidentApprovalsScreen(
+                            residentId: widget.residentId,
+                            societyId: widget.societyId,
+                            flatNo: widget.flatNo,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: _buildSummaryCard(
+                      icon: Icons.verified_rounded,
+                      label: "Pending Approvals",
+                      count: _pendingApprovalsCount,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildSummaryCard(
-                    icon: Icons.notifications_rounded,
-                    label: "New Notices",
-                    count: _recentNoticesCount,
-                    color: AppColors.success,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => NoticeBoardScreen(
+                            societyId: widget.societyId,
+                            themeColor: AppColors.success,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: _buildSummaryCard(
+                      icon: Icons.notifications_rounded,
+                      label: "New Notices",
+                      count: _recentNoticesCount,
+                      color: AppColors.success,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _buildSummaryCard(
-                    icon: Icons.report_problem_rounded,
-                    label: "My Complaints",
-                    count: _recentComplaintsCount,
-                    color: AppColors.warning,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ResidentComplaintsListScreen(
+                            residentId: widget.residentId,
+                            societyId: widget.societyId,
+                            flatNo: widget.flatNo,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: _buildSummaryCard(
+                      icon: Icons.report_problem_rounded,
+                      label: "My Complaints",
+                      count: _recentComplaintsCount,
+                      color: AppColors.warning,
+                    ),
                   ),
                 ),
               ],
@@ -493,6 +543,49 @@ class _ResidentNotificationDrawerState extends State<ResidentNotificationDrawer>
     );
   }
 
+  void _handleNotificationTap(Map<String, dynamic> notification) {
+    final type = notification['type'] ?? '';
+    
+    Navigator.pop(context); // Close the drawer first
+    
+    if (type == 'visitor') {
+      // Navigate to approvals screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ResidentApprovalsScreen(
+            residentId: widget.residentId,
+            societyId: widget.societyId,
+            flatNo: widget.flatNo,
+          ),
+        ),
+      );
+    } else if (type == 'notice') {
+      // Navigate to notice board screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => NoticeBoardScreen(
+            societyId: widget.societyId,
+            themeColor: AppColors.success,
+          ),
+        ),
+      );
+    } else if (type == 'complaint') {
+      // Navigate to complaints list screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ResidentComplaintsListScreen(
+            residentId: widget.residentId,
+            societyId: widget.societyId,
+            flatNo: widget.flatNo,
+          ),
+        ),
+      );
+    }
+  }
+
   Widget _buildNotificationItem(Map<String, dynamic> notification) {
     final type = notification['type'] ?? '';
     final title = notification['title'] ?? '';
@@ -500,22 +593,25 @@ class _ResidentNotificationDrawerState extends State<ResidentNotificationDrawer>
     final status = notification['status'] ?? '';
     final time = _formatTime(notification['created_at']);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
+    return InkWell(
+      onTap: () => _handleNotificationTap(notification),
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
@@ -622,6 +718,7 @@ class _ResidentNotificationDrawerState extends State<ResidentNotificationDrawer>
             ),
           ),
         ],
+      ),
       ),
     );
   }

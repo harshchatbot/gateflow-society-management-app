@@ -7,7 +7,9 @@ import '../services/notification_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import 'resident_complaint_screen.dart';
+import 'resident_approvals_screen.dart';
 import 'notice_board_screen.dart';
+import 'role_select_screen.dart';
 import '../widgets/resident_notification_drawer.dart';
 import '../services/firestore_service.dart';
 
@@ -67,6 +69,27 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     notificationService.setOnNotificationReceived((data) {
       if (data['type'] == 'notice' || data['type'] == 'visitor') {
         _loadDashboardData(); // Refresh data when notification received
+      }
+    });
+    notificationService.setOnNotificationTap((data) {
+      final type = (data['type'] ?? '').toString();
+      if (type == 'visitor') {
+        // Open approvals screen/tab (handled via shell/tab; for now just refresh)
+        _loadDashboardData();
+      } else if (type == 'notice') {
+        // Open notice board screen
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => NoticeBoardScreen(
+              societyId: widget.societyId,
+              themeColor: AppColors.success,
+            ),
+          ),
+        );
+      } else if (type == 'complaint') {
+        // For complaints, open complaints tab/screen in future; for now just log
+        AppLogger.i("Complaint notification tapped (resident)", data: data);
       }
     });
   }
@@ -205,11 +228,60 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     }
   }
 
+  Future<bool> _onWillPop() async {
+    // Show confirmation dialog when back is pressed on dashboard
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Exit App?'),
+        content: const Text('Do you want to exit the app?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+    if (shouldExit == true && context.mounted) {
+      // Navigate to role select instead of just popping
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+        (route) => false,
+      );
+      return false; // Don't pop, we already navigated
+    }
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: Stack(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (!didPop) {
+          await _onWillPop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => _onWillPop().then((shouldExit) {
+              if (shouldExit && context.mounted) {
+                Navigator.of(context).pop();
+              }
+            }),
+          ),
+        ),
+        body: Stack(
         children: [
           // Green Gradient Header Background
           Positioned(
@@ -293,6 +365,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
           if (_isLoading) GlassLoader(show: true, message: "Loading Dashboard…"),
         ],
+      ),
       ),
     );
   }
@@ -443,7 +516,16 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           subtitle: "$_pendingCount requests",
           color: AppColors.warning,
           onTap: () {
-            // Navigate to approvals tab - handled by shell
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ResidentApprovalsScreen(
+                  residentId: widget.residentId,
+                  societyId: widget.societyId,
+                  flatNo: widget.flatNo,
+                ),
+              ),
+            );
           },
         ),
         _buildActionCard(

@@ -10,6 +10,7 @@ import '../core/env.dart';
 import 'notice_board_screen.dart';
 import 'admin_manage_notices_screen.dart';
 import 'admin_manage_admins_screen.dart';
+import 'role_select_screen.dart';
 import '../widgets/admin_notification_drawer.dart';
 
 /// Admin Dashboard Screen
@@ -69,6 +70,16 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     notificationService.setOnNotificationReceived((data) {
       if (data['type'] == 'notice' || data['type'] == 'complaint') {
         _loadNotificationCount(); // Refresh count when notification received
+      }
+    });
+    notificationService.setOnNotificationTap((data) {
+      final type = (data['type'] ?? '').toString();
+      if (type == 'complaint') {
+        // Navigate to complaints tab (index 3)
+        _navigateToTab(3);
+      } else if (type == 'notice') {
+        // Navigate to notices tab (index 4)
+        _navigateToTab(4);
       }
     });
   }
@@ -188,11 +199,54 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _onWillPop() async {
+    // Show confirmation dialog when back is pressed on dashboard
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Exit App?'),
+        content: const Text('Do you want to exit the app?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Exit'),
+          ),
+        ],
+      ),
+    );
+    if (shouldExit == true && context.mounted) {
+      // Navigate to role select instead of just popping
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+        (route) => false,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: Stack(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) async {
+        if (!didPop) {
+          await _onWillPop();
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => _onWillPop(),
+          ),
+        ),
+        body: Stack(
         children: [
           // Background Gradient Header (purple theme)
           Positioned(
@@ -237,6 +291,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
           if (_isLoading) GlassLoader(show: true, message: "Loading Stats..."),
         ],
+      ),
       ),
     );
   }
