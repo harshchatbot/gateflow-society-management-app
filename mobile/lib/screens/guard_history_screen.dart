@@ -358,6 +358,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () async {
+            if (!mounted) return;
             // Convert Map to Visitor object for VisitorDetailsScreen
             final visitorObj = _mapToVisitor(visitorData);
             await Navigator.push(
@@ -369,7 +370,9 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                 ),
               ),
             );
-            _loadHistory(); // Refresh on return
+            if (mounted) {
+              _loadHistory(); // Refresh on return
+            }
           },
           borderRadius: BorderRadius.circular(18),
           child: Padding(

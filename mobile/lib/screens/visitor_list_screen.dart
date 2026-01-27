@@ -265,13 +265,16 @@ class _VisitorListScreenState extends State<VisitorListScreen>
         dense: true, // Makes the tile smaller
         contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
         onTap: () async {
+          if (!mounted) return;
           await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (_) => VisitorDetailsScreen(visitor: v, guardId: widget.guardId),
             ),
           );
-          _loadToday(); // Refresh on return
+          if (mounted) {
+            _loadToday(); // Refresh on return
+          }
         },
         leading: CircleAvatar(
           radius: 20,

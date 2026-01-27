@@ -519,6 +519,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             
             return InkWell(
               onTap: () {
+                if (!mounted) return;
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -529,7 +530,9 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                   ),
                 ).then((_) {
                   // Refresh dashboard after returning from details
-                  _syncDashboard();
+                  if (mounted) {
+                    _syncDashboard();
+                  }
                 });
               },
               child: Container(

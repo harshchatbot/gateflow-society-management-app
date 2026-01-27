@@ -294,7 +294,14 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
     final displayFlat = _visitor.flatNo.isNotEmpty ? _visitor.flatNo : _visitor.flatId;
     final statusColor = _statusColor(_visitor.status);
 
-    return Scaffold(
+    return PopScope(
+      canPop: true,
+      onPopInvoked: (didPop) {
+        if (!didPop && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
         backgroundColor: AppColors.bg,
@@ -303,7 +310,11 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
         automaticallyImplyLeading: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          },
         ),
         title: const Text(
           "Visitor Details",
@@ -592,6 +603,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
             message: "Updating status…",
           ),
         ],
+      ),
       ),
     );
   }
