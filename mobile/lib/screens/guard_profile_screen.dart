@@ -88,6 +88,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
             expandedHeight: 220,
             pinned: true,
             backgroundColor: AppColors.primary,
+            automaticallyImplyLeading: true,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(

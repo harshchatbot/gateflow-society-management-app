@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:gateflow/models/visitor.dart';
-import 'package:gateflow/services/visitor_service.dart';
+import 'package:gateflow/services/firestore_service.dart';
 
 import 'visitor_details_screen.dart';
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
+import '../core/app_logger.dart';
 
 class VisitorListScreen extends StatefulWidget {
   final String guardId;
@@ -16,11 +18,13 @@ class VisitorListScreen extends StatefulWidget {
 
 class _VisitorListScreenState extends State<VisitorListScreen>
     with SingleTickerProviderStateMixin {
-  final _service = VisitorService();
+  final FirestoreService _firestore = FirestoreService();
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
   late final TabController _tabController;
 
   bool _loading = false;
   String? _error;
+  String? _societyId;
 
   List<Visitor> _today = [];
   List<Visitor> _byFlat = [];
@@ -31,7 +35,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
-    _loadToday();
+    _loadSocietyIdAndToday();
   }
 
   @override
@@ -41,29 +45,210 @@ class _VisitorListScreenState extends State<VisitorListScreen>
     super.dispose();
   }
 
+  Future<void> _loadSocietyIdAndToday() async {
+    // Get societyId from membership
+    try {
+      final membership = await _firestore.getCurrentUserMembership();
+      _societyId = membership?['societyId'] as String?;
+      if (_societyId != null && _societyId!.isNotEmpty) {
+        await _loadToday();
+      } else {
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _error = "Society ID not found";
+          });
+        }
+      }
+    } catch (e) {
+      AppLogger.e("Error loading society ID", error: e);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = "Failed to load data";
+        });
+      }
+    }
+  }
+
   // --- REFRESH LOGIC ---
   Future<void> _loadToday() async {
+    if (_societyId == null || _societyId!.isEmpty) {
+      await _loadSocietyIdAndToday();
+      return;
+    }
+
     setState(() { _loading = true; _error = null; });
-    final res = await _service.getVisitorsToday(guardId: widget.guardId);
-    if (!mounted) return;
-    setState(() {
-      _loading = false;
-      if (res.isSuccess) _today = res.data!;
-      else _error = res.error?.userMessage ?? "Failed to load visitors";
-    });
+
+    try {
+      // Get today's visitors from Firestore
+      final today = DateTime.now();
+      final startOfDay = DateTime(today.year, today.month, today.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      final visitorsRef = _db
+          .collection('societies')
+          .doc(_societyId!)
+          .collection('visitors');
+
+      QuerySnapshot querySnapshot;
+      try {
+        querySnapshot = await visitorsRef
+            .where('guard_uid', isEqualTo: widget.guardId)
+            .limit(100)
+            .get()
+            .timeout(const Duration(seconds: 10));
+      } catch (e) {
+        AppLogger.w("getTodayVisitors timeout or error", error: e.toString());
+        querySnapshot = await visitorsRef
+            .where('guard_uid', isEqualTo: widget.guardId)
+            .limit(0)
+            .get();
+      }
+
+      // Filter by today's date in memory and convert to Visitor objects
+      final todayVisitors = querySnapshot.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>?;
+        if (data == null) return false;
+        
+        final createdAt = data['createdAt'];
+        if (createdAt == null) return false;
+        
+        DateTime createdDate;
+        if (createdAt is Timestamp) {
+          createdDate = createdAt.toDate();
+        } else if (createdAt is DateTime) {
+          createdDate = createdAt;
+        } else {
+          return false;
+        }
+        
+        return createdDate.isAfter(startOfDay.subtract(const Duration(seconds: 1))) &&
+               createdDate.isBefore(endOfDay);
+      }).map((doc) => _mapToVisitor(doc.data() as Map<String, dynamic>, doc.id)).toList();
+
+      // Sort by createdAt descending
+      todayVisitors.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _today = todayVisitors;
+          _error = null;
+        });
+      }
+
+      AppLogger.i("Loaded ${todayVisitors.length} today's visitors", data: {
+        "guardId": widget.guardId,
+        "societyId": _societyId,
+      });
+    } catch (e, stackTrace) {
+      AppLogger.e("Error loading today's visitors", error: e, stackTrace: stackTrace);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = "Failed to load visitors";
+        });
+      }
+    }
   }
 
   Future<void> _loadByFlat() async {
-    final flatNo = _flatController.text.trim();
-    if (flatNo.isEmpty) return;
+    final flatNo = _flatController.text.trim().toUpperCase();
+    if (flatNo.isEmpty || _societyId == null || _societyId!.isEmpty) return;
+    
     setState(() { _loading = true; _error = null; });
-    final res = await _service.getVisitorsByFlatNo(guardId: widget.guardId, flatNo: flatNo);
-    if (!mounted) return;
-    setState(() {
-      _loading = false;
-      if (res.isSuccess) _byFlat = res.data!;
-      else _error = "No records found";
-    });
+
+    try {
+      final visitorsRef = _db
+          .collection('societies')
+          .doc(_societyId!)
+          .collection('visitors');
+
+      QuerySnapshot querySnapshot;
+      try {
+        querySnapshot = await visitorsRef
+            .where('guard_uid', isEqualTo: widget.guardId)
+            .where('flat_no', isEqualTo: flatNo)
+            .orderBy('createdAt', descending: true)
+            .limit(50)
+            .get()
+            .timeout(const Duration(seconds: 10));
+      } catch (e) {
+        AppLogger.w("getVisitorsByFlat timeout or error", error: e.toString());
+        // Try without orderBy if composite index is missing
+        querySnapshot = await visitorsRef
+            .where('guard_uid', isEqualTo: widget.guardId)
+            .where('flat_no', isEqualTo: flatNo)
+            .limit(50)
+            .get()
+            .timeout(const Duration(seconds: 10));
+      }
+
+      final visitors = querySnapshot.docs
+          .map((doc) => _mapToVisitor(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
+
+      // Sort by createdAt descending
+      visitors.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _byFlat = visitors;
+          _error = visitors.isEmpty ? "No records found" : null;
+        });
+      }
+    } catch (e, stackTrace) {
+      AppLogger.e("Error loading visitors by flat", error: e, stackTrace: stackTrace);
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = "Failed to load visitors";
+        });
+      }
+    }
+  }
+
+  Visitor _mapToVisitor(Map<String, dynamic> data, String docId) {
+    // Parse createdAt
+    DateTime createdAt;
+    final createdAtValue = data['createdAt'];
+    if (createdAtValue is Timestamp) {
+      createdAt = createdAtValue.toDate();
+    } else if (createdAtValue is DateTime) {
+      createdAt = createdAtValue;
+    } else {
+      createdAt = DateTime.now();
+    }
+
+    // Parse approvedAt if exists
+    DateTime? approvedAt;
+    final approvedAtValue = data['approvedAt'] ?? data['approved_at'];
+    if (approvedAtValue != null) {
+      if (approvedAtValue is Timestamp) {
+        approvedAt = approvedAtValue.toDate();
+      } else if (approvedAtValue is DateTime) {
+        approvedAt = approvedAtValue;
+      }
+    }
+
+    return Visitor(
+      visitorId: docId,
+      societyId: data['society_id']?.toString() ?? _societyId ?? '',
+      flatId: data['flat_id']?.toString() ?? data['flat_no']?.toString() ?? '',
+      flatNo: (data['flat_no'] ?? data['flatNo'] ?? '').toString(),
+      visitorType: (data['visitor_type'] ?? data['visitorType'] ?? 'GUEST').toString(),
+      visitorPhone: (data['visitor_phone'] ?? data['visitorPhone'] ?? '').toString(),
+      status: (data['status'] ?? 'PENDING').toString(),
+      createdAt: createdAt,
+      approvedAt: approvedAt,
+      approvedBy: data['approved_by']?.toString() ?? data['approvedBy']?.toString(),
+      guardId: data['guard_uid']?.toString() ?? data['guard_id']?.toString() ?? widget.guardId,
+      photoPath: data['photo_path']?.toString(),
+      photoUrl: data['photo_url']?.toString() ?? data['photoUrl']?.toString(),
+      note: data['note']?.toString(),
+    );
   }
 
   // --- COMPACT UI COMPONENTS ---

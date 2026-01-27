@@ -68,6 +68,11 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
     });
   }
 
+  bool _isPending(String status) {
+    final s = status.toUpperCase();
+    return s == 'PENDING';
+  }
+
   Color _statusColor(String status) {
     final s = status.toUpperCase();
     if (s.contains("APPROV")) return AppColors.success;
@@ -75,6 +80,26 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
     if (s.contains("LEAVE")) return AppColors.warning;
     if (s.contains("PENDING")) return AppColors.text2;
     return AppColors.textMuted;
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = DateTime(now.year, now.month, now.day - 1);
+    final dateOnly = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final localTime = dateTime.toLocal();
+
+    String dateStr;
+    if (dateOnly == today) {
+      dateStr = "Today";
+    } else if (dateOnly == yesterday) {
+      dateStr = "Yesterday";
+    } else {
+      dateStr = "${localTime.day}/${localTime.month}/${localTime.year}";
+    }
+
+    final timeStr = "${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}";
+    return "$dateStr at $timeStr";
   }
 
   // ✅ Phosphor icons for visitor type
@@ -275,6 +300,11 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
         backgroundColor: AppColors.bg,
         elevation: 0,
         surfaceTintColor: AppColors.bg,
+        automaticallyImplyLeading: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
         title: const Text(
           "Visitor Details",
           style: TextStyle(
@@ -410,94 +440,149 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                 ),
               ),
 
-              const SizedBox(height: 14),
-
-              // Actions
-              _premiumCard(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Actions",
-                      style: TextStyle(
-                        color: AppColors.text,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 13.5,
+              // Only show actions if visitor is still PENDING
+              if (_isPending(_visitor.status)) ...[
+                const SizedBox(height: 14),
+                // Actions
+                _premiumCard(
+                  padding: const EdgeInsets.all(14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Actions",
+                        style: TextStyle(
+                          color: AppColors.text,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 13.5,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: 52,
-                            child: ElevatedButton.icon(
-                              onPressed: () => _setStatus("APPROVED"),
-                              icon: const Icon(AppIcons.approve, size: 18), // ✅
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.success,
-                                foregroundColor: Colors.white,
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: SizedBox(
+                              height: 52,
+                              child: ElevatedButton.icon(
+                                onPressed: _loading ? null : () => _setStatus("APPROVED"),
+                                icon: const Icon(AppIcons.approve, size: 18),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.success,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  disabledBackgroundColor: AppColors.success.withOpacity(0.5),
+                                ),
+                                label: const Text(
+                                  "Approve",
+                                  style: TextStyle(fontWeight: FontWeight.w900),
                                 ),
                               ),
-                              label: const Text(
-                                "Approve",
-                                style: TextStyle(fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: SizedBox(
+                              height: 52,
+                              child: OutlinedButton.icon(
+                                onPressed: _loading ? null : () => _setStatus("REJECTED"),
+                                icon: const Icon(AppIcons.reject, size: 18),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: AppColors.error,
+                                  side: BorderSide(color: AppColors.error.withOpacity(0.28)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  backgroundColor: AppColors.surface,
+                                  disabledForegroundColor: AppColors.error.withOpacity(0.5),
+                                ),
+                                label: const Text(
+                                  "Reject",
+                                  style: TextStyle(fontWeight: FontWeight.w900),
+                                ),
                               ),
                             ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: OutlinedButton.icon(
+                          onPressed: _loading ? null : () => _setStatus("LEAVE_AT_GATE"),
+                          icon: const Icon(AppIcons.leave, size: 18),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.warning,
+                            side: BorderSide(color: AppColors.warning.withOpacity(0.28)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            backgroundColor: AppColors.surface,
+                            disabledForegroundColor: AppColors.warning.withOpacity(0.5),
+                          ),
+                          label: const Text(
+                            "Leave at Gate",
+                            style: TextStyle(fontWeight: FontWeight.w900),
                           ),
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: SizedBox(
-                            height: 52,
-                            child: OutlinedButton.icon(
-                              onPressed: () => _setStatus("REJECTED"),
-                              icon: const Icon(AppIcons.reject, size: 18), // ✅
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: AppColors.error,
-                                side: BorderSide(color: AppColors.error.withOpacity(0.28)),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                backgroundColor: AppColors.surface,
-                              ),
-                              label: const Text(
-                                "Reject",
-                                style: TextStyle(fontWeight: FontWeight.w900),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                // Show status info card for completed visitors
+                const SizedBox(height: 14),
+                _premiumCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            _statusIcon(_visitor.status),
+                            color: statusColor,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              "Status: ${_visitor.status}",
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: statusColor,
                               ),
                             ),
                           ),
+                        ],
+                      ),
+                      if (_visitor.approvedAt != null) ...[
+                        const SizedBox(height: 12),
+                        const Divider(height: 1),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Icon(Icons.access_time_rounded, size: 16, color: AppColors.text2),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Processed: ${_formatDateTime(_visitor.approvedAt!)}",
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: AppColors.text2,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 10),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: OutlinedButton.icon(
-                        onPressed: () => _setStatus("LEAVE_AT_GATE"),
-                        icon: const Icon(AppIcons.leave, size: 18), // ✅
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.warning,
-                          side: BorderSide(color: AppColors.warning.withOpacity(0.28)),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          backgroundColor: AppColors.surface,
-                        ),
-                        label: const Text(
-                          "Leave at Gate",
-                          style: TextStyle(fontWeight: FontWeight.w900),
-                        ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
 

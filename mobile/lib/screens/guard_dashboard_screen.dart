@@ -5,8 +5,10 @@ import '../services/firestore_service.dart';
 import '../ui/glass_loader.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
+import '../models/visitor.dart';
 import 'notice_board_screen.dart';
 import 'role_select_screen.dart';
+import 'visitor_details_screen.dart';
 
 class GuardDashboardScreen extends StatefulWidget {
   final String guardId;
@@ -37,6 +39,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   int pendingCount = 0;
   int approvedCount = 0;
   bool _isLoading = false;
+  List<Visitor> _recentVisitors = [];
 
   @override
   void initState() {
@@ -117,12 +120,52 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         };
       }).toList();
 
+      // 3. Get recent visitors (last 5, ordered by createdAt descending)
+      List<Visitor> recentVisitors = [];
+      try {
+        final recentQuerySnapshot = await visitorsRef
+            .where('guard_uid', isEqualTo: widget.guardId)
+            .orderBy('createdAt', descending: true)
+            .limit(5)
+            .get()
+            .timeout(const Duration(seconds: 10));
+
+        recentVisitors = recentQuerySnapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>?;
+          if (data == null) return null;
+          return _mapToVisitor(data, doc.id);
+        }).whereType<Visitor>().toList();
+      } catch (e) {
+        AppLogger.w("getRecentVisitors error", error: e.toString());
+        // Fallback: try without orderBy if composite index is missing
+        try {
+          final recentQuerySnapshot = await visitorsRef
+              .where('guard_uid', isEqualTo: widget.guardId)
+              .limit(20)
+              .get()
+              .timeout(const Duration(seconds: 10));
+
+          final allVisitors = recentQuerySnapshot.docs.map((doc) {
+            final data = doc.data() as Map<String, dynamic>?;
+            if (data == null) return null;
+            return _mapToVisitor(data, doc.id);
+          }).whereType<Visitor>().toList();
+
+          // Sort by createdAt descending in memory
+          allVisitors.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          recentVisitors = allVisitors.take(5).toList();
+        } catch (e2) {
+          AppLogger.w("getRecentVisitors fallback error", error: e2.toString());
+        }
+      }
+
       if (mounted) {
         setState(() {
           _isLoading = false;
           todayCount = todayVisitors.length;
           pendingCount = todayVisitors.where((v) => (v['status'] as String).toUpperCase() == 'PENDING').length;
           approvedCount = todayVisitors.where((v) => (v['status'] as String).toUpperCase() == 'APPROVED').length;
+          _recentVisitors = recentVisitors;
         });
       }
 
@@ -137,6 +180,87 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  Visitor _mapToVisitor(Map<String, dynamic> data, String docId) {
+    // Parse createdAt
+    DateTime createdAt;
+    final createdAtValue = data['createdAt'];
+    if (createdAtValue is Timestamp) {
+      createdAt = createdAtValue.toDate();
+    } else if (createdAtValue is DateTime) {
+      createdAt = createdAtValue;
+    } else {
+      createdAt = DateTime.now();
+    }
+
+    // Parse approvedAt if exists
+    DateTime? approvedAt;
+    final approvedAtValue = data['approvedAt'] ?? data['approved_at'];
+    if (approvedAtValue != null) {
+      if (approvedAtValue is Timestamp) {
+        approvedAt = approvedAtValue.toDate();
+      } else if (approvedAtValue is DateTime) {
+        approvedAt = approvedAtValue;
+      }
+    }
+
+    return Visitor(
+      visitorId: docId,
+      societyId: data['society_id']?.toString() ?? widget.societyId,
+      flatId: data['flat_id']?.toString() ?? data['flat_no']?.toString() ?? '',
+      flatNo: (data['flat_no'] ?? data['flatNo'] ?? '').toString(),
+      visitorType: (data['visitor_type'] ?? data['visitorType'] ?? 'GUEST').toString(),
+      visitorPhone: (data['visitor_phone'] ?? data['visitorPhone'] ?? '').toString(),
+      status: (data['status'] ?? 'PENDING').toString(),
+      createdAt: createdAt,
+      approvedAt: approvedAt,
+      approvedBy: data['approved_by']?.toString() ?? data['approvedBy']?.toString(),
+      guardId: data['guard_uid']?.toString() ?? data['guard_id']?.toString() ?? widget.guardId,
+      photoPath: data['photo_path']?.toString(),
+      photoUrl: data['photo_url']?.toString() ?? data['photoUrl']?.toString(),
+      note: data['note']?.toString(),
+    );
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final now = DateTime.now();
+    final diff = now.difference(dateTime);
+
+    if (diff.inMinutes < 1) {
+      return "Just now";
+    } else if (diff.inMinutes < 60) {
+      return "${diff.inMinutes}m ago";
+    } else if (diff.inHours < 24) {
+      return "${diff.inHours}h ago";
+    } else if (diff.inDays < 7) {
+      return "${diff.inDays}d ago";
+    } else {
+      final localTime = dateTime.toLocal();
+      return "${localTime.day}/${localTime.month}/${localTime.year}";
+    }
+  }
+
+  IconData _getVisitorTypeIcon(String type) {
+    switch (type.toUpperCase()) {
+      case "DELIVERY":
+        return Icons.inventory_2_outlined;
+      case "CAB":
+        return Icons.directions_car_outlined;
+      case "GUEST":
+        return Icons.person_outline;
+      default:
+        return Icons.person_add_outlined;
+    }
+  }
+
+  Color _getStatusColor(String status) {
+    final s = status.toUpperCase();
+    if (s.contains("APPROV")) return AppColors.success;
+    if (s.contains("REJECT")) return AppColors.error;
+    if (s.contains("LEAVE")) return AppColors.warning;
+    if (s.contains("PENDING")) return AppColors.warning;
+    return AppColors.textMuted;
   }
 
   Future<void> _onWillPop() async {
@@ -368,7 +492,107 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           ],
         ),
         const SizedBox(height: 10),
-        const _ActivityTile(title: "Amazon Delivery", subtitle: "Package at Gate 1", badge: "Pending", badgeColor: AppColors.warning, icon: Icons.inventory_2_outlined),
+        if (_recentVisitors.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Center(
+              child: Text(
+                "No recent visitors",
+                style: TextStyle(
+                  color: AppColors.text2,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          )
+        else
+          ..._recentVisitors.map((visitor) {
+            final displayFlat = visitor.flatNo.isNotEmpty ? visitor.flatNo : visitor.flatId;
+            final statusColor = _getStatusColor(visitor.status);
+            final subtitle = "${visitor.visitorPhone.isNotEmpty ? visitor.visitorPhone : 'No phone'} • ${_formatTime(visitor.createdAt)}";
+            
+            return InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => VisitorDetailsScreen(
+                      visitor: visitor,
+                      guardId: widget.guardId,
+                    ),
+                  ),
+                ).then((_) {
+                  // Refresh dashboard after returning from details
+                  _syncDashboard();
+                });
+              },
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      _getVisitorTypeIcon(visitor.visitorType),
+                      color: AppColors.primary,
+                      size: 24,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "${visitor.visitorType} • Flat $displayFlat",
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                              color: AppColors.text,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: AppColors.text2,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: statusColor.withOpacity(0.12),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: statusColor.withOpacity(0.3)),
+                      ),
+                      child: Text(
+                        visitor.status,
+                        style: TextStyle(
+                          color: statusColor,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
       ],
     );
   }
