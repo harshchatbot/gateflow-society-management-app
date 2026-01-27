@@ -61,32 +61,41 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
       residentName: widget.residentName,
       societyId: widget.societyId,
       flatNo: widget.flatNo,
+      onNavigateToApprovals: () => setState(() => _index = 1),
+      onNavigateToHistory: () => setState(() => _index = 2),
+      onNavigateToComplaints: () => setState(() => _index = 3),
+      onNavigateToNotices: () => setState(() => _index = 4),
     ),
     ResidentApprovalsScreen(
       residentId: widget.residentId,
       societyId: widget.societyId,
       flatNo: widget.flatNo,
+      onBackPressed: () => setState(() => _index = 0),
     ),
     ResidentHistoryScreen(
       residentId: widget.residentId,
       societyId: widget.societyId,
       flatNo: widget.flatNo,
+      onBackPressed: () => setState(() => _index = 0),
     ),
     ResidentComplaintsListScreen(
       residentId: widget.residentId,
       societyId: widget.societyId,
       flatNo: widget.flatNo,
+      onBackPressed: () => setState(() => _index = 0),
     ),
     NoticeBoardScreen(
       societyId: widget.societyId,
       themeColor: AppColors.success, // Green theme for residents
       useScaffold: false, // Don't use Scaffold when used as tab
+      onBackPressed: () => setState(() => _index = 0),
     ),
     ResidentProfileScreen(
       residentId: widget.residentId,
       residentName: widget.residentName,
       societyId: widget.societyId,
       flatNo: widget.flatNo,
+      onBackPressed: () => setState(() => _index = 0),
     ),
   ];
 

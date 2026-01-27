@@ -18,6 +18,7 @@ class NoticeBoardScreen extends StatefulWidget {
   final String? adminId; // Optional: if provided, shows manage button
   final String? adminName; // Optional: for admin context
   final bool useScaffold; // Whether to wrap in Scaffold (true for standalone, false for tab)
+  final VoidCallback? onBackPressed; // Callback for back button when in tab navigation
 
   const NoticeBoardScreen({
     super.key,
@@ -26,6 +27,7 @@ class NoticeBoardScreen extends StatefulWidget {
     this.adminId,
     this.adminName,
     this.useScaffold = true, // Default to true for backward compatibility
+    this.onBackPressed,
   });
 
   @override
@@ -261,6 +263,28 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Back button (only when in tab navigation with callback)
+                      if (widget.onBackPressed != null && !widget.useScaffold)
+                        IconButton(
+                          icon: Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: widget.themeColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.arrow_back_rounded,
+                              color: widget.themeColor,
+                              size: 20,
+                            ),
+                          ),
+                          onPressed: () {
+                            if (widget.onBackPressed != null) {
+                              widget.onBackPressed!();
+                            }
+                          },
+                          tooltip: "Back",
+                        ),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -416,23 +440,59 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   Widget build(BuildContext context) {
     final content = _buildScreen();
     
-    // If useScaffold is false (used as tab), return content directly
-    // If useScaffold is true (standalone), wrap in Scaffold
+    // If useScaffold is false (used as tab), return content directly (back button is in header)
+    // If useScaffold is true (standalone), wrap in Scaffold with AppBar
     if (!widget.useScaffold) {
+      // When used as tab, wrap in PopScope for system back button handling
+      if (widget.onBackPressed != null) {
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) {
+            if (!didPop) {
+              if (widget.onBackPressed != null) {
+                widget.onBackPressed!();
+              }
+            }
+          },
+          child: content,
+        );
+      }
+      // If no back callback, return content directly (for backward compatibility)
       return content;
     }
     
-    return Scaffold(
-      backgroundColor: AppColors.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: AppColors.text),
-          onPressed: () => Navigator.of(context).pop(),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          // If we're in a tab navigation, switch to dashboard
+          if (widget.onBackPressed != null) {
+            widget.onBackPressed!();
+          } else if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.surface,
+        appBar: AppBar(
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          automaticallyImplyLeading: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+            onPressed: () {
+              // If we're in a tab navigation, switch to dashboard
+              if (widget.onBackPressed != null) {
+                widget.onBackPressed!();
+              } else if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
         ),
+        body: content,
       ),
-      body: content,
     );
   }
 

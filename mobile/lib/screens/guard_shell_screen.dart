@@ -69,6 +69,7 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
       guardId: widget.guardId,
       guardName: widget.guardName,
       societyId: widget.societyId,
+      onBackPressed: () => setState(() => _index = 0),
     ),
     GuardHistoryScreen(
       guardId: widget.guardId,

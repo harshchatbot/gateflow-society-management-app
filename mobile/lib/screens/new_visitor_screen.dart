@@ -21,12 +21,14 @@ class NewVisitorScreen extends StatefulWidget {
   final String guardId;
   final String guardName;
   final String societyId;
+  final VoidCallback? onBackPressed;
 
   const NewVisitorScreen({
     super.key,
     required this.guardId,
     required this.guardName,
     required this.societyId,
+    this.onBackPressed,
   });
 
   @override
@@ -145,16 +147,35 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        automaticallyImplyLeading: true,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.text),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          // If we're in a tab navigation (IndexedStack), switch to dashboard
+          if (widget.onBackPressed != null) {
+            widget.onBackPressed!();
+          } else if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          automaticallyImplyLeading: true,
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.text),
+            onPressed: () {
+              // If we're in a tab navigation (IndexedStack), switch to dashboard
+              if (widget.onBackPressed != null) {
+                widget.onBackPressed!();
+              } else if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
         title: const Text('New Entry', style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 22)),
         centerTitle: true,
       ),
@@ -182,6 +203,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
           ),
           GlassLoader(show: _isLoading, message: "Syncing with Residents..."),
         ],
+      ),
       ),
     );
   }

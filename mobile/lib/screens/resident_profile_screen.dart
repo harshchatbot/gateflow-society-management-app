@@ -24,6 +24,7 @@ class ResidentProfileScreen extends StatefulWidget {
   final String societyId;
   final String flatNo;
   final String? residentPhone;
+  final VoidCallback? onBackPressed;
 
   const ResidentProfileScreen({
     super.key,
@@ -32,6 +33,7 @@ class ResidentProfileScreen extends StatefulWidget {
     required this.societyId,
     required this.flatNo,
     this.residentPhone,
+    this.onBackPressed,
   });
 
   @override
@@ -126,17 +128,41 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      body: CustomScrollView(
-        slivers: [
-          // Green Gradient Profile Header
-          SliverAppBar(
-            expandedHeight: 220,
-            pinned: true,
-            backgroundColor: AppColors.success,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          // If we're in a tab navigation, switch to dashboard
+          if (widget.onBackPressed != null) {
+            widget.onBackPressed!();
+          } else if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        body: CustomScrollView(
+          slivers: [
+            // Green Gradient Profile Header
+            SliverAppBar(
+              expandedHeight: 220,
+              pinned: true,
+              backgroundColor: AppColors.success,
+              automaticallyImplyLeading: true,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                onPressed: () {
+                  // If we're in a tab navigation, switch to dashboard
+                  if (widget.onBackPressed != null) {
+                    widget.onBackPressed!();
+                  } else if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -190,8 +216,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                   ],
                 ),
               ),
+              ),
             ),
-          ),
 
           SliverToBoxAdapter(
             child: Padding(
@@ -213,9 +239,10 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               ),
             ),
           ),
-        ],
-      ),
-    );
+        ], // closes slivers
+        ), // closes CustomScrollView
+      ), // closes Scaffold
+    ); // closes PopScope
   }
 
   Widget _buildAccountInfoSection() {

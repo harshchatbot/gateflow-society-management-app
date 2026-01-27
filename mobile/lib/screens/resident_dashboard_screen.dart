@@ -7,7 +7,9 @@ import '../services/notification_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import 'resident_complaint_screen.dart';
+import 'resident_complaints_list_screen.dart';
 import 'resident_approvals_screen.dart';
+import 'resident_history_screen.dart';
 import 'notice_board_screen.dart';
 import 'role_select_screen.dart';
 import '../widgets/resident_notification_drawer.dart';
@@ -26,6 +28,10 @@ class ResidentDashboardScreen extends StatefulWidget {
   final String residentName;
   final String societyId;
   final String flatNo;
+  final VoidCallback? onNavigateToApprovals;
+  final VoidCallback? onNavigateToHistory;
+  final VoidCallback? onNavigateToComplaints;
+  final VoidCallback? onNavigateToNotices;
 
   const ResidentDashboardScreen({
     super.key,
@@ -33,6 +39,10 @@ class ResidentDashboardScreen extends StatefulWidget {
     required this.residentName,
     required this.societyId,
     required this.flatNo,
+    this.onNavigateToApprovals,
+    this.onNavigateToHistory,
+    this.onNavigateToComplaints,
+    this.onNavigateToNotices,
   });
 
   @override
@@ -269,18 +279,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       },
       child: Scaffold(
         backgroundColor: AppColors.bg,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => _onWillPop().then((shouldExit) {
-              if (shouldExit && context.mounted) {
-                Navigator.of(context).pop();
-              }
-            }),
-          ),
-        ),
         body: Stack(
         children: [
           // Green Gradient Header Background
@@ -516,16 +514,21 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           subtitle: "$_pendingCount requests",
           color: AppColors.warning,
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ResidentApprovalsScreen(
-                  residentId: widget.residentId,
-                  societyId: widget.societyId,
-                  flatNo: widget.flatNo,
+            // Navigate to approvals tab if in shell, otherwise push new route
+            if (widget.onNavigateToApprovals != null) {
+              widget.onNavigateToApprovals!();
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ResidentApprovalsScreen(
+                    residentId: widget.residentId,
+                    societyId: widget.societyId,
+                    flatNo: widget.flatNo,
+                  ),
                 ),
-              ),
-            );
+              );
+            }
           },
         ),
         _buildActionCard(
@@ -553,17 +556,21 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           subtitle: "View all complaints",
           color: AppColors.primary,
           onTap: () {
-            // Navigate to complaints tab - handled by shell
-            // For now, show snackbar
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text("Use the Complaints tab below to view your complaints"),
-                backgroundColor: AppColors.success,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.all(16),
-              ),
-            );
+            // Navigate to complaints tab if in shell, otherwise push new route
+            if (widget.onNavigateToComplaints != null) {
+              widget.onNavigateToComplaints!();
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ResidentComplaintsListScreen(
+                    residentId: widget.residentId,
+                    societyId: widget.societyId,
+                    flatNo: widget.flatNo,
+                  ),
+                ),
+              );
+            }
           },
         ),
         _buildActionCard(
@@ -573,6 +580,21 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           color: AppColors.success,
           onTap: () {
             // Navigate to history tab - handled by shell
+            if (widget.onNavigateToHistory != null) {
+              widget.onNavigateToHistory!();
+            } else {
+              // Fallback: navigate to history screen if not in shell
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ResidentHistoryScreen(
+                    residentId: widget.residentId,
+                    societyId: widget.societyId,
+                    flatNo: widget.flatNo,
+                  ),
+                ),
+              );
+            }
           },
         ),
         _buildActionCard(
@@ -581,15 +603,20 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           subtitle: "Society announcements",
           color: AppColors.warning,
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => NoticeBoardScreen(
-                  societyId: widget.societyId,
-                  themeColor: AppColors.success,
+            // Navigate to notices tab if in shell, otherwise push new route
+            if (widget.onNavigateToNotices != null) {
+              widget.onNavigateToNotices!();
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => NoticeBoardScreen(
+                    societyId: widget.societyId,
+                    themeColor: AppColors.success,
+                  ),
                 ),
-              ),
-            );
+              );
+            }
           },
         ),
       ],

@@ -18,12 +18,14 @@ class ResidentApprovalsScreen extends StatefulWidget {
   final String residentId;
   final String societyId;
   final String flatNo;
+  final VoidCallback? onBackPressed;
 
   const ResidentApprovalsScreen({
     super.key,
     required this.residentId,
     required this.societyId,
     required this.flatNo,
+    this.onBackPressed,
   });
 
   @override
@@ -166,11 +168,35 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 0,
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          // If we're in a tab navigation, switch to dashboard
+          if (widget.onBackPressed != null) {
+            widget.onBackPressed!();
+          } else if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.bg,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          automaticallyImplyLeading: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+            onPressed: () {
+              // If we're in a tab navigation, switch to dashboard
+              if (widget.onBackPressed != null) {
+                widget.onBackPressed!();
+              } else if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
         title: const Text(
           "Pending Approvals",
           style: TextStyle(
@@ -313,6 +339,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
             ),
           GlassLoader(show: _isLoading, message: "Processing…"),
         ],
+      ),
       ),
     );
   }
