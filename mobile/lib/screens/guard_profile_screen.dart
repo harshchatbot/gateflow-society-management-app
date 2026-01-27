@@ -15,12 +15,14 @@ class ProfileScreen extends StatefulWidget {
   final String guardId;
   final String guardName;
   final String societyId;
+  final VoidCallback? onBackPressed;
 
   const ProfileScreen({
     super.key,
     required this.guardId,
     required this.guardName,
     required this.societyId,
+    this.onBackPressed,
   });
 
   @override
@@ -80,10 +82,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: true,
+      canPop: false,
       onPopInvoked: (didPop) {
-        if (!didPop && Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
+        if (!didPop) {
+          // If we're in a tab navigation (IndexedStack), switch to dashboard
+          if (widget.onBackPressed != null) {
+            widget.onBackPressed!();
+          } else if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
         }
       },
       child: Scaffold(
@@ -99,7 +106,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
               onPressed: () {
-                if (Navigator.of(context).canPop()) {
+                // If we're in a tab navigation (IndexedStack), switch to dashboard
+                if (widget.onBackPressed != null) {
+                  widget.onBackPressed!();
+                } else if (Navigator.of(context).canPop()) {
                   Navigator.of(context).pop();
                 }
               },

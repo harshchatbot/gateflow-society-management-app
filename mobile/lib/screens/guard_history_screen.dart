@@ -16,12 +16,14 @@ class GuardHistoryScreen extends StatefulWidget {
   final String guardId;
   final String? guardName;
   final String? societyId;
+  final VoidCallback? onBackPressed;
 
   const GuardHistoryScreen({
     super.key,
     required this.guardId,
     this.guardName,
     this.societyId,
+    this.onBackPressed,
   });
 
   @override
@@ -149,15 +151,34 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          // If we're in a tab navigation (IndexedStack), switch to dashboard
+          if (widget.onBackPressed != null) {
+            widget.onBackPressed!();
+          } else if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        }
+      },
+      child: Scaffold(
         backgroundColor: AppColors.bg,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.text),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        appBar: AppBar(
+          backgroundColor: AppColors.bg,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.text),
+            onPressed: () {
+              // If we're in a tab navigation (IndexedStack), switch to dashboard
+              if (widget.onBackPressed != null) {
+                widget.onBackPressed!();
+              } else if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
         title: const Text(
           "Visitor History",
           style: TextStyle(
@@ -274,6 +295,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
             ),
           GlassLoader(show: _isLoading, message: "Loading history…"),
         ],
+      ),
       ),
     );
   }

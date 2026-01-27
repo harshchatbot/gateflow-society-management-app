@@ -10,7 +10,12 @@ import '../core/app_logger.dart';
 
 class VisitorListScreen extends StatefulWidget {
   final String guardId;
-  const VisitorListScreen({super.key, required this.guardId});
+  final VoidCallback? onBackPressed;
+  const VisitorListScreen({
+    super.key,
+    required this.guardId,
+    this.onBackPressed,
+  });
 
   @override
   State<VisitorListScreen> createState() => _VisitorListScreenState();
@@ -308,15 +313,34 @@ class _VisitorListScreenState extends State<VisitorListScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(
+    return PopScope(
+      canPop: false,
+      onPopInvoked: (didPop) {
+        if (!didPop) {
+          // If we're in a tab navigation (IndexedStack), switch to dashboard
+          if (widget.onBackPressed != null) {
+            widget.onBackPressed!();
+          } else if (Navigator.of(context).canPop()) {
+            Navigator.of(context).pop();
+          }
+        }
+      },
+      child: Scaffold(
         backgroundColor: AppColors.bg,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.text),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        appBar: AppBar(
+          backgroundColor: AppColors.bg,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.text),
+            onPressed: () {
+              // If we're in a tab navigation (IndexedStack), switch to dashboard
+              if (widget.onBackPressed != null) {
+                widget.onBackPressed!();
+              } else if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
         title: const Text("Visitor Logs", style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w900)),
         centerTitle: true,
         actions: [
@@ -377,6 +401,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
           ),
           GlassLoader(show: _loading, message: "Updating logs..."),
         ],
+      ),
       ),
     );
   }

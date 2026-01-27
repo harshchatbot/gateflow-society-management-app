@@ -61,17 +61,24 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
       onTapNewEntry: () => setState(() => _index = 2),
       onTapVisitors: () => setState(() => _index = 1),
     ),
-    VisitorListScreen(guardId: widget.guardId),
+    VisitorListScreen(
+      guardId: widget.guardId,
+      onBackPressed: () => setState(() => _index = 0),
+    ),
     NewVisitorScreen(
       guardId: widget.guardId,
       guardName: widget.guardName,
       societyId: widget.societyId,
     ),
-    GuardHistoryScreen(guardId: widget.guardId),
+    GuardHistoryScreen(
+      guardId: widget.guardId,
+      onBackPressed: () => setState(() => _index = 0),
+    ),
     ProfileScreen(
       guardId: widget.guardId,
       guardName: widget.guardName,
       societyId: widget.societyId,
+      onBackPressed: () => setState(() => _index = 0),
     ),
   ];
 
