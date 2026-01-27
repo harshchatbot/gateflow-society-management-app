@@ -11,6 +11,7 @@ import 'package:uuid/uuid.dart';
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
 import '../services/admin_service.dart';
+import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 
@@ -36,6 +37,8 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
   late final AdminService _service = AdminService(
     baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
   );
+
+  final FirestoreService _firestore = FirestoreService();
 
   List<dynamic> _guards = [];
   List<dynamic> _filteredGuards = [];
@@ -88,55 +91,42 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
     });
 
     try {
-      final result = await _service.getGuards(societyId: widget.societyId);
+      final members = await _firestore.getMembers(
+        societyId: widget.societyId,
+        systemRole: 'guard',
+      );
 
       if (!mounted) return;
 
-      if (result.isSuccess && result.data != null) {
-        setState(() {
-          _guards = result.data!;
-          _filteredGuards = _guards;
-          _isLoading = false;
-        });
-        AppLogger.i("Loaded ${_guards.length} guards");
-      } else {
-        setState(() {
-          _isLoading = false;
-          _error = result.error ?? "Failed to load guards";
-        });
-        AppLogger.w("Failed to load guards: ${result.error}");
-        // Show error snackbar for better visibility
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                result.error ?? "Failed to load guards",
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              backgroundColor: AppColors.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              margin: const EdgeInsets.all(16),
-              action: SnackBarAction(
-                label: "Retry",
-                textColor: Colors.white,
-                onPressed: _loadGuards,
-              ),
-            ),
-          );
-        }
-      }
+      // Adapt Firestore members to existing guard card shape
+      final mapped = members.map((m) {
+        return {
+          'guard_id': m['uid'] ?? m['id'],
+          'guard_name': m['name'] ?? 'Guard',
+          'phone': m['phone'],
+          'role': (m['systemRole'] ?? 'GUARD').toString().toUpperCase(),
+          'active': m['active'] ?? true,
+          'society_id': widget.societyId,
+        };
+      }).toList();
+
+      setState(() {
+        _guards = mapped;
+        _filteredGuards = _guards;
+        _isLoading = false;
+      });
+      AppLogger.i("Loaded ${_guards.length} guards from Firestore");
     } catch (e) {
       AppLogger.e("Error loading guards", error: e);
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = "Connection error. Please try again.";
+          _error = "Failed to load guards. Please try again.";
         });
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
-              "Connection error. Please try again.",
+              "Failed to load guards. Please try again.",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             backgroundColor: AppColors.error,
