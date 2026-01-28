@@ -36,3 +36,5 @@ uvicorn==0.40.0
 aiofiles
 firebase-admin==6.5.0
 httpx>=0.24.0
+python-multipart>=0.0.6
+
