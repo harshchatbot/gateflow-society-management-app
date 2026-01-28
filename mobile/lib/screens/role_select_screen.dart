@@ -4,6 +4,7 @@ import 'resident_login_screen.dart';
 import 'admin_login_screen.dart';
 import '../widgets/powered_by_footer.dart';
 import '../ui/app_colors.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class RoleSelectScreen extends StatelessWidget {
   const RoleSelectScreen({super.key});
@@ -143,13 +144,13 @@ class RoleSelectScreen extends StatelessWidget {
               ),
             ],
           ),
-          child: Image.asset(
-            'assets/images/logo.png',
+          child: SvgPicture.asset(
+            'assets/images/logo.svg',
             width: 120,
             height: 120,
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              // Fallback to icon if image not found
+            placeholderBuilder: (context) {
+              // Fallback to icon while SVG is loading or if unavailable
               return Container(
                 decoration: BoxDecoration(
                   gradient: const LinearGradient(

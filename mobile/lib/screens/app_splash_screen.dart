@@ -7,6 +7,7 @@ import 'admin_shell_screen.dart';
 import '../core/storage.dart';
 import '../services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 
 class AppSplashScreen extends StatefulWidget {
   const AppSplashScreen({super.key});
@@ -335,7 +336,7 @@ class _AppSplashScreenState extends State<AppSplashScreen>
                                   ],
                                 ),
                               ),
-                            // Logo image (no white background)
+                            // Logo image (SVG, no white background)
                             Container(
                               width: 180,
                               height: 180,
@@ -348,13 +349,13 @@ class _AppSplashScreenState extends State<AppSplashScreen>
                                   ),
                                 ],
                               ),
-                              child: Image.asset(
-                                'assets/images/logo.png',
+                              child: SvgPicture.asset(
+                                'assets/images/logo.svg',
                                 width: 180,
                                 height: 180,
                                 fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) {
-                                  // Fallback to icon if image not found
+                                placeholderBuilder: (context) {
+                                  // Fallback to icon while SVG is loading or if unavailable
                                   return Container(
                                     decoration: BoxDecoration(
                                       gradient: const LinearGradient(

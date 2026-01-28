@@ -147,6 +147,15 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         elevation: 0,
+        automaticallyImplyLeading: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
         title: const Text(
           "Raise Complaint",
           style: TextStyle(

@@ -126,6 +126,14 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
         title: const Text(
           "Edit Account",
           style: TextStyle(

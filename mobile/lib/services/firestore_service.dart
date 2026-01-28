@@ -961,6 +961,33 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     }
   }
 
+  // ============================================
+  // RESIDENT PROFILE HELPERS
+  // ============================================
 
+  Future<void> updateResidentProfile({
+    required String societyId,
+    required String uid,
+    String? phone,
+    String? email,
+    String? photoUrl,
+  }) async {
+    try {
+      final data = <String, dynamic>{
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+      if (phone != null) data['phone'] = phone;
+      if (email != null) data['email'] = email;
+      if (photoUrl != null) data['photoUrl'] = photoUrl;
 
+      await _memberRef(societyId, uid).update(data);
+      AppLogger.i('Resident profile updated', data: {
+        'societyId': societyId,
+        'uid': uid,
+      });
+    } catch (e, st) {
+      AppLogger.e('Error updating resident profile', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
 }

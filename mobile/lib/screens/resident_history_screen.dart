@@ -210,6 +210,8 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
     final status = record['status']?.toString() ?? 'UNKNOWN';
     final createdAt = record['created_at']?.toString() ?? '';
     final approvedAt = record['approved_at']?.toString() ?? '';
+    final photoUrl = record['photo_url']?.toString() ?? record['photoUrl']?.toString();
+    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -246,18 +248,57 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
           ),
           const SizedBox(height: 12),
           
-          // Visitor Details
-          _buildDetailRow(Icons.phone_rounded, "Phone", visitorPhone),
-          const SizedBox(height: 8),
-          _buildDetailRow(Icons.access_time_rounded, "Requested", _formatDateTime(createdAt)),
-          if (approvedAt.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            _buildDetailRow(
-              Icons.check_circle_rounded,
-              "Decided",
-              _formatDateTime(approvedAt),
-            ),
-          ],
+          // Visitor Details (with optional photo)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (hasPhoto) ...[
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: ClipOval(
+                    child: Image.network(
+                      photoUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: AppColors.bg,
+                          child: const Icon(
+                            Icons.person_rounded,
+                            color: AppColors.text2,
+                            size: 24,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildDetailRow(Icons.phone_rounded, "Phone", visitorPhone),
+                    const SizedBox(height: 8),
+                    _buildDetailRow(Icons.access_time_rounded, "Requested", _formatDateTime(createdAt)),
+                    if (approvedAt.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      _buildDetailRow(
+                        Icons.check_circle_rounded,
+                        "Decided",
+                        _formatDateTime(approvedAt),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );

@@ -34,6 +34,9 @@ dependencies:
   #photo
   image_picker: ^1.1.2
 
+  # SVG rendering (for logo.svg)
+  flutter_svg: ^2.0.9
+
 
   http: ^1.2.2
   http_parser: ^4.0.2
@@ -75,10 +78,10 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/logo.png"
+  image_path: "assets/images/logo.svg"
   min_sdk_android: 21
   adaptive_icon_background: "#FFFFFF"
-  adaptive_icon_foreground: "assets/images/logo.png"
+  adaptive_icon_foreground: "assets/images/logo.svg"
 
 flutter:
   uses-material-design: true

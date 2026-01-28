@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../ui/app_colors.dart';
 import '../core/app_logger.dart';
 import '../services/resident_service.dart';
+import '../services/firestore_service.dart';
 import '../core/env.dart';
 import '../ui/glass_loader.dart';
 
@@ -31,6 +33,7 @@ class ResidentEditImageScreen extends StatefulWidget {
 
 class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
   final _residentService = ResidentService(baseUrl: Env.apiBaseUrl);
+  final FirestoreService _firestore = FirestoreService();
   final _picker = ImagePicker();
   File? _selectedImage;
   bool _isLoading = false;
@@ -88,58 +91,51 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final result = await _residentService.uploadProfileImage(
-        residentId: widget.residentId,
+      // Upload to Firebase Storage (similar to visitor/guard flows)
+      final storage = FirebaseStorage.instance;
+      final ref = storage
+          .ref()
+          .child('societies/${widget.societyId}/residents/${widget.residentId}.jpg');
+      final file = _selectedImage!;
+      final task = await ref.putFile(file);
+      final url = await task.ref.getDownloadURL();
+
+      // Update resident membership document with photoUrl
+      await _firestore.updateResidentProfile(
         societyId: widget.societyId,
-        flatNo: widget.flatNo,
-        imagePath: _selectedImage!.path,
+        uid: widget.residentId,
+        photoUrl: url,
       );
 
       if (!mounted) return;
 
-      if (result.isSuccess) {
-        AppLogger.i("Profile image uploaded successfully");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                const Text(
-                  "Profile image updated successfully",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
+      AppLogger.i("Profile image uploaded successfully", data: {"photoUrl": url});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text(
+                "Profile image updated successfully",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
-        );
-        Navigator.of(context).pop(true);
-      } else {
-        AppLogger.e("Failed to upload image", error: result.error);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result.error ?? "Failed to upload image",
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-      }
-    } catch (e) {
-      AppLogger.e("Error uploading image", error: e);
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e, st) {
+      AppLogger.e("Error uploading image", error: e, stackTrace: st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
-              "An error occurred. Please try again.",
+              "Failed to upload image. Please try again.",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             backgroundColor: AppColors.error,
@@ -161,6 +157,14 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+          onPressed: () {
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
         title: const Text(
           "Profile Image",
           style: TextStyle(

@@ -350,6 +350,8 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
     final visitorPhone = visitor['visitor_phone']?.toString() ?? '';
     final status = visitor['status']?.toString() ?? 'PENDING';
     final createdAt = visitor['created_at']?.toString() ?? '';
+    final photoUrl = visitor['photo_url']?.toString() ?? visitor['photoUrl']?.toString();
+    final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
     final isProcessing = _processingVisitorId == visitorId;
 
     return Container(
@@ -407,10 +409,52 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
           ),
           const SizedBox(height: 12),
           
-          // Visitor Details (Compact)
-          _buildCompactDetailRow(Icons.phone_rounded, visitorPhone),
-          const SizedBox(height: 6),
-          _buildCompactDetailRow(Icons.access_time_rounded, _formatDateTime(createdAt)),
+          // Visitor Details (with optional photo)
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (hasPhoto) ...[
+                Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: AppColors.success.withOpacity(0.2),
+                      width: 2,
+                    ),
+                  ),
+                  child: ClipOval(
+                    child: Image.network(
+                      photoUrl,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: AppColors.success.withOpacity(0.1),
+                          child: const Icon(
+                            Icons.person_rounded,
+                            color: AppColors.success,
+                            size: 24,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildCompactDetailRow(Icons.phone_rounded, visitorPhone),
+                    const SizedBox(height: 6),
+                    _buildCompactDetailRow(Icons.access_time_rounded, _formatDateTime(createdAt)),
+                  ],
+                ),
+              ),
+            ],
+          ),
           
           const SizedBox(height: 14),
           
