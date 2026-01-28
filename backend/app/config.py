@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     
     # Google Sheets Configuration
     GOOGLE_SHEETS_CREDENTIALS_PATH: str = "credentials.json"
-    SHEETS_SPREADSHEET_ID: str = "firebase_service_account.json"
+    SHEETS_SPREADSHEET_ID: str = ""
     
     # Sheet Names (must match existing sheet names exactly)
     SHEET_FLATS: str = "Flats"
@@ -23,7 +23,8 @@ class Settings(BaseSettings):
     SHEET_NOTICES: str = "Notices"
 
     GOOGLE_SERVICE_ACCOUNT_FILE: str = "credentials.json"
-    FIREBASE_SERVICE_ACCOUNT_PATH: str
+    FIREBASE_SERVICE_ACCOUNT_PATH: str = "firebase_service_account.json"
+
 
 
     
@@ -33,7 +34,6 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = True
-
 
 
     # ✅ Add WhatsApp fields (so env vars are accepted)
