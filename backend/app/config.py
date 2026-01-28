@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     
     # Google Sheets Configuration
     GOOGLE_SHEETS_CREDENTIALS_PATH: str = "credentials.json"
-    SHEETS_SPREADSHEET_ID: str = ""
+    SHEETS_SPREADSHEET_ID: str = "firebase_service_account.json"
     
     # Sheet Names (must match existing sheet names exactly)
     SHEET_FLATS: str = "Flats"
