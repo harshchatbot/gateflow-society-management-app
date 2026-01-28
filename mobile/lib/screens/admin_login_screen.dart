@@ -45,7 +45,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   final password = _passwordController.text.trim();
 
   setState(() => _isLoading = true);
-  AppLogger.i("Admin login attempt", data: {"email": email});
+  AppLogger.i("Admin login attempt");
 
   try {
     // Step 1: Sign in with Firebase Auth

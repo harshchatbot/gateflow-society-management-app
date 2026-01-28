@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class GuardSession {
   final String guardId;
@@ -41,6 +42,15 @@ class AdminSession {
 }
 
 class Storage {
+  // Secure storage instance for sensitive identity/session data
+  static const FlutterSecureStorage _secure = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+  );
   // Keys
   static const String _kGuardId = "guard_id";
   static const String _kGuardName = "guard_name";
@@ -218,49 +228,47 @@ class Storage {
     required String name,
     String? flatNo,
   }) async {
-    final prefs = await _prefs();
-    await prefs.setString(_kUid, uid);
-    await prefs.setString(_kSocietyId, societyId);
-    await prefs.setString(_kSystemRole, systemRole);
+    // Use secure storage for identity/session data instead of plain SharedPreferences
+    await _secure.write(key: _kUid, value: uid);
+    await _secure.write(key: _kSocietyId, value: societyId);
+    await _secure.write(key: _kSystemRole, value: systemRole);
     if (societyRole != null) {
-      await prefs.setString(_kSocietyRole, societyRole);
+      await _secure.write(key: _kSocietyRole, value: societyRole);
     }
-    await prefs.setString(_kName, name);
+    await _secure.write(key: _kName, value: name);
     if (flatNo != null) {
-      await prefs.setString(_kFlatNo, flatNo);
+      await _secure.write(key: _kFlatNo, value: flatNo);
     }
   }
 
   /// Get Firebase session
   static Future<Map<String, dynamic>?> getFirebaseSession() async {
-    final prefs = await _prefs();
-    final uid = prefs.getString(_kUid);
+    final uid = await _secure.read(key: _kUid);
     if (uid == null || uid.isEmpty) return null;
 
     return {
       'uid': uid,
-      'societyId': prefs.getString(_kSocietyId) ?? '',
-      'systemRole': prefs.getString(_kSystemRole) ?? '',
-      'societyRole': prefs.getString(_kSocietyRole),
-      'name': prefs.getString(_kName) ?? '',
-      'flatNo': prefs.getString(_kFlatNo),
+      'societyId': await _secure.read(key: _kSocietyId) ?? '',
+      'systemRole': await _secure.read(key: _kSystemRole) ?? '',
+      'societyRole': await _secure.read(key: _kSocietyRole),
+      'name': await _secure.read(key: _kName) ?? '',
+      'flatNo': await _secure.read(key: _kFlatNo),
     };
   }
 
   /// Clear Firebase session
   static Future<void> clearFirebaseSession() async {
-    final prefs = await _prefs();
-    await prefs.remove(_kUid);
-    await prefs.remove(_kSocietyId);
-    await prefs.remove(_kSystemRole);
-    await prefs.remove(_kSocietyRole);
-    await prefs.remove(_kName);
-    await prefs.remove(_kFlatNo);
+    await _secure.delete(key: _kUid);
+    await _secure.delete(key: _kSocietyId);
+    await _secure.delete(key: _kSystemRole);
+    await _secure.delete(key: _kSocietyRole);
+    await _secure.delete(key: _kName);
+    await _secure.delete(key: _kFlatNo);
   }
 
   /// Check if Firebase session exists
   static Future<bool> hasFirebaseSession() async {
-    final prefs = await _prefs();
-    return (prefs.getString(_kUid) ?? "").isNotEmpty;
+    final uid = await _secure.read(key: _kUid);
+    return (uid ?? "").isNotEmpty;
   }
 }

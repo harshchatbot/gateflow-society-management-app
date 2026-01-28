@@ -64,7 +64,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
       final user = userCredential.user;
       final uid = user?.uid;
 
-      debugPrint("Logged in email: ${user?.email}");
+      // Don't log raw email/PII in production logs
 
       if (uid == null) {
         throw Exception("Failed to sign in (uid null)");

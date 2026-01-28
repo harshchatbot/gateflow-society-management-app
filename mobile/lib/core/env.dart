@@ -9,7 +9,8 @@ class Env {
     try {
       AppLogger.i('Loading .env file...');
       await dotenv.load(fileName: 'assets/.env');
-      AppLogger.i('Env loaded', data: {'API_BASE_URL': dotenv.env['API_BASE_URL']});
+      // Do not log actual env values to avoid leaking configuration in logs
+      AppLogger.i('Env loaded');
     } catch (e, st) {
       AppLogger.e('Failed to load .env', error: e, stackTrace: st);
       throw AppError(

@@ -1,4 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:crypto/crypto.dart';
+import 'dart:convert';
 import '../core/app_logger.dart';
 
 /// FirebaseAuthService - Wrapper for Firebase Authentication
@@ -34,7 +36,7 @@ class FirebaseAuthService {
     required String password,
   }) async {
     try {
-      AppLogger.i('Creating admin account', data: {'email': email});
+      AppLogger.i('Creating admin account');
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -53,7 +55,7 @@ class FirebaseAuthService {
     required String password,
   }) async {
     try {
-      AppLogger.i('Signing in admin', data: {'email': email});
+      AppLogger.i('Signing in admin');
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -69,9 +71,9 @@ class FirebaseAuthService {
   /// Send password reset email for admin (email/password accounts).
   Future<void> sendPasswordResetEmail({required String email}) async {
     try {
-      AppLogger.i('Sending password reset email', data: {'email': email});
+      AppLogger.i('Sending password reset email');
       await _auth.sendPasswordResetEmail(email: email);
-      AppLogger.i('Password reset email sent', data: {'email': email});
+      AppLogger.i('Password reset email sent');
     } catch (e, stackTrace) {
       AppLogger.e('Error sending password reset email', error: e, stackTrace: stackTrace);
       rethrow;
@@ -117,10 +119,14 @@ class FirebaseAuthService {
   }) async {
     try {
       final email = getGuardEmail(societyId: societyId, guardId: guardId);
-      AppLogger.i('Creating guard account', data: {'email': email, 'societyId': societyId, 'guardId': guardId});
+      AppLogger.i('Creating guard account', data: {'societyId': societyId, 'guardId': guardId});
+      final password = _derivePasswordFromPin(
+        context: 'guard:$societyId:$guardId',
+        pin: pin,
+      );
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
-        password: pin, // PIN is used as password (temporary MVP approach)
+        password: password,
       );
       AppLogger.i('Guard account created', data: {'uid': credential.user?.uid});
       return credential;
@@ -137,7 +143,7 @@ class FirebaseAuthService {
   }) async {
     try {
       final email = getGuardEmailFromUsername(username);
-      AppLogger.i('Creating guard account (username)', data: {'email': email});
+      AppLogger.i('Creating guard account (username)');
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: pin,
@@ -161,13 +167,38 @@ class FirebaseAuthService {
   }) async {
     try {
       final email = getGuardEmail(societyId: societyId, guardId: guardId);
-      AppLogger.i('Signing in guard', data: {'email': email, 'societyId': societyId, 'guardId': guardId});
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: pin,
+      AppLogger.i('Signing in guard', data: {'societyId': societyId, 'guardId': guardId});
+      final password = _derivePasswordFromPin(
+        context: 'guard:$societyId:$guardId',
+        pin: pin,
       );
-      AppLogger.i('Guard signed in', data: {'uid': credential.user?.uid});
-      return credential;
+      try {
+        final credential = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        AppLogger.i('Guard signed in', data: {'uid': credential.user?.uid});
+        return credential;
+      } on FirebaseAuthException catch (e) {
+        // Backward compatibility: try plain PIN, then migrate password
+        if (e.code == 'wrong-password') {
+          AppLogger.w('Guard hashed password sign-in failed, trying legacy PIN', error: e);
+          final legacyCredential = await _auth.signInWithEmailAndPassword(
+            email: email,
+            password: pin,
+          );
+          AppLogger.i('Guard signed in with legacy PIN, migrating to hashed password', data: {
+            'uid': legacyCredential.user?.uid,
+          });
+          try {
+            await legacyCredential.user?.updatePassword(password);
+          } catch (updateError, st) {
+            AppLogger.e('Failed to migrate guard password to hashed', error: updateError, stackTrace: st);
+          }
+          return legacyCredential;
+        }
+        rethrow;
+      }
     } catch (e, stackTrace) {
       AppLogger.e('Error signing in guard', error: e, stackTrace: stackTrace);
       rethrow;
@@ -181,7 +212,7 @@ class FirebaseAuthService {
   }) async {
     try {
       final email = getGuardEmailFromUsername(username);
-      AppLogger.i('Signing in guard (username)', data: {'email': email});
+      AppLogger.i('Signing in guard (username)');
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: pin,
@@ -203,10 +234,14 @@ class FirebaseAuthService {
   }) async {
     try {
       final email = getResidentEmail(societyId: societyId, flatNo: flatNo, phone: phone);
-      AppLogger.i('Creating resident account', data: {'email': email, 'societyId': societyId, 'flatNo': flatNo});
+      AppLogger.i('Creating resident account', data: {'societyId': societyId, 'flatNo': flatNo});
+      final password = _derivePasswordFromPin(
+        context: 'resident:$societyId:$flatNo:$phone',
+        pin: pin,
+      );
       final credential = await _auth.createUserWithEmailAndPassword(
         email: email,
-        password: pin, // PIN is used as password (temporary MVP approach)
+        password: password,
       );
       AppLogger.i('Resident account created', data: {'uid': credential.user?.uid});
       return credential;
@@ -225,13 +260,38 @@ class FirebaseAuthService {
   }) async {
     try {
       final email = getResidentEmail(societyId: societyId, flatNo: flatNo, phone: phone);
-      AppLogger.i('Signing in resident', data: {'email': email, 'societyId': societyId, 'flatNo': flatNo});
-      final credential = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: pin,
+      AppLogger.i('Signing in resident', data: {'societyId': societyId, 'flatNo': flatNo});
+      final password = _derivePasswordFromPin(
+        context: 'resident:$societyId:$flatNo:$phone',
+        pin: pin,
       );
-      AppLogger.i('Resident signed in', data: {'uid': credential.user?.uid});
-      return credential;
+      try {
+        final credential = await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+        AppLogger.i('Resident signed in', data: {'uid': credential.user?.uid});
+        return credential;
+      } on FirebaseAuthException catch (e) {
+        // Backward compatibility: try plain PIN, then migrate password
+        if (e.code == 'wrong-password') {
+          AppLogger.w('Resident hashed password sign-in failed, trying legacy PIN', error: e);
+          final legacyCredential = await _auth.signInWithEmailAndPassword(
+            email: email,
+            password: pin,
+          );
+          AppLogger.i('Resident signed in with legacy PIN, migrating to hashed password', data: {
+            'uid': legacyCredential.user?.uid,
+          });
+          try {
+            await legacyCredential.user?.updatePassword(password);
+          } catch (updateError, st) {
+            AppLogger.e('Failed to migrate resident password to hashed', error: updateError, stackTrace: st);
+          }
+          return legacyCredential;
+        }
+        rethrow;
+      }
     } catch (e, stackTrace) {
       AppLogger.e('Error signing in resident', error: e, stackTrace: stackTrace);
       rethrow;
@@ -244,7 +304,7 @@ class FirebaseAuthService {
     required String password,
   }) async {
     try {
-      AppLogger.i('Signing in resident', data: {'email': email});
+      AppLogger.i('Signing in resident (email/password)');
       final credential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
@@ -258,25 +318,36 @@ class FirebaseAuthService {
   }
 
   Future<UserCredential> signUpOrSignIn({
-  required String email,
-  required String password,
-}) async {
-  try {
-    return await _auth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-  } on FirebaseAuthException catch (e) {
-    if (e.code == 'email-already-in-use') {
-      return await _auth.signInWithEmailAndPassword(
+    required String email,
+    required String password,
+  }) async {
+    try {
+      return await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        return await _auth.signInWithEmailAndPassword(
+          email: email,
+          password: password,
+        );
+      }
+      rethrow;
     }
-    rethrow;
   }
-}
 
-
-
+  /// Derive a strong password string from a short PIN + context.
+  /// This avoids storing the raw PIN as the Firebase password.
+  static String _derivePasswordFromPin({
+    required String context,
+    required String pin,
+  }) {
+    final normalizedPin = pin.trim();
+    final input = '$context|$normalizedPin|sentinel-v1';
+    final bytes = utf8.encode(input);
+    final digest = sha256.convert(bytes).toString(); // 64-char hex
+    // Optionally add a prefix to avoid pure-hex-only passwords if needed.
+    return 'Sf_${digest}_p';
+  }
 }

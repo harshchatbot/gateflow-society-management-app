@@ -48,7 +48,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
     final password = _passwordController.text.trim();
 
     setState(() => _isLoading = true);
-    AppLogger.i("Resident login attempt", data: {"email": email});
+    AppLogger.i("Resident login attempt");
 
     try {
       // 1) Firebase Auth sign-in
@@ -60,7 +60,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
       final user = userCredential.user;
       final uid = user?.uid;
 
-      debugPrint("Logged in email: ${user?.email}");
+      // Don't log raw email in production logs
 
       if (uid == null) {
         debugPrint("uid is null${uid}");

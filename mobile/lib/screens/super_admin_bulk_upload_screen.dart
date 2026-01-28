@@ -1125,7 +1125,7 @@ final inviteRef = FirebaseFirestore.instance
 
 
           successCount++;
-          AppLogger.i("Resident created via bulk upload", data: {'flatNo': flatNo, 'uid': uid, 'email': email});
+          AppLogger.i("Resident created via bulk upload", data: {'flatNo': flatNo, 'uid': uid});
         } catch (e, stackTrace) {
           AppLogger.e("Error processing resident row $rowNumber", error: e, stackTrace: stackTrace);
           errors.add("Row $rowNumber: ${e.toString()}");
