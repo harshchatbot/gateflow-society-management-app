@@ -35,6 +35,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   
   String _dynamicName = "";
+  String? _photoUrl;
   int todayCount = 0;
   int pendingCount = 0;
   int approvedCount = 0;
@@ -58,7 +59,8 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
       final membership = await _firestore.getCurrentUserMembership();
       if (membership != null && membership['name'] != null) {
         _dynamicName = membership['name'] as String;
-        
+        _photoUrl = membership['photoUrl'] as String?;
+
         // Sync to storage so Profile page updates too
         Storage.saveGuardSession(
           guardId: widget.guardId,
@@ -363,12 +365,53 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   Widget _buildHeader(BuildContext context) {
     return Row(
       children: [
+        // Small profile avatar
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withOpacity(0.8),
+              width: 2,
+            ),
+          ),
+          child: CircleAvatar(
+            backgroundColor: Colors.white24,
+            backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                ? NetworkImage(_photoUrl!)
+                : null,
+            child: (_photoUrl == null || _photoUrl!.isEmpty)
+                ? const Icon(
+                    Icons.person_rounded,
+                    color: Colors.white,
+                  )
+                : null,
+          ),
+        ),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Welcome back,", style: TextStyle(color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.w600, fontSize: 14)),
-              Text(_dynamicName, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 24)),
+              Text(
+                "Welcome back,",
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.8),
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              Text(
+                _dynamicName,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 24,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
             ],
           ),
         ),

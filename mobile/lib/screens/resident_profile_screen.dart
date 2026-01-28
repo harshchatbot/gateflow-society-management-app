@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../ui/app_colors.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
+import '../services/firestore_service.dart';
 import 'role_select_screen.dart';
 import 'resident_notification_settings_screen.dart';
 import 'resident_edit_phone_screen.dart';
@@ -42,6 +43,27 @@ class ResidentProfileScreen extends StatefulWidget {
 
 class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
   bool _isLoggingOut = false;
+  final FirestoreService _firestore = FirestoreService();
+  String? _photoUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfilePhoto();
+  }
+
+  Future<void> _loadProfilePhoto() async {
+    try {
+      final membership = await _firestore.getCurrentUserMembership();
+      if (!mounted || membership == null) return;
+
+      setState(() {
+        _photoUrl = membership['photoUrl'] as String?;
+      });
+    } catch (e, st) {
+      AppLogger.e("Error loading resident profile photo", error: e, stackTrace: st);
+    }
+  }
 
   Future<void> _handleLogout() async {
     // Show confirmation dialog
@@ -189,10 +211,19 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                           ),
                         ],
                       ),
-                      child: const CircleAvatar(
+                      child: CircleAvatar(
                         radius: 45,
                         backgroundColor: Colors.white24,
-                        child: Icon(Icons.person_rounded, size: 50, color: Colors.white),
+                        backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                            ? NetworkImage(_photoUrl!)
+                            : null,
+                        child: (_photoUrl == null || _photoUrl!.isEmpty)
+                            ? const Icon(
+                                Icons.person_rounded,
+                                size: 50,
+                                color: Colors.white,
+                              )
+                            : null,
                       ),
                     ),
                     const SizedBox(height: 12),

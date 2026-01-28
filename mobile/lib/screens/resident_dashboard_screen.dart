@@ -65,12 +65,27 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   int _rejectedCount = 0;
   int _notificationCount = 0; // Total notifications (approvals + notices)
   bool _isLoading = false;
+  String? _photoUrl;
 
   @override
   void initState() {
     super.initState();
     _loadDashboardData();
+    _loadResidentProfilePhoto();
     _setupNotificationListener();
+  }
+
+  Future<void> _loadResidentProfilePhoto() async {
+    try {
+      final membership = await _firestore.getCurrentUserMembership();
+      if (!mounted || membership == null) return;
+
+      setState(() {
+        _photoUrl = membership['photoUrl'] as String?;
+      });
+    } catch (e, st) {
+      AppLogger.e("Error loading resident profile photo (dashboard)", error: e, stackTrace: st);
+    }
   }
 
   void _setupNotificationListener() {
@@ -371,6 +386,31 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   Widget _buildHeader() {
     return Row(
       children: [
+        // Small profile avatar
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withOpacity(0.8),
+              width: 2,
+            ),
+          ),
+          child: CircleAvatar(
+            backgroundColor: Colors.white24,
+            backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                ? NetworkImage(_photoUrl!)
+                : null,
+            child: (_photoUrl == null || _photoUrl!.isNotEmpty == false)
+                ? const Icon(
+                    Icons.person_rounded,
+                    color: Colors.white,
+                  )
+                : null,
+          ),
+        ),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
