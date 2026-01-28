@@ -150,6 +150,7 @@ class ResidentService:
         flat_no: str,
         resident_name: Optional[str],
         resident_phone: Optional[str],
+        sos_id: Optional[str] = None,
     ) -> None:
         """
         Send SOS alert notification to all staff (guards/admins) in a society.
@@ -175,6 +176,7 @@ class ResidentService:
                 "flat_no": safe_flat,
                 "resident_name": safe_name,
                 "resident_phone": safe_phone,
+                **({"sos_id": sos_id} if sos_id else {}),
             },
             sound="notification_sound",
         )

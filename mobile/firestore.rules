@@ -208,6 +208,29 @@ service cloud.firestore {
       }
 
       // ------------------------
+      // SOS Requests
+      // Residents can create SOS alerts; admins/guards can read.
+      // ------------------------
+      match /sos_requests/{id} {
+        // Any active member (resident, guard, admin) can create an SOS
+        allow create: if activeMember(societyId);
+
+        // Allow reads to staff and the resident who created it
+        allow read: if activeMember(societyId)
+          && (
+            // Admin / super_admin / guard can read all SOS for this society
+            member(societyId).data.systemRole in ["admin", "super_admin", "guard"]
+            // Or the resident who created the SOS (by residentId field)
+            || resource.data.residentId == request.auth.uid
+          );
+
+        // Admins/guards can update/close SOS (future: add stricter field checks)
+        allow update: if activeMember(societyId)
+          && member(societyId).data.systemRole in ["admin", "super_admin", "guard"];
+        allow delete: if false;
+      }
+
+      // ------------------------
       // Visitors
       // Guards can create visitors, all members can read
       // Residents can update status (approve/reject) for their flat's visitors

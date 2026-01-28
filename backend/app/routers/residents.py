@@ -70,6 +70,7 @@ class SosAlertRequest(BaseModel):
     flat_no: str
     resident_name: str
     resident_phone: Optional[str] = None
+    sos_id: Optional[str] = None
 
 
 # -----------------------------
@@ -183,6 +184,7 @@ def send_sos_alert(payload: SosAlertRequest):
         flat_no=payload.flat_no,
         resident_name=payload.resident_name,
         resident_phone=payload.resident_phone,
+        sos_id=payload.sos_id,
     )
     return GenericOkResponse(ok=True)
 

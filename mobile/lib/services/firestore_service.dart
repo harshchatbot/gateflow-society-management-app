@@ -818,7 +818,34 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
   /// SOS / Emergency Requests
   /// ============================================
 
-  Future<void> createSosRequest({
+  Future<void> updateSosStatus({
+    required String societyId,
+    required String sosId,
+    required String status,
+  }) async {
+    try {
+      final ref = _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('sos_requests')
+          .doc(sosId);
+
+      await ref.update({
+        'status': status.toUpperCase(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      AppLogger.i('SOS status updated', data: {
+        'societyId': societyId,
+        'sosId': sosId,
+        'status': status.toUpperCase(),
+      });
+    } catch (e, st) {
+      AppLogger.e('Error updating SOS status', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
+  Future<String> createSosRequest({
     required String societyId,
     required String residentId,
     required String residentName,
@@ -835,6 +862,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
           .doc();
 
       final payload = <String, dynamic>{
+        'sosId': sosRef.id,
         'residentId': residentId,
         'residentName': residentName,
         'flatNo': flatNo,
@@ -852,6 +880,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         'flatNo': flatNo,
         'type': payload['type'],
       });
+      return sosRef.id;
     } catch (e, st) {
       AppLogger.e('Error creating SOS request', error: e, stackTrace: st);
       rethrow;

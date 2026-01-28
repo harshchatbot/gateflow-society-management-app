@@ -224,6 +224,7 @@ class ResidentService {
     required String flatNo,
     required String residentName,
     String? residentPhone,
+    String? sosId,
   }) async {
     try {
       final uri = _uri("/api/residents/sos");
@@ -233,6 +234,8 @@ class ResidentService {
         "resident_name": residentName,
         if (residentPhone != null && residentPhone.trim().isNotEmpty)
           "resident_phone": residentPhone.trim(),
+        if (sosId != null && sosId.trim().isNotEmpty)
+          "sos_id": sosId.trim(),
       });
 
       final res = await http

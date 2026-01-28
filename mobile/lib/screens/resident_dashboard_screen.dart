@@ -927,7 +927,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
   Future<void> _sendSos() async {
     try {
-      await _firestore.createSosRequest(
+      final sosId = await _firestore.createSosRequest(
         societyId: widget.societyId,
         residentId: widget.residentId,
         residentName: widget.residentName,
@@ -942,6 +942,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           flatNo: widget.flatNo,
           residentName: widget.residentName,
           residentPhone: _phone,
+          sosId: sosId,
         );
       } catch (_) {
         // Ignore backend SOS errors here; Firestore record is already created

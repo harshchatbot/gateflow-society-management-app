@@ -9,6 +9,7 @@ import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import 'notice_board_screen.dart';
+import 'sos_detail_screen.dart';
 import 'admin_manage_notices_screen.dart';
 import 'admin_manage_admins_screen.dart';
 import 'role_select_screen.dart';
@@ -97,6 +98,26 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       } else if (type == 'notice') {
         // Navigate to notices tab (index 4)
         _navigateToTab(4);
+      } else if (type == 'sos') {
+        final societyId = (data['society_id'] ?? widget.societyId).toString();
+        final flatNo = (data['flat_no'] ?? '').toString();
+        final residentName = (data['resident_name'] ?? 'Resident').toString();
+        final phone = (data['resident_phone'] ?? '').toString();
+        final sosId = (data['sos_id'] ?? '').toString();
+
+        if (!mounted || sosId.isEmpty) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SosDetailScreen(
+              societyId: societyId,
+              sosId: sosId,
+              flatNo: flatNo,
+              residentName: residentName,
+              residentPhone: phone.isNotEmpty ? phone : null,
+            ),
+          ),
+        );
       }
     });
   }

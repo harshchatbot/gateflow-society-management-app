@@ -9,6 +9,8 @@ import '../models/visitor.dart';
 import 'notice_board_screen.dart';
 import 'role_select_screen.dart';
 import 'visitor_details_screen.dart';
+import '../services/notification_service.dart';
+import 'sos_detail_screen.dart';
 
 class GuardDashboardScreen extends StatefulWidget {
   final String guardId;
@@ -48,6 +50,35 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     // Initialize with passed name, then fetch fresh data
     _dynamicName = widget.guardName; 
     _syncDashboard();
+    _setupNotificationListener();
+  }
+
+  void _setupNotificationListener() {
+    final notificationService = NotificationService();
+    notificationService.setOnNotificationTap((data) {
+      final type = (data['type'] ?? '').toString();
+      if (type == 'sos') {
+        final societyId = (data['society_id'] ?? widget.societyId).toString();
+        final flatNo = (data['flat_no'] ?? '').toString();
+        final residentName = (data['resident_name'] ?? 'Resident').toString();
+        final phone = (data['resident_phone'] ?? '').toString();
+        final sosId = (data['sos_id'] ?? '').toString();
+
+        if (!mounted || sosId.isEmpty) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SosDetailScreen(
+              societyId: societyId,
+              sosId: sosId,
+              flatNo: flatNo,
+              residentName: residentName,
+              residentPhone: phone.isNotEmpty ? phone : null,
+            ),
+          ),
+        );
+      }
+    });
   }
 
   Future<void> _syncDashboard() async {
