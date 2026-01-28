@@ -35,6 +35,7 @@ class Settings(BaseSettings):
         case_sensitive = True
 
 
+
     # ✅ Add WhatsApp fields (so env vars are accepted)
     WHATSAPP_TOKEN: Optional[str] = None
     WHATSAPP_PHONE_NUMBER_ID: Optional[str] = None
