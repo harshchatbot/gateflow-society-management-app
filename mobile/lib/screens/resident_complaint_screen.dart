@@ -32,7 +32,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
   final _titleController = TextEditingController();
   final _descriptionController = TextEditingController();
   late final ComplaintService _service = ComplaintService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
 
   String _selectedCategory = "GENERAL";

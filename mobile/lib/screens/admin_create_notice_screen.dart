@@ -27,7 +27,7 @@ class AdminCreateNoticeScreen extends StatefulWidget {
 
 class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
   late final NoticeService _service = NoticeService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
 
   final _formKey = GlobalKey<FormState>();

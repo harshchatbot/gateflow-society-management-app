@@ -64,6 +64,14 @@ class GenericOkResponse(BaseModel):
     ok: bool
 
 
+class SosAlertRequest(BaseModel):
+    """Trigger SOS alert to society staff (guards/admins)"""
+    society_id: str
+    flat_no: str
+    resident_name: str
+    resident_phone: Optional[str] = None
+
+
 # -----------------------------
 # Routes
 # -----------------------------
@@ -157,6 +165,25 @@ def upsert_fcm_token(payload: FcmTokenUpsertRequest):
     """
     svc = get_resident_service()
     svc.upsert_fcm_token(payload)
+    return GenericOkResponse(ok=True)
+
+
+@router.post("/sos", response_model=GenericOkResponse)
+def send_sos_alert(payload: SosAlertRequest):
+    """
+    Trigger an SOS push notification to all staff (guards/admins) in the society.
+
+    Mobile app already writes an SOS document to Firestore; this endpoint is
+    focused purely on sending the FCM notification using the existing
+    NotificationService and `society_{society_id}_staff` topic.
+    """
+    svc = get_resident_service()
+    svc.send_sos_alert(
+        society_id=payload.society_id,
+        flat_no=payload.flat_no,
+        resident_name=payload.resident_name,
+        resident_phone=payload.resident_phone,
+    )
     return GenericOkResponse(ok=True)
 
 

@@ -331,23 +331,43 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                   const SizedBox(height: 20),
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 20),
-                  
-                  // Dynamic Stats Row
-                  Row(
-                    children: [
-                      Expanded(child: _StatCard(label: "Today", value: todayCount.toString(), icon: Icons.today, color: AppColors.primary)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _StatCard(label: "Pending", value: pendingCount.toString(), icon: Icons.hourglass_empty, color: AppColors.warning)),
-                      const SizedBox(width: 12),
-                      Expanded(child: _StatCard(label: "Approved", value: approvedCount.toString(), icon: Icons.verified_user_outlined, color: AppColors.success)),
-                    ],
-                  ),
 
-                  const SizedBox(height: 25),
-                  const Text("Quick Actions", style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 16)),
+                  // Top category strip (New Entry / Visitors / Notices)
+                  const Text(
+                    "Explore",
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTopCategoryStrip(),
+
+                  const SizedBox(height: 24),
+                  const Text(
+                    "Today at a glance",
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildStatsRow(),
+
+                  const SizedBox(height: 24),
+                  const Text(
+                    "Your actions",
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   _buildActionGrid(),
-                  
+
                   const SizedBox(height: 25),
                   _buildRecentActivitySection(),
                 ],
@@ -488,6 +508,144 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             ),
           ),
           const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
+        ],
+      ),
+    );
+  }
+
+  /// Horizontal strip of rounded category chips for quick navigation
+  Widget _buildTopCategoryStrip() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildCategoryChip(
+            icon: Icons.person_add_rounded,
+            label: "New Entry",
+            color: AppColors.primary,
+            onTap: widget.onTapNewEntry,
+          ),
+          const SizedBox(width: 8),
+          _buildCategoryChip(
+            icon: Icons.groups_rounded,
+            label: "Visitors",
+            color: AppColors.success,
+            onTap: widget.onTapVisitors,
+          ),
+          const SizedBox(width: 8),
+          _buildCategoryChip(
+            icon: Icons.notifications_rounded,
+            label: "Notices",
+            color: AppColors.warning,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => NoticeBoardScreen(
+                    societyId: widget.societyId,
+                    themeColor: AppColors.primary,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    VoidCallback? onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.text,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Stats row wrapped in a soft card module
+  Widget _buildStatsRow() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _StatCard(
+              label: "Today",
+              value: todayCount.toString(),
+              icon: Icons.today,
+              color: AppColors.primary,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _StatCard(
+              label: "Pending",
+              value: pendingCount.toString(),
+              icon: Icons.hourglass_empty,
+              color: AppColors.warning,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _StatCard(
+              label: "Approved",
+              value: approvedCount.toString(),
+              icon: Icons.verified_user_outlined,
+              color: AppColors.success,
+            ),
+          ),
         ],
       ),
     );

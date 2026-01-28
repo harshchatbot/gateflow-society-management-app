@@ -26,11 +26,11 @@ class AdminNotificationDrawer extends StatefulWidget {
 
 class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
   late final ComplaintService _complaintService = ComplaintService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
   
   late final NoticeService _noticeService = NoticeService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
 
   List<Map<String, dynamic>> _notifications = [];

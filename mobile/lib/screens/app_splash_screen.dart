@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../ui/app_colors.dart';
 import 'role_select_screen.dart';
 import 'guard_shell_screen.dart';
@@ -157,7 +158,9 @@ class _AppSplashScreenState extends State<AppSplashScreen>
           final membership = await firestore.getCurrentUserMembership().timeout(
             const Duration(seconds: 5),
             onTimeout: () {
-              print("Timeout loading membership");
+              if (kDebugMode) {
+                debugPrint("Timeout loading membership");
+              }
               return null;
             },
           );
@@ -192,8 +195,10 @@ class _AppSplashScreenState extends State<AppSplashScreen>
             }
           }
         } catch (e, stackTrace) {
-          print("Error loading membership: $e");
-          print("Stack trace: $stackTrace");
+          if (kDebugMode) {
+            debugPrint("Error loading membership: $e");
+            debugPrint("Stack trace: $stackTrace");
+          }
           // On error, sign out and go to role select
           try {
             await FirebaseAuth.instance.signOut();
@@ -237,7 +242,9 @@ class _AppSplashScreenState extends State<AppSplashScreen>
             );
           }
         } catch (e) {
-          print("Error loading old session: $e");
+          if (kDebugMode) {
+            debugPrint("Error loading old session: $e");
+          }
         }
       }
 
@@ -253,8 +260,10 @@ class _AppSplashScreenState extends State<AppSplashScreen>
         );
       }
     } catch (e, stackTrace) {
-      print("Critical error in splash navigation: $e");
-      print("Stack trace: $stackTrace");
+      if (kDebugMode) {
+        debugPrint("Critical error in splash navigation: $e");
+        debugPrint("Stack trace: $stackTrace");
+      }
       // Ensure we always navigate somewhere
       if (mounted) {
         Navigator.of(context).pushReplacement(

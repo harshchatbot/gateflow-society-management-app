@@ -63,16 +63,12 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
       // Don't log raw email in production logs
 
       if (uid == null) {
-        debugPrint("uid is null${uid}");
-
         throw Exception("Failed to sign in (uid null)");
       }
 
       // 2) Get membership (now returns even if active=false)
       Map<String, dynamic>? membership =
           await _firestore.getCurrentUserMembership();
-        debugPrint("membership : ${membership}");
-      
       // 3) If membership missing -> attempt invite claim -> retry membership
       if (membership == null) {
         AppLogger.w(

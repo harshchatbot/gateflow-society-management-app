@@ -34,7 +34,7 @@ class ResidentApprovalsScreen extends StatefulWidget {
 
 class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
   late final ResidentService _service = ResidentService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
 
   List<dynamic> _pendingVisitors = [];

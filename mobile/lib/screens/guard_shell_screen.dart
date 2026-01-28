@@ -1,5 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 // Screens
 import 'guard_dashboard_screen.dart';
@@ -49,7 +50,9 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
       );
     } catch (e) {
       // Notification subscription failed, continue anyway
-      print("Failed to subscribe to notifications: $e");
+      if (kDebugMode) {
+        debugPrint("Failed to subscribe to notifications: $e");
+      }
     }
   }
 

@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from fastapi import HTTPException
 
 from app.sheets.client import get_sheets_client
+from app.services.notification_service import get_notification_service
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +124,44 @@ class ResidentService:
         )
         if not ok:
             raise HTTPException(status_code=400, detail="Unable to save fcm_token")
+
+    def send_sos_alert(
+        self,
+        society_id: str,
+        flat_no: str,
+        resident_name: Optional[str],
+        resident_phone: Optional[str],
+    ) -> None:
+        """
+        Send SOS alert notification to all staff (guards/admins) in a society.
+        Uses FCM topic `society_{society_id}_staff` which guards/admins subscribe to in the mobile app.
+        """
+        topic = f"society_{society_id}_staff"
+
+        safe_name = (resident_name or "Resident").strip() or "Resident"
+        safe_flat = (flat_no or "Unknown").strip() or "Unknown"
+        safe_phone = (resident_phone or "Not available").strip() or "Not available"
+
+        title = "🚨 SOS Alert"
+        body = f"{safe_name} from Flat {safe_flat} needs help. Phone: {safe_phone}"
+
+        svc = get_notification_service()
+        ok = svc.send_to_topic(
+            topic=topic,
+            title=title,
+            body=body,
+            data={
+                "type": "sos",
+                "society_id": society_id,
+                "flat_no": safe_flat,
+                "resident_name": safe_name,
+                "resident_phone": safe_phone,
+            },
+            sound="notification_sound",
+        )
+
+        if not ok:
+            logger.warning("Failed to send SOS alert via FCM", extra={"topic": topic})
 
 
 

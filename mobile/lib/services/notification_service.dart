@@ -302,12 +302,17 @@ class NotificationService {
 
       // Subscribe to society topic (for notices) - multi-tenant format
       await subscribeToTopic("society_$societyId");
-      
+
       // Subscribe to flat topic (for visitor entries) if resident - multi-tenant format
       if (flatId != null && role == "resident") {
         await subscribeToTopic("flat_${societyId}_$flatId");
       }
-      
+
+      // Subscribe staff (guards/admins) to SOS / staff-only alerts
+      if (role == "guard" || role == "admin") {
+        await subscribeToTopic("society_${societyId}_staff");
+      }
+
       AppLogger.i("Subscribed to topics", data: {
         "society_id": societyId,
         "flat_id": flatId,

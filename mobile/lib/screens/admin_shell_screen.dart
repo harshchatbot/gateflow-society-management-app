@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_manage_residents_screen.dart';
 import 'admin_manage_guards_screen.dart';
@@ -54,7 +55,9 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
       );
     } catch (e) {
       // Notification subscription failed, continue anyway
-      print("Failed to subscribe to notifications: $e");
+      if (kDebugMode) {
+        debugPrint("Failed to subscribe to notifications: $e");
+      }
     }
   }
 

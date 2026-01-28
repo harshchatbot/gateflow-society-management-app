@@ -37,7 +37,7 @@ class AdminManageGuardsScreen extends StatefulWidget {
 
 class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
   late final AdminService _service = AdminService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
 
   final FirestoreService _firestore = FirestoreService();

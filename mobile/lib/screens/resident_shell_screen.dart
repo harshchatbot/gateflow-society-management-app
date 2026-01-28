@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 
 import '../ui/floating_bottom_nav.dart'; // the file where SocietyBottomNav lives
 
@@ -51,7 +52,9 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
       );
     } catch (e) {
       // Notification subscription failed, continue anyway
-      print("Failed to subscribe to notifications: $e");
+      if (kDebugMode) {
+        debugPrint("Failed to subscribe to notifications: $e");
+      }
     }
   }
 

@@ -33,15 +33,15 @@ class ResidentNotificationDrawer extends StatefulWidget {
 
 class _ResidentNotificationDrawerState extends State<ResidentNotificationDrawer> {
   late final ResidentService _residentService = ResidentService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
   
   late final ComplaintService _complaintService = ComplaintService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
   
   late final NoticeService _noticeService = NoticeService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
 
   List<Map<String, dynamic>> _notifications = [];

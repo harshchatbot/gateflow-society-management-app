@@ -40,7 +40,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   final _confirmPinController = TextEditingController();
 
   late final AdminService _adminService = AdminService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
 
   final FirebaseAuthService _authService = FirebaseAuthService();

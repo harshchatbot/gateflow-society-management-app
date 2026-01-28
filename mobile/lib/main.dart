@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart'; // Keep this for FCM
@@ -17,7 +18,9 @@ import 'screens/app_splash_screen.dart';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform); // Initialize Firebase in background handler
-  print("Handling a background message: ${message.messageId}");
+  if (kDebugMode) {
+    debugPrint("Handling a background message: ${message.messageId}");
+  }
   // You can process the message here, e.g., show a local notification
   // For example: NotificationService().showNotification(message);
 }
@@ -29,7 +32,9 @@ Future<void> main() async {
   try {
     await dotenv.load(fileName: "assets/.env");
   } catch (e) {
-    print("Warning: Could not load .env file: $e");
+    if (kDebugMode) {
+      debugPrint("Warning: Could not load .env file: $e");
+    }
   }
 
   // Initialize Firebase App
@@ -38,18 +43,24 @@ Future<void> main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    print("Firebase initialized successfully.");
+    if (kDebugMode) {
+      debugPrint("Firebase initialized successfully.");
+    }
 
     // Set up background message handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     // Initialize notification service AFTER Firebase is initialized
     await NotificationService().initialize();
-    print("Notification service initialized.");
+    if (kDebugMode) {
+      debugPrint("Notification service initialized.");
+    }
 
   } catch (e) {
-    print("Firebase initialization failed: $e");
-    print("Skipping notification service initialization (Firebase not available)");
+    if (kDebugMode) {
+      debugPrint("Firebase initialization failed: $e");
+      debugPrint("Skipping notification service initialization (Firebase not available)");
+    }
   }
 
 

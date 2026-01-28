@@ -40,7 +40,7 @@ class AdminDashboardScreen extends StatefulWidget {
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   late final AdminService _service = AdminService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
 
   Map<String, dynamic>? _stats;
@@ -48,11 +48,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   String? _error;
   
   late final ComplaintService _complaintService = ComplaintService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
   
   late final NoticeService _noticeService = NoticeService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
   
   int _notificationCount = 0;
@@ -289,11 +289,41 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 20),
 
-                  // Stats Grid
-                  if (_stats != null) _buildStatsGrid(),
+                  // Top category strip (Residents / Guards / Complaints / Notices)
+                  const Text(
+                    "Explore",
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTopCategoryStrip(),
+
+                  const SizedBox(height: 24),
+                  if (_stats != null) ...[
+                    const Text(
+                      "Today at a glance",
+                      style: TextStyle(
+                        color: AppColors.text,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildStatsSection(),
+                  ],
 
                   const SizedBox(height: 25),
-                  const Text("Quick Actions", style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 16)),
+                  const Text(
+                    "Your actions",
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   _buildActionGrid(),
                 ],
@@ -450,6 +480,112 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
         ],
       ),
+    );
+  }
+
+  /// Horizontal strip of rounded category chips for key admin areas
+  Widget _buildTopCategoryStrip() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildCategoryChip(
+            icon: Icons.people_rounded,
+            label: "Residents",
+            color: AppColors.admin,
+            onTap: () => _navigateToTab(1),
+          ),
+          const SizedBox(width: 8),
+          _buildCategoryChip(
+            icon: Icons.shield_rounded,
+            label: "Guards",
+            color: AppColors.primary,
+            onTap: () => _navigateToTab(2),
+          ),
+          const SizedBox(width: 8),
+          _buildCategoryChip(
+            icon: Icons.report_problem_rounded,
+            label: "Complaints",
+            color: AppColors.error,
+            onTap: () => _navigateToTab(3),
+          ),
+          const SizedBox(width: 8),
+          _buildCategoryChip(
+            icon: Icons.notifications_rounded,
+            label: "Notices",
+            color: AppColors.warning,
+            onTap: () => _navigateToTab(4),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.text,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Wraps the existing stats grid into a soft card module
+  Widget _buildStatsSection() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: _buildStatsGrid(),
     );
   }
 

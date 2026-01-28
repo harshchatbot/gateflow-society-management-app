@@ -4,7 +4,7 @@ import '../ui/glass_loader.dart';
 import '../services/resident_service.dart';
 import '../core/app_logger.dart';
 import '../widgets/status_chip.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
+import '../core/env.dart';
 
 /// Resident History Screen
 /// 
@@ -37,7 +37,7 @@ class ResidentHistoryScreen extends StatefulWidget {
 
 class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
   late final ResidentService _service = ResidentService(
-    baseUrl: dotenv.env["API_BASE_URL"] ?? "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
 
   List<dynamic> _history = [];

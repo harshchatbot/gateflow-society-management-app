@@ -216,4 +216,46 @@ class ResidentService {
       return ApiResult.failure("Connection error");
     }
   }
+
+  /// Trigger SOS push notification via FastAPI backend.
+  /// Firestore already stores the SOS record; this call only sends FCM to staff.
+  Future<ApiResult<void>> sendSosAlert({
+    required String societyId,
+    required String flatNo,
+    required String residentName,
+    String? residentPhone,
+  }) async {
+    try {
+      final uri = _uri("/api/residents/sos");
+      final body = jsonEncode({
+        "society_id": societyId,
+        "flat_no": flatNo,
+        "resident_name": residentName,
+        if (residentPhone != null && residentPhone.trim().isNotEmpty)
+          "resident_phone": residentPhone.trim(),
+      });
+
+      final res = await http
+          .post(
+            uri,
+            headers: {"Content-Type": "application/json"},
+            body: body,
+          )
+          .timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        return ApiResult.success(null);
+      }
+      return ApiResult.failure("SOS notify failed: ${res.statusCode} ${res.body}");
+    } on TimeoutException catch (e) {
+      debugPrint("sendSosAlert timeout error: $e");
+      return ApiResult.failure("Request timeout. Please check your connection and try again.");
+    } on SocketException catch (e) {
+      debugPrint("sendSosAlert socket error: $e");
+      return ApiResult.failure("Cannot connect to server. Please check your network connection.");
+    } catch (e) {
+      debugPrint("sendSosAlert error: $e");
+      return ApiResult.failure("Connection error: ${e.toString()}");
+    }
+  }
 }

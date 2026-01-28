@@ -28,7 +28,7 @@ class AdminManageComplaintsScreen extends StatefulWidget {
 
 class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScreen> {
   late final ComplaintService _service = ComplaintService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
 
   List<dynamic> _complaints = [];

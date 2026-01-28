@@ -812,7 +812,50 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
       AppLogger.e('Error getting admin stats', error: e, stackTrace: stackTrace);
       rethrow;
     }
+  }
 
+  /// ============================================
+  /// SOS / Emergency Requests
+  /// ============================================
+
+  Future<void> createSosRequest({
+    required String societyId,
+    required String residentId,
+    required String residentName,
+    required String flatNo,
+    String? phone,
+    String? type, // e.g. MEDICAL, SECURITY, OTHER
+    String? note,
+  }) async {
+    try {
+      final sosRef = _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('sos_requests')
+          .doc();
+
+      final payload = <String, dynamic>{
+        'residentId': residentId,
+        'residentName': residentName,
+        'flatNo': flatNo,
+        if (phone != null) 'phone': phone,
+        'type': (type ?? 'OTHER').toUpperCase(),
+        'note': note,
+        'status': 'OPEN', // OPEN -> ACKNOWLEDGED -> RESOLVED (future)
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      await sosRef.set(payload);
+      AppLogger.i('SOS request created', data: {
+        'societyId': societyId,
+        'residentId': residentId,
+        'flatNo': flatNo,
+        'type': payload['type'],
+      });
+    } catch (e, st) {
+      AppLogger.e('Error creating SOS request', error: e, stackTrace: st);
+      rethrow;
+    }
   }
 
   Future<void> createInvite({

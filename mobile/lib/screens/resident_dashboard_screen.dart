@@ -53,11 +53,9 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   // 🔹 Firestore (new, for notices)
   final FirestoreService _firestore = FirestoreService();
 
-  // 🔹 Existing backend service (leave untouched)
+  // 🔹 Existing backend service (leave untouched, but use Env.apiBaseUrl only)
   late final resident.ResidentService _service = resident.ResidentService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty
-        ? Env.apiBaseUrl
-        : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
 
   int _pendingCount = 0;
@@ -66,6 +64,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   int _notificationCount = 0; // Total notifications (approvals + notices)
   bool _isLoading = false;
   String? _photoUrl;
+  String? _phone;
 
   @override
   void initState() {
@@ -82,6 +81,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
       setState(() {
         _photoUrl = membership['photoUrl'] as String?;
+        _phone = membership['phone'] as String?;
       });
     } catch (e, st) {
       AppLogger.e("Error loading resident profile photo (dashboard)", error: e, stackTrace: st);
@@ -328,41 +328,33 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 20),
 
-                  // Stats Row
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _StatCard(
-                          label: "Pending",
-                          value: _pendingCount.toString(),
-                          icon: Icons.pending_actions_rounded,
-                          color: AppColors.warning,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          label: "Approved",
-                          value: _approvedCount.toString(),
-                          icon: Icons.check_circle_rounded,
-                          color: AppColors.success,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _StatCard(
-                          label: "Rejected",
-                          value: _rejectedCount.toString(),
-                          icon: Icons.cancel_rounded,
-                          color: AppColors.error,
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 25),
+                  // Top category strip (Visitors / Complaints / Notices)
                   const Text(
-                    "Quick Actions",
+                    "Explore",
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTopCategoryStrip(),
+
+                  const SizedBox(height: 24),
+                  const Text(
+                    "Today at a glance",
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildStatsRow(),
+
+                  const SizedBox(height: 24),
+                  const Text(
+                    "Your actions",
                     style: TextStyle(
                       color: AppColors.text,
                       fontWeight: FontWeight.w900,
@@ -539,6 +531,178 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     );
   }
 
+  /// Horizontal strip of rounded category chips similar to NoBrokerHood
+  Widget _buildTopCategoryStrip() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildCategoryChip(
+            icon: Icons.verified_user_rounded,
+            label: "Visitors",
+            color: AppColors.warning,
+            onTap: () {
+              if (widget.onNavigateToApprovals != null) {
+                widget.onNavigateToApprovals!();
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ResidentApprovalsScreen(
+                      residentId: widget.residentId,
+                      societyId: widget.societyId,
+                      flatNo: widget.flatNo,
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+          const SizedBox(width: 8),
+          _buildCategoryChip(
+            icon: Icons.report_problem_rounded,
+            label: "Complaints",
+            color: AppColors.error,
+            onTap: () {
+              if (widget.onNavigateToComplaints != null) {
+                widget.onNavigateToComplaints!();
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ResidentComplaintsListScreen(
+                      residentId: widget.residentId,
+                      societyId: widget.societyId,
+                      flatNo: widget.flatNo,
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+          const SizedBox(width: 8),
+          _buildCategoryChip(
+            icon: Icons.notifications_rounded,
+            label: "Notices",
+            color: AppColors.primary,
+            onTap: () {
+              if (widget.onNavigateToNotices != null) {
+                widget.onNavigateToNotices!();
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => NoticeBoardScreen(
+                      societyId: widget.societyId,
+                      themeColor: AppColors.success,
+                    ),
+                  ),
+                );
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip({
+    required IconData icon,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.04),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 18),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.text,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Stats row wrapped in a subtle card, to feel more like a module
+  Widget _buildStatsRow() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _StatCard(
+              label: "Pending",
+              value: _pendingCount.toString(),
+              icon: Icons.pending_actions_rounded,
+              color: AppColors.warning,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _StatCard(
+              label: "Approved",
+              value: _approvedCount.toString(),
+              icon: Icons.check_circle_rounded,
+              color: AppColors.success,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: _StatCard(
+              label: "Rejected",
+              value: _rejectedCount.toString(),
+              icon: Icons.cancel_rounded,
+              color: AppColors.error,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildActionGrid() {
     return GridView.count(
       shrinkWrap: true,
@@ -659,6 +823,13 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             }
           },
         ),
+        _buildActionCard(
+          icon: Icons.sos_rounded,
+          title: "Emergency SOS",
+          subtitle: "Alert security team",
+          color: AppColors.error,
+          onTap: _showSosConfirmDialog,
+        ),
       ],
     );
   }
@@ -721,6 +892,84 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         ),
       ),
     );
+  }
+
+  /// Show confirmation dialog before sending SOS
+  void _showSosConfirmDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Emergency SOS'),
+        content: const Text(
+          'This will send an emergency alert to your society\'s security/admin team '
+          'with your flat details. Use only in case of real emergency.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.of(context).pop();
+              await _sendSos();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.error,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Send SOS'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _sendSos() async {
+    try {
+      await _firestore.createSosRequest(
+        societyId: widget.societyId,
+        residentId: widget.residentId,
+        residentName: widget.residentName,
+        flatNo: widget.flatNo,
+        phone: _phone,
+      );
+
+      // Best-effort: also trigger FastAPI backend to send FCM to staff
+      try {
+        await _service.sendSosAlert(
+          societyId: widget.societyId,
+          flatNo: widget.flatNo,
+          residentName: widget.residentName,
+          residentPhone: _phone,
+        );
+      } catch (_) {
+        // Ignore backend SOS errors here; Firestore record is already created
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('SOS sent to security team'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    } catch (e) {
+      AppLogger.e("Error sending SOS", error: e);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Failed to send SOS. Please try again or call security.'),
+          backgroundColor: AppColors.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    }
   }
 }
 

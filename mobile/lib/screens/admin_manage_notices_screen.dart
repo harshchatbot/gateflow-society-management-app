@@ -30,7 +30,7 @@ class AdminManageNoticesScreen extends StatefulWidget {
 
 class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
   late final NoticeService _service = NoticeService(
-    baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000",
+    baseUrl: Env.apiBaseUrl,
   );
 
   List<dynamic> _notices = [];
