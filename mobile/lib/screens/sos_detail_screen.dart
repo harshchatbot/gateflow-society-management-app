@@ -97,6 +97,17 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
     final status = (data['status'] ?? 'OPEN').toString();
     final createdAt = data['createdAt'];
 
+    final acknowledgedByName =
+        (data['acknowledgedByName'] ?? data['acknowledged_by_name'])
+            ?.toString();
+    final acknowledgedByRole =
+        (data['acknowledgedByRole'] ?? data['acknowledged_by_role'])
+            ?.toString();
+    final resolvedByName =
+        (data['resolvedByName'] ?? data['resolved_by_name'])?.toString();
+    final resolvedByRole =
+        (data['resolvedByRole'] ?? data['resolved_by_role'])?.toString();
+
     DateTime? created;
     if (createdAt is Timestamp) {
       created = createdAt.toDate();
@@ -199,6 +210,53 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.text2,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (acknowledgedByName != null &&
+                          acknowledgedByName.isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.person_outline_rounded,
+                                size: 18, color: AppColors.text2),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                acknowledgedByRole != null
+                                    ? 'Acknowledged by $acknowledgedByName (${acknowledgedByRole.toLowerCase()})'
+                                    : 'Acknowledged by $acknowledgedByName',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.text2,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                      if (resolvedByName != null &&
+                          resolvedByName.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.verified_rounded,
+                                size: 18, color: AppColors.success),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                resolvedByRole != null
+                                    ? 'Resolved by $resolvedByName (${resolvedByRole.toLowerCase()})'
+                                    : 'Resolved by $resolvedByName',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                           ],

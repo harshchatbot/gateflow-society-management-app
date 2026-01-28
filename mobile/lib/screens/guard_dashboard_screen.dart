@@ -10,6 +10,7 @@ import 'notice_board_screen.dart';
 import 'role_select_screen.dart';
 import 'visitor_details_screen.dart';
 import '../services/notification_service.dart';
+import 'sos_alerts_screen.dart';
 import 'sos_detail_screen.dart';
 
 class GuardDashboardScreen extends StatefulWidget {
@@ -43,6 +44,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   int approvedCount = 0;
   bool _isLoading = false;
   List<Visitor> _recentVisitors = [];
+  int _sosBadgeCount = 0;
 
   @override
   void initState() {
@@ -65,6 +67,10 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         final sosId = (data['sos_id'] ?? '').toString();
 
         if (!mounted || sosId.isEmpty) return;
+        // Increment badge so bell highlights SOS presence
+        setState(() {
+          _sosBadgeCount++;
+        });
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -196,8 +202,12 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         setState(() {
           _isLoading = false;
           todayCount = todayVisitors.length;
-          pendingCount = todayVisitors.where((v) => (v['status'] as String).toUpperCase() == 'PENDING').length;
-          approvedCount = todayVisitors.where((v) => (v['status'] as String).toUpperCase() == 'APPROVED').length;
+          pendingCount = todayVisitors
+              .where((v) => (v['status'] as String).toUpperCase() == 'PENDING')
+              .length;
+          approvedCount = todayVisitors
+              .where((v) => (v['status'] as String).toUpperCase() == 'APPROVED')
+              .length;
           _recentVisitors = recentVisitors;
         });
       }
@@ -478,7 +488,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                 }
               },
             ),
-            if (pendingCount > 0)
+            if (pendingCount + _sosBadgeCount > 0)
               Positioned(
                 right: 8,
                 top: 8,
@@ -703,6 +713,22 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                 builder: (context) => NoticeBoardScreen(
                   societyId: widget.societyId,
                   themeColor: AppColors.primary,
+                ),
+              ),
+            );
+          },
+        ),
+        _QuickAction(
+          label: "SOS Alerts",
+          icon: Icons.sos_rounded,
+          tint: AppColors.error,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SosAlertsScreen(
+                  societyId: widget.societyId,
+                  role: 'guard',
                 ),
               ),
             );

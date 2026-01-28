@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
 import '../services/admin_service.dart';
@@ -10,6 +11,7 @@ import '../core/app_logger.dart';
 import '../core/env.dart';
 import 'notice_board_screen.dart';
 import 'sos_detail_screen.dart';
+import 'sos_alerts_screen.dart';
 import 'admin_manage_notices_screen.dart';
 import 'admin_manage_admins_screen.dart';
 import 'role_select_screen.dart';
@@ -57,6 +59,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   );
   
   int _notificationCount = 0;
+  int _sosBadgeCount = 0;
   final FirestoreService _firestore = FirestoreService();
   String? _photoUrl;
 
@@ -88,6 +91,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     notificationService.setOnNotificationReceived((data) {
       if (data['type'] == 'notice' || data['type'] == 'complaint') {
         _loadNotificationCount(); // Refresh count when notification received
+      } else if (data['type'] == 'sos') {
+        // Increment SOS badge while app is running
+        if (mounted) {
+          setState(() {
+            _sosBadgeCount += 1;
+          });
+        }
       }
     });
     notificationService.setOnNotificationTap((data) {
@@ -106,6 +116,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         final sosId = (data['sos_id'] ?? '').toString();
 
         if (!mounted || sosId.isEmpty) return;
+
+        // Increment SOS badge so bell reflects SOS attention
+        setState(() {
+          _sosBadgeCount += 1;
+        });
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -347,6 +363,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   const SizedBox(height: 12),
                   _buildActionGrid(),
+                  const SizedBox(height: 25),
                 ],
               ),
             ),
@@ -423,31 +440,36 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               icon: const Icon(Icons.notifications_rounded, color: Colors.white),
               onPressed: _showNotificationDrawer,
             ),
-            if (_notificationCount > 0)
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: AppColors.error,
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 18,
-                    minHeight: 18,
-                  ),
-                  child: Text(
-                    _notificationCount > 9 ? "9+" : _notificationCount.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
+            Builder(
+              builder: (context) {
+                final totalBadgeCount = _notificationCount + _sosBadgeCount;
+                if (totalBadgeCount <= 0) return const SizedBox.shrink();
+                return Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: AppColors.error,
+                      shape: BoxShape.circle,
                     ),
-                    textAlign: TextAlign.center,
+                    constraints: const BoxConstraints(
+                      minWidth: 18,
+                      minHeight: 18,
+                    ),
+                    child: Text(
+                      totalBadgeCount > 9 ? "9+" : totalBadgeCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
                   ),
-                ),
-              ),
+                );
+              },
+            ),
           ],
         ),
       ],
@@ -728,6 +750,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           },
         ),
         _ActionItem(
+          icon: Icons.sos_rounded,
+          title: "SOS Alerts",
+          subtitle: "View emergency SOS history",
+          color: AppColors.error,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SosAlertsScreen(
+                  societyId: widget.societyId,
+                  role: 'admin',
+                ),
+              ),
+            );
+          },
+        ),
+        _ActionItem(
           icon: Icons.edit_note_rounded,
           title: "Manage Notices",
           subtitle: "Create & edit notices",
@@ -760,6 +799,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ],
     );
   }
+
 }
 
 class _StatCard extends StatelessWidget {

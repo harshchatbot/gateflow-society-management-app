@@ -179,6 +179,36 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.9),
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.arrow_back_rounded,
+              color: AppColors.text,
+              size: 20,
+            ),
+          ),
+          onPressed: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+            );
+          },
+        ),
+      ),
       body: Stack(
         children: [
           // Gradient Background (Purple theme)
@@ -198,55 +228,17 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             ),
           ),
           SafeArea(
-            child: Stack(
-              children: [
-                // Back button (floating over gradient, like resident/guard)
-                Align(
-                  alignment: Alignment.topLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8.0, top: 4.0),
-                    child: IconButton(
-                      icon: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          borderRadius: BorderRadius.circular(12),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.arrow_back_rounded,
-                          color: AppColors.text,
-                          size: 20,
-                        ),
-                      ),
-                      onPressed: () {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-                // Main content
-                SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 20),
-                      _buildBrandHeader(),
-                      const SizedBox(height: 40),
-                      _buildLoginForm(),
-                      const SizedBox(height: 24),
-                    ],
-                  ),
-                ),
-              ],
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: Column(
+                children: [
+                  const SizedBox(height: 20),
+                  _buildBrandHeader(),
+                  const SizedBox(height: 40),
+                  _buildLoginForm(),
+                  const SizedBox(height: 24),
+                ],
+              ),
             ),
           ),
           GlassLoader(show: _isLoading, message: "Verifying Admin…"),

@@ -824,23 +824,93 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     required String status,
   }) async {
     try {
+      final uid = currentUid;
+      Map<String, dynamic>? membership;
+      if (uid != null) {
+        membership = await getCurrentUserMembership();
+      }
+
+      final actorName = membership?['name']?.toString();
+      final actorRole = membership?['systemRole']?.toString();
+      final statusUpper = status.toUpperCase();
+
       final ref = _firestore
           .collection('societies')
           .doc(societyId)
           .collection('sos_requests')
           .doc(sosId);
 
-      await ref.update({
-        'status': status.toUpperCase(),
+      final updateData = <String, dynamic>{
+        'status': statusUpper,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      // Track who last touched this SOS
+      if (uid != null) {
+        updateData['lastUpdatedByUid'] = uid;
+        if (actorName != null) {
+          updateData['lastUpdatedByName'] = actorName;
+        }
+        if (actorRole != null) {
+          updateData['lastUpdatedByRole'] = actorRole;
+        }
+      }
+
+      // Track specific ack / resolve handlers for audit
+      if (statusUpper == 'ACKNOWLEDGED' && uid != null) {
+        updateData['acknowledgedAt'] = FieldValue.serverTimestamp();
+        updateData['acknowledgedByUid'] = uid;
+        if (actorName != null) {
+          updateData['acknowledgedByName'] = actorName;
+        }
+        if (actorRole != null) {
+          updateData['acknowledgedByRole'] = actorRole;
+        }
+      } else if (statusUpper == 'RESOLVED' && uid != null) {
+        updateData['resolvedAt'] = FieldValue.serverTimestamp();
+        updateData['resolvedByUid'] = uid;
+        if (actorName != null) {
+          updateData['resolvedByName'] = actorName;
+        }
+        if (actorRole != null) {
+          updateData['resolvedByRole'] = actorRole;
+        }
+      }
+
+      await ref.update(updateData);
       AppLogger.i('SOS status updated', data: {
         'societyId': societyId,
         'sosId': sosId,
-        'status': status.toUpperCase(),
+        'status': statusUpper,
       });
     } catch (e, st) {
       AppLogger.e('Error updating SOS status', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getSosRequests({
+    required String societyId,
+    int limit = 50,
+  }) async {
+    try {
+      final snap = await _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('sos_requests')
+          .orderBy('createdAt', descending: true)
+          .limit(limit)
+          .get();
+
+      return snap.docs.map((d) {
+        final data = d.data();
+        return {
+          'sosId': d.id,
+          ...data,
+        };
+      }).toList();
+    } catch (e, st) {
+      AppLogger.e('Error getting SOS requests', error: e, stackTrace: st);
       rethrow;
     }
   }
