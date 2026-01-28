@@ -11,7 +11,26 @@ logger = logging.getLogger(__name__)
 
 class ResidentService:
     def __init__(self):
-        self.sheets = get_sheets_client()
+        """
+        Initialize resident service.
+
+        In older deployments this always created a Google Sheets client and
+        crashed the app if SHEETS_SPREADSHEET_ID / credentials were missing.
+        To allow running without Sheets (Firebase-only mode), we now make the
+        Sheets client **optional**:
+        - If configuration is present → self.sheets is a real SheetsClient.
+        - If configuration is missing → self.sheets is None and any Sheets-
+          backed methods will fail at call time instead of preventing startup.
+        """
+        try:
+            self.sheets = get_sheets_client()
+        except Exception as e:
+            logger.warning(
+                "Google Sheets client not configured for ResidentService; "
+                "Sheets-based endpoints will be unavailable. %s",
+                e,
+            )
+            self.sheets = None
 
     def get_profile(self, society_id: str, flat_no: str, phone: Optional[str] = None) -> Dict:
         r = self.sheets.get_resident_by_flat_no(
