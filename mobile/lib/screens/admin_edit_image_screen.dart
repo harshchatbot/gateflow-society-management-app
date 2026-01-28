@@ -1,10 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../ui/app_colors.dart';
 import '../core/app_logger.dart';
-import '../services/admin_service.dart';
-import '../core/env.dart';
+import '../services/firestore_service.dart';
 import '../ui/glass_loader.dart';
 
 /// Edit Profile Image Screen for Admin
@@ -28,7 +28,7 @@ class AdminEditImageScreen extends StatefulWidget {
 }
 
 class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
-  final _adminService = AdminService(baseUrl: Env.apiBaseUrl.isNotEmpty ? Env.apiBaseUrl : "http://192.168.29.195:8000");
+  final FirestoreService _firestore = FirestoreService();
   final _picker = ImagePicker();
   File? _selectedImage;
   bool _isLoading = false;
@@ -86,57 +86,51 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final result = await _adminService.uploadProfileImage(
-        adminId: widget.adminId,
+      // Upload to Firebase Storage (admins path)
+      final storage = FirebaseStorage.instance;
+      final ref = storage
+          .ref()
+          .child('societies/${widget.societyId}/admins/${widget.adminId}.jpg');
+      final file = _selectedImage!;
+      final task = await ref.putFile(file);
+      final url = await task.ref.getDownloadURL();
+
+      // Update admin membership document with photoUrl
+      await _firestore.updateAdminProfile(
         societyId: widget.societyId,
-        imagePath: _selectedImage!.path,
+        uid: widget.adminId,
+        photoUrl: url,
       );
 
       if (!mounted) return;
 
-      if (result.isSuccess) {
-        AppLogger.i("Profile image uploaded successfully");
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                const Text(
-                  "Profile image updated successfully",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.admin,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
+      AppLogger.i("Profile image uploaded successfully", data: {"photoUrl": url});
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: const [
+              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text(
+                "Profile image updated successfully",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ],
           ),
-        );
-        Navigator.of(context).pop(true);
-      } else {
-        AppLogger.e("Failed to upload image", error: result.error);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              result.error ?? "Failed to upload image",
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-      }
-    } catch (e) {
-      AppLogger.e("Error uploading image", error: e);
+          backgroundColor: AppColors.admin,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e, st) {
+      AppLogger.e("Error uploading image", error: e, stackTrace: st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text(
-              "An error occurred. Please try again.",
+              "Failed to upload image. Please try again.",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             backgroundColor: AppColors.error,

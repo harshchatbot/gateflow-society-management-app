@@ -15,11 +15,13 @@ import '../services/firestore_service.dart';
 class AdminManageResidentsScreen extends StatefulWidget {
   final String adminId;
   final String societyId;
+  final VoidCallback? onBackPressed;
 
   const AdminManageResidentsScreen({
     super.key,
     required this.adminId,
     required this.societyId,
+    this.onBackPressed,
   });
 
   @override
@@ -298,6 +300,16 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+          onPressed: () {
+            if (widget.onBackPressed != null) {
+              widget.onBackPressed!();
+            } else if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
         title: const Text(
           "Manage Residents",
           style: TextStyle(

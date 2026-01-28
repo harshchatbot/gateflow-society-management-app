@@ -5,6 +5,7 @@ import '../services/admin_service.dart';
 import '../services/complaint_service.dart';
 import '../services/notice_service.dart';
 import '../services/notification_service.dart';
+import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import 'notice_board_screen.dart';
@@ -55,6 +56,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   );
   
   int _notificationCount = 0;
+  final FirestoreService _firestore = FirestoreService();
+  String? _photoUrl;
 
   @override
   void initState() {
@@ -62,6 +65,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _loadStats();
     _loadNotificationCount();
     _setupNotificationListener();
+    _loadAdminProfile();
+  }
+
+  Future<void> _loadAdminProfile() async {
+    try {
+      final membership = await _firestore.getCurrentUserMembership();
+      if (!mounted || membership == null) return;
+
+      setState(() {
+        _photoUrl = membership['photoUrl'] as String?;
+      });
+    } catch (e, st) {
+      AppLogger.e("Error loading admin profile photo", error: e, stackTrace: st);
+    }
   }
 
   void _setupNotificationListener() {
@@ -238,14 +255,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       },
       child: Scaffold(
         backgroundColor: AppColors.bg,
-        appBar: AppBar(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
-            onPressed: () => _onWillPop(),
-          ),
-        ),
         body: Stack(
         children: [
           // Background Gradient Header (purple theme)
@@ -266,7 +275,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           ),
 
           RefreshIndicator(
-            onRefresh: _loadStats,
+            onRefresh: () async {
+              await _loadStats();
+              await _loadAdminProfile();
+            },
             color: AppColors.admin, // Purple refresh indicator
             child: SafeArea(
               child: ListView(
@@ -299,6 +311,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildHeader(BuildContext context) {
     return Row(
       children: [
+        // Small profile avatar
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withOpacity(0.8),
+              width: 2,
+            ),
+          ),
+          child: CircleAvatar(
+            backgroundColor: Colors.white24,
+            backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                ? NetworkImage(_photoUrl!)
+                : null,
+            child: (_photoUrl == null || _photoUrl!.isEmpty)
+                ? const Icon(
+                    Icons.person_rounded,
+                    color: Colors.white,
+                  )
+                : null,
+          ),
+        ),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -361,22 +398,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 ),
               ),
           ],
-        ),
-        IconButton(
-          icon: const Icon(Icons.person_rounded, color: Colors.white),
-          onPressed: () {
-            // Navigate to profile - handled by parent shell
-            // For now, show a message
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text("Use the Profile tab below to view your account"),
-                backgroundColor: AppColors.admin,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.all(16),
-              ),
-            );
-          },
         ),
       ],
     );

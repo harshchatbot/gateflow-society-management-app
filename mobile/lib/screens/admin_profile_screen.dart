@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../ui/app_colors.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
+import '../services/firestore_service.dart';
 import 'role_select_screen.dart';
 import 'admin_edit_image_screen.dart';
 import 'super_admin_bulk_upload_screen.dart';
@@ -16,6 +17,7 @@ class AdminProfileScreen extends StatefulWidget {
   final String adminName;
   final String societyId;
   final String role;
+  final VoidCallback? onBackPressed;
 
   const AdminProfileScreen({
     super.key,
@@ -23,6 +25,7 @@ class AdminProfileScreen extends StatefulWidget {
     required this.adminName,
     required this.societyId,
     required this.role,
+    this.onBackPressed,
   });
 
   @override
@@ -31,6 +34,194 @@ class AdminProfileScreen extends StatefulWidget {
 
 class _AdminProfileScreenState extends State<AdminProfileScreen> {
   bool _isLoggingOut = false;
+  final FirestoreService _firestore = FirestoreService();
+  String? _photoUrl;
+  String? _email;
+  String? _phone;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfilePhoto();
+  }
+
+  Future<void> _loadProfilePhoto() async {
+    try {
+      final membership = await _firestore.getCurrentUserMembership();
+      if (!mounted || membership == null) return;
+
+      setState(() {
+        _photoUrl = membership['photoUrl'] as String?;
+        _email = membership['email'] as String?;
+        _phone = membership['phone'] as String?;
+      });
+    } catch (e, st) {
+      AppLogger.e("Error loading admin profile photo", error: e, stackTrace: st);
+    }
+  }
+
+  Future<void> _showUpdateEmailDialog() async {
+    final controller = TextEditingController(text: _email ?? "");
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          "Update Email",
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.emailAddress,
+          decoration: const InputDecoration(
+            labelText: "Email",
+            hintText: "admin@example.com",
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              if (value.isEmpty || !value.contains('@')) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      "Please enter a valid email.",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+              Navigator.of(context).pop(value);
+            },
+            child: const Text("Save"),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      try {
+        await _firestore.updateAdminProfile(
+          societyId: widget.societyId,
+          uid: widget.adminId,
+          email: result,
+        );
+        await _loadProfilePhoto();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Email updated successfully",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } catch (e, st) {
+        AppLogger.e("Error updating admin email", error: e, stackTrace: st);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Failed to update email. Please try again.",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _showUpdatePhoneDialog() async {
+    final controller = TextEditingController(text: _phone ?? "");
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text(
+          "Update Phone Number",
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.phone,
+          decoration: const InputDecoration(
+            labelText: "Phone Number",
+            hintText: "+91 9876543210",
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final value = controller.text.trim();
+              final digits = value.replaceAll(RegExp(r'[^\d+]'), '');
+              if (digits.length < 10) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text(
+                      "Please enter a valid phone number.",
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    backgroundColor: AppColors.error,
+                  ),
+                );
+                return;
+              }
+              Navigator.of(context).pop(value);
+            },
+            child: const Text("Save"),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      try {
+        await _firestore.updateAdminProfile(
+          societyId: widget.societyId,
+          uid: widget.adminId,
+          phone: result,
+        );
+        await _loadProfilePhoto();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Phone number updated successfully",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } catch (e, st) {
+        AppLogger.e("Error updating admin phone", error: e, stackTrace: st);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Failed to update phone number. Please try again.",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
+    }
+  }
 
   Future<void> _handleLogout() async {
     // Show confirmation dialog
@@ -124,9 +315,20 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         slivers: [
           // Profile Header (purple theme)
           SliverAppBar(
+            automaticallyImplyLeading: true,
             expandedHeight: 220,
             pinned: true,
             backgroundColor: AppColors.admin, // Purple background
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+              onPressed: () {
+                if (widget.onBackPressed != null) {
+                  widget.onBackPressed!();
+                } else if (Navigator.of(context).canPop()) {
+                  Navigator.of(context).pop();
+                }
+              },
+            ),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 decoration: const BoxDecoration(
@@ -145,10 +347,19 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 3),
                       ),
-                      child: const CircleAvatar(
+                      child: CircleAvatar(
                         radius: 45,
                         backgroundColor: Colors.white24,
-                        child: Icon(Icons.admin_panel_settings_rounded, size: 50, color: Colors.white),
+                        backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                            ? NetworkImage(_photoUrl!)
+                            : null,
+                        child: (_photoUrl == null || _photoUrl!.isNotEmpty == false)
+                            ? const Icon(
+                                Icons.admin_panel_settings_rounded,
+                                size: 50,
+                                color: Colors.white,
+                              )
+                            : null,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -257,8 +468,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 ),
               );
               if (updated == true && mounted) {
-                // Refresh profile if needed
-                setState(() {});
+                await _loadProfilePhoto();
               }
             },
             child: Container(
@@ -362,6 +572,62 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             value: widget.role,
             iconColor: AppColors.admin,
             iconBgColor: AppColors.admin.withOpacity(0.15),
+          ),
+          const Divider(height: 24),
+          _buildInfoRow(
+            icon: Icons.email_rounded,
+            label: "Email",
+            value: _email?.isNotEmpty == true ? _email! : "Not set",
+            iconColor: AppColors.admin,
+            iconBgColor: AppColors.admin.withOpacity(0.15),
+          ),
+          const Divider(height: 24),
+          _buildInfoRow(
+            icon: Icons.phone_rounded,
+            label: "Phone",
+            value: _phone?.isNotEmpty == true ? _phone! : "Not set",
+            iconColor: AppColors.admin,
+            iconBgColor: AppColors.admin.withOpacity(0.15),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _showUpdateEmailDialog,
+                  icon: const Icon(Icons.email_rounded, size: 18),
+                  label: const Text(
+                    "Update Email",
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.admin.withOpacity(0.6)),
+                    foregroundColor: AppColors.admin,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _showUpdatePhoneDialog,
+                  icon: const Icon(Icons.phone_rounded, size: 18),
+                  label: const Text(
+                    "Update Phone",
+                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(color: AppColors.admin.withOpacity(0.6)),
+                    foregroundColor: AppColors.admin,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

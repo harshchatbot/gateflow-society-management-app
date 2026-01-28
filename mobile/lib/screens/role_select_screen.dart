@@ -23,10 +23,12 @@ class RoleSelectScreen extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.primarySoft.withOpacity(0.5),
+                    const Color(0xFFFFE5E5),
                     AppColors.bg,
                     AppColors.bg,
+                    const Color(0xFFFFF0F0),
                   ],
+                  stops: const [0.0, 0.3, 0.7, 1.0],
                 ),
               ),
             ),
@@ -133,8 +135,8 @@ class RoleSelectScreen extends StatelessWidget {
     return Column(
       children: [
         Container(
-          width: 120,
-          height: 120,
+          width: 170,
+          height: 170,
           decoration: BoxDecoration(
             boxShadow: [
               BoxShadow(
@@ -146,8 +148,8 @@ class RoleSelectScreen extends StatelessWidget {
           ),
           child: SvgPicture.asset(
             'assets/images/logo.svg',
-            width: 120,
-            height: 120,
+            width: 170,
+            height: 170,
             fit: BoxFit.contain,
             placeholderBuilder: (context) {
               // Fallback to icon while SVG is loading or if unavailable

@@ -14,12 +14,14 @@ class AdminManageNoticesScreen extends StatefulWidget {
   final String adminId;
   final String adminName;
   final String societyId;
+  final VoidCallback? onBackPressed;
 
   const AdminManageNoticesScreen({
     super.key,
     required this.adminId,
     required this.adminName,
     required this.societyId,
+    this.onBackPressed,
   });
 
   @override
@@ -170,6 +172,16 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+          onPressed: () {
+            if (widget.onBackPressed != null) {
+              widget.onBackPressed!();
+            } else if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
         title: const Text(
           "Manage Notices",
           style: TextStyle(

@@ -22,11 +22,13 @@ import '../core/env.dart';
 class AdminManageGuardsScreen extends StatefulWidget {
   final String adminId;
   final String societyId;
+  final VoidCallback? onBackPressed;
 
   const AdminManageGuardsScreen({
     super.key,
     required this.adminId,
     required this.societyId,
+    this.onBackPressed,
   });
 
   @override
@@ -151,6 +153,16 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.bg,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+          onPressed: () {
+            if (widget.onBackPressed != null) {
+              widget.onBackPressed!();
+            } else if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
         title: const Text(
           "Manage Guards",
           style: TextStyle(

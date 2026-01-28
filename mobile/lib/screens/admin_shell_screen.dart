@@ -114,16 +114,31 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         return AdminManageResidentsScreen(
           adminId: widget.adminId,
           societyId: widget.societyId,
+          onBackPressed: () {
+            setState(() {
+              _currentIndex = 0;
+            });
+          },
         );
       case 2:
         return AdminManageGuardsScreen(
           adminId: widget.adminId,
           societyId: widget.societyId,
+          onBackPressed: () {
+            setState(() {
+              _currentIndex = 0;
+            });
+          },
         );
       case 3:
         return AdminManageComplaintsScreen(
           adminId: widget.adminId,
           societyId: widget.societyId,
+          onBackPressed: () {
+            setState(() {
+              _currentIndex = 0;
+            });
+          },
         );
       case 4:
         return NoticeBoardScreen(
@@ -132,6 +147,11 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           adminId: widget.adminId, // Pass admin ID so manage button shows
           adminName: widget.adminName,
           useScaffold: false, // Don't use Scaffold when used as tab
+          onBackPressed: () {
+            setState(() {
+              _currentIndex = 0; // Go back to dashboard tab
+            });
+          },
         );
       case 5:
         return AdminProfileScreen(
@@ -139,6 +159,11 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           adminName: widget.adminName,
           societyId: widget.societyId,
           role: widget.role,
+          onBackPressed: () {
+            setState(() {
+              _currentIndex = 0;
+            });
+          },
         );
       default:
         return Container(color: AppColors.bg);

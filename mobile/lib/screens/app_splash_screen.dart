@@ -282,10 +282,10 @@ class _AppSplashScreenState extends State<AppSplashScreen>
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              AppColors.primary.withOpacity(0.08),
+              const Color(0xFFFFE5E5), // soft leaf-red glow
               AppColors.bg,
               AppColors.bg,
-              AppColors.primary.withOpacity(0.05),
+              const Color(0xFFFFF0F0),
             ],
             stops: const [0.0, 0.3, 0.7, 1.0],
           ),
@@ -314,32 +314,32 @@ class _AppSplashScreenState extends State<AppSplashScreen>
                             // Glow effect
                             if (_glowAnimation.value > 0)
                               Container(
-                                width: 200 * _logoScale.value,
-                                height: 200 * _logoScale.value,
+                                width: 260 * _logoScale.value,
+                                height: 260 * _logoScale.value,
                                 decoration: BoxDecoration(
                                   shape: BoxShape.circle,
                                   boxShadow: [
                                     BoxShadow(
-                                      color: AppColors.primary.withOpacity(
-                                        0.3 * _glowAnimation.value * (0.5 + 0.5 * _shimmerAnimation.value),
+                                      color: const Color(0xFFFF6F61).withOpacity(
+                                        0.35 * _glowAnimation.value * (0.5 + 0.5 * _shimmerAnimation.value),
                                       ),
-                                      blurRadius: 40 * _glowAnimation.value,
-                                      spreadRadius: 10 * _glowAnimation.value,
+                                      blurRadius: 50 * _glowAnimation.value,
+                                      spreadRadius: 14 * _glowAnimation.value,
                                     ),
                                     BoxShadow(
-                                      color: AppColors.primary.withOpacity(
-                                        0.2 * _glowAnimation.value * (0.5 + 0.5 * _shimmerAnimation.value),
+                                      color: const Color(0xFFFF8A80).withOpacity(
+                                        0.25 * _glowAnimation.value * (0.5 + 0.5 * _shimmerAnimation.value),
                                       ),
-                                      blurRadius: 60 * _glowAnimation.value,
-                                      spreadRadius: 20 * _glowAnimation.value,
+                                      blurRadius: 70 * _glowAnimation.value,
+                                      spreadRadius: 24 * _glowAnimation.value,
                                     ),
                                   ],
                                 ),
                               ),
-                            // Logo image (SVG, no white background)
+                            // Logo image (SVG, no white background) — slightly larger
                             Container(
-                              width: 180,
-                              height: 180,
+                              width: 260,
+                              height: 260,
                               decoration: BoxDecoration(
                                 boxShadow: [
                                   BoxShadow(
@@ -351,8 +351,8 @@ class _AppSplashScreenState extends State<AppSplashScreen>
                               ),
                               child: SvgPicture.asset(
                                 'assets/images/logo.svg',
-                                width: 180,
-                                height: 180,
+                                width: 260,
+                                height: 260,
                                 fit: BoxFit.contain,
                                 placeholderBuilder: (context) {
                                   // Fallback to icon while SVG is loading or if unavailable
