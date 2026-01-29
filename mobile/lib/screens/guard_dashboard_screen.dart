@@ -70,10 +70,14 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     }
   }
 
+  /// Context from inside ShowCaseWidget's builder (needed to find ShowCaseWidget).
+  BuildContext? _showCaseContext;
+
   void startTour() {
+    if (_showCaseContext == null || !mounted) return;
     try {
       final keys = [_keyNewEntry, _keyVisitors, _keySosAlerts];
-      ShowCaseWidget.of(context).startShowCase(keys);
+      ShowCaseWidget.of(_showCaseContext!).startShowCase(keys);
     } catch (_) {
       if (mounted) TourStorage.setHasSeenTourGuard();
     }
@@ -364,7 +368,9 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
       onFinish: () {
         TourStorage.setHasSeenTourGuard();
       },
-      builder: (context) => PopScope(
+      builder: (context) {
+        _showCaseContext = context;
+        return PopScope(
         canPop: false,
         onPopInvoked: (didPop) async {
           if (!didPop) {
@@ -448,7 +454,8 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         ],
       ),
       ),
-    ),
+    );
+      },
     );
   }
 

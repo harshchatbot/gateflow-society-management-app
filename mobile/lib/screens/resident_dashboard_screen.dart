@@ -89,10 +89,14 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     }
   }
 
+  /// Context from inside ShowCaseWidget's builder (needed to find ShowCaseWidget).
+  BuildContext? _showCaseContext;
+
   void startTour() {
+    if (_showCaseContext == null || !mounted) return;
     try {
       final keys = [_keyApprovals, _keyComplaints, _keySos];
-      ShowCaseWidget.of(context).startShowCase(keys);
+      ShowCaseWidget.of(_showCaseContext!).startShowCase(keys);
     } catch (_) {
       if (mounted) TourStorage.setHasSeenTourResident();
     }
@@ -327,16 +331,18 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       onFinish: () {
         TourStorage.setHasSeenTourResident();
       },
-      builder: (context) => PopScope(
-        canPop: false,
-        onPopInvoked: (didPop) async {
-          if (!didPop) {
-            await _onWillPop();
-          }
-        },
-        child: Scaffold(
-          backgroundColor: AppColors.bg,
-          body: Stack(
+      builder: (context) {
+        _showCaseContext = context;
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) async {
+            if (!didPop) {
+              await _onWillPop();
+            }
+          },
+          child: Scaffold(
+            backgroundColor: AppColors.bg,
+            body: Stack(
         children: [
           // Green Gradient Header Background
           Positioned(
@@ -414,7 +420,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         ],
       ),
       ),
-    ),
+    );
+      },
     );
   }
 

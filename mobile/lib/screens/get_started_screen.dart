@@ -58,9 +58,9 @@ class GetStartedScreen extends StatelessWidget {
       case 'admin':
       case 'super_admin':
         return [
-          {'title': 'Approve Residents', 'body': 'Manage Residents tab: approve pending signups and manage resident list.'},
-          {'title': 'Share Society Code / QR', 'body': 'Guards tab: generate Guard Join QR so guards can join your society.'},
-          {'title': 'Create Notice', 'body': 'Notices tab: create and manage society notices.'},
+          {'title': 'Approve Residents', 'body': 'Residents Directory: approve pending signups and manage resident list.'},
+          {'title': 'Share Society Code / QR', 'body': 'Security Staff: generate Guard Join QR so guards can join your society.'},
+          {'title': 'Create Notice', 'body': 'Notice Board: create and manage society notices.'},
           {'title': 'Complaints & SOS', 'body': 'Complaints tab for issues; SOS Alerts for emergency responses.'},
         ];
       default:

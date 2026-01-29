@@ -92,10 +92,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  /// Context from inside ShowCaseWidget's builder (needed to find ShowCaseWidget).
+  BuildContext? _showCaseContext;
+
   void startTour() {
+    if (_showCaseContext == null || !mounted) return;
     try {
       final keys = [_keyResidents, _keyGuards, _keyComplaints, _keyNotices, _keySos];
-      ShowCaseWidget.of(context).startShowCase(keys);
+      ShowCaseWidget.of(_showCaseContext!).startShowCase(keys);
     } catch (_) {
       if (mounted) TourStorage.setHasSeenTourForRole(widget.systemRole ?? 'admin');
     }
@@ -340,16 +344,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       onFinish: () {
         TourStorage.setHasSeenTourForRole(widget.systemRole ?? 'admin');
       },
-      builder: (context) => PopScope(
-        canPop: false,
-        onPopInvoked: (didPop) async {
-          if (!didPop) {
-            await _onWillPop();
-          }
-        },
-        child: Scaffold(
-          backgroundColor: AppColors.bg,
-          body: Stack(
+      builder: (context) {
+        _showCaseContext = context;
+        return PopScope(
+          canPop: false,
+          onPopInvoked: (didPop) async {
+            if (!didPop) {
+              await _onWillPop();
+            }
+          },
+          child: Scaffold(
+            backgroundColor: AppColors.bg,
+            body: Stack(
         children: [
           // Background Gradient Header (purple theme)
           Positioned(
@@ -430,7 +436,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
       ),
-    ),
+    );
+      },
     );
   }
 
@@ -592,14 +599,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         children: [
           _buildCategoryChip(
             icon: Icons.people_rounded,
-            label: "Residents",
+            label: "Residents Directory",
             color: AppColors.admin,
             onTap: () => _navigateToTab(1),
           ),
           const SizedBox(width: 8),
           _buildCategoryChip(
             icon: Icons.shield_rounded,
-            label: "Guards",
+            label: "Security Staff",
             color: AppColors.primary,
             onTap: () => _navigateToTab(2),
           ),
@@ -755,8 +762,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           description: "View and approve pending resident signups.",
           child: _ActionItem(
             icon: Icons.people_rounded,
-            title: "Manage Residents",
-            subtitle: "View & manage residents",
+            title: "Residents Directory",
+            subtitle: "View residents directory",
             color: AppColors.admin,
             onTap: () => _navigateToTab(1),
           ),
@@ -767,8 +774,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           description: "Generate Guard Join QR so guards can join your society.",
           child: _ActionItem(
             icon: Icons.shield_rounded,
-            title: "Manage Guards",
-            subtitle: "View & manage guards",
+            title: "Security Staff",
+            subtitle: "View security staff",
             color: AppColors.primary,
             onTap: () => _navigateToTab(2),
           ),
@@ -796,7 +803,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           description: "View and resolve society complaints.",
           child: _ActionItem(
             icon: Icons.report_problem_rounded,
-            title: "Manage Complaints",
+            title: "Complaints",
             subtitle: "View & resolve complaints",
             color: AppColors.error,
             onTap: () => _navigateToTab(3),
@@ -835,13 +842,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               );
             },
           ),
-        ),
-        _ActionItem(
-          icon: Icons.edit_note_rounded,
-          title: "Manage Notices",
-          subtitle: "Create & edit notices",
-          color: AppColors.admin,
-          onTap: () => _navigateToTab(4),
         ),
         if (widget.systemRole?.toLowerCase() == 'super_admin')
           _ActionItem(
