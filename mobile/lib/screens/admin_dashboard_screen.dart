@@ -60,6 +60,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   
   int _notificationCount = 0;
   int _sosBadgeCount = 0;
+  int _unreadNoticesCount = 0;
+  bool _initializedUnreadNotices = false;
   final FirestoreService _firestore = FirestoreService();
   String? _photoUrl;
 
@@ -89,13 +91,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     // Listen for new notifications to update count
     final notificationService = NotificationService();
     notificationService.setOnNotificationReceived((data) {
-      if (data['type'] == 'notice' || data['type'] == 'complaint') {
-        _loadNotificationCount(); // Refresh count when notification received
-      } else if (data['type'] == 'sos') {
-        // Increment SOS badge while app is running
+      final type = (data['type'] ?? '').toString();
+      if (type == 'complaint') {
+        // Complaints are action-based; reload counts from backend
+        _loadNotificationCount();
+      } else if (type == 'notice') {
+        // Informational notice: increment unread counter only
         if (mounted) {
           setState(() {
-            _sosBadgeCount += 1;
+            _unreadNoticesCount += 1;
+            _notificationCount += 1;
+          });
+        }
+      } else if (type == 'sos') {
+        // Simple SOS badge to highlight attention
+        if (mounted) {
+          setState(() {
+            _sosBadgeCount = 1;
           });
         }
       }
@@ -106,7 +118,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         // Navigate to complaints tab (index 3)
         _navigateToTab(3);
       } else if (type == 'notice') {
-        // Navigate to notices tab (index 4)
+        // Mark notices as read for this session and navigate to notices tab (index 4)
+        if (mounted) {
+          setState(() {
+            _unreadNoticesCount = 0;
+          });
+        }
         _navigateToTab(4);
       } else if (type == 'sos') {
         final societyId = (data['society_id'] ?? widget.societyId).toString();
@@ -117,9 +134,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
         if (!mounted || sosId.isEmpty) return;
 
-        // Increment SOS badge so bell reflects SOS attention
+        // Clear SOS badge once user navigates to details
         setState(() {
-          _sosBadgeCount += 1;
+          _sosBadgeCount = 0;
         });
 
         Navigator.push(
@@ -152,12 +169,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         totalCount += pendingComplaints;
       }
       
-      // Count recent notices (created in last 24 hours)
+      // Count recent notices (created in last 24 hours) only once to seed unread count
       final noticesResult = await _noticeService.getNotices(
         societyId: widget.societyId,
         activeOnly: true,
       );
-      if (noticesResult.isSuccess && noticesResult.data != null) {
+      if (!_initializedUnreadNotices && noticesResult.isSuccess && noticesResult.data != null) {
         final now = DateTime.now();
         final recentNotices = noticesResult.data!.where((n) {
           try {
@@ -170,8 +187,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             return false;
           }
         }).length;
-        totalCount += recentNotices;
+        _unreadNoticesCount = recentNotices;
+        _initializedUnreadNotices = true;
       }
+
+      totalCount += _unreadNoticesCount;
       
       if (mounted) {
         setState(() {
@@ -193,7 +213,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         adminId: widget.adminId,
       ),
     ).then((_) {
-      // Refresh notification count when drawer closes
+      // User has seen notifications; clear unread notices for this session
+      if (mounted) {
+        setState(() {
+          _unreadNoticesCount = 0;
+        });
+      }
       _loadNotificationCount();
     });
   }

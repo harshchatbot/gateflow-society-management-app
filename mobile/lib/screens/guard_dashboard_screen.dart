@@ -67,9 +67,9 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         final sosId = (data['sos_id'] ?? '').toString();
 
         if (!mounted || sosId.isEmpty) return;
-        // Increment badge so bell highlights SOS presence
+        // Clear SOS badge when user opens the SOS details
         setState(() {
-          _sosBadgeCount++;
+          _sosBadgeCount = 0;
         });
         Navigator.push(
           context,
@@ -723,6 +723,11 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           icon: Icons.sos_rounded,
           tint: AppColors.error,
           onTap: () {
+            if (mounted) {
+              setState(() {
+                _sosBadgeCount = 0;
+              });
+            }
             Navigator.push(
               context,
               MaterialPageRoute(

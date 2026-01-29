@@ -61,7 +61,9 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   int _pendingCount = 0;
   int _approvedCount = 0;
   int _rejectedCount = 0;
-  int _notificationCount = 0; // Total notifications (approvals + notices)
+  int _notificationCount = 0; // Total notifications (approvals + unread notices)
+  int _unreadNoticesCount = 0;
+  bool _initializedUnreadNotices = false;
   bool _isLoading = false;
   String? _photoUrl;
   String? _phone;
@@ -92,8 +94,17 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     // Listen for new notifications to update count
     final notificationService = NotificationService();
     notificationService.setOnNotificationReceived((data) {
-      if (data['type'] == 'notice' || data['type'] == 'visitor') {
-        _loadDashboardData(); // Refresh data when notification received
+      final type = (data['type'] ?? '').toString();
+      if (type == 'visitor') {
+        // Visitor approvals are action-based; reload stats/pending count
+        _loadDashboardData();
+      } else if (type == 'notice') {
+        // Informational notice: increment unread counter only
+        if (!mounted) return;
+        setState(() {
+          _unreadNoticesCount += 1;
+          _notificationCount = _pendingCount + _unreadNoticesCount;
+        });
       }
     });
     notificationService.setOnNotificationTap((data) {
@@ -102,7 +113,13 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         // Open approvals screen/tab (handled via shell/tab; for now just refresh)
         _loadDashboardData();
       } else if (type == 'notice') {
-        // Open notice board screen
+        // Mark notices as read for this session and open notice board
+        if (mounted) {
+          setState(() {
+            _unreadNoticesCount = 0;
+            _notificationCount = _pendingCount;
+          });
+        }
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -208,34 +225,33 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         }).length;
       }
 
-      // ✅ Count recent notices (created in last 24 hours) via Firestore list
-      int recentNotices = 0;
-      try {
-        final noticesList = await _loadNoticesList();
-        final now = DateTime.now();
+      // ✅ Count recent notices (created in last 24 hours) only once to seed unread count
+      if (!_initializedUnreadNotices) {
+        try {
+          final noticesList = await _loadNoticesList();
+          final now = DateTime.now();
 
-        recentNotices = noticesList.where((n) {
-          try {
-            // Prefer 'created_at' if your notice docs use snake_case
-            final createdAtStr = (n['created_at'] ?? n['createdAt'])?.toString() ?? '';
-            if (createdAtStr.isEmpty) return false;
+          final recentNotices = noticesList.where((n) {
+            try {
+              final createdAtStr = (n['created_at'] ?? n['createdAt'])?.toString() ?? '';
+              if (createdAtStr.isEmpty) return false;
+              final created = DateTime.parse(createdAtStr.replaceAll("Z", "+00:00"));
+              final hoursDiff = now.difference(created).inHours;
+              return hoursDiff <= 24;
+            } catch (_) {
+              return false;
+            }
+          }).length;
 
-            // If stored as ISO string
-            final created = DateTime.parse(createdAtStr.replaceAll("Z", "+00:00"));
-            final hoursDiff = now.difference(created).inHours;
-            return hoursDiff <= 24;
-          } catch (_) {
-            // If createdAt is Timestamp or invalid format, skip gracefully
-            return false;
-          }
-        }).length;
-      } catch (e) {
-        AppLogger.e("Error counting notices", error: e);
-        // Continue without notices count
+          _unreadNoticesCount = recentNotices;
+          _initializedUnreadNotices = true;
+        } catch (e) {
+          AppLogger.e("Error counting notices", error: e);
+        }
       }
 
-      // Total notification count = pending approvals + recent notices
-      _notificationCount = _pendingCount + recentNotices;
+      // Total notification count = pending approvals + unread informational notices
+      _notificationCount = _pendingCount + _unreadNoticesCount;
 
       if (mounted) {
         setState(() => _isLoading = false);
@@ -245,7 +261,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         "pending": _pendingCount,
         "approved": _approvedCount,
         "rejected": _rejectedCount,
-        "notices": recentNotices,
+        "unread_notices": _unreadNoticesCount,
       });
     } catch (e) {
       AppLogger.e("Error loading dashboard data", error: e);
@@ -435,7 +451,13 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             IconButton(
               icon: const Icon(Icons.notifications_rounded, color: Colors.white),
               onPressed: () {
-                // Show notification drawer
+                // Mark notices as read for this session and open drawer
+                if (mounted) {
+                  setState(() {
+                    _unreadNoticesCount = 0;
+                    _notificationCount = _pendingCount;
+                  });
+                }
                 showModalBottomSheet(
                   context: context,
                   isScrollControlled: true,
@@ -446,7 +468,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                     flatNo: widget.flatNo,
                   ),
                 ).then((_) {
-                  // Refresh notification count when drawer closes
+                  // Refresh pending approvals when drawer closes
                   _loadDashboardData();
                 });
               },

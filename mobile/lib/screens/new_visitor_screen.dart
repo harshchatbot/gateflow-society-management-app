@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:confetti/confetti.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../core/app_logger.dart';
@@ -42,7 +41,6 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   final _flatNoController = TextEditingController();
   final _visitorPhoneController = TextEditingController();
   final _visitorService = FirebaseVisitorService();
-  late ConfettiController _confettiController;
 
   final ImagePicker _picker = ImagePicker();
   File? _visitorPhoto;
@@ -54,14 +52,12 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
   }
 
   @override
   void dispose() {
     _flatNoController.dispose();
     _visitorPhoneController.dispose();
-    _confettiController.dispose();
     super.dispose();
   }
 
@@ -97,7 +93,6 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         _isLoading = false;
         _createdVisitor = result.data!;
       });
-      _confettiController.play();
     } else {
       setState(() => _isLoading = false);
       final err = result.error ?? AppError(userMessage: 'Failed to create visitor', technicalMessage: 'Unknown');
@@ -190,15 +185,6 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                   if (_createdVisitor != null) _buildSuccessCard() else _buildEntryForm(),
                 ],
               ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              numberOfParticles: 25,
-              colors: const [AppColors.primary, AppColors.success, Colors.orange],
             ),
           ),
           GlassLoader(show: _isLoading, message: "Syncing with Residents..."),

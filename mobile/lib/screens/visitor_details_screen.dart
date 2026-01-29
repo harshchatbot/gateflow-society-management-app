@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:confetti/confetti.dart';
 import 'package:gateflow/models/visitor.dart';
 import 'package:gateflow/services/visitor_service.dart';
 
@@ -29,17 +30,20 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
   late Visitor _visitor;
 
   final _noteController = TextEditingController();
+  late ConfettiController _confettiController;
 
   @override
   void initState() {
     super.initState();
     _visitor = widget.visitor;
     _noteController.text = _visitor.note ?? "";
+    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
   }
 
   @override
   void dispose() {
     _noteController.dispose();
+    _confettiController.dispose();
     super.dispose();
   }
 
@@ -62,6 +66,10 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
       _loading = false;
       if (res.isSuccess) {
         _visitor = res.data!;
+        // Play celebration only when entry is approved
+        if (_visitor.status.toUpperCase().contains('APPROV')) {
+          _confettiController.play();
+        }
       } else {
         _error = res.error?.userMessage ?? "Failed to update status";
       }
@@ -595,6 +603,25 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                 ),
               ],
             ],
+          ),
+
+          // Confetti when approval succeeds
+          Align(
+            alignment: Alignment.topCenter,
+            child: ConfettiWidget(
+              confettiController: _confettiController,
+              blastDirectionality: BlastDirectionality.explosive,
+              numberOfParticles: 25,
+              maxBlastForce: 18,
+              minBlastForce: 5,
+              gravity: 0.25,
+              colors: const [
+                AppColors.success,
+                AppColors.primary,
+                Colors.orangeAccent,
+                Colors.blueAccent,
+              ],
+            ),
           ),
 
           // Full screen glass loader
