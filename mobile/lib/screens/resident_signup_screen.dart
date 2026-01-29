@@ -5,7 +5,7 @@ import '../core/app_logger.dart';
 import '../services/resident_signup_service.dart';
 import '../services/firestore_service.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../ui/app_icons.dart';
 import 'resident_login_screen.dart';
 import 'package:flutter/foundation.dart';
@@ -192,7 +192,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
               ),
             ),
           ),
-          GlassLoader(show: _isLoading, message: "Creating Account…"),
+          AppLoader.overlay(show: _isLoading, message: "Creating Account…"),
         ],
       ),
     );

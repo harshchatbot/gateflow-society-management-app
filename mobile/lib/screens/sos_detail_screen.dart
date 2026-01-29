@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
+import '../ui/app_loader.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 
@@ -118,11 +119,11 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
         title: const Text('SOS Alert'),
         backgroundColor: AppColors.error,
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : Card(
+      body: _loading
+          ? AppLoader.fullscreen(show: true)
+          : Padding(
+              padding: const EdgeInsets.all(16),
+              child: Card(
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 elevation: 3,
                 child: Padding(

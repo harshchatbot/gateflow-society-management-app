@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../services/resident_service.dart';
 import '../core/app_logger.dart';
 import '../widgets/status_chip.dart';
@@ -196,7 +196,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                 },
               ),
             ),
-          GlassLoader(show: _isLoading, message: "Loading history…"),
+          AppLoader.overlay(show: _isLoading, message: "Loading history…"),
         ],
       ),
       ),

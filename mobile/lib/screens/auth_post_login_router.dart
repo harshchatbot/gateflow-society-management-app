@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../ui/app_loader.dart';
 import '../services/invite_claim_service.dart';
 import 'guard_shell_screen.dart';
 // TODO: add resident shell when you build it
@@ -116,7 +117,7 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
   Widget build(BuildContext context) {
     if (_loading) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: AppLoader.fullscreen(show: true),
       );
     }
 

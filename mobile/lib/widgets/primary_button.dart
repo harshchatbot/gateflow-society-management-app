@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../ui/app_loader.dart';
+
 class PrimaryButton extends StatelessWidget {
   final String? text;
   final String? label;
@@ -43,10 +45,10 @@ class PrimaryButton extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         if (effectiveLoading) ...[
-          const SizedBox(
+          SizedBox(
             width: 18,
             height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
+            child: AppLoader.inline(size: 18),
           ),
           const SizedBox(width: 10),
         ] else if (icon != null) ...[

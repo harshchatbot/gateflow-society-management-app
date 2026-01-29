@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../services/admin_signup_service.dart';
 import '../core/app_logger.dart';
 import '../services/firestore_service.dart';
@@ -483,7 +483,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
               _buildPendingSignupsList(),
             ],
           ),
-          GlassLoader(show: _isLoading, message: "Loading..."),
+          AppLoader.overlay(show: _isLoading, message: "Loading..."),
         ],
       ),
     );

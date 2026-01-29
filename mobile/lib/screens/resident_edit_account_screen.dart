@@ -5,7 +5,7 @@ import '../services/resident_service.dart';
 import '../core/env.dart';
 import '../widgets/app_text_field.dart';
 import '../widgets/primary_button.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 
 /// Edit Account Information Screen
 /// 
@@ -246,13 +246,10 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _isLoading ? null : _handleSave,
                       icon: _isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
+                              child: AppLoader.inline(size: 20),
                             )
                           : const Icon(Icons.save_rounded, size: 22),
                       label: Text(
@@ -277,7 +274,7 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
               ),
             ),
           ),
-          if (_isLoading) const GlassLoader(),
+          if (_isLoading) AppLoader.overlay(show: true),
         ],
       ),
     );

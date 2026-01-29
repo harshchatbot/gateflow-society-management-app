@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../services/admin_service.dart';
 import '../services/resident_signup_service.dart';
 import '../core/app_logger.dart';
@@ -479,7 +479,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
               ),
             ],
           ),
-          GlassLoader(show: _isLoading, message: _currentTabIndex == 0 ? "Loading residents…" : "Loading signups…"),
+          AppLoader.overlay(show: _isLoading, message: _currentTabIndex == 0 ? "Loading residents…" : "Loading signups…"),
         ],
       ),
     );

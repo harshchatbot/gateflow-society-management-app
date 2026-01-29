@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../services/complaint_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
@@ -253,7 +253,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
               ),
             ],
           ),
-          GlassLoader(show: _isLoading, message: "Loading complaints…"),
+          AppLoader.overlay(show: _isLoading, message: "Loading complaints…"),
         ],
       ),
     );

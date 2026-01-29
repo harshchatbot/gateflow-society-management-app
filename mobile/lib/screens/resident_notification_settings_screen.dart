@@ -3,7 +3,7 @@ import '../ui/app_colors.dart';
 import '../core/app_logger.dart';
 import '../services/resident_service.dart';
 import '../core/env.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 
 /// Notification Settings Screen
 /// 
@@ -217,13 +217,10 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
                   child: ElevatedButton.icon(
                     onPressed: _isLoading ? null : _handleSave,
                     icon: _isLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
+                            child: AppLoader.inline(size: 20),
                           )
                         : const Icon(Icons.save_rounded, size: 22),
                     label: Text(
@@ -247,7 +244,7 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
               ],
             ),
           ),
-          if (_isLoading) const GlassLoader(),
+          if (_isLoading) AppLoader.overlay(show: true),
         ],
       ),
     );

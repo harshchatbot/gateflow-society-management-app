@@ -5,7 +5,7 @@ import '../core/app_logger.dart';
 import '../services/admin_signup_service.dart';
 import '../services/firestore_service.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../ui/app_icons.dart';
 import 'admin_login_screen.dart';
 import 'admin_onboarding_screen.dart';
@@ -173,7 +173,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
               ),
             ),
           ),
-          GlassLoader(show: _isLoading, message: "Creating Account…"),
+          AppLoader.overlay(show: _isLoading, message: "Creating Account…"),
         ],
       ),
     );

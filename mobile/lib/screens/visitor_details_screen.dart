@@ -5,7 +5,7 @@ import 'package:gateflow/services/visitor_service.dart';
 
 // New UI system (no logic changes)
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 
 // ✅ Phosphor icon mapping (single source)
 import '../ui/app_icons.dart';
@@ -625,7 +625,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
           ),
 
           // Full screen glass loader
-          GlassLoader(
+          AppLoader.overlay(
             show: _loading,
             message: "Updating status…",
           ),

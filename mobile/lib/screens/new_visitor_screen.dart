@@ -13,7 +13,7 @@ import 'guard_login_screen.dart';
 
 // UI system
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../ui/app_icons.dart';
 
 class NewVisitorScreen extends StatefulWidget {
@@ -187,7 +187,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               ),
             ),
           ),
-          GlassLoader(show: _isLoading, message: "Syncing with Residents..."),
+          AppLoader.overlay(show: _isLoading, message: "Syncing with Residents..."),
         ],
       ),
       ),

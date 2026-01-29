@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../services/resident_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
@@ -337,7 +337,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                 },
               ),
             ),
-          GlassLoader(show: _isLoading, message: "Processing…"),
+          AppLoader.overlay(show: _isLoading, message: "Processing…"),
         ],
       ),
       ),
@@ -492,13 +492,10 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                       ? null
                       : () => _handleDecision(visitorId, "APPROVED"),
                   icon: isProcessing
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
+                          child: AppLoader.inline(size: 16),
                         )
                       : const Icon(Icons.check_rounded, size: 18),
                   label: Text(

@@ -11,7 +11,7 @@ import '../core/storage.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import 'guard_shell_screen.dart';
 
 class GuardJoinScreen extends StatefulWidget {
@@ -426,7 +426,7 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
               ),
             ),
           ),
-          GlassLoader(show: _isProcessing, message: "Creating guard account…"),
+          AppLoader.overlay(show: _isProcessing, message: "Creating guard account…"),
         ],
       ),
     );

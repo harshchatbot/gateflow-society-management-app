@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../ui/app_loader.dart';
 import '../services/invite_claim_service.dart';
 import 'guard_shell_screen.dart';
 // TODO: import resident shell when ready
@@ -127,10 +128,10 @@ class _JoinSocietyScreenState extends State<JoinSocietyScreen> {
               child: ElevatedButton(
                 onPressed: _loading ? null : _join,
                 child: _loading
-                    ? const SizedBox(
+                    ? SizedBox(
                         height: 20,
                         width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
+                        child: AppLoader.inline(size: 20),
                       )
                     : const Text("Join"),
               ),

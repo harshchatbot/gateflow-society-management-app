@@ -9,7 +9,7 @@ import '../ui/app_colors.dart';
 import '../core/app_logger.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../utils/csv_validators.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -170,7 +170,7 @@ class _SuperAdminBulkUploadScreenState
             ),
           ),
           if (_isUploadingGuards || _isUploadingResidents)
-            GlassLoader(
+            AppLoader.overlay(
               show: true,
               message: _isUploadingGuards
                   ? "Uploading guards..."

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
 import '../ui/app_colors.dart';
+import '../ui/app_loader.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import 'sos_detail_screen.dart';
@@ -61,7 +62,7 @@ class _SosAlertsScreenState extends State<SosAlertsScreen> {
       body: RefreshIndicator(
         onRefresh: _load,
         child: _loading
-            ? const Center(child: CircularProgressIndicator())
+            ? AppLoader.fullscreen(show: true)
             : _alerts.isEmpty
                 ? const Center(
                     child: Text(

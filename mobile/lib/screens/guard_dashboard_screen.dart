@@ -3,7 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../ui/app_colors.dart';
 import '../services/firestore_service.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
 import '../core/tour_storage.dart';
@@ -450,7 +450,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             ),
           ),
           
-          if (_isLoading) GlassLoader(show: true, message: "Syncing Data..."),
+          if (_isLoading) AppLoader.overlay(show: true, message: "Syncing Data..."),
         ],
       ),
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
+import '../ui/app_loader.dart';
 import '../services/resident_service.dart';
 import '../services/complaint_service.dart';
 import '../services/notice_service.dart';
@@ -426,8 +427,8 @@ class _ResidentNotificationDrawerState extends State<ResidentNotificationDrawer>
           // Notifications List
           Expanded(
             child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.success),
+                ? Center(
+                    child: AppLoader.inline(size: 28),
                   )
                 : _notifications.isEmpty
                     ? Center(

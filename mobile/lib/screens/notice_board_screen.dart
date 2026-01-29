@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../services/notice_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
@@ -430,7 +430,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               ),
             ],
           ),
-          GlassLoader(show: _isLoading, message: "Loading notices…"),
+          AppLoader.overlay(show: _isLoading, message: "Loading notices…"),
         ],
       ),
     );

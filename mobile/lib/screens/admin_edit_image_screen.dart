@@ -5,7 +5,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import '../ui/app_colors.dart';
 import '../core/app_logger.dart';
 import '../services/firestore_service.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 
 /// Edit Profile Image Screen for Admin
 /// 
@@ -301,13 +301,10 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                         ? null
                         : _handleUpload,
                     icon: _isLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
+                            child: AppLoader.inline(size: 20),
                           )
                         : const Icon(Icons.cloud_upload_rounded, size: 22),
                     label: Text(
@@ -331,7 +328,7 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
               ],
             ),
           ),
-          if (_isLoading) const GlassLoader(),
+          if (_isLoading) AppLoader.overlay(show: true),
         ],
       ),
     );

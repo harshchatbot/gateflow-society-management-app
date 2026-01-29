@@ -4,7 +4,7 @@ import '../core/app_logger.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import 'admin_shell_screen.dart';
 import 'role_select_screen.dart';
 import 'admin_onboarding_screen.dart';
@@ -241,7 +241,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               ),
             ),
           ),
-          GlassLoader(show: _isLoading, message: "Verifying Admin…"),
+          AppLoader.overlay(show: _isLoading, message: "Verifying Admin…"),
         ],
       ),
     );

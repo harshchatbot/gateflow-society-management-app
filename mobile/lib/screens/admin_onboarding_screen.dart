@@ -9,7 +9,7 @@ import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/invite_claim_service.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import 'admin_shell_screen.dart';
 import 'admin_login_screen.dart';
 import '../core/storage.dart';
@@ -412,7 +412,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             ),
           ),
           if (_isLoading || _isLoadingLocations)
-            GlassLoader(
+            AppLoader.overlay(
               show: true,
               message: _isLoading ? "Creating your account…" : "Loading locations…",
             ),

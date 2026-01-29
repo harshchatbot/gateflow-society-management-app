@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../services/admin_service.dart';
 import '../services/complaint_service.dart';
 import '../services/notice_service.dart';
@@ -432,7 +432,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ),
 
-          if (_isLoading) GlassLoader(show: true, message: "Loading Stats..."),
+          if (_isLoading) AppLoader.overlay(show: true, message: "Loading Stats..."),
         ],
       ),
       ),

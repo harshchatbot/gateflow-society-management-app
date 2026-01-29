@@ -9,7 +9,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:uuid/uuid.dart';
 
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../services/admin_service.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
@@ -276,7 +276,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
               ),
             ],
           ),
-          GlassLoader(show: _isLoading, message: "Loading guards…"),
+          AppLoader.overlay(show: _isLoading, message: "Loading guards…"),
         ],
       ),
     );

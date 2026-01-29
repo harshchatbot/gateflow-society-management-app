@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../services/resident_service.dart' as resident;
 import '../services/notification_service.dart';
 import '../core/app_logger.dart';
@@ -416,7 +416,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             ),
           ),
 
-          if (_isLoading) GlassLoader(show: true, message: "Loading Dashboard…"),
+          if (_isLoading) AppLoader.overlay(show: true, message: "Loading Dashboard…"),
         ],
       ),
       ),

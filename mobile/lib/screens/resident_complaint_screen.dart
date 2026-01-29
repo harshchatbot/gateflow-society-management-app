@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../services/complaint_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
@@ -415,13 +415,10 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                     child: ElevatedButton.icon(
                       onPressed: _isLoading || _isSuccess ? null : _submitComplaint,
                       icon: _isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
+                              child: AppLoader.inline(size: 20),
                             )
                           : const Icon(Icons.send_rounded, size: 22),
                       label: Text(
@@ -450,7 +447,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
               ),
             ),
           ),
-          GlassLoader(show: _isLoading, message: "Submitting complaint…"),
+          AppLoader.overlay(show: _isLoading, message: "Submitting complaint…"),
         ],
       ),
     );

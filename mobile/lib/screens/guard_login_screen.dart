@@ -7,7 +7,7 @@ import '../services/firestore_service.dart';
 
 // UI system
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../ui/app_icons.dart';
 
 import 'guard_shell_screen.dart';
@@ -268,7 +268,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
               ),
             ),
           ),
-          GlassLoader(show: _isLoading, message: "Verifying Credentials…"),
+          AppLoader.overlay(show: _isLoading, message: "Verifying Credentials…"),
         ],
       ),
     );

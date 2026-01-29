@@ -7,7 +7,7 @@ import '../core/app_logger.dart';
 import '../services/resident_service.dart';
 import '../services/firestore_service.dart';
 import '../core/env.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 
 /// Edit Profile Image Screen
 /// 
@@ -314,13 +314,10 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
                         ? null
                         : _handleUpload,
                     icon: _isLoading
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 20,
                             height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                            ),
+                            child: AppLoader.inline(size: 20),
                           )
                         : const Icon(Icons.cloud_upload_rounded, size: 22),
                     label: Text(
@@ -344,7 +341,7 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
               ],
             ),
           ),
-          if (_isLoading) const GlassLoader(),
+          if (_isLoading) AppLoader.overlay(show: true),
         ],
       ),
     );

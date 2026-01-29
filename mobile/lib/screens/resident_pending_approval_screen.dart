@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_icons.dart';
+import '../ui/app_loader.dart';
 import 'resident_login_screen.dart';
 import 'resident_shell_screen.dart';
 import '../services/firestore_service.dart';
@@ -236,13 +237,10 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
                       child: ElevatedButton.icon(
                         onPressed: _isChecking ? null : _checkApprovalStatus,
                         icon: _isChecking
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                                ),
+                                child: AppLoader.inline(size: 20),
                               )
                             : const Icon(Icons.refresh_rounded, size: 20),
                         label: Text(

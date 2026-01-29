@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../models/visitor.dart';
@@ -293,7 +293,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                 },
               ),
             ),
-          GlassLoader(show: _isLoading, message: "Loading history…"),
+          AppLoader.overlay(show: _isLoading, message: "Loading history…"),
         ],
       ),
       ),

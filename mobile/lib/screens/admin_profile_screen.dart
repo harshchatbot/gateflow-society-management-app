@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../ui/app_colors.dart';
+import '../ui/app_loader.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
 import '../services/firestore_service.dart';
@@ -832,13 +833,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       child: OutlinedButton.icon(
         onPressed: _isLoggingOut ? null : _handleLogout,
         icon: _isLoggingOut
-            ? const SizedBox(
+            ? SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.error),
-                ),
+                child: AppLoader.inline(size: 20),
               )
             : const Icon(Icons.logout_rounded, color: AppColors.error),
         label: Text(

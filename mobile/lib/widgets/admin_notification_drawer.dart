@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../ui/app_colors.dart';
+import '../ui/app_loader.dart';
 import '../services/complaint_service.dart';
 import '../services/notice_service.dart';
 import '../services/firestore_service.dart';
@@ -376,8 +377,8 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           // Notifications List
           Expanded(
             child: _isLoading
-                ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.admin),
+                ? Center(
+                    child: AppLoader.inline(size: 28),
                   )
                 : _notifications.isEmpty
                     ? Center(

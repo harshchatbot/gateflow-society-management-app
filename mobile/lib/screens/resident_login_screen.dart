@@ -9,7 +9,7 @@ import '../services/invite_claim_service.dart';
 
 // UI system
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../ui/app_icons.dart';
 
 import 'resident_shell_screen.dart';
@@ -242,7 +242,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
               ),
             ),
           ),
-          GlassLoader(show: _isLoading, message: "Verifying Credentials…"),
+          AppLoader.overlay(show: _isLoading, message: "Verifying Credentials…"),
         ],
       ),
     );

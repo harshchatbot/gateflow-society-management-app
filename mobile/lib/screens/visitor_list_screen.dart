@@ -5,7 +5,7 @@ import 'package:gateflow/services/firestore_service.dart';
 
 import 'visitor_details_screen.dart';
 import '../ui/app_colors.dart';
-import '../ui/glass_loader.dart';
+import '../ui/app_loader.dart';
 import '../core/app_logger.dart';
 
 class VisitorListScreen extends StatefulWidget {
@@ -399,7 +399,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
               ),
             ],
           ),
-          GlassLoader(show: _loading, message: "Updating logs..."),
+          AppLoader.overlay(show: _loading, message: "Updating logs..."),
         ],
       ),
       ),

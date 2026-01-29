@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../ui/app_loader.dart';
 import 'join_society_screen.dart';
 import 'guard_shell_screen.dart';
 // TODO: resident shell later
@@ -83,7 +84,7 @@ class _AuthRouterState extends State<AuthRouter> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      body: Center(child: CircularProgressIndicator()),
+      body: AppLoader.fullscreen(show: true),
     );
   }
 }
