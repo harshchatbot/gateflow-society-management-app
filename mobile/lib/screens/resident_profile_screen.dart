@@ -9,6 +9,7 @@ import 'resident_notification_settings_screen.dart';
 import 'resident_edit_phone_screen.dart';
 import 'resident_edit_image_screen.dart';
 import 'resident_edit_account_screen.dart';
+import 'get_started_screen.dart';
 
 /// Resident Profile Screen
 /// 
@@ -26,6 +27,7 @@ class ResidentProfileScreen extends StatefulWidget {
   final String flatNo;
   final String? residentPhone;
   final VoidCallback? onBackPressed;
+  final VoidCallback? onStartTourRequested;
 
   const ResidentProfileScreen({
     super.key,
@@ -35,6 +37,7 @@ class ResidentProfileScreen extends StatefulWidget {
     required this.flatNo,
     this.residentPhone,
     this.onBackPressed,
+    this.onStartTourRequested,
   });
 
   @override
@@ -436,6 +439,23 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             ],
           ),
           const SizedBox(height: 16),
+          _buildSettingItem(
+            icon: Icons.lightbulb_outline_rounded,
+            title: "Get Started",
+            subtitle: "Quick start guide & interactive tour",
+            onTap: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => GetStartedScreen(
+                    role: 'resident',
+                    onStartTour: widget.onStartTourRequested,
+                  ),
+                ),
+              );
+            },
+          ),
+          const Divider(height: 24),
           _buildSettingItem(
             icon: Icons.notifications_rounded,
             title: "Notifications",

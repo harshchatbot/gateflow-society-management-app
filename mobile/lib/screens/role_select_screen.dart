@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'guard_login_screen.dart';
 import 'resident_login_screen.dart';
 import 'admin_login_screen.dart';
+import 'how_sentinel_works_screen.dart';
 import '../widgets/powered_by_footer.dart';
 import '../ui/app_colors.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -64,7 +65,26 @@ class RoleSelectScreen extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 12),
+                        TextButton.icon(
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const HowSentinelWorksScreen(),
+                              ),
+                            );
+                          },
+                          icon: Icon(Icons.info_outline_rounded, size: 18, color: AppColors.primary),
+                          label: const Text(
+                            "How Sentinel Works",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
                         // Role Cards
                         _RoleCard(
                           title: "Guard",

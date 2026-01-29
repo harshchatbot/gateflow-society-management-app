@@ -34,6 +34,7 @@ class GuardShellScreen extends StatefulWidget {
 
 class _GuardShellScreenState extends State<GuardShellScreen> {
   int _index = 0;
+  final GlobalKey<State<GuardDashboardScreen>> _dashboardKey = GlobalKey<State<GuardDashboardScreen>>();
 
   @override
   void initState() {
@@ -56,8 +57,18 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
     }
   }
 
+  void _onStartTourRequested() {
+    setState(() => _index = 0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        (_dashboardKey.currentState as dynamic)?.startTour();
+      } catch (_) {}
+    });
+  }
+
   late final List<Widget> _screens = [
     GuardDashboardScreen(
+      key: _dashboardKey,
       guardId: widget.guardId,
       guardName: widget.guardName,
       societyId: widget.societyId,
@@ -83,6 +94,7 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
       guardName: widget.guardName,
       societyId: widget.societyId,
       onBackPressed: () => setState(() => _index = 0),
+      onStartTourRequested: _onStartTourRequested,
     ),
   ];
 

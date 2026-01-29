@@ -10,12 +10,14 @@ import '../core/storage.dart';
 import '../core/app_logger.dart';
 import '../services/firestore_service.dart';
 import 'role_select_screen.dart';
+import 'get_started_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final String guardId;
   final String guardName;
   final String societyId;
   final VoidCallback? onBackPressed;
+  final VoidCallback? onStartTourRequested;
 
   const ProfileScreen({
     super.key,
@@ -23,6 +25,7 @@ class ProfileScreen extends StatefulWidget {
     required this.guardName,
     required this.societyId,
     this.onBackPressed,
+    this.onStartTourRequested,
   });
 
   @override
@@ -181,6 +184,55 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // Password
                   _buildPasswordCard(),
                   const SizedBox(height: 25),
+
+                  // Get Started (Quick Start + Interactive Tour)
+                  InkWell(
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => GetStartedScreen(
+                            role: 'guard',
+                            onStartTour: widget.onStartTourRequested,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.primary.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.lightbulb_outline_rounded, color: AppColors.primary, size: 22),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Get Started", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.text)),
+                                SizedBox(height: 4),
+                                Text("Quick start guide & interactive tour", style: TextStyle(fontSize: 13, color: AppColors.text2)),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.primary),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
 
                   // 3. Operational Tasks Grid
                   const Align(

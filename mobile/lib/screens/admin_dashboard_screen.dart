@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:showcaseview/showcaseview.dart';
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
 import '../services/admin_service.dart';
@@ -9,6 +10,7 @@ import '../services/notification_service.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
+import '../core/tour_storage.dart';
 import 'notice_board_screen.dart';
 import 'sos_detail_screen.dart';
 import 'sos_alerts_screen.dart';
@@ -46,18 +48,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     baseUrl: Env.apiBaseUrl,
   );
 
+  final GlobalKey<State<StatefulWidget>> _keyResidents = GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keyGuards = GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keyComplaints = GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keyNotices = GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keySos = GlobalKey<State<StatefulWidget>>();
+
   Map<String, dynamic>? _stats;
   bool _isLoading = false;
   String? _error;
-  
+
   late final ComplaintService _complaintService = ComplaintService(
     baseUrl: Env.apiBaseUrl,
   );
-  
+
   late final NoticeService _noticeService = NoticeService(
     baseUrl: Env.apiBaseUrl,
   );
-  
+
   int _notificationCount = 0;
   int _sosBadgeCount = 0;
   int _unreadNoticesCount = 0;
@@ -72,6 +80,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _loadNotificationCount();
     _setupNotificationListener();
     _loadAdminProfile();
+    _maybeAutoRunTour();
+  }
+
+  void _maybeAutoRunTour() async {
+    final seen = await TourStorage.hasSeenTourForRole(widget.systemRole ?? 'admin');
+    if (mounted && !seen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) startTour();
+      });
+    }
+  }
+
+  void startTour() {
+    try {
+      final keys = [_keyResidents, _keyGuards, _keyComplaints, _keyNotices, _keySos];
+      ShowCaseWidget.of(context).startShowCase(keys);
+    } catch (_) {
+      if (mounted) TourStorage.setHasSeenTourForRole(widget.systemRole ?? 'admin');
+    }
   }
 
   Future<void> _loadAdminProfile() async {
@@ -309,16 +336,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) async {
-        if (!didPop) {
-          await _onWillPop();
-        }
+    return ShowCaseWidget(
+      onFinish: () {
+        TourStorage.setHasSeenTourForRole(widget.systemRole ?? 'admin');
       },
-      child: Scaffold(
-        backgroundColor: AppColors.bg,
-        body: Stack(
+      builder: (context) => PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) async {
+          if (!didPop) {
+            await _onWillPop();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.bg,
+          body: Stack(
         children: [
           // Background Gradient Header (purple theme)
           Positioned(
@@ -399,6 +430,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
       ),
+    ),
     );
   }
 
@@ -715,27 +747,31 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       crossAxisCount: 2,
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 1.3, // Adjusted to give more height for text
+      childAspectRatio: 1.3,
       children: [
-        _ActionItem(
-          icon: Icons.people_rounded,
-          title: "Manage Residents",
-          subtitle: "View & manage residents",
-          color: AppColors.admin,
-          onTap: () {
-            // Navigate to Residents tab (index 1)
-            _navigateToTab(1);
-          },
+        Showcase(
+          key: _keyResidents,
+          title: "Approve Residents",
+          description: "View and approve pending resident signups.",
+          child: _ActionItem(
+            icon: Icons.people_rounded,
+            title: "Manage Residents",
+            subtitle: "View & manage residents",
+            color: AppColors.admin,
+            onTap: () => _navigateToTab(1),
+          ),
         ),
-        _ActionItem(
-          icon: Icons.shield_rounded,
-          title: "Manage Guards",
-          subtitle: "View & manage guards",
-          color: AppColors.primary,
-          onTap: () {
-            // Navigate to Guards tab (index 2)
-            _navigateToTab(2);
-          },
+        Showcase(
+          key: _keyGuards,
+          title: "Share Society Code / QR",
+          description: "Generate Guard Join QR so guards can join your society.",
+          child: _ActionItem(
+            icon: Icons.shield_rounded,
+            title: "Manage Guards",
+            subtitle: "View & manage guards",
+            color: AppColors.primary,
+            onTap: () => _navigateToTab(2),
+          ),
         ),
         _ActionItem(
           icon: Icons.home_rounded,
@@ -743,7 +779,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           subtitle: "View & manage flats",
           color: AppColors.success,
           onTap: () {
-            // Navigate to Flats - show message for now (no flats screen yet)
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text("Flats management coming soon!"),
@@ -755,54 +790,59 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             );
           },
         ),
-        _ActionItem(
-          icon: Icons.report_problem_rounded,
-          title: "Manage Complaints",
-          subtitle: "View & resolve complaints",
-          color: AppColors.error,
-          onTap: () {
-            // Navigate to Complaints tab (index 3)
-            _navigateToTab(3);
-          },
+        Showcase(
+          key: _keyComplaints,
+          title: "Complaints",
+          description: "View and resolve society complaints.",
+          child: _ActionItem(
+            icon: Icons.report_problem_rounded,
+            title: "Manage Complaints",
+            subtitle: "View & resolve complaints",
+            color: AppColors.error,
+            onTap: () => _navigateToTab(3),
+          ),
         ),
-        _ActionItem(
-          icon: Icons.notifications_rounded,
-          title: "Notice Board",
-          subtitle: "View & manage notices",
-          color: AppColors.warning,
-          onTap: () {
-            // Navigate to Notices tab (index 4)
-            _navigateToTab(4);
-          },
+        Showcase(
+          key: _keyNotices,
+          title: "Create Notice",
+          description: "View notices and create new announcements.",
+          child: _ActionItem(
+            icon: Icons.notifications_rounded,
+            title: "Notice Board",
+            subtitle: "View & manage notices",
+            color: AppColors.warning,
+            onTap: () => _navigateToTab(4),
+          ),
         ),
-        _ActionItem(
-          icon: Icons.sos_rounded,
+        Showcase(
+          key: _keySos,
           title: "SOS Alerts",
-          subtitle: "View emergency SOS history",
-          color: AppColors.error,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => SosAlertsScreen(
-                  societyId: widget.societyId,
-                  role: 'admin',
+          description: "View and respond to emergency SOS from residents.",
+          child: _ActionItem(
+            icon: Icons.sos_rounded,
+            title: "SOS Alerts",
+            subtitle: "View emergency SOS history",
+            color: AppColors.error,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SosAlertsScreen(
+                    societyId: widget.societyId,
+                    role: 'admin',
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
         _ActionItem(
           icon: Icons.edit_note_rounded,
           title: "Manage Notices",
           subtitle: "Create & edit notices",
           color: AppColors.admin,
-          onTap: () {
-            // Navigate to Notices tab (index 4) - manage notices can be accessed from there
-            _navigateToTab(4);
-          },
+          onTap: () => _navigateToTab(4),
         ),
-        // Only show "Manage Admins" for super admins
         if (widget.systemRole?.toLowerCase() == 'super_admin')
           _ActionItem(
             icon: Icons.admin_panel_settings_rounded,

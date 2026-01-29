@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:showcaseview/showcaseview.dart';
 import '../ui/app_colors.dart';
 import '../services/firestore_service.dart';
 import '../ui/glass_loader.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
+import '../core/tour_storage.dart';
 import '../models/visitor.dart';
 import 'notice_board_screen.dart';
 import 'role_select_screen.dart';
@@ -36,7 +38,11 @@ class GuardDashboardScreen extends StatefulWidget {
 class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   final FirestoreService _firestore = FirestoreService();
   final FirebaseFirestore _db = FirebaseFirestore.instance;
-  
+
+  final GlobalKey<State<StatefulWidget>> _keyNewEntry = GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keyVisitors = GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keySosAlerts = GlobalKey<State<StatefulWidget>>();
+
   String _dynamicName = "";
   String? _photoUrl;
   int todayCount = 0;
@@ -49,10 +55,28 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   @override
   void initState() {
     super.initState();
-    // Initialize with passed name, then fetch fresh data
-    _dynamicName = widget.guardName; 
+    _dynamicName = widget.guardName;
     _syncDashboard();
     _setupNotificationListener();
+    _maybeAutoRunTour();
+  }
+
+  void _maybeAutoRunTour() async {
+    final seen = await TourStorage.hasSeenTourGuard();
+    if (mounted && !seen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) startTour();
+      });
+    }
+  }
+
+  void startTour() {
+    try {
+      final keys = [_keyNewEntry, _keyVisitors, _keySosAlerts];
+      ShowCaseWidget.of(context).startShowCase(keys);
+    } catch (_) {
+      if (mounted) TourStorage.setHasSeenTourGuard();
+    }
   }
 
   void _setupNotificationListener() {
@@ -336,14 +360,18 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) async {
-        if (!didPop) {
-          await _onWillPop();
-        }
+    return ShowCaseWidget(
+      onFinish: () {
+        TourStorage.setHasSeenTourGuard();
       },
-      child: Scaffold(
+      builder: (context) => PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) async {
+          if (!didPop) {
+            await _onWillPop();
+          }
+        },
+        child: Scaffold(
         backgroundColor: AppColors.bg,
         body: Stack(
           children: [
@@ -420,6 +448,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         ],
       ),
       ),
+    ),
     );
   }
 
@@ -700,8 +729,18 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
       children: [
-        _QuickAction(label: "New Entry", icon: Icons.person_add_rounded, tint: AppColors.primary, onTap: widget.onTapNewEntry),
-        _QuickAction(label: "Visitors", icon: Icons.groups_rounded, tint: AppColors.success, onTap: widget.onTapVisitors),
+        Showcase(
+          key: _keyNewEntry,
+          title: "New Visitor Entry",
+          description: "Register a new visitor. Resident gets a request to approve.",
+          child: _QuickAction(label: "New Entry", icon: Icons.person_add_rounded, tint: AppColors.primary, onTap: widget.onTapNewEntry),
+        ),
+        Showcase(
+          key: _keyVisitors,
+          title: "Visitor List / History",
+          description: "View today's visitors and full history.",
+          child: _QuickAction(label: "Visitors", icon: Icons.groups_rounded, tint: AppColors.success, onTap: widget.onTapVisitors),
+        ),
         _QuickAction(
           label: "Notices",
           icon: Icons.notifications_rounded,
@@ -718,26 +757,31 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             );
           },
         ),
-        _QuickAction(
-          label: "SOS Alerts",
-          icon: Icons.sos_rounded,
-          tint: AppColors.error,
-          onTap: () {
-            if (mounted) {
-              setState(() {
-                _sosBadgeCount = 0;
-              });
-            }
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => SosAlertsScreen(
-                  societyId: widget.societyId,
-                  role: 'guard',
+        Showcase(
+          key: _keySosAlerts,
+          title: "SOS Alerts",
+          description: "View and respond to emergency SOS from residents.",
+          child: _QuickAction(
+            label: "SOS Alerts",
+            icon: Icons.sos_rounded,
+            tint: AppColors.error,
+            onTap: () {
+              if (mounted) {
+                setState(() {
+                  _sosBadgeCount = 0;
+                });
+              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => SosAlertsScreen(
+                    societyId: widget.societyId,
+                    role: 'guard',
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ],
     );

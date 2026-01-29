@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:showcaseview/showcaseview.dart';
 import '../ui/app_colors.dart';
 import '../ui/glass_loader.dart';
 import '../services/resident_service.dart' as resident;
 import '../services/notification_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
+import '../core/tour_storage.dart';
 import 'resident_complaint_screen.dart';
 import 'resident_complaints_list_screen.dart';
 import 'resident_approvals_screen.dart';
@@ -50,18 +52,19 @@ class ResidentDashboardScreen extends StatefulWidget {
 }
 
 class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
-  // 🔹 Firestore (new, for notices)
   final FirestoreService _firestore = FirestoreService();
-
-  // 🔹 Existing backend service (leave untouched, but use Env.apiBaseUrl only)
   late final resident.ResidentService _service = resident.ResidentService(
     baseUrl: Env.apiBaseUrl,
   );
 
+  final GlobalKey<State<StatefulWidget>> _keyApprovals = GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keyComplaints = GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keySos = GlobalKey<State<StatefulWidget>>();
+
   int _pendingCount = 0;
   int _approvedCount = 0;
   int _rejectedCount = 0;
-  int _notificationCount = 0; // Total notifications (approvals + unread notices)
+  int _notificationCount = 0;
   int _unreadNoticesCount = 0;
   bool _initializedUnreadNotices = false;
   bool _isLoading = false;
@@ -74,6 +77,25 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     _loadDashboardData();
     _loadResidentProfilePhoto();
     _setupNotificationListener();
+    _maybeAutoRunTour();
+  }
+
+  void _maybeAutoRunTour() async {
+    final seen = await TourStorage.hasSeenTourResident();
+    if (mounted && !seen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) startTour();
+      });
+    }
+  }
+
+  void startTour() {
+    try {
+      final keys = [_keyApprovals, _keyComplaints, _keySos];
+      ShowCaseWidget.of(context).startShowCase(keys);
+    } catch (_) {
+      if (mounted) TourStorage.setHasSeenTourResident();
+    }
   }
 
   Future<void> _loadResidentProfilePhoto() async {
@@ -301,16 +323,20 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvoked: (didPop) async {
-        if (!didPop) {
-          await _onWillPop();
-        }
+    return ShowCaseWidget(
+      onFinish: () {
+        TourStorage.setHasSeenTourResident();
       },
-      child: Scaffold(
-        backgroundColor: AppColors.bg,
-        body: Stack(
+      builder: (context) => PopScope(
+        canPop: false,
+        onPopInvoked: (didPop) async {
+          if (!didPop) {
+            await _onWillPop();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: AppColors.bg,
+          body: Stack(
         children: [
           // Green Gradient Header Background
           Positioned(
@@ -388,6 +414,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         ],
       ),
       ),
+    ),
     );
   }
 
@@ -734,28 +761,32 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       crossAxisSpacing: 12,
       childAspectRatio: 1.4,
       children: [
-        _buildActionCard(
-          icon: Icons.verified_user_rounded,
-          title: "Pending Approvals",
-          subtitle: "$_pendingCount requests",
-          color: AppColors.warning,
-          onTap: () {
-            // Navigate to approvals tab if in shell, otherwise push new route
-            if (widget.onNavigateToApprovals != null) {
-              widget.onNavigateToApprovals!();
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ResidentApprovalsScreen(
-                    residentId: widget.residentId,
-                    societyId: widget.societyId,
-                    flatNo: widget.flatNo,
+        Showcase(
+          key: _keyApprovals,
+          title: "Approve / Reject Visitors",
+          description: "Open here to see pending visitor requests and approve or reject.",
+          child: _buildActionCard(
+            icon: Icons.verified_user_rounded,
+            title: "Pending Approvals",
+            subtitle: "$_pendingCount requests",
+            color: AppColors.warning,
+            onTap: () {
+              if (widget.onNavigateToApprovals != null) {
+                widget.onNavigateToApprovals!();
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ResidentApprovalsScreen(
+                      residentId: widget.residentId,
+                      societyId: widget.societyId,
+                      flatNo: widget.flatNo,
+                    ),
                   ),
-                ),
-              );
-            }
-          },
+                );
+              }
+            },
+          ),
         ),
         _buildActionCard(
           icon: Icons.report_problem_rounded,
@@ -776,28 +807,32 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             );
           },
         ),
-        _buildActionCard(
-          icon: Icons.inbox_rounded,
-          title: "My Complaints",
-          subtitle: "View all complaints",
-          color: AppColors.primary,
-          onTap: () {
-            // Navigate to complaints tab if in shell, otherwise push new route
-            if (widget.onNavigateToComplaints != null) {
-              widget.onNavigateToComplaints!();
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ResidentComplaintsListScreen(
-                    residentId: widget.residentId,
-                    societyId: widget.societyId,
-                    flatNo: widget.flatNo,
+        Showcase(
+          key: _keyComplaints,
+          title: "Complaints",
+          description: "View and manage your complaints here.",
+          child: _buildActionCard(
+            icon: Icons.inbox_rounded,
+            title: "My Complaints",
+            subtitle: "View all complaints",
+            color: AppColors.primary,
+            onTap: () {
+              if (widget.onNavigateToComplaints != null) {
+                widget.onNavigateToComplaints!();
+              } else {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ResidentComplaintsListScreen(
+                      residentId: widget.residentId,
+                      societyId: widget.societyId,
+                      flatNo: widget.flatNo,
+                    ),
                   ),
-                ),
-              );
-            }
-          },
+                );
+              }
+            },
+          ),
         ),
         _buildActionCard(
           icon: Icons.history_rounded,
@@ -805,11 +840,9 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           subtitle: "Past decisions",
           color: AppColors.success,
           onTap: () {
-            // Navigate to history tab - handled by shell
             if (widget.onNavigateToHistory != null) {
               widget.onNavigateToHistory!();
             } else {
-              // Fallback: navigate to history screen if not in shell
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -829,7 +862,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           subtitle: "Society announcements",
           color: AppColors.warning,
           onTap: () {
-            // Navigate to notices tab if in shell, otherwise push new route
             if (widget.onNavigateToNotices != null) {
               widget.onNavigateToNotices!();
             } else {
@@ -845,12 +877,17 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             }
           },
         ),
-        _buildActionCard(
-          icon: Icons.sos_rounded,
+        Showcase(
+          key: _keySos,
           title: "Emergency SOS",
-          subtitle: "Alert security team",
-          color: AppColors.error,
-          onTap: _showSosConfirmDialog,
+          description: "Send an instant alert to security and admin in case of emergency.",
+          child: _buildActionCard(
+            icon: Icons.sos_rounded,
+            title: "Emergency SOS",
+            subtitle: "Alert security team",
+            color: AppColors.error,
+            onTap: _showSosConfirmDialog,
+          ),
         ),
       ],
     );

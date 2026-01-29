@@ -32,11 +32,21 @@ class ResidentShellScreen extends StatefulWidget {
 
 class _ResidentShellScreenState extends State<ResidentShellScreen> {
   int _index = 0;
+  final GlobalKey<State<ResidentDashboardScreen>> _dashboardKey = GlobalKey<State<ResidentDashboardScreen>>();
 
   @override
   void initState() {
     super.initState();
     _subscribeToNotifications();
+  }
+
+  void _onStartTourRequested() {
+    setState(() => _index = 0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        (_dashboardKey.currentState as dynamic)?.startTour();
+      } catch (_) {}
+    });
   }
 
   Future<void> _subscribeToNotifications() async {
@@ -60,6 +70,7 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
 
   late final List<Widget> _screens = [
     ResidentDashboardScreen(
+      key: _dashboardKey,
       residentId: widget.residentId,
       residentName: widget.residentName,
       societyId: widget.societyId,
@@ -99,6 +110,7 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
       societyId: widget.societyId,
       flatNo: widget.flatNo,
       onBackPressed: () => setState(() => _index = 0),
+      onStartTourRequested: _onStartTourRequested,
     ),
   ];
 

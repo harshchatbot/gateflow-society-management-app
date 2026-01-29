@@ -34,16 +34,24 @@ class AdminShellScreen extends StatefulWidget {
 }
 
 class _AdminShellScreenState extends State<AdminShellScreen> {
-  // This index tracks which *screen* is visible in the IndexedStack (0-5)
   int _currentIndex = 0;
-  final Map<int, bool> _screenInitialized = {}; // Track which screens have been initialized
+  final Map<int, bool> _screenInitialized = {};
+  final GlobalKey<State<AdminDashboardScreen>> _dashboardKey = GlobalKey<State<AdminDashboardScreen>>();
 
   @override
   void initState() {
     super.initState();
-    // Initialize dashboard immediately
     _screenInitialized[0] = true;
     _subscribeToNotifications();
+  }
+
+  void _onStartTourRequested() {
+    setState(() => _currentIndex = 0);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      try {
+        (_dashboardKey.currentState as dynamic)?.startTour();
+      } catch (_) {}
+    });
   }
 
   Future<void> _subscribeToNotifications() async {
@@ -107,6 +115,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     switch (index) {
       case 0:
         return AdminDashboardScreen(
+          key: _dashboardKey,
           adminId: widget.adminId,
           adminName: widget.adminName,
           societyId: widget.societyId,
@@ -167,6 +176,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
               _currentIndex = 0;
             });
           },
+          onStartTourRequested: _onStartTourRequested,
         );
       default:
         return Container(color: AppColors.bg);

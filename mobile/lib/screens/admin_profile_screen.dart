@@ -7,6 +7,7 @@ import '../services/firestore_service.dart';
 import 'role_select_screen.dart';
 import 'admin_edit_image_screen.dart';
 import 'super_admin_bulk_upload_screen.dart';
+import 'get_started_screen.dart';
 
 /// Admin Profile Screen
 /// 
@@ -18,6 +19,7 @@ class AdminProfileScreen extends StatefulWidget {
   final String societyId;
   final String role;
   final VoidCallback? onBackPressed;
+  final VoidCallback? onStartTourRequested;
 
   const AdminProfileScreen({
     super.key,
@@ -26,6 +28,7 @@ class AdminProfileScreen extends StatefulWidget {
     required this.societyId,
     required this.role,
     this.onBackPressed,
+    this.onStartTourRequested,
   });
 
   @override
@@ -404,6 +407,55 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     _buildBulkUploadSection(),
                     const SizedBox(height: 20),
                   ],
+
+                  // Get Started (Quick Start + Interactive Tour)
+                  InkWell(
+                    onTap: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => GetStartedScreen(
+                            role: widget.role,
+                            onStartTour: widget.onStartTourRequested,
+                          ),
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.admin.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.admin.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: AppColors.admin.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: const Icon(Icons.lightbulb_outline_rounded, color: AppColors.admin, size: 22),
+                          ),
+                          const SizedBox(width: 14),
+                          const Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Get Started", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.text)),
+                                SizedBox(height: 4),
+                                Text("Quick start guide & interactive tour", style: TextStyle(fontSize: 13, color: AppColors.text2)),
+                              ],
+                            ),
+                          ),
+                          Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.admin),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
 
                   // Logout Button
                   _buildLogoutButton(),
