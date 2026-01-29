@@ -213,10 +213,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         adminId: widget.adminId,
       ),
     ).then((_) {
-      // User has seen notifications; clear unread notices for this session
+      // User has seen notifications; clear unread notices and SOS badge for this session
       if (mounted) {
         setState(() {
           _unreadNoticesCount = 0;
+          _sosBadgeCount = 0;
         });
       }
       _loadNotificationCount();

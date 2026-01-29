@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../ui/app_colors.dart';
 import '../services/complaint_service.dart';
 import '../services/notice_service.dart';
+import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 
@@ -33,10 +36,13 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
     baseUrl: Env.apiBaseUrl,
   );
 
+  final FirestoreService _firestore = FirestoreService();
+
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
   int _pendingComplaintsCount = 0;
   int _recentNoticesCount = 0;
+  int _openSosCount = 0;
 
   @override
   void initState() {
@@ -82,8 +88,6 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
         
         complaintNotifications = recentPending;
       }
-
-      // Admin drawer: Only show notices and complaints (no visitors)
 
       // Load recent notices (created in last 24 hours)
       final noticesResult = await _noticeService.getNotices(
@@ -136,9 +140,51 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
             .toList();
       }
 
+      // Load open SOS alerts from Firestore for this society (treated as actionable notifications)
+      List<Map<String, dynamic>> sosNotifications = [];
+      int openSos = 0;
+      try {
+        final sosList = await _firestore.getSosRequests(
+          societyId: widget.societyId,
+          limit: 50,
+        );
+
+        final openOnly = sosList.where((s) {
+          final status = (s['status'] ?? 'OPEN').toString().toUpperCase();
+          return status == 'OPEN';
+        }).toList();
+
+        openSos = openOnly.length;
+
+        sosNotifications = openOnly.map((s) {
+          final flatNo = (s['flatNo'] ?? '').toString();
+          final residentName = (s['residentName'] ?? 'Resident').toString();
+          final createdAt = s['createdAt'];
+          String? createdAtIso;
+          if (createdAt is Timestamp) {
+            createdAtIso = createdAt.toDate().toIso8601String();
+          } else if (createdAt is DateTime) {
+            createdAtIso = createdAt.toIso8601String();
+          }
+
+          return {
+            'type': 'sos',
+            'id': (s['sosId'] ?? '').toString(),
+            'title': 'SOS from Flat $flatNo',
+            'description': residentName,
+            'status': (s['status'] ?? 'OPEN').toString(),
+            'created_at': createdAtIso ?? '',
+            'flat_no': flatNo,
+            'resident_name': residentName,
+          };
+        }).toList();
+      } catch (e, st) {
+        AppLogger.e("Error loading SOS notifications (admin drawer)", error: e, stackTrace: st);
+      }
+
       // Combine and sort by created_at (most recent first)
-      // Admin: Only notices and complaints
       final allNotifications = [
+        ...sosNotifications,
         ...complaintNotifications,
         ...noticeNotifications,
       ];
@@ -158,6 +204,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           _notifications = allNotifications;
           _pendingComplaintsCount = pendingComplaints;
           _recentNoticesCount = recentNotices;
+          _openSosCount = openSos;
           _isLoading = false;
         });
       }
@@ -165,6 +212,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
       AppLogger.i("Admin notifications loaded", data: {
         "pending_complaints": pendingComplaints,
         "recent_notices": recentNotices,
+        "open_sos": openSos,
         "total_notifications": allNotifications.length,
       });
     } catch (e, stackTrace) {
@@ -216,6 +264,8 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
 
   Color _getNotificationIconColor(String type) {
     switch (type) {
+      case 'sos':
+        return AppColors.error;
       case 'complaint':
         return AppColors.warning;
       case 'visitor':
@@ -308,6 +358,15 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                     label: "New Notices",
                     count: _recentNoticesCount,
                     color: AppColors.admin,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildSummaryCard(
+                    icon: Icons.sos_rounded,
+                    label: "Open SOS",
+                    count: _openSosCount,
+                    color: AppColors.error,
                   ),
                 ),
               ],
