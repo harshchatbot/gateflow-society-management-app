@@ -8,7 +8,6 @@ import 'admin_shell_screen.dart';
 import '../core/storage.dart';
 import '../services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class AppSplashScreen extends StatefulWidget {
   const AppSplashScreen({super.key});
@@ -345,40 +344,20 @@ class _AppSplashScreenState extends State<AppSplashScreen>
                                   ],
                                 ),
                               ),
-                            // Logo image (SVG, no white background) — slightly larger
-                            Container(
+                            // Logo image (transparent background)
+                            SizedBox(
                               width: 260,
                               height: 260,
-                              decoration: BoxDecoration(
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: SvgPicture.asset(
-                                'assets/images/logo.svg',
+                              child: Image.asset(
+                                'assets/images/logo.png',
                                 width: 260,
                                 height: 260,
                                 fit: BoxFit.contain,
-                                placeholderBuilder: (context) {
-                                  // Fallback to icon while SVG is loading or if unavailable
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      gradient: const LinearGradient(
-                                        begin: Alignment.topLeft,
-                                        end: Alignment.bottomRight,
-                                        colors: [AppColors.primary, Color(0xFF1E40AF)],
-                                      ),
-                                      borderRadius: BorderRadius.circular(32),
-                                    ),
-                                    child: const Icon(
-                                      Icons.shield_rounded,
-                                      size: 80,
-                                      color: Colors.white,
-                                    ),
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(
+                                    Icons.shield_rounded,
+                                    size: 88,
+                                    color: Colors.white,
                                   );
                                 },
                               ),

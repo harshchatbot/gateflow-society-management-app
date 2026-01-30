@@ -5,7 +5,6 @@ import 'admin_login_screen.dart';
 import 'how_sentinel_works_screen.dart';
 import '../widgets/powered_by_footer.dart';
 import '../ui/app_colors.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class RoleSelectScreen extends StatelessWidget {
   const RoleSelectScreen({super.key});
@@ -154,39 +153,19 @@ class RoleSelectScreen extends StatelessWidget {
   Widget _buildBrandHeader() {
     return Column(
       children: [
-        Container(
-          width: 170,
-          height: 170,
-          decoration: BoxDecoration(
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.2),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: SvgPicture.asset(
-            'assets/images/logo.svg',
-            width: 170,
-            height: 170,
+        SizedBox(
+          width: 200,
+          height: 200,
+          child: Image.asset(
+            'assets/images/logo.png',
+            width: 200,
+            height: 200,
             fit: BoxFit.contain,
-            placeholderBuilder: (context) {
-              // Fallback to icon while SVG is loading or if unavailable
-              return Container(
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [AppColors.primary, Color(0xFF1E40AF)],
-                  ),
-                  borderRadius: BorderRadius.circular(28),
-                ),
-                child: const Icon(
-                  Icons.shield_rounded,
-                  size: 60,
-                  color: Colors.white,
-                ),
+            errorBuilder: (context, error, stackTrace) {
+              return const Icon(
+                Icons.shield_rounded,
+                size: 64,
+                color: AppColors.primary,
               );
             },
           ),

@@ -113,19 +113,32 @@ class NotificationService {
           .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
           ?.createNotificationChannel(androidChannel);
 
-      // Get FCM token
-      _fcmToken = await _fcm.getToken();
-      if (_fcmToken != null) {
-        AppLogger.i("FCM token obtained", data: {"token": _fcmToken!.substring(0, 20) + "..."});
-        await _saveFcmToken(_fcmToken!);
-      }
+      // Get FCM token (may fail with TOO_MANY_REGISTRATIONS during development)
+      try {
+        _fcmToken = await _fcm.getToken();
+        if (_fcmToken != null) {
+          AppLogger.i("FCM token obtained", data: {"token": _fcmToken!.substring(0, 20) + "..."});
+          await _saveFcmToken(_fcmToken!);
+        }
 
-      // Listen for token refresh
-      _fcm.onTokenRefresh.listen((newToken) {
-        _fcmToken = newToken;
-        _saveFcmToken(newToken);
-        AppLogger.i("FCM token refreshed");
-      });
+        // Listen for token refresh
+        _fcm.onTokenRefresh.listen((newToken) {
+          _fcmToken = newToken;
+          _saveFcmToken(newToken);
+          AppLogger.i("FCM token refreshed");
+        });
+      } catch (e) {
+        final msg = e.toString();
+        if (msg.contains('TOO_MANY_REGISTRATIONS') || msg.contains('too_many_registrations')) {
+          AppLogger.w(
+            "FCM token temporarily unavailable: too many registrations on this device. "
+            "Push will work again after some time or after clearing app data. Local notifications will still work.",
+          );
+          // Continue: local notifications and message handlers still work
+        } else {
+          rethrow;
+        }
+      }
 
       // Handle foreground messages
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
