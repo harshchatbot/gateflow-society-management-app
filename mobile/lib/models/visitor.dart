@@ -21,6 +21,9 @@ class Visitor {
   final String? photoUrl;
   final String? note;
 
+  /// Resident (flat owner) phone — so guard can call while approval is pending
+  final String? residentPhone;
+
   Visitor({
     required this.visitorId,
     required this.societyId,
@@ -36,6 +39,7 @@ class Visitor {
     this.photoPath,
     this.photoUrl,
     this.note,
+    this.residentPhone,
   });
 
   factory Visitor.fromJson(Map<String, dynamic> json) {
@@ -67,6 +71,7 @@ class Visitor {
       photoPath: json['photo_path'] as String?,
       photoUrl: json['photo_url'] as String?,
       note: json['note'] as String?,
+      residentPhone: (json['resident_phone'] ?? json['residentPhone']) as String?,
     );
   }
 
@@ -89,6 +94,7 @@ class Visitor {
       'photo_path': photoPath,
       'photo_url': photoUrl,
       'note': note,
+      'resident_phone': residentPhone,
     };
   }
 }

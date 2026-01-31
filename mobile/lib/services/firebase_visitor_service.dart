@@ -39,6 +39,7 @@ class FirebaseVisitorService {
     required String visitorType,
     required String visitorPhone,
     required File photoFile,
+    String? residentPhone,
   }) async {
     try {
       final uid = currentUid;
@@ -148,6 +149,7 @@ class FirebaseVisitorService {
         createdAt: createdAt,
         guardId: uid,
         photoUrl: photoUrl,
+        residentPhone: residentPhone?.trim().isNotEmpty == true ? residentPhone!.trim() : null,
       );
 
       return Result.success(visitor);
@@ -170,6 +172,7 @@ class FirebaseVisitorService {
     required String flatNo,
     required String visitorType,
     required String visitorPhone,
+    String? residentPhone,
   }) async {
     try {
       final uid = currentUid;
@@ -203,6 +206,7 @@ class FirebaseVisitorService {
         "status": "PENDING",
         "createdAt": now,
         "updatedAt": now,
+        if (residentPhone != null && residentPhone.isNotEmpty) "resident_phone": residentPhone.trim(),
       };
 
       final visitorRef = _visitorsRef(societyId).doc(visitorId);
@@ -233,6 +237,7 @@ class FirebaseVisitorService {
         status: "PENDING",
         createdAt: createdAt,
         guardId: uid,
+        residentPhone: residentPhone?.trim().isNotEmpty == true ? residentPhone!.trim() : null,
       );
 
       return Result.success(visitor);

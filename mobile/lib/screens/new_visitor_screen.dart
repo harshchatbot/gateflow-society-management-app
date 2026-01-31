@@ -2,12 +2,14 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_logger.dart';
 import '../core/app_error.dart';
 import '../core/storage.dart';
 import '../models/visitor.dart';
 import '../services/firebase_visitor_service.dart';
+import '../services/firestore_service.dart';
 
 import 'guard_login_screen.dart';
 
@@ -41,6 +43,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   final _flatNoController = TextEditingController();
   final _visitorPhoneController = TextEditingController();
   final _visitorService = FirebaseVisitorService();
+  final _firestore = FirestoreService();
 
   final ImagePicker _picker = ImagePicker();
   File? _visitorPhoto;
@@ -49,16 +52,98 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   bool _isLoading = false;
   Visitor? _createdVisitor;
 
+  // Flat owner (resident) for current flat — shown so guard can call
+  String? _flatOwnerName;
+  String? _flatOwnerPhone;
+  bool _flatOwnerLoading = false;
+
   @override
   void initState() {
     super.initState();
+    _flatNoController.addListener(_onFlatChanged);
   }
 
   @override
   void dispose() {
+    _flatNoController.removeListener(_onFlatChanged);
     _flatNoController.dispose();
     _visitorPhoneController.dispose();
     super.dispose();
+  }
+
+  void _onFlatChanged() {
+    _lookupFlatOwnerDebounced();
+  }
+
+  static const _debounceDuration = Duration(milliseconds: 500);
+  bool _flatOwnerDebounceScheduled = false;
+
+  void _lookupFlatOwnerDebounced() {
+    if (_flatOwnerDebounceScheduled) return;
+    _flatOwnerDebounceScheduled = true;
+    Future.delayed(_debounceDuration, () async {
+      _flatOwnerDebounceScheduled = false;
+      if (!mounted) return;
+      await _lookupFlatOwner();
+    });
+  }
+
+  Future<void> _lookupFlatOwner() async {
+    final flat = _flatNoController.text.trim();
+    if (flat.isEmpty) {
+      if (mounted) setState(() {
+        _flatOwnerName = null;
+        _flatOwnerPhone = null;
+        _flatOwnerLoading = false;
+      });
+      return;
+    }
+    if (!mounted) return;
+    setState(() => _flatOwnerLoading = true);
+    try {
+      final members = await _firestore.getMembers(
+        societyId: widget.societyId,
+        systemRole: 'resident',
+      );
+      final flatNorm = flat.toUpperCase();
+      final matches = members.cast<Map<String, dynamic>>().where((m) {
+        final mFlat = (m['flat_no'] ?? m['flatNo'] ?? '').toString().trim().toUpperCase();
+        return mFlat == flatNorm;
+      }).toList();
+      if (!mounted) return;
+      if (matches.isNotEmpty) {
+        final m = matches.first;
+        final name = (m['resident_name'] ?? m['name'] ?? 'Resident').toString();
+        final phone = (m['resident_phone'] ?? m['phone'] ?? m['mobile'] ?? '').toString();
+        setState(() {
+          _flatOwnerName = name;
+          _flatOwnerPhone = phone.isNotEmpty ? phone : null;
+          _flatOwnerLoading = false;
+        });
+      } else {
+        setState(() {
+          _flatOwnerName = null;
+          _flatOwnerPhone = null;
+          _flatOwnerLoading = false;
+        });
+      }
+    } catch (e) {
+      AppLogger.w('Flat owner lookup failed', error: e.toString());
+      if (mounted) setState(() {
+        _flatOwnerName = null;
+        _flatOwnerPhone = null;
+        _flatOwnerLoading = false;
+      });
+    }
+  }
+
+  Future<void> _launchCall(String phone) async {
+    final cleaned = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    if (cleaned.isEmpty) return;
+    final uri = Uri.parse('tel:$cleaned');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   // --- LOGIC SECTION ---
@@ -71,6 +156,27 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       _createdVisitor = null;
     });
 
+    // Look up resident phone for this flat so guard can call owner while approval is pending
+    String? residentPhone;
+    try {
+      final members = await _firestore.getMembers(
+        societyId: widget.societyId,
+        systemRole: 'resident',
+      );
+      final flatNorm = _flatNoController.text.trim().toUpperCase();
+      final matches = members.cast<Map<String, dynamic>>().where((m) {
+        final mFlat = (m['flat_no'] ?? m['flatNo'] ?? '').toString().trim().toUpperCase();
+        return mFlat == flatNorm;
+      }).toList();
+      if (matches.isNotEmpty) {
+        final m = matches.first;
+        residentPhone = (m['resident_phone'] ?? m['phone'] ?? m['mobile'] ?? '').toString();
+        if (residentPhone.isEmpty) residentPhone = null;
+      }
+    } catch (e) {
+      AppLogger.w('Resident phone lookup failed (continuing without)', error: e.toString());
+    }
+
     final result = (_visitorPhoto != null)
         ? await _visitorService.createVisitorWithPhoto(
             societyId: widget.societyId,
@@ -78,12 +184,14 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             visitorType: _selectedVisitorType,
             visitorPhone: _visitorPhoneController.text.trim(),
             photoFile: _visitorPhoto!,
+            residentPhone: residentPhone,
           )
         : await _visitorService.createVisitor(
             societyId: widget.societyId,
             flatNo: _flatNoController.text.trim(),
             visitorType: _selectedVisitorType,
             visitorPhone: _visitorPhoneController.text.trim(),
+            residentPhone: residentPhone,
           );
 
     if (!mounted) return;
@@ -119,6 +227,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       _selectedVisitorType = 'GUEST';
       _createdVisitor = null;
       _visitorPhoto = null;
+      _flatOwnerName = null;
+      _flatOwnerPhone = null;
     });
   }
 
@@ -270,6 +380,64 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             hint: "e.g. B-402",
             icon: AppIcons.flat,
           ),
+          if (_flatOwnerLoading) ...[
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
+                const SizedBox(width: 10),
+                Text("Finding flat owner...", style: TextStyle(fontSize: 12, color: AppColors.text2, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          ] else if (_flatOwnerName != null || _flatOwnerPhone != null) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.success.withOpacity(0.25)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.person_rounded, size: 20, color: AppColors.success),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text("Flat owner", style: TextStyle(fontSize: 11, color: AppColors.text2, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 2),
+                        Text(
+                          _flatOwnerName ?? '—',
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.text),
+                        ),
+                        if (_flatOwnerPhone != null && _flatOwnerPhone!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            _flatOwnerPhone!,
+                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (_flatOwnerPhone != null && _flatOwnerPhone!.trim().isNotEmpty)
+                    IconButton(
+                      onPressed: () => _launchCall(_flatOwnerPhone!),
+                      icon: const Icon(Icons.call_rounded, color: AppColors.success, size: 24),
+                      tooltip: 'Call flat owner',
+                    ),
+                ],
+              ),
+            ),
+          ] else if (_flatNoController.text.trim().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Text(
+              "No resident found for this flat.",
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w600),
+            ),
+          ],
           const SizedBox(height: 18),
           _buildFieldLabel("Visitor Category"),
           const SizedBox(height: 10),
@@ -363,6 +531,10 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
           _buildInfoRow("Flat Number", v.flatNo),
           _buildInfoRow("Category", v.visitorType),
           _buildInfoRow("Status", v.status, isStatus: true),
+          if (v.residentPhone != null && v.residentPhone!.trim().isNotEmpty) ...[
+            const SizedBox(height: 6),
+            _buildResidentPhoneRow(v.residentPhone!),
+          ],
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
@@ -392,6 +564,32 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                 child: Text(value, style: TextStyle(color: AppColors.statusChipFg(value), fontWeight: FontWeight.bold, fontSize: 12)),
               )
             : Text(value, style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.text)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResidentPhoneRow(String phone) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text("Resident phone", style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.bold)),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(phone, style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.text)),
+              const SizedBox(width: 8),
+              IconButton(
+                onPressed: () => _launchCall(phone),
+                icon: const Icon(Icons.call_rounded, color: AppColors.success, size: 22),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                tooltip: 'Call resident',
+              ),
+            ],
+          ),
         ],
       ),
     );

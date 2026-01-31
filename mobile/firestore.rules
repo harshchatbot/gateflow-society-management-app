@@ -116,9 +116,13 @@ service cloud.firestore {
           && (request.resource.data.active == true || request.resource.data.active == false)
           && request.resource.data.systemRole in ["admin", "super_admin", "guard", "resident"];
 
-        // Read: member can read self (even if inactive); admin can read all
+        // Read: member can read self (even if inactive); admin can read all; guard can read all (for Residents Directory)
         allow read: if signedIn()
-          && (uid == request.auth.uid || isAdmin(societyId));
+          && (
+            uid == request.auth.uid
+            || isAdmin(societyId)
+            || (activeMember(societyId) && member(societyId).data.systemRole == "guard")
+          );
 
         // Update:
         // - Self can update own member doc even if inactive (profile-only)

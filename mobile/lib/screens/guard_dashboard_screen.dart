@@ -12,8 +12,10 @@ import 'notice_board_screen.dart';
 import 'role_select_screen.dart';
 import 'visitor_details_screen.dart';
 import '../services/notification_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'sos_alerts_screen.dart';
 import 'sos_detail_screen.dart';
+import 'guard_residents_directory_screen.dart';
 
 class GuardDashboardScreen extends StatefulWidget {
   final String guardId;
@@ -291,6 +293,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
       photoPath: data['photo_path']?.toString(),
       photoUrl: data['photo_url']?.toString() ?? data['photoUrl']?.toString(),
       note: data['note']?.toString(),
+      residentPhone: data['resident_phone']?.toString(),
     );
   }
 
@@ -626,6 +629,22 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               );
             },
           ),
+          const SizedBox(width: 8),
+          _buildCategoryChip(
+            icon: Icons.people_rounded,
+            label: "Residents",
+            color: AppColors.admin,
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => GuardResidentsDirectoryScreen(
+                    societyId: widget.societyId,
+                  ),
+                ),
+              );
+            },
+          ),
         ],
       ),
     );
@@ -790,6 +809,21 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             },
           ),
         ),
+        _QuickAction(
+          label: "Residents",
+          icon: Icons.people_rounded,
+          tint: AppColors.admin,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => GuardResidentsDirectoryScreen(
+                  societyId: widget.societyId,
+                ),
+              ),
+            );
+          },
+        ),
       ],
     );
   }
@@ -830,7 +864,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             final displayFlat = visitor.flatNo.isNotEmpty ? visitor.flatNo : visitor.flatId;
             final statusColor = _getStatusColor(visitor.status);
             final subtitle = "${visitor.visitorPhone.isNotEmpty ? visitor.visitorPhone : 'No phone'} • ${_formatTime(visitor.createdAt)}";
-            
+            final hasResidentPhone = visitor.residentPhone != null && visitor.residentPhone!.trim().isNotEmpty;
             return InkWell(
               onTap: () {
                 if (!mounted) return;
@@ -886,6 +920,35 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
+                          if (hasResidentPhone) ...[
+                            const SizedBox(height: 4),
+                            GestureDetector(
+                              onTap: () async {
+                                final phone = visitor.residentPhone!;
+                                final cleaned = phone.replaceAll(RegExp(r'[^\d+]'), '');
+                                if (cleaned.isEmpty) return;
+                                final uri = Uri.parse('tel:$cleaned');
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                }
+                              },
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.call_rounded, size: 14, color: AppColors.success),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "Resident: ${visitor.residentPhone}",
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      color: AppColors.success,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

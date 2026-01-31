@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:gateflow/models/visitor.dart';
 import 'package:gateflow/services/firestore_service.dart';
 
@@ -253,12 +254,23 @@ class _VisitorListScreenState extends State<VisitorListScreen>
       photoPath: data['photo_path']?.toString(),
       photoUrl: data['photo_url']?.toString() ?? data['photoUrl']?.toString(),
       note: data['note']?.toString(),
+      residentPhone: data['resident_phone']?.toString(),
     );
   }
 
   // --- COMPACT UI COMPONENTS ---
 
+  Future<void> _launchCall(String phone) async {
+    final cleaned = phone.replaceAll(RegExp(r'[^\d+]'), '');
+    if (cleaned.isEmpty) return;
+    final uri = Uri.parse('tel:$cleaned');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   Widget _buildCompactVisitorCard(Visitor v) {
+    final hasResidentPhone = v.residentPhone != null && v.residentPhone!.trim().isNotEmpty;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), // Reduced vertical margin
       decoration: BoxDecoration(
@@ -266,9 +278,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppColors.border.withOpacity(0.6)),
       ),
-      child: ListTile(
-        dense: true, // Makes the tile smaller
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: InkWell(
         onTap: () async {
           if (!mounted) return;
           await Navigator.push(
@@ -281,30 +291,79 @@ class _VisitorListScreenState extends State<VisitorListScreen>
             _loadToday(); // Refresh on return
           }
         },
-        leading: CircleAvatar(
-          radius: 20,
-          backgroundColor: AppColors.primarySoft,
-          backgroundImage: (v.photoUrl != null && v.photoUrl!.isNotEmpty) 
-              ? NetworkImage(v.photoUrl!) 
-              : null,
-          child: (v.photoUrl == null || v.photoUrl!.isEmpty)
-              ? const Icon(Icons.person, size: 20, color: AppColors.primary)
-              : null,
-        ),
-        title: Text(
-          "${v.visitorType} • Flat ${v.flatNo}",
-          style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.text, fontSize: 14),
-        ),
-        subtitle: Text(v.visitorPhone, style: const TextStyle(fontSize: 12, color: AppColors.text2)),
-        trailing: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColors.statusChipBg(v.status),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Text(
-            v.status,
-            style: TextStyle(color: AppColors.statusChipFg(v.status), fontWeight: FontWeight.bold, fontSize: 10),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          child: Row(
+            children: [
+              CircleAvatar(
+                radius: 20,
+                backgroundColor: AppColors.primarySoft,
+                backgroundImage: (v.photoUrl != null && v.photoUrl!.isNotEmpty)
+                    ? NetworkImage(v.photoUrl!)
+                    : null,
+                child: (v.photoUrl == null || v.photoUrl!.isEmpty)
+                    ? const Icon(Icons.person, size: 20, color: AppColors.primary)
+                    : null,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      "${v.visitorType} • Flat ${v.flatNo}",
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.text,
+                        fontSize: 14,
+                      ),
+                    ),
+                    Text(
+                      v.visitorPhone,
+                      style: const TextStyle(fontSize: 12, color: AppColors.text2),
+                    ),
+                    if (hasResidentPhone) ...[
+                      const SizedBox(height: 2),
+                      GestureDetector(
+                        onTap: () => _launchCall(v.residentPhone!),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.call_rounded, size: 12, color: AppColors.success),
+                            const SizedBox(width: 4),
+                            Text(
+                              "Resident: ${v.residentPhone}",
+                              style: const TextStyle(
+                                fontSize: 11,
+                                color: AppColors.success,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.statusChipBg(v.status),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  v.status,
+                  style: TextStyle(
+                    color: AppColors.statusChipFg(v.status),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),

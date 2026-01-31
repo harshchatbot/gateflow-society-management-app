@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/firestore_service.dart';
@@ -338,6 +339,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
       photoPath: data['photo_path']?.toString(),
       photoUrl: data['photo_url']?.toString() ?? data['photoUrl']?.toString(),
       note: data['note']?.toString(),
+      residentPhone: data['resident_phone']?.toString(),
     );
   }
 
@@ -345,6 +347,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
     final visitorType = (visitorData['visitor_type'] ?? visitorData['visitorType'] ?? 'GUEST').toString();
     final flatNo = (visitorData['flat_no'] ?? visitorData['flatNo'] ?? 'N/A').toString();
     final phone = (visitorData['visitor_phone'] ?? visitorData['visitorPhone'] ?? 'N/A').toString();
+    final residentPhone = (visitorData['resident_phone'] ?? '').toString().trim();
     final status = (visitorData['status'] ?? 'PENDING').toString();
     final createdAt = visitorData['createdAt'];
     final photoUrl = visitorData['photo_url'] ?? visitorData['photoUrl'];
@@ -524,6 +527,45 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                               ),
                             ],
                           ),
+                          if (residentPhone.isNotEmpty) ...[
+                            const SizedBox(height: 6),
+                            InkWell(
+                              onTap: () async {
+                                final cleaned = residentPhone.replaceAll(RegExp(r'[^\d+]'), '');
+                                if (cleaned.isEmpty) return;
+                                final uri = Uri.parse('tel:$cleaned');
+                                if (await canLaunchUrl(uri)) {
+                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(6),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.success.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: const Icon(
+                                      Icons.call_rounded,
+                                      size: 14,
+                                      color: AppColors.success,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    "Resident: $residentPhone",
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      color: AppColors.success,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ],
                       ),
                     ),

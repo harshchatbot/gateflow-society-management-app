@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:gateflow/models/visitor.dart';
 import 'package:gateflow/services/visitor_service.dart';
 
@@ -414,6 +415,37 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                         ),
                       ],
                     ),
+                    if (_visitor.residentPhone != null && _visitor.residentPhone!.trim().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      InkWell(
+                        onTap: () async {
+                          final phone = _visitor.residentPhone!;
+                          final cleaned = phone.replaceAll(RegExp(r'[^\d+]'), '');
+                          if (cleaned.isEmpty) return;
+                          final uri = Uri.parse('tel:$cleaned');
+                          if (await canLaunchUrl(uri)) {
+                            await launchUrl(uri, mode: LaunchMode.externalApplication);
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Row(
+                          children: [
+                            Icon(AppIcons.phone, size: 16, color: AppColors.success),
+                            const SizedBox(width: 6),
+                            Text(
+                              "Resident (flat owner): ${_visitor.residentPhone}",
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.success,
+                              ),
+                            ),
+                            const SizedBox(width: 6),
+                            const Icon(Icons.call_rounded, size: 16, color: AppColors.success),
+                          ],
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     const Divider(height: 1),
                     const SizedBox(height: 12),
