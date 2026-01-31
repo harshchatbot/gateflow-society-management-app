@@ -36,6 +36,8 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
   );
 
   String _selectedCategory = "GENERAL";
+  /// 'general' = visible to everyone; 'personal' = visible to admins & guards only
+  String _visibility = "general";
   bool _isLoading = false;
   bool _isSuccess = false;
 
@@ -73,6 +75,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
         category: _selectedCategory,
+        visibility: _visibility,
       );
 
       if (!mounted) return;
@@ -405,6 +408,136 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                         return null;
                       },
                     ),
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Visibility: Personal (admins & guards only) vs General (visible to everyone)
+                  Text(
+                    "Who can see this complaint?",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.text2,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _visibility = "general"),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: _visibility == "general"
+                                  ? AppColors.success.withOpacity(0.15)
+                                  : AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _visibility == "general"
+                                    ? AppColors.success
+                                    : AppColors.border,
+                                width: _visibility == "general" ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.public_rounded,
+                                      size: 18,
+                                      color: _visibility == "general"
+                                          ? AppColors.success
+                                          : AppColors.text2,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      "General",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: _visibility == "general"
+                                            ? AppColors.success
+                                            : AppColors.text2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Visible to everyone (society-level)",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => setState(() => _visibility = "personal"),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            decoration: BoxDecoration(
+                              color: _visibility == "personal"
+                                  ? AppColors.success.withOpacity(0.15)
+                                  : AppColors.surface,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: _visibility == "personal"
+                                    ? AppColors.success
+                                    : AppColors.border,
+                                width: _visibility == "personal" ? 2 : 1,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.lock_rounded,
+                                      size: 18,
+                                      color: _visibility == "personal"
+                                          ? AppColors.success
+                                          : AppColors.text2,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      "Personal",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w800,
+                                        color: _visibility == "personal"
+                                            ? AppColors.success
+                                            : AppColors.text2,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  "Admins & guards only (flat-specific)",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 32),
 

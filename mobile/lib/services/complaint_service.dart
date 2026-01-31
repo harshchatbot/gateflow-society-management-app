@@ -31,6 +31,8 @@ class ComplaintService {
     required String title,
     required String description,
     required String category,
+    /// 'general' = visible to everyone; 'personal' = visible to admins & guards only
+    String visibility = 'general',
   }) async {
     try {
       // Get current user UID
@@ -48,6 +50,7 @@ class ComplaintService {
         category: category,
         title: title,
         description: description,
+        visibility: visibility,
       );
 
       AppLogger.i("Complaint created successfully", data: {'complaintId': complaintId});

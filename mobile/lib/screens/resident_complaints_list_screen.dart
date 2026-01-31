@@ -349,6 +349,8 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
     final description = (complaint['description'] ?? '').toString();
     final category = (complaint['category'] ?? 'GENERAL').toString();
     final status = (complaint['status'] ?? 'PENDING').toString();
+    final visibility = (complaint['visibility'] ?? 'general').toString().toLowerCase();
+    final isPersonal = visibility == 'personal';
     final createdAt = complaint['created_at']?.toString() ?? '';
     final resolvedAt = complaint['resolved_at']?.toString();
     final adminResponse = complaint['admin_response']?.toString();
@@ -379,24 +381,54 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Row: Category + Status
+                // Header Row: Category + Personal badge + Status
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        category,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.success,
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            category,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.success,
+                            ),
+                          ),
                         ),
-                      ),
+                        if (isPersonal) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: AppColors.textMuted.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.lock_rounded, size: 12, color: AppColors.textMuted),
+                                const SizedBox(width: 4),
+                                Text(
+                                  "Personal",
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: AppColors.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     StatusChip(status: status, compact: true),
                   ],

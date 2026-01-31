@@ -14,10 +14,13 @@ import '../ui/app_icons.dart';
 class VisitorDetailsScreen extends StatefulWidget {
   final Visitor visitor;
   final String guardId;
+  /// When false (e.g. opened by guard), Approve/Reject/Leave actions are hidden. Residents use their own approval screen.
+  final bool showStatusActions;
   const VisitorDetailsScreen({
     super.key,
     required this.visitor,
     required this.guardId,
+    this.showStatusActions = false,
   });
 
   @override
@@ -491,8 +494,8 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                 ),
               ),
 
-              // Only show actions if visitor is still PENDING
-              if (_isPending(_visitor.status)) ...[
+              // Only show actions if visitor is still PENDING and viewer is allowed (e.g. resident); guards must not see Approve/Reject/Leave
+              if (widget.showStatusActions && _isPending(_visitor.status)) ...[
                 const SizedBox(height: 14),
                 // Actions
                 _premiumCard(

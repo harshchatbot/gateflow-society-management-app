@@ -517,6 +517,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
   // ============================================
 
   /// Create complaint (writes BOTH camelCase + snake_case for compatibility)
+  /// [visibility] 'general' = visible to everyone; 'personal' = visible to admins & guards only
   Future<String> createComplaint({
     required String societyId,
     required String flatNo,
@@ -525,12 +526,14 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     required String category,
     String? title,
     required String description,
+    String visibility = 'general',
   }) async {
     try {
       final complaintRef = _complaintsRef(societyId).doc();
 
       final normalizedFlat = flatNo.trim().toUpperCase();
       final now = FieldValue.serverTimestamp();
+      final vis = visibility.trim().toLowerCase() == 'personal' ? 'personal' : 'general';
 
       await complaintRef.set({
         // ✅ canonical (camelCase)
@@ -541,6 +544,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         'title': title?.trim(),
         'description': description.trim(),
         'status': 'pending',
+        'visibility': vis,
         'createdAt': now,
         'updatedAt': now,
 
@@ -568,7 +572,8 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     }
   }
 
-  /// Get resident complaints (supports BOTH schemas)
+  /// Get resident complaints (supports BOTH schemas).
+  /// When residentUid is provided, queries only that resident's complaints (so read rule allows it for personal visibility).
   Future<List<Map<String, dynamic>>> getResidentComplaints({
     required String societyId,
     required String flatNo,
@@ -577,17 +582,29 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     try {
       final normalizedFlat = flatNo.trim().toUpperCase();
 
-      // We cannot OR-filter easily across different field names.
-      // ✅ Strategy: fetch latest N complaints for society, then filter client-side.
-      // (Small societies -> fine; later we can normalize data to remove this.)
-      final snapshot = await _complaintsRef(societyId)
-          .orderBy('createdAt', descending: true)
-          .limit(200)
-          .get()
-          .catchError((_) async {
-        // Fallback if createdAt missing in some docs
-        return await _complaintsRef(societyId).limit(200).get();
-      });
+      final QuerySnapshot snapshot;
+      if (residentUid != null && residentUid.isNotEmpty) {
+        // Query only this resident's complaints so Firestore read rule allows (own docs always readable)
+        snapshot = await _complaintsRef(societyId)
+            .where('residentUid', isEqualTo: residentUid)
+            .orderBy('createdAt', descending: true)
+            .limit(200)
+            .get()
+            .catchError((_) async {
+          return await _complaintsRef(societyId)
+              .where('residentUid', isEqualTo: residentUid)
+              .limit(200)
+              .get();
+        });
+      } else {
+        snapshot = await _complaintsRef(societyId)
+            .orderBy('createdAt', descending: true)
+            .limit(200)
+            .get()
+            .catchError((_) async {
+          return await _complaintsRef(societyId).limit(200).get();
+        });
+      }
 
       final results = <Map<String, dynamic>>[];
 
@@ -616,6 +633,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
           'title': data['title']?.toString(),
           'description': data['description']?.toString(),
           'status': (data['status'] ?? 'pending')?.toString().toLowerCase(),
+          'visibility': (data['visibility'] ?? 'general')?.toString(),
 
           // keep originals too (optional, harmless)
           ...data,
@@ -684,6 +702,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
           'title': data['title']?.toString(),
           'description': data['description']?.toString(),
           'status': st,
+          'visibility': (data['visibility'] ?? 'general')?.toString(),
 
           ...data,
 

@@ -204,10 +204,20 @@ service cloud.firestore {
 
       // ------------------------
       // Complaints (members create/read, admin updates)
+      // visibility: 'general' = visible to everyone; 'personal' = visible to admins & guards only
       // ------------------------
       match /complaints/{id} {
-        allow read: if activeMember(societyId);
-        allow create: if activeMember(societyId);
+        allow read: if activeMember(societyId)
+          && (
+            // Admins and guards can read all complaints
+            isAdmin(societyId)
+            || member(societyId).data.systemRole == "guard"
+            // Residents: general (or missing/legacy) or their own complaint
+            || (!("visibility" in resource.data) || resource.data.visibility != "personal")
+            || resource.data.residentUid == request.auth.uid
+          );
+        allow create: if activeMember(societyId)
+          && (!("visibility" in request.resource.data) || request.resource.data.visibility in ["general", "personal"]);
         allow update, delete: if isAdmin(societyId);
       }
 
