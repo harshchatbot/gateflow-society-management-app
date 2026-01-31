@@ -10,6 +10,7 @@ import '../core/env.dart';
 import '../core/tour_storage.dart';
 import 'resident_complaint_screen.dart';
 import 'resident_complaints_list_screen.dart';
+import 'resident_violations_screen.dart';
 import 'resident_approvals_screen.dart';
 import 'resident_history_screen.dart';
 import 'notice_board_screen.dart';
@@ -376,19 +377,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 20),
 
-                  // Top category strip (Visitors / Complaints / Notices)
-                  const Text(
-                    "Explore",
-                    style: TextStyle(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildTopCategoryStrip(),
-
-                  const SizedBox(height: 24),
                   const Text(
                     "Today at a glance",
                     style: TextStyle(
@@ -588,128 +576,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   }
 
   /// Horizontal strip of rounded category chips similar to NoBrokerHood
-  Widget _buildTopCategoryStrip() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildCategoryChip(
-            icon: Icons.verified_user_rounded,
-            label: "Visitors",
-            color: AppColors.warning,
-            onTap: () {
-              if (widget.onNavigateToApprovals != null) {
-                widget.onNavigateToApprovals!();
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ResidentApprovalsScreen(
-                      residentId: widget.residentId,
-                      societyId: widget.societyId,
-                      flatNo: widget.flatNo,
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
-          const SizedBox(width: 8),
-          _buildCategoryChip(
-            icon: Icons.report_problem_rounded,
-            label: "Complaints",
-            color: AppColors.error,
-            onTap: () {
-              if (widget.onNavigateToComplaints != null) {
-                widget.onNavigateToComplaints!();
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ResidentComplaintsListScreen(
-                      residentId: widget.residentId,
-                      societyId: widget.societyId,
-                      flatNo: widget.flatNo,
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
-          const SizedBox(width: 8),
-          _buildCategoryChip(
-            icon: Icons.notifications_rounded,
-            label: "Notices",
-            color: AppColors.primary,
-            onTap: () {
-              if (widget.onNavigateToNotices != null) {
-                widget.onNavigateToNotices!();
-              } else {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => NoticeBoardScreen(
-                      societyId: widget.societyId,
-                      themeColor: AppColors.success,
-                    ),
-                  ),
-                );
-              }
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryChip({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 18),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.text,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// Stats row wrapped in a subtle card, to feel more like a module
   Widget _buildStatsRow() {
     return Container(
@@ -882,6 +748,25 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                 ),
               );
             }
+          },
+        ),
+        _buildActionCard(
+          icon: Icons.directions_car_rounded,
+          title: "My Violations",
+          subtitle: "Parking & fire-lane – only your flat",
+          color: AppColors.warning,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ResidentViolationsScreen(
+                  residentId: widget.residentId,
+                  societyId: widget.societyId,
+                  flatNo: widget.flatNo,
+                  onBackPressed: () => Navigator.pop(context),
+                ),
+              ),
+            );
           },
         ),
         Showcase(

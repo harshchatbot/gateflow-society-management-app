@@ -16,6 +16,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'sos_alerts_screen.dart';
 import 'sos_detail_screen.dart';
 import 'guard_residents_directory_screen.dart';
+import 'guard_violations_list_screen.dart';
 
 class GuardDashboardScreen extends StatefulWidget {
   final String guardId;
@@ -410,19 +411,6 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 20),
 
-                  // Top category strip (New Entry / Visitors / Notices)
-                  const Text(
-                    "Explore",
-                    style: TextStyle(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildTopCategoryStrip(),
-
-                  const SizedBox(height: 24),
                   const Text(
                     "Today at a glance",
                     style: TextStyle(
@@ -593,111 +581,6 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     );
   }
 
-  /// Horizontal strip of rounded category chips for quick navigation
-  Widget _buildTopCategoryStrip() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildCategoryChip(
-            icon: Icons.person_add_rounded,
-            label: "New Entry",
-            color: AppColors.primary,
-            onTap: widget.onTapNewEntry,
-          ),
-          const SizedBox(width: 8),
-          _buildCategoryChip(
-            icon: Icons.groups_rounded,
-            label: "Visitors",
-            color: AppColors.success,
-            onTap: widget.onTapVisitors,
-          ),
-          const SizedBox(width: 8),
-          _buildCategoryChip(
-            icon: Icons.notifications_rounded,
-            label: "Notices",
-            color: AppColors.warning,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => NoticeBoardScreen(
-                    societyId: widget.societyId,
-                    themeColor: AppColors.primary,
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-          _buildCategoryChip(
-            icon: Icons.people_rounded,
-            label: "Residents",
-            color: AppColors.admin,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => GuardResidentsDirectoryScreen(
-                    societyId: widget.societyId,
-                  ),
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryChip({
-    required IconData icon,
-    required String label,
-    required Color color,
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 18),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.text,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// Stats row wrapped in a soft card module
   Widget _buildStatsRow() {
     return Container(
@@ -818,6 +701,22 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               context,
               MaterialPageRoute(
                 builder: (_) => GuardResidentsDirectoryScreen(
+                  societyId: widget.societyId,
+                ),
+              ),
+            );
+          },
+        ),
+        _QuickAction(
+          label: "Violations",
+          icon: Icons.directions_car_rounded,
+          tint: AppColors.warning,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => GuardViolationsListScreen(
+                  guardId: widget.guardId,
                   societyId: widget.societyId,
                 ),
               ),

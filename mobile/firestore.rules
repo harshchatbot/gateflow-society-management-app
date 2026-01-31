@@ -75,6 +75,18 @@ service cloud.firestore {
         && member(societyId).data.systemRole == "super_admin";
     }
 
+    // ✅ Check if user is guard (for violations: own reports only)
+    function isGuard(societyId) {
+      return activeMember(societyId)
+        && member(societyId).data.systemRole == "guard";
+    }
+
+    // ✅ Check if user is resident (for violations: own flat only)
+    function isResident(societyId) {
+      return activeMember(societyId)
+        && member(societyId).data.systemRole == "resident";
+    }
+
     // ✅ STEP B: ADD THIS HELPER HERE
     function canReadMemberDoc(societyId, uid) {
       return signedIn()
@@ -242,6 +254,24 @@ service cloud.firestore {
         allow update: if activeMember(societyId)
           && member(societyId).data.systemRole in ["admin", "super_admin", "guard"];
         allow delete: if false;
+      }
+
+      // ------------------------
+      // Violations (parking / fire-lane - private, no names)
+      // Guard: own reports | Admin: full | Resident: only self (by flat)
+      // ------------------------
+      match /violations/{id} {
+        allow create: if isGuard(societyId)
+          && request.resource.data.guardUid == request.auth.uid
+          && request.resource.data.keys().hasAll(["guardUid", "flatNo", "violationType", "createdAt", "updatedAt"])
+          && request.resource.data.violationType in ["PARKING", "FIRE_LANE", "OTHER"];
+        allow read: if activeMember(societyId)
+          && (
+            isAdmin(societyId)
+            || (isGuard(societyId) && resource.data.guardUid == request.auth.uid)
+            || (isResident(societyId) && resource.data.flatNo != null && member(societyId).data.flatNo != null && resource.data.flatNo.upper() == member(societyId).data.flatNo.upper())
+          );
+        allow update, delete: if isAdmin(societyId);
       }
 
       // ------------------------

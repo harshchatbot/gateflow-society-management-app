@@ -16,6 +16,7 @@ import 'sos_detail_screen.dart';
 import 'sos_alerts_screen.dart';
 import 'admin_manage_notices_screen.dart';
 import 'admin_manage_admins_screen.dart';
+import 'admin_manage_violations_screen.dart';
 import 'role_select_screen.dart';
 import '../widgets/admin_notification_drawer.dart';
 
@@ -389,20 +390,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 20),
 
-                  // Top category strip (Residents / Guards / Complaints / Notices)
-                  const Text(
-                    "Explore",
-                    style: TextStyle(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildTopCategoryStrip(),
-
-                  const SizedBox(height: 24),
                   if (_stats != null) ...[
+                    const SizedBox(height: 24),
                     const Text(
                       "Today at a glance",
                       style: TextStyle(
@@ -591,92 +580,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  /// Horizontal strip of rounded category chips for key admin areas
-  Widget _buildTopCategoryStrip() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildCategoryChip(
-            icon: Icons.people_rounded,
-            label: "Residents Directory",
-            color: AppColors.admin,
-            onTap: () => _navigateToTab(1),
-          ),
-          const SizedBox(width: 8),
-          _buildCategoryChip(
-            icon: Icons.shield_rounded,
-            label: "Security Staff",
-            color: AppColors.primary,
-            onTap: () => _navigateToTab(2),
-          ),
-          const SizedBox(width: 8),
-          _buildCategoryChip(
-            icon: Icons.report_problem_rounded,
-            label: "Complaints",
-            color: AppColors.error,
-            onTap: () => _navigateToTab(3),
-          ),
-          const SizedBox(width: 8),
-          _buildCategoryChip(
-            icon: Icons.notifications_rounded,
-            label: "Notices",
-            color: AppColors.warning,
-            onTap: () => _navigateToTab(4),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryChip({
-    required IconData icon,
-    required String label,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(6),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(icon, color: color, size: 18),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: AppColors.text,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   /// Wraps the existing stats grid into a soft card module
   Widget _buildStatsSection() {
     return Container(
@@ -820,6 +723,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             color: AppColors.warning,
             onTap: () => _navigateToTab(4),
           ),
+        ),
+        _ActionItem(
+          icon: Icons.directions_car_rounded,
+          title: "Violations",
+          subtitle: "Parking & fire-lane – full control",
+          color: AppColors.warning,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AdminManageViolationsScreen(
+                  adminId: widget.adminId,
+                  adminName: widget.adminName,
+                  societyId: widget.societyId,
+                  onBackPressed: () => Navigator.pop(context),
+                ),
+              ),
+            );
+          },
         ),
         Showcase(
           key: _keySos,

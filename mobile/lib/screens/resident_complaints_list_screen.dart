@@ -351,6 +351,8 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
     final status = (complaint['status'] ?? 'PENDING').toString();
     final visibility = (complaint['visibility'] ?? 'general').toString().toLowerCase();
     final isPersonal = visibility == 'personal';
+    final photoUrl = (complaint['photoUrl'] ?? complaint['photo_url'] ?? '').toString().trim();
+    final hasPhoto = photoUrl.isNotEmpty;
     final createdAt = complaint['created_at']?.toString() ?? '';
     final resolvedAt = complaint['resolved_at']?.toString();
     final adminResponse = complaint['admin_response']?.toString();
@@ -433,6 +435,25 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                     StatusChip(status: status, compact: true),
                   ],
                 ),
+                if (hasPhoto) ...[
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      photoUrl,
+                      height: 140,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        height: 140,
+                        color: AppColors.bg,
+                        child: const Center(
+                          child: Icon(Icons.broken_image_outlined, color: AppColors.textMuted, size: 40),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 12),
 
                 // Title
@@ -501,6 +522,8 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
     final description = (complaint['description'] ?? '').toString();
     final category = (complaint['category'] ?? 'GENERAL').toString();
     final status = (complaint['status'] ?? 'PENDING').toString();
+    final photoUrl = (complaint['photoUrl'] ?? complaint['photo_url'] ?? '').toString().trim();
+    final hasPhoto = photoUrl.isNotEmpty;
     final createdAt = complaint['created_at']?.toString() ?? '';
     final resolvedAt = complaint['resolved_at']?.toString();
     final adminResponse = complaint['admin_response']?.toString();
@@ -557,6 +580,26 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                   ),
                 ],
               ),
+              if (hasPhoto) ...[
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    photoUrl,
+                    width: double.infinity,
+                    height: 200,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => Container(
+                      height: 200,
+                      color: AppColors.bg,
+                      child: const Center(
+                        child: Icon(Icons.broken_image_outlined, color: AppColors.textMuted, size: 48),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               const SizedBox(height: 24),
               _buildDetailSection("Title", title),
               _buildDetailSection("Category", category),

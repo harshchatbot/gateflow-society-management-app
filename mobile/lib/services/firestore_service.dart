@@ -41,6 +41,11 @@ class FirestoreService {
     return _societyRef(societyId).collection('complaints');
   }
 
+  /// Get violations subcollection reference (parking / fire-lane etc. - private, no names)
+  CollectionReference _violationsRef(String societyId) {
+    return _societyRef(societyId).collection('violations');
+  }
+
   /// Get flats subcollection reference
   CollectionReference _flatsRef(String societyId) {
     return _societyRef(societyId).collection('flats');
@@ -518,6 +523,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
 
   /// Create complaint (writes BOTH camelCase + snake_case for compatibility)
   /// [visibility] 'general' = visible to everyone; 'personal' = visible to admins & guards only
+  /// [photoUrl] optional image URL (e.g. from Firebase Storage) for the complaint
   Future<String> createComplaint({
     required String societyId,
     required String flatNo,
@@ -527,6 +533,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     String? title,
     required String description,
     String visibility = 'general',
+    String? photoUrl,
   }) async {
     try {
       final complaintRef = _complaintsRef(societyId).doc();
@@ -535,7 +542,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
       final now = FieldValue.serverTimestamp();
       final vis = visibility.trim().toLowerCase() == 'personal' ? 'personal' : 'general';
 
-      await complaintRef.set({
+      final data = <String, dynamic>{
         // ✅ canonical (camelCase)
         'flatNo': normalizedFlat,
         'residentUid': residentUid,
@@ -556,7 +563,12 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         'updated_at': now,
         'society_id': societyId,
         'complaint_id': complaintRef.id,
-      });
+      };
+      if (photoUrl != null && photoUrl.isNotEmpty) {
+        data['photoUrl'] = photoUrl;
+        data['photo_url'] = photoUrl;
+      }
+      await complaintRef.set(data);
 
       AppLogger.i('Complaint created', data: {
         'complaintId': complaintRef.id,
@@ -771,6 +783,224 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
       AppLogger.i('Complaint status updated', data: {'complaintId': complaintId, 'status': normalizedStatus});
     } catch (e, stackTrace) {
       AppLogger.e('Error updating complaint status', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  // ============================================
+  // VIOLATIONS (Parking / Fire-lane - private, no names)
+  // Guard: own reports | Admin: full | Resident: only self (by flat)
+  // ============================================
+
+  /// Violation types
+  static const String violationTypeParking = 'PARKING';
+  static const String violationTypeFireLane = 'FIRE_LANE';
+  static const String violationTypeOther = 'OTHER';
+
+  Future<String> createViolation({
+    required String societyId,
+    required String guardUid,
+    required String flatNo,
+    required String violationType,
+    String? note,
+    String? photoUrl,
+  }) async {
+    try {
+      final ref = _violationsRef(societyId).doc();
+      final normalizedFlat = flatNo.trim().toUpperCase();
+      final now = FieldValue.serverTimestamp();
+      final type = violationType.trim().toUpperCase();
+      final validType = type == 'FIRE_LANE' || type == 'PARKING' ? type : 'OTHER';
+
+      await ref.set({
+        'guardUid': guardUid,
+        'flatNo': normalizedFlat,
+        'violationType': validType,
+        'note': note?.trim(),
+        'photoUrl': photoUrl,
+        'status': 'OPEN',
+        'createdAt': now,
+        'updatedAt': now,
+      });
+      AppLogger.i('Violation created', data: {'violationId': ref.id, 'societyId': societyId});
+      return ref.id;
+    } catch (e, stackTrace) {
+      AppLogger.e('Error creating violation', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Guard: list violations reported by this guard
+  Future<List<Map<String, dynamic>>> getViolationsByGuard({
+    required String societyId,
+    required String guardUid,
+  }) async {
+    try {
+      final snapshot = await _violationsRef(societyId)
+          .where('guardUid', isEqualTo: guardUid)
+          .orderBy('createdAt', descending: true)
+          .limit(200)
+          .get();
+      return _violationDocsToMaps(snapshot.docs, societyId);
+    } catch (e, stackTrace) {
+      AppLogger.e('Error getViolationsByGuard', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Resident: list violations for this flat only (no reporter name)
+  Future<List<Map<String, dynamic>>> getViolationsByFlat({
+    required String societyId,
+    required String flatNo,
+  }) async {
+    try {
+      final normalizedFlat = flatNo.trim().toUpperCase();
+      final snapshot = await _violationsRef(societyId)
+          .where('flatNo', isEqualTo: normalizedFlat)
+          .orderBy('createdAt', descending: true)
+          .limit(200)
+          .get();
+      return _violationDocsToMaps(snapshot.docs, societyId);
+    } catch (e, stackTrace) {
+      AppLogger.e('Error getViolationsByFlat', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Admin: list all violations (filter status/year/month in memory to avoid composite index)
+  Future<List<Map<String, dynamic>>> getAllViolations({
+    required String societyId,
+    String? status,
+    int? year,
+    int? month,
+  }) async {
+    try {
+      final snapshot = await _violationsRef(societyId)
+          .orderBy('createdAt', descending: true)
+          .limit(500)
+          .get();
+      var list = _violationDocsToMaps(snapshot.docs, societyId);
+      if (status != null && status.isNotEmpty) {
+        final st = status.trim().toUpperCase();
+        list = list.where((m) => (m['status'] ?? '').toString().toUpperCase() == st).toList();
+      }
+      if (year != null && month != null) {
+        list = list.where((m) {
+          final createdAt = m['created_at'];
+          if (createdAt == null) return false;
+          final dt = DateTime.tryParse(createdAt.toString());
+          if (dt == null) return false;
+          return dt.year == year && dt.month == month;
+        }).toList();
+      }
+      return list;
+    } catch (e, stackTrace) {
+      AppLogger.e('Error getAllViolations', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  List<Map<String, dynamic>> _violationDocsToMaps(List docs, String societyId) {
+    return docs.map<Map<String, dynamic>>((doc) {
+      final d = doc as QueryDocumentSnapshot<Object?>;
+      final data = d.data() as Map<String, dynamic>? ?? {};
+      final createdAt = data['createdAt'];
+      final updatedAt = data['updatedAt'];
+      return {
+        'violation_id': d.id,
+        'society_id': societyId,
+        'guard_uid': data['guardUid'],
+        'flat_no': (data['flatNo'] ?? '').toString(),
+        'violation_type': (data['violationType'] ?? 'OTHER').toString(),
+        'note': data['note']?.toString(),
+        'photo_url': data['photoUrl']?.toString(),
+        'status': (data['status'] ?? 'OPEN').toString(),
+        'created_at': createdAt is Timestamp ? (createdAt as Timestamp).toDate().toIso8601String() : createdAt?.toString(),
+        'updated_at': updatedAt is Timestamp ? (updatedAt as Timestamp).toDate().toIso8601String() : updatedAt?.toString(),
+        ...data,
+      };
+    }).toList();
+  }
+
+  /// Admin: stats for a month (anonymous summary - no names)
+  /// Returns: total, byType (PARKING, FIRE_LANE, OTHER), repeatedFlatsCount, previousMonthRepeatedFlatsCount
+  Future<Map<String, dynamic>> getViolationStatsForMonth({
+    required String societyId,
+    required int year,
+    required int month,
+  }) async {
+    try {
+      final start = DateTime(year, month, 1);
+      final end = month < 12 ? DateTime(year, month + 1, 1) : DateTime(year + 1, 1, 1);
+      final startTs = Timestamp.fromDate(start);
+      final endTs = Timestamp.fromDate(end);
+
+      final snapshot = await _violationsRef(societyId)
+          .where('createdAt', isGreaterThanOrEqualTo: startTs)
+          .where('createdAt', isLessThan: endTs)
+          .get();
+
+      final prevStart = month > 1 ? DateTime(year, month - 1, 1) : DateTime(year - 1, 12, 1);
+      final prevEnd = start;
+      final prevSnapshot = await _violationsRef(societyId)
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(prevStart))
+          .where('createdAt', isLessThan: Timestamp.fromDate(prevEnd))
+          .get();
+
+      final byType = <String, int>{'PARKING': 0, 'FIRE_LANE': 0, 'OTHER': 0};
+      final flatCountThisMonth = <String, int>{};
+      final flatCountPrevMonth = <String, int>{};
+
+      for (final doc in snapshot.docs) {
+        final d = doc.data() as Map<String, dynamic>? ?? {};
+        final t = (d['violationType'] ?? 'OTHER').toString().toUpperCase();
+        byType[t] = (byType[t] ?? 0) + 1;
+        final flat = (d['flatNo'] ?? '').toString();
+        if (flat.isNotEmpty) flatCountThisMonth[flat] = (flatCountThisMonth[flat] ?? 0) + 1;
+      }
+      for (final doc in prevSnapshot.docs) {
+        final d = doc.data() as Map<String, dynamic>? ?? {};
+        final flat = (d['flatNo'] ?? '').toString();
+        if (flat.isNotEmpty) flatCountPrevMonth[flat] = (flatCountPrevMonth[flat] ?? 0) + 1;
+      }
+
+      final repeatedThis = flatCountThisMonth.values.where((c) => c > 1).length;
+      final repeatedPrev = flatCountPrevMonth.values.where((c) => c > 1).length;
+      num reducedPercent = 0;
+      if (repeatedPrev > 0) {
+        reducedPercent = ((repeatedPrev - repeatedThis) / repeatedPrev * 100).round();
+        if (reducedPercent < 0) reducedPercent = 0;
+      }
+
+      return {
+        'total': snapshot.docs.length,
+        'byType': byType,
+        'parking': byType['PARKING'] ?? 0,
+        'fireLane': byType['FIRE_LANE'] ?? 0,
+        'other': byType['OTHER'] ?? 0,
+        'repeatedFlatsCount': repeatedThis,
+        'previousMonthRepeatedFlatsCount': repeatedPrev,
+        'repeatedViolationsReducedPercent': reducedPercent,
+      };
+    } catch (e, stackTrace) {
+      AppLogger.e('Error getViolationStatsForMonth', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Admin: update violation status (e.g. RESOLVED)
+  Future<void> updateViolationStatus({
+    required String societyId,
+    required String violationId,
+    required String status,
+  }) async {
+    try {
+      await _violationsRef(societyId).doc(violationId).update({
+        'status': status.trim().toUpperCase(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (e, stackTrace) {
+      AppLogger.e('Error updateViolationStatus', error: e, stackTrace: stackTrace);
       rethrow;
     }
   }

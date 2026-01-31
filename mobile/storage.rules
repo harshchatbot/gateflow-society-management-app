@@ -73,6 +73,22 @@ service firebase.storage {
         && get(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.active == true;
     }
     
+    // Complaint photos: societies/{societyId}/complaints/{fileName}
+    match /societies/{societyId}/complaints/{fileName} {
+      // Residents can upload complaint photos (active member)
+      allow write: if isAuthenticated()
+        && exists(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid))
+        && get(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.systemRole == 'resident'
+        && get(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.active == true
+        && request.resource.size < 5 * 1024 * 1024 // 5MB limit
+        && request.resource.contentType.matches('image/.*');
+      
+      // Admins, guards, and residents can read complaint photos
+      allow read: if isAuthenticated()
+        && exists(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid))
+        && get(/databases/(default)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.active == true;
+    }
+    
     // Default deny all other paths
     match /{allPaths=**} {
       allow read, write: if false;

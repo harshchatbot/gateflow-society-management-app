@@ -1,0 +1,315 @@
+import 'package:flutter/material.dart';
+import '../ui/app_colors.dart';
+import '../ui/app_loader.dart';
+import '../services/firestore_service.dart';
+import '../core/app_logger.dart';
+
+/// Resident My Violations Screen
+///
+/// Shows only violations for this resident's flat. No reporter names.
+/// Violations are private – society sees only anonymous summaries when admin publishes.
+class ResidentViolationsScreen extends StatefulWidget {
+  final String residentId;
+  final String societyId;
+  final String flatNo;
+  final VoidCallback? onBackPressed;
+
+  const ResidentViolationsScreen({
+    super.key,
+    required this.residentId,
+    required this.societyId,
+    required this.flatNo,
+    this.onBackPressed,
+  });
+
+  @override
+  State<ResidentViolationsScreen> createState() => _ResidentViolationsScreenState();
+}
+
+class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
+  final FirestoreService _firestore = FirestoreService();
+
+  List<Map<String, dynamic>> _violations = [];
+  bool _isLoading = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadViolations();
+  }
+
+  Future<void> _loadViolations() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final list = await _firestore.getViolationsByFlat(
+        societyId: widget.societyId,
+        flatNo: widget.flatNo,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _violations = list;
+        _isLoading = false;
+      });
+      AppLogger.i('Loaded ${list.length} violations for flat ${widget.flatNo}');
+    } catch (e) {
+      AppLogger.e('Error loading violations', error: e);
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = 'Failed to load violations. Please try again.';
+        });
+      }
+    }
+  }
+
+  String _violationTypeLabel(String type) {
+    switch (type.toUpperCase()) {
+      case 'PARKING':
+        return 'Parking';
+      case 'FIRE_LANE':
+        return 'Fire lane';
+      default:
+        return 'Other';
+    }
+  }
+
+  IconData _violationTypeIcon(String type) {
+    switch (type.toUpperCase()) {
+      case 'PARKING':
+        return Icons.directions_car_rounded;
+      case 'FIRE_LANE':
+        return Icons.local_fire_department_rounded;
+      default:
+        return Icons.warning_rounded;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        backgroundColor: AppColors.bg,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+          onPressed: () {
+            if (widget.onBackPressed != null) {
+              widget.onBackPressed!();
+            } else if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            }
+          },
+        ),
+        title: const Text(
+          'My Violations',
+          style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 20),
+        ),
+        centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: AppColors.success.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.refresh_rounded, color: AppColors.success, size: 20),
+            ),
+            onPressed: _isLoading ? null : _loadViolations,
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: Stack(
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Privacy note
+              Container(
+                margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lock_rounded, color: AppColors.primary, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Violations are private. You see only reports for your flat. No names are publicised.',
+                        style: TextStyle(fontSize: 12, color: AppColors.text2, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: _buildContent(),
+              ),
+            ],
+          ),
+          AppLoader.overlay(show: _isLoading, message: 'Loading…'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    if (_error != null) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline, size: 64, color: AppColors.error),
+            const SizedBox(height: 16),
+            Text(_error!, style: const TextStyle(color: AppColors.text2, fontSize: 16), textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _loadViolations,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Retry'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.success,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (_violations.isEmpty && !_isLoading) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.directions_car_outlined, size: 64, color: AppColors.textMuted),
+            const SizedBox(height: 16),
+            const Text(
+              'No violations for your flat',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.text),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Reports for Flat ${widget.flatNo} will appear here.',
+              style: TextStyle(fontSize: 14, color: AppColors.text2),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return RefreshIndicator(
+      onRefresh: _loadViolations,
+      child: ListView.builder(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+        itemCount: _violations.length,
+        itemBuilder: (context, index) {
+          final v = _violations[index];
+          return _buildViolationCard(v);
+        },
+      ),
+    );
+  }
+
+  Widget _buildViolationCard(Map<String, dynamic> v) {
+    final type = v['violation_type']?.toString() ?? 'OTHER';
+    final status = (v['status'] ?? 'OPEN').toString().toUpperCase();
+    final createdAt = v['created_at']?.toString();
+    final note = v['note']?.toString();
+    final photoUrl = v['photo_url']?.toString();
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 0,
+      color: AppColors.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.warning.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(_violationTypeIcon(type), color: AppColors.warning, size: 24),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _violationTypeLabel(type),
+                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.text),
+                  ),
+                  const SizedBox(height: 2),
+                  if (createdAt != null && createdAt.isNotEmpty)
+                    Text(
+                      createdAt.length >= 10 ? createdAt.substring(0, 10) : createdAt,
+                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                    ),
+                  if (note != null && note.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(
+                        note,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: 12, color: AppColors.text2),
+                      ),
+                    ),
+                  const SizedBox(height: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: status == 'RESOLVED' ? AppColors.success.withOpacity(0.15) : AppColors.warning.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      status,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: status == 'RESOLVED' ? AppColors.success : AppColors.warning,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (photoUrl != null && photoUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: Image.network(
+                  photoUrl,
+                  width: 48,
+                  height: 48,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => const SizedBox(width: 48, height: 48),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

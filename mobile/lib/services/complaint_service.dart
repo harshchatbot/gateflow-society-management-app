@@ -33,6 +33,8 @@ class ComplaintService {
     required String category,
     /// 'general' = visible to everyone; 'personal' = visible to admins & guards only
     String visibility = 'general',
+    /// Optional image URL (e.g. uploaded to Firebase Storage)
+    String? photoUrl,
   }) async {
     try {
       // Get current user UID
@@ -51,6 +53,7 @@ class ComplaintService {
         title: title,
         description: description,
         visibility: visibility,
+        photoUrl: photoUrl,
       );
 
       AppLogger.i("Complaint created successfully", data: {'complaintId': complaintId});

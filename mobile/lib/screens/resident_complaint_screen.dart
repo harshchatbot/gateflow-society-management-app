@@ -1,4 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:uuid/uuid.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/complaint_service.dart';
@@ -41,6 +45,10 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
   bool _isLoading = false;
   bool _isSuccess = false;
 
+  File? _complaintImage;
+  final ImagePicker _picker = ImagePicker();
+  final _uuid = const Uuid();
+
   final List<Map<String, String>> _categories = [
     {"value": "GENERAL", "label": "General"},
     {"value": "MAINTENANCE", "label": "Maintenance"},
@@ -67,6 +75,12 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
     });
 
     try {
+      String? photoUrl;
+      if (_complaintImage != null) {
+        photoUrl = await _uploadComplaintImage(_complaintImage!);
+        if (!mounted) return;
+      }
+
       final result = await _service.createComplaint(
         societyId: widget.societyId,
         flatNo: widget.flatNo,
@@ -76,6 +90,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
         description: _descriptionController.text.trim(),
         category: _selectedCategory,
         visibility: _visibility,
+        photoUrl: photoUrl,
       );
 
       if (!mounted) return;
@@ -114,6 +129,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
             _descriptionController.clear();
             setState(() {
               _isSuccess = false;
+              _complaintImage = null;
             });
           }
         });
@@ -141,6 +157,59 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
         margin: const EdgeInsets.all(16),
       ),
     );
+  }
+
+  Future<String?> _uploadComplaintImage(File file) async {
+    try {
+      final storage = FirebaseStorage.instance;
+      final path = 'societies/${widget.societyId}/complaints/${_uuid.v4()}.jpg';
+      final ref = storage.ref().child(path);
+      await ref.putFile(
+        file,
+        SettableMetadata(contentType: 'image/jpeg'),
+      );
+      return await ref.getDownloadURL();
+    } catch (e) {
+      AppLogger.e('Complaint image upload failed', error: e);
+      if (mounted) _showError('Image upload failed. Submitting without photo.');
+      return null;
+    }
+  }
+
+  Future<void> _pickComplaintImage() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt_rounded),
+              title: const Text('Camera'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library_rounded),
+              title: const Text('Gallery'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+    try {
+      final XFile? picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 80,
+        maxWidth: 1200,
+      );
+      if (picked != null && mounted) {
+        setState(() => _complaintImage = File(picked.path));
+      }
+    } catch (e) {
+      if (mounted) _showError('Could not pick image.');
+    }
   }
 
   @override
@@ -220,7 +289,64 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 24),
+
+                  // Optional photo (optional)
+                  Text(
+                    "Add photo (optional)",
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.text2,
+                      letterSpacing: 0.2,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: _complaintImage == null ? _pickComplaintImage : null,
+                    child: Container(
+                      width: double.infinity,
+                      height: 140,
+                      decoration: BoxDecoration(
+                        color: AppColors.bg,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: _complaintImage == null
+                          ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.add_photo_alternate_rounded, size: 40, color: AppColors.success.withOpacity(0.6)),
+                                const SizedBox(height: 8),
+                                Text(
+                                  "Tap to add a photo",
+                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMuted),
+                                ),
+                              ],
+                            )
+                          : Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Image.file(_complaintImage!, fit: BoxFit.cover),
+                                ),
+                                Positioned(
+                                  top: 8,
+                                  right: 8,
+                                  child: IconButton(
+                                    onPressed: () => setState(() => _complaintImage = null),
+                                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                                    style: IconButton.styleFrom(
+                                      backgroundColor: Colors.black54,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
 
                   // Category Selection
                   Text(
