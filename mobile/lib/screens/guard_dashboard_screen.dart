@@ -11,7 +11,7 @@ import '../core/tour_storage.dart';
 import '../core/society_modules.dart';
 import '../models/visitor.dart';
 import 'notice_board_screen.dart';
-import 'role_select_screen.dart';
+import 'onboarding_choose_role_screen.dart';
 import 'visitor_details_screen.dart';
 import '../services/notification_service.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -413,7 +413,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     if (shouldExit == true && context.mounted) {
       // Navigate to role select instead of just popping
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+        MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
         (route) => false,
       );
     }

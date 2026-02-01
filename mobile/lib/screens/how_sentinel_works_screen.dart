@@ -3,7 +3,7 @@ import '../ui/app_colors.dart';
 
 /// Static pre-signup info screen: "How Sentinel Works".
 /// Explains onboarding in 4–5 steps and highlights SOS as a USP.
-/// No backend; accessible from RoleSelectScreen.
+/// No backend; accessible from OnboardingChooseRoleScreen.
 class HowSentinelWorksScreen extends StatelessWidget {
   const HowSentinelWorksScreen({super.key});
 

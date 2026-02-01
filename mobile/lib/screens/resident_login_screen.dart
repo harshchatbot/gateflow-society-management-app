@@ -16,7 +16,7 @@ import '../ui/app_icons.dart';
 
 import 'resident_shell_screen.dart';
 import 'resident_pending_approval_screen.dart';
-import 'role_select_screen.dart';
+import 'onboarding_choose_role_screen.dart';
 import 'resident_signup_screen.dart';
 
 class ResidentLoginScreen extends StatefulWidget {
@@ -133,7 +133,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
         if (!mounted) return;
         setState(() => _isLoading = false);
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+          MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
         );
         return;
       }
@@ -226,7 +226,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
               Navigator.of(context).pop();
             } else {
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+                MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
               );
             }
           },

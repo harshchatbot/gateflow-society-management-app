@@ -6,7 +6,7 @@ import '../core/storage.dart';
 import '../core/session_gate_service.dart';
 import '../ui/app_loader.dart';
 import 'join_society_screen.dart';
-import 'role_select_screen.dart';
+import 'onboarding_choose_role_screen.dart';
 import 'guard_shell_screen.dart';
 import 'resident_shell_screen.dart';
 import 'admin_shell_screen.dart';
@@ -40,7 +40,7 @@ class _AuthRouterState extends State<AuthRouter> {
       await Storage.clearFirebaseSession();
       GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+        MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
       );
       return;
     }

@@ -11,7 +11,7 @@ import '../ui/app_loader.dart';
 import '../ui/app_icons.dart';
 
 import 'guard_shell_screen.dart';
-import 'role_select_screen.dart';
+import 'onboarding_choose_role_screen.dart';
 import 'guard_join_screen.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -127,7 +127,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
         if (!mounted) return;
         setState(() => _isLoading = false);
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+          MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
         );
         return;
       }
@@ -250,7 +250,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
               Navigator.of(context).pop();
             } else {
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+                MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
               );
             }
           },

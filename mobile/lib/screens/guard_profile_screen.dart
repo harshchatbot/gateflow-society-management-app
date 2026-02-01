@@ -11,7 +11,7 @@ import '../core/storage.dart';
 import '../core/app_logger.dart';
 import '../core/society_modules.dart';
 import '../services/firestore_service.dart';
-import 'role_select_screen.dart';
+import 'onboarding_choose_role_screen.dart';
 import 'get_started_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -713,7 +713,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             AppLogger.i("Guard session cleared - logout successful");
             if (context.mounted) {
               Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+                MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
                 (route) => false,
               );
             }
@@ -722,7 +722,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Still navigate to role select even if logout fails
             if (context.mounted) {
               Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+                MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
                 (route) => false,
               );
             }

@@ -7,7 +7,7 @@ import '../core/storage.dart';
 import '../core/app_logger.dart';
 import '../core/society_modules.dart';
 import '../services/firestore_service.dart';
-import 'role_select_screen.dart';
+import 'onboarding_choose_role_screen.dart';
 import 'admin_edit_image_screen.dart';
 import 'super_admin_bulk_upload_screen.dart';
 import 'get_started_screen.dart';
@@ -291,7 +291,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
 
       // Navigate to role select screen
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+        MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
         (route) => false,
       );
     } catch (e) {

@@ -38,7 +38,7 @@ enum GateBlockReason {
   societyInactive,
 }
 
-/// Pending block message to show after navigating to Login/Join screen (e.g. RoleSelectScreen).
+/// Pending block message to show after navigating to Choose Role screen (e.g. OnboardingChooseRoleScreen).
 /// Consumed once when the target screen is built.
 class GateBlockMessage {
   static String? _pending;
@@ -47,7 +47,7 @@ class GateBlockMessage {
     _pending = message;
   }
 
-  /// Returns and clears the pending message. Call from RoleSelectScreen (or similar) on first frame.
+  /// Returns and clears the pending message. Call from OnboardingChooseRoleScreen (or similar) on first frame.
   static String? take() {
     final m = _pending;
     _pending = null;

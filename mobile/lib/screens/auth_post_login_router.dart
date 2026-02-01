@@ -7,7 +7,7 @@ import '../core/session_gate_service.dart';
 import '../ui/app_loader.dart';
 import '../services/invite_claim_service.dart';
 import 'guard_shell_screen.dart';
-import 'role_select_screen.dart';
+import 'onboarding_choose_role_screen.dart';
 
 class AuthPostLoginRouter extends StatefulWidget {
   final String defaultSocietyId; // you must pass societyId you’re onboarding into
@@ -84,7 +84,7 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
         await Storage.clearFirebaseSession();
         GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+          MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
         );
         return;
       }

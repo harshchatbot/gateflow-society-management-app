@@ -16,7 +16,7 @@ import 'resident_violations_screen.dart';
 import 'resident_approvals_screen.dart';
 import 'resident_history_screen.dart';
 import 'notice_board_screen.dart';
-import 'role_select_screen.dart';
+import 'onboarding_choose_role_screen.dart';
 import '../widgets/resident_notification_drawer.dart';
 import '../widgets/dashboard_hero.dart';
 import '../widgets/dashboard_stat_card.dart';
@@ -329,7 +329,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     if (shouldExit == true && context.mounted) {
       // Navigate to role select instead of just popping
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+        MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
         (route) => false,
       );
       return false; // Don't pop, we already navigated

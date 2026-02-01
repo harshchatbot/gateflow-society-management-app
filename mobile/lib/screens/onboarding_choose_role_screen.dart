@@ -1,13 +1,38 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
+import '../core/session_gate_service.dart';
 import 'guard_login_screen.dart';
 import 'resident_login_screen.dart';
 import 'admin_login_screen.dart';
+import 'how_sentinel_works_screen.dart';
 
 /// Choose Role screen: single theme (primary blue), cards with illustrations.
-/// Tapping a card navigates to role-specific login screen.
-class OnboardingChooseRoleScreen extends StatelessWidget {
+/// Used after logout and from onboarding. Shows gate block message if set.
+class OnboardingChooseRoleScreen extends StatefulWidget {
   const OnboardingChooseRoleScreen({super.key});
+
+  @override
+  State<OnboardingChooseRoleScreen> createState() => _OnboardingChooseRoleScreenState();
+}
+
+class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final message = GateBlockMessage.take();
+      if (message != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.orange.shade800,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +90,25 @@ class OnboardingChooseRoleScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 32),
+            TextButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const HowSentinelWorksScreen(),
+                  ),
+                );
+              },
+              icon: Icon(Icons.info_outline_rounded, size: 18, color: AppColors.primary),
+              label: const Text(
+                'How Sentinel Works',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 24),

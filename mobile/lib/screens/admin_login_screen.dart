@@ -6,7 +6,7 @@ import '../services/firestore_service.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import 'admin_shell_screen.dart';
-import 'role_select_screen.dart';
+import 'onboarding_choose_role_screen.dart';
 import 'admin_onboarding_screen.dart';
 import 'admin_signup_screen.dart';
 import 'admin_pending_approval_screen.dart';
@@ -125,7 +125,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+        MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
       );
       return;
     }
@@ -225,7 +225,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               Navigator.of(context).pop();
             } else {
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+                MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
               );
             }
           },

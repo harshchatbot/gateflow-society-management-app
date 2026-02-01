@@ -21,7 +21,7 @@ import 'sos_alerts_screen.dart';
 import 'admin_manage_notices_screen.dart';
 import 'admin_manage_admins_screen.dart';
 import 'admin_manage_violations_screen.dart';
-import 'role_select_screen.dart';
+import 'onboarding_choose_role_screen.dart';
 import '../widgets/admin_notification_drawer.dart';
 import '../widgets/dashboard_hero.dart';
 import '../widgets/dashboard_stat_card.dart';
@@ -397,7 +397,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (shouldExit == true && context.mounted) {
       // Navigate to role select instead of just popping
       Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+        MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
         (route) => false,
       );
     }

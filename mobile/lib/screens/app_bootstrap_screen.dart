@@ -6,7 +6,7 @@ import '../core/storage.dart';
 import '../core/society_modules.dart';
 import '../core/session_gate_service.dart';
 import 'onboarding_welcome_screen.dart';
-import 'role_select_screen.dart';
+import 'onboarding_choose_role_screen.dart';
 import 'guard_shell_screen.dart';
 import 'resident_shell_screen.dart';
 import 'admin_shell_screen.dart';
@@ -87,7 +87,7 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
               SocietyModules.clear();
               GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
             } catch (_) {}
-            targetScreen = const RoleSelectScreen();
+            targetScreen = const OnboardingChooseRoleScreen();
           }
         } catch (e, stackTrace) {
           if (kDebugMode) {
