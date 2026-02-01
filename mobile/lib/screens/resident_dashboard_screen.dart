@@ -18,6 +18,9 @@ import 'resident_history_screen.dart';
 import 'notice_board_screen.dart';
 import 'role_select_screen.dart';
 import '../widgets/resident_notification_drawer.dart';
+import '../widgets/dashboard_hero.dart';
+import '../widgets/dashboard_stat_card.dart';
+import '../widgets/dashboard_quick_action.dart';
 import '../services/firestore_service.dart';
 
 /// Resident Dashboard Screen
@@ -382,7 +385,71 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
                 children: [
-                  _buildHeader(),
+                  DashboardHero(
+                    userName: widget.residentName,
+                    statusMessage: _pendingCount > 0
+                        ? '$_pendingCount approval(s) pending'
+                        : "You're all set",
+                    mascotMood: _pendingCount > 0 ? SentiMood.alert : SentiMood.happy,
+                    avatar: CircleAvatar(
+                      backgroundColor: Colors.white24,
+                      backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                          ? CachedNetworkImageProvider(_photoUrl!)
+                          : null,
+                      child: (_photoUrl == null || _photoUrl!.isEmpty)
+                          ? const Icon(Icons.person_rounded, color: Colors.white)
+                          : null,
+                    ),
+                    trailingActions: Stack(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_rounded, color: Colors.white),
+                          onPressed: () {
+                            if (mounted) {
+                              setState(() {
+                                _unreadNoticesCount = 0;
+                                _notificationCount = _pendingCount;
+                              });
+                            }
+                            showModalBottomSheet(
+                              context: context,
+                              isScrollControlled: true,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) => ResidentNotificationDrawer(
+                                societyId: widget.societyId,
+                                residentId: widget.residentId,
+                                flatNo: widget.flatNo,
+                              ),
+                            ).then((_) {
+                              _loadDashboardData();
+                            });
+                          },
+                        ),
+                        if (_notificationCount > 0)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: AppColors.error,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                              child: Text(
+                                _notificationCount > 9 ? '9+' : _notificationCount.toString(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 20),
@@ -421,119 +488,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       ),
     );
       },
-    );
-  }
-
-  Widget _buildHeader() {
-    return Row(
-      children: [
-        // Small profile avatar
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.white.withOpacity(0.8),
-              width: 2,
-            ),
-          ),
-          child: CircleAvatar(
-            backgroundColor: Colors.white24,
-            backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                ? CachedNetworkImageProvider(_photoUrl!)
-                : null,
-            child: (_photoUrl == null || _photoUrl!.isNotEmpty == false)
-                ? const Icon(
-                    Icons.person_rounded,
-                    color: Colors.white,
-                  )
-                : null,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Welcome back,",
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.9),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.residentName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 24,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-        // Notification Bell Icon
-        Stack(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_rounded, color: Colors.white),
-              onPressed: () {
-                // Mark notices as read for this session and open drawer
-                if (mounted) {
-                  setState(() {
-                    _unreadNoticesCount = 0;
-                    _notificationCount = _pendingCount;
-                  });
-                }
-                showModalBottomSheet(
-                  context: context,
-                  isScrollControlled: true,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) => ResidentNotificationDrawer(
-                    societyId: widget.societyId,
-                    residentId: widget.residentId,
-                    flatNo: widget.flatNo,
-                  ),
-                ).then((_) {
-                  // Refresh pending approvals when drawer closes
-                  _loadDashboardData();
-                });
-              },
-            ),
-            if (_notificationCount > 0)
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: AppColors.error,
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 18,
-                    minHeight: 18,
-                  ),
-                  child: Text(
-                    _notificationCount > 9 ? "9+" : _notificationCount.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ],
     );
   }
 
@@ -606,7 +560,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       child: Row(
         children: [
           Expanded(
-            child: _StatCard(
+            child: DashboardStatCard(
               label: "Pending",
               value: _pendingCount.toString(),
               icon: Icons.pending_actions_rounded,
@@ -615,7 +569,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: _StatCard(
+            child: DashboardStatCard(
               label: "Approved",
               value: _approvedCount.toString(),
               icon: Icons.check_circle_rounded,
@@ -624,7 +578,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: _StatCard(
+            child: DashboardStatCard(
               label: "Rejected",
               value: _rejectedCount.toString(),
               icon: Icons.cancel_rounded,
@@ -644,11 +598,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           key: _keyApprovals,
           title: "Approve / Reject Visitors",
           description: "Open here to see pending visitor requests and approve or reject.",
-          child: _buildActionCard(
+          child: DashboardQuickAction(
+            label: "Pending Approvals",
             icon: Icons.verified_user_rounded,
-            title: "Pending Approvals",
-            subtitle: "$_pendingCount requests",
-            color: AppColors.warning,
+            tint: AppColors.warning,
             onTap: () {
               if (widget.onNavigateToApprovals != null) {
                 widget.onNavigateToApprovals!();
@@ -669,11 +622,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         ),
       );
       children.add(
-        _buildActionCard(
+        DashboardQuickAction(
+          label: "View History",
           icon: Icons.history_rounded,
-          title: "View History",
-          subtitle: "Past decisions",
-          color: AppColors.success,
+          tint: AppColors.success,
           onTap: () {
             if (widget.onNavigateToHistory != null) {
               widget.onNavigateToHistory!();
@@ -695,11 +647,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     }
     if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
       children.add(
-        _buildActionCard(
+        DashboardQuickAction(
+          label: "Raise Complaint",
           icon: Icons.report_problem_rounded,
-          title: "Raise Complaint",
-          subtitle: "Report an issue",
-          color: AppColors.error,
+          tint: AppColors.error,
           onTap: () {
             Navigator.push(
               context,
@@ -720,11 +671,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           key: _keyComplaints,
           title: "Complaints",
           description: "View and manage your complaints here.",
-          child: _buildActionCard(
+          child: DashboardQuickAction(
+            label: "My Complaints",
             icon: Icons.inbox_rounded,
-            title: "My Complaints",
-            subtitle: "View all complaints",
-            color: AppColors.primary,
+            tint: AppColors.primary,
             onTap: () {
               if (widget.onNavigateToComplaints != null) {
                 widget.onNavigateToComplaints!();
@@ -747,11 +697,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     }
     if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
       children.add(
-        _buildActionCard(
+        DashboardQuickAction(
+          label: "Notice Board",
           icon: Icons.notifications_rounded,
-          title: "Notice Board",
-          subtitle: "Society announcements",
-          color: AppColors.warning,
+          tint: AppColors.warning,
           onTap: () {
             if (widget.onNavigateToNotices != null) {
               widget.onNavigateToNotices!();
@@ -772,11 +721,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     }
     if (SocietyModules.isEnabled(SocietyModuleIds.violations)) {
       children.add(
-        _buildActionCard(
+        DashboardQuickAction(
+          label: "My Violations",
           icon: Icons.directions_car_rounded,
-          title: "My Violations",
-          subtitle: "Parking & fire-lane – only your flat",
-          color: AppColors.warning,
+          tint: AppColors.warning,
           onTap: () {
             Navigator.push(
               context,
@@ -799,11 +747,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           key: _keySos,
           title: "Emergency SOS",
           description: "Send an instant alert to security and admin in case of emergency.",
-          child: _buildActionCard(
+          child: DashboardQuickAction(
+            label: "Emergency SOS",
             icon: Icons.sos_rounded,
-            title: "Emergency SOS",
-            subtitle: "Alert security team",
-            color: AppColors.error,
+            tint: AppColors.error,
             onTap: _showSosConfirmDialog,
           ),
         ),
@@ -817,66 +764,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       crossAxisSpacing: 12,
       childAspectRatio: 1.4,
       children: children,
-    );
-  }
-
-  Widget _buildActionCard({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              title,
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-                fontSize: 14,
-                color: AppColors.text,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.text2,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -960,65 +847,3 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 15,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: color, size: 24),
-          ),
-          const SizedBox(height: 10),
-          Text(
-            value,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.w900,
-              fontSize: 20,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppColors.text2,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}

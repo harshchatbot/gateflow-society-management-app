@@ -41,8 +41,6 @@ class DashboardHero extends StatelessWidget {
   /// Optional: pass pre-built avatar (e.g. with CachedNetworkImage) to avoid dependency.
   final Widget? avatar;
   final Widget? trailingActions;
-  final Color headerGradientStart;
-  final Color headerGradientEnd;
 
   const DashboardHero({
     super.key,
@@ -51,8 +49,6 @@ class DashboardHero extends StatelessWidget {
     this.mascotMood = SentiMood.idle,
     this.avatar,
     this.trailingActions,
-    this.headerGradientStart = AppColors.primary,
-    this.headerGradientEnd = const Color(0xFF1E40AF),
   });
 
   @override

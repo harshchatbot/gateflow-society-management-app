@@ -23,6 +23,10 @@ import 'admin_manage_admins_screen.dart';
 import 'admin_manage_violations_screen.dart';
 import 'role_select_screen.dart';
 import '../widgets/admin_notification_drawer.dart';
+import '../widgets/dashboard_hero.dart';
+import '../widgets/dashboard_stat_card.dart';
+import '../widgets/dashboard_quick_action.dart';
+import '../widgets/visitors_chart.dart';
 
 /// Admin Dashboard Screen
 /// 
@@ -63,6 +67,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Map<String, dynamic>? _stats;
   bool _isLoading = false;
   String? _error;
+  /// Society-wide visitor counts last 7 days (for chart). null until loaded.
+  List<int>? _visitorsByDayLast7;
 
   late final ComplaintService _complaintService = ComplaintService(
     baseUrl: Env.apiBaseUrl,
@@ -340,6 +346,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _isLoading = false;
         });
         AppLogger.i("Admin dashboard stats loaded", data: _stats);
+        // Load society-wide visitor chart (no guard filter)
+        if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
+          try {
+            final counts = await _firestore.getVisitorCountsByDayLast7Days(
+              societyId: widget.societyId,
+            );
+            if (mounted) setState(() => _visitorsByDayLast7 = counts);
+          } catch (e) {
+            AppLogger.w("Admin visitor chart load failed", error: e.toString());
+          }
+        }
       } else {
         setState(() {
           _isLoading = false;
@@ -434,7 +451,57 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
                 children: [
-                  _buildHeader(context),
+                  DashboardHero(
+                    userName: widget.adminName,
+                    statusMessage: (_notificationCount + _sosBadgeCount) > 0
+                        ? '${_notificationCount + _sosBadgeCount} item(s) need attention'
+                        : 'Society overview',
+                    mascotMood: (_notificationCount + _sosBadgeCount) > 0 ? SentiMood.alert : SentiMood.idle,
+                    avatar: CircleAvatar(
+                      backgroundColor: Colors.white24,
+                      backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                          ? CachedNetworkImageProvider(_photoUrl!)
+                          : null,
+                      child: (_photoUrl == null || _photoUrl!.isEmpty)
+                          ? const Icon(Icons.person_rounded, color: Colors.white)
+                          : null,
+                    ),
+                    trailingActions: Stack(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_rounded, color: Colors.white),
+                          onPressed: _showNotificationDrawer,
+                        ),
+                        Builder(
+                          builder: (context) {
+                            final totalBadgeCount = _notificationCount + _sosBadgeCount;
+                            if (totalBadgeCount <= 0) return const SizedBox.shrink();
+                            return Positioned(
+                              right: 8,
+                              top: 8,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: const BoxDecoration(
+                                  color: AppColors.error,
+                                  shape: BoxShape.circle,
+                                ),
+                                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                                child: Text(
+                                  totalBadgeCount > 9 ? '9+' : totalBadgeCount.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 20),
@@ -451,6 +518,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildStatsSection(),
+                    if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement) && _visitorsByDayLast7 != null) ...[
+                      const SizedBox(height: 16),
+                      VisitorsChart(
+                        countsByDay: _visitorsByDayLast7!,
+                        barColor: AppColors.admin,
+                      ),
+                    ],
                   ],
 
                   const SizedBox(height: 25),
@@ -476,106 +550,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ),
     );
       },
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    return Row(
-      children: [
-        // Small profile avatar
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.white.withOpacity(0.8),
-              width: 2,
-            ),
-          ),
-          child: CircleAvatar(
-            backgroundColor: Colors.white24,
-            backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                ? CachedNetworkImageProvider(_photoUrl!)
-                : null,
-            child: (_photoUrl == null || _photoUrl!.isEmpty)
-                ? const Icon(
-                    Icons.person_rounded,
-                    color: Colors.white,
-                  )
-                : null,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                "Welcome back,",
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                widget.adminName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 24,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-        // Notification Bell Icon
-        Stack(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_rounded, color: Colors.white),
-              onPressed: _showNotificationDrawer,
-            ),
-            Builder(
-              builder: (context) {
-                final totalBadgeCount = _notificationCount + _sosBadgeCount;
-                if (totalBadgeCount <= 0) return const SizedBox.shrink();
-                return Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(4),
-                    decoration: const BoxDecoration(
-                      color: AppColors.error,
-                      shape: BoxShape.circle,
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
-                    child: Text(
-                      totalBadgeCount > 9 ? "9+" : totalBadgeCount.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                );
-              },
-            ),
-          ],
-        ),
-      ],
     );
   }
 
@@ -652,19 +626,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildStatsGrid() {
     final stats = _stats!;
     final children = <Widget>[
-      _StatCard(
+      DashboardStatCard(
         label: "Residents",
         value: (stats['total_residents'] ?? 0).toString(),
         icon: Icons.people_rounded,
         color: AppColors.admin,
       ),
-      _StatCard(
+      DashboardStatCard(
         label: "Guards",
         value: (stats['total_guards'] ?? 0).toString(),
         icon: Icons.shield_rounded,
         color: AppColors.primary,
       ),
-      _StatCard(
+      DashboardStatCard(
         label: "Flats",
         value: (stats['total_flats'] ?? 0).toString(),
         icon: Icons.home_rounded,
@@ -673,22 +647,22 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     ];
     if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
       children.addAll([
-        _StatCard(
+        DashboardStatCard(
           label: "Visitors Today",
           value: (stats['visitors_today'] ?? 0).toString(),
           icon: Icons.person_add_rounded,
           color: AppColors.warning,
         ),
-        _StatCard(
+        DashboardStatCard(
           label: "Pending",
           value: (stats['pending_approvals'] ?? 0).toString(),
-          icon: Icons.hourglass_empty,
+          icon: Icons.hourglass_empty_rounded,
           color: AppColors.warning,
         ),
-        _StatCard(
+        DashboardStatCard(
           label: "Approved Today",
           value: (stats['approved_today'] ?? 0).toString(),
-          icon: Icons.verified_user_outlined,
+          icon: Icons.verified_user_rounded,
           color: AppColors.success,
         ),
       ]);
@@ -710,11 +684,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         key: _keyResidents,
         title: "Approve Residents",
         description: "View and approve pending resident signups.",
-        child: _ActionItem(
+        child: DashboardQuickAction(
+          label: "Residents Directory",
           icon: Icons.people_rounded,
-          title: "Residents Directory",
-          subtitle: "View residents directory",
-          color: AppColors.admin,
+          tint: AppColors.admin,
           onTap: () => _navigateToTab(1),
         ),
       ),
@@ -722,19 +695,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         key: _keyGuards,
         title: "Share Society Code / QR",
         description: "Generate Guard Join QR so guards can join your society.",
-        child: _ActionItem(
+        child: DashboardQuickAction(
+          label: "Security Staff",
           icon: Icons.shield_rounded,
-          title: "Security Staff",
-          subtitle: "View security staff",
-          color: AppColors.primary,
+          tint: AppColors.primary,
           onTap: () => _navigateToTab(2),
         ),
       ),
-      _ActionItem(
+      DashboardQuickAction(
+        label: "Manage Flats",
         icon: Icons.home_rounded,
-        title: "Manage Flats",
-        subtitle: "View & manage flats",
-        color: AppColors.success,
+        tint: AppColors.success,
         onTap: () {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -754,11 +725,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           key: _keyComplaints,
           title: "Complaints",
           description: "View and resolve society complaints.",
-          child: _ActionItem(
+          child: DashboardQuickAction(
+            label: "Complaints",
             icon: Icons.report_problem_rounded,
-            title: "Complaints",
-            subtitle: "View & resolve complaints",
-            color: AppColors.error,
+            tint: AppColors.error,
             onTap: () => _navigateToTab(3),
           ),
         ),
@@ -770,11 +740,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           key: _keyNotices,
           title: "Create Notice",
           description: "View notices and create new announcements.",
-          child: _ActionItem(
+          child: DashboardQuickAction(
+            label: "Notice Board",
             icon: Icons.notifications_rounded,
-            title: "Notice Board",
-            subtitle: "View & manage notices",
-            color: AppColors.warning,
+            tint: AppColors.warning,
             onTap: () => _navigateToTab(4),
           ),
         ),
@@ -782,11 +751,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
     if (SocietyModules.isEnabled(SocietyModuleIds.violations)) {
       children.add(
-        _ActionItem(
+        DashboardQuickAction(
+          label: "Violations",
           icon: Icons.directions_car_rounded,
-          title: "Violations",
-          subtitle: "Parking & fire-lane – full control",
-          color: AppColors.warning,
+          tint: AppColors.warning,
           onTap: () {
             Navigator.push(
               context,
@@ -809,11 +777,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           key: _keySos,
           title: "SOS Alerts",
           description: "View and respond to emergency SOS from residents.",
-          child: _ActionItem(
+          child: DashboardQuickAction(
+            label: "SOS Alerts",
             icon: Icons.sos_rounded,
-            title: "SOS Alerts",
-            subtitle: "View emergency SOS history",
-            color: AppColors.error,
+            tint: AppColors.error,
             onTap: () {
               Navigator.push(
                 context,
@@ -831,11 +798,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
     if (widget.systemRole?.toLowerCase() == 'super_admin') {
       children.add(
-        _ActionItem(
+        DashboardQuickAction(
+          label: "Manage Admins",
           icon: Icons.admin_panel_settings_rounded,
-          title: "Manage Admins",
-          subtitle: "Approve admin signups",
-          color: AppColors.admin,
+          tint: AppColors.admin,
           onTap: () {
             Navigator.push(
               context,
@@ -862,148 +828,4 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-}
-
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-
-  const _StatCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 10),
-          Flexible(
-            child: Text(
-              value,
-              style: const TextStyle(
-                color: AppColors.text,
-                fontWeight: FontWeight.w900,
-                fontSize: 20,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Flexible(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: AppColors.text2,
-                fontWeight: FontWeight.bold,
-                fontSize: 11,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActionItem extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final Color color;
-  final VoidCallback onTap;
-
-  const _ActionItem({
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.color,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.04),
-              blurRadius: 10,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 24),
-            ),
-            const Spacer(),
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-                color: AppColors.text,
-                height: 1.2,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.text2,
-                fontWeight: FontWeight.w500,
-                height: 1.2,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

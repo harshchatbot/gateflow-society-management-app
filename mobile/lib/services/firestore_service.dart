@@ -1132,17 +1132,18 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
       final todayStart = DateTime(now.year, now.month, now.day);
       final sevenDaysAgoStart = todayStart.subtract(const Duration(days: 6));
 
-      var query = _visitorsRef(societyId);
-      if (guardId != null && guardId.isNotEmpty) {
-        query = query.where('guard_uid', isEqualTo: guardId);
-      }
-      final snapshot = await query.limit(400).get();
+      final snapshot = guardId != null && guardId.isNotEmpty
+          ? await _visitorsRef(societyId)
+              .where('guard_uid', isEqualTo: guardId)
+              .limit(400)
+              .get()
+          : await _visitorsRef(societyId).limit(400).get();
 
       final counts = List<int>.filled(7, 0);
       for (final doc in snapshot.docs) {
         final data = doc.data();
         if (data == null) continue;
-        final createdAt = data['createdAt'];
+        final createdAt = (data as Map<String, dynamic>)['createdAt'];
         if (createdAt == null) continue;
         DateTime date;
         if (createdAt is Timestamp) {

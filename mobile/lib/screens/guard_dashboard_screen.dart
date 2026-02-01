@@ -461,7 +461,65 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
                 children: [
-                  _buildHeader(context),
+                  DashboardHero(
+                    userName: _dynamicName,
+                    statusMessage: (pendingCount + _sosBadgeCount) > 0
+                        ? '${pendingCount + _sosBadgeCount} pending · Check approvals'
+                        : 'All gates are secure',
+                    mascotMood: (pendingCount + _sosBadgeCount) > 0
+                        ? SentiMood.alert
+                        : (todayCount > 0 ? SentiMood.happy : SentiMood.idle),
+                    avatar: CircleAvatar(
+                      backgroundColor: Colors.white24,
+                      backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                          ? CachedNetworkImageProvider(_photoUrl!)
+                          : null,
+                      child: (_photoUrl == null || _photoUrl!.isEmpty)
+                          ? const Icon(Icons.person_rounded, color: Colors.white)
+                          : null,
+                    ),
+                    trailingActions: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Stack(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.notifications_rounded, color: Colors.white),
+                              onPressed: _showNotificationDrawer,
+                            ),
+                            if (pendingCount + _sosBadgeCount > 0)
+                              Positioned(
+                                right: 8,
+                                top: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.error,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
+                                  child: Text(
+                                    (pendingCount + _sosBadgeCount) > 9
+                                        ? '9+'
+                                        : (pendingCount + _sosBadgeCount).toString(),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.tune_rounded, color: Colors.white),
+                          onPressed: () => _showSettingsSheet(context),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 20),
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 20),
@@ -515,103 +573,6 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Row(
-      children: [
-        // Small profile avatar
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: Colors.white.withOpacity(0.8),
-              width: 2,
-            ),
-          ),
-          child: CircleAvatar(
-            backgroundColor: Colors.white24,
-            backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                ? CachedNetworkImageProvider(_photoUrl!)
-                : null,
-            child: (_photoUrl == null || _photoUrl!.isEmpty)
-                ? const Icon(
-                    Icons.person_rounded,
-                    color: Colors.white,
-                  )
-                : null,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Welcome back,",
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-              Text(
-                _dynamicName,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 24,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-          ),
-        ),
-        // Notification Bell Icon — opens notification drawer (SOS & notices)
-        Stack(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.notifications_rounded, color: Colors.white),
-              onPressed: _showNotificationDrawer,
-            ),
-            if (pendingCount + _sosBadgeCount > 0)
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: const BoxDecoration(
-                    color: AppColors.error,
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 18,
-                    minHeight: 18,
-                  ),
-                  child: Text(
-                    (pendingCount + _sosBadgeCount) > 9
-                        ? "9+"
-                        : (pendingCount + _sosBadgeCount).toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        IconButton(
-          icon: const Icon(Icons.tune_rounded, color: Colors.white),
-          onPressed: () => _showSettingsSheet(context),
-        ),
-      ],
-    );
-  }
-
   Widget _buildPremiumSocietyCard() {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -662,28 +623,28 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
       child: Row(
         children: [
           Expanded(
-            child: _StatCard(
+            child: DashboardStatCard(
               label: "Today",
               value: todayCount.toString(),
-              icon: Icons.today,
+              icon: Icons.today_rounded,
               color: AppColors.primary,
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: _StatCard(
+            child: DashboardStatCard(
               label: "Pending",
               value: pendingCount.toString(),
-              icon: Icons.hourglass_empty,
+              icon: Icons.hourglass_empty_rounded,
               color: AppColors.warning,
             ),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: _StatCard(
+            child: DashboardStatCard(
               label: "Approved",
               value: approvedCount.toString(),
-              icon: Icons.verified_user_outlined,
+              icon: Icons.verified_user_rounded,
               color: AppColors.success,
             ),
           ),
@@ -700,19 +661,19 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           key: _keyNewEntry,
           title: "New Visitor Entry",
           description: "Register a new visitor. Resident gets a request to approve.",
-          child: _QuickAction(label: "New Entry", icon: Icons.person_add_rounded, tint: AppColors.primary, onTap: widget.onTapNewEntry),
+          child: DashboardQuickAction(label: "New Entry", icon: Icons.person_add_rounded, tint: AppColors.primary, onTap: widget.onTapNewEntry),
         ),
         Showcase(
           key: _keyVisitors,
           title: "Visitor List / History",
           description: "View today's visitors and full history.",
-          child: _QuickAction(label: "Visitors", icon: Icons.groups_rounded, tint: AppColors.success, onTap: widget.onTapVisitors),
+          child: DashboardQuickAction(label: "Visitors", icon: Icons.groups_rounded, tint: AppColors.success, onTap: widget.onTapVisitors),
         ),
       ]);
     }
     if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
       children.add(
-        _QuickAction(
+        DashboardQuickAction(
           label: "Notices",
           icon: Icons.notifications_rounded,
           tint: AppColors.warning,
@@ -736,7 +697,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           key: _keySosAlerts,
           title: "SOS Alerts",
           description: "View and respond to emergency SOS from residents.",
-          child: _QuickAction(
+          child: DashboardQuickAction(
             label: "SOS Alerts",
             icon: Icons.sos_rounded,
             tint: AppColors.error,
@@ -761,7 +722,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         );
     }
     children.add(
-      _QuickAction(
+      DashboardQuickAction(
         label: "Residents",
         icon: Icons.people_rounded,
         tint: AppColors.admin,
@@ -779,7 +740,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     );
     if (SocietyModules.isEnabled(SocietyModuleIds.violations)) {
       children.add(
-        _QuickAction(
+        DashboardQuickAction(
           label: "Violations",
           icon: Icons.directions_car_rounded,
           tint: AppColors.warning,
@@ -821,21 +782,48 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         const SizedBox(height: 10),
         if (_recentVisitors.isEmpty)
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
             decoration: BoxDecoration(
               color: AppColors.surface,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Center(
-              child: Text(
-                "No recent visitors",
-                style: TextStyle(
-                  color: AppColors.text2,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
+              border: Border.all(color: AppColors.border.withOpacity(0.6)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
-              ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Image.asset(
+                  'assets/mascot/senti_idle.png',
+                  width: 80,
+                  height: 80,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Icon(Icons.person_outline_rounded, size: 56, color: AppColors.text2.withOpacity(0.5)),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  "No visitors yet today",
+                  style: TextStyle(
+                    color: AppColors.text2,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Add an entry when someone arrives",
+                  style: TextStyle(
+                    color: AppColors.textMuted,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
           )
         else
@@ -978,89 +966,6 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-// --- HELPER COMPONENTS ---
-
-class _StatCard extends StatelessWidget {
-  final String label;
-  final String value;
-  final IconData icon;
-  final Color color;
-  const _StatCard({required this.label, required this.value, required this.icon, required this.color});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.border)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: color, size: 20),
-          const SizedBox(height: 10),
-          Text(value, style: const TextStyle(color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 18)),
-          Text(label, style: const TextStyle(color: AppColors.text2, fontWeight: FontWeight.bold, fontSize: 11)),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickAction extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final Color tint;
-  final VoidCallback? onTap;
-  const _QuickAction({required this.label, required this.icon, required this.tint, this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.border)),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: tint, size: 28),
-            const SizedBox(height: 8),
-            Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ActivityTile extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final String badge;
-  final Color badgeColor;
-  final IconData icon;
-  const _ActivityTile({required this.title, required this.subtitle, required this.badge, required this.badgeColor, required this.icon});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(20), border: Border.all(color: AppColors.border)),
-      child: Row(
-        children: [
-          Icon(icon, color: AppColors.primary),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text(subtitle, style: const TextStyle(fontSize: 12, color: AppColors.text2)),
-            ]),
-          ),
-          Text(badge, style: TextStyle(color: badgeColor, fontWeight: FontWeight.bold, fontSize: 12)),
-        ],
       ),
     );
   }
