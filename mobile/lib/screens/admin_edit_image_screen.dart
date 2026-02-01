@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../ui/app_colors.dart';
@@ -242,19 +243,17 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                               fit: BoxFit.cover,
                             )
                           : widget.currentImagePath != null
-                              ? Image.network(
-                                  widget.currentImagePath!,
+                              ? CachedNetworkImage(
+                                  imageUrl: widget.currentImagePath!,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) {
-                                    return Container(
-                                      color: AppColors.bg,
-                                      child: const Icon(
-                                        Icons.admin_panel_settings_rounded,
-                                        size: 70,
-                                        color: AppColors.text2,
-                                      ),
-                                    );
-                                  },
+                                  placeholder: (context, url) => Container(
+                                    color: Colors.grey.shade300,
+                                    child: const Center(child: Icon(Icons.admin_panel_settings_rounded, size: 70, color: AppColors.text2)),
+                                  ),
+                                  errorWidget: (context, url, error) => Container(
+                                    color: AppColors.bg,
+                                    child: const Icon(Icons.admin_panel_settings_rounded, size: 70, color: AppColors.text2),
+                                  ),
                                 )
                               : Container(
                                   color: AppColors.bg,

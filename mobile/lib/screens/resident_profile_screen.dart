@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
@@ -333,7 +334,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                         radius: 45,
                         backgroundColor: Colors.white24,
                         backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                            ? NetworkImage(_photoUrl!)
+                            ? CachedNetworkImageProvider(_photoUrl!)
                             : null,
                         child: (_photoUrl == null || _photoUrl!.isEmpty)
                             ? const Icon(

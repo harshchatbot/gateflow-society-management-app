@@ -24,6 +24,13 @@ class Visitor {
   /// Resident (flat owner) phone — so guard can call while approval is pending
   final String? residentPhone;
 
+  /// New entry fields (walk-in)
+  final String? visitorName;
+  final String? deliveryPartner;
+  final String? deliveryPartnerOther;
+  final String? vehicleNumber;
+  final String? entryMode;
+
   Visitor({
     required this.visitorId,
     required this.societyId,
@@ -40,6 +47,11 @@ class Visitor {
     this.photoUrl,
     this.note,
     this.residentPhone,
+    this.visitorName,
+    this.deliveryPartner,
+    this.deliveryPartnerOther,
+    this.vehicleNumber,
+    this.entryMode,
   });
 
   factory Visitor.fromJson(Map<String, dynamic> json) {
@@ -72,6 +84,11 @@ class Visitor {
       photoUrl: json['photo_url'] as String?,
       note: json['note'] as String?,
       residentPhone: (json['resident_phone'] ?? json['residentPhone']) as String?,
+      visitorName: (json['visitor_name'] ?? json['visitorName']) as String?,
+      deliveryPartner: (json['delivery_partner'] ?? json['deliveryPartner']) as String?,
+      deliveryPartnerOther: (json['delivery_partner_other'] ?? json['deliveryPartnerOther']) as String?,
+      vehicleNumber: (json['vehicle_number'] ?? json['vehicleNumber']) as String?,
+      entryMode: (json['entry_mode'] ?? json['entryMode']) as String?,
     );
   }
 
@@ -95,6 +112,11 @@ class Visitor {
       'photo_url': photoUrl,
       'note': note,
       'resident_phone': residentPhone,
+      'visitor_name': visitorName,
+      'delivery_partner': deliveryPartner,
+      'delivery_partner_other': deliveryPartnerOther,
+      'vehicle_number': vehicleNumber,
+      'entry_mode': entryMode,
     };
   }
 }

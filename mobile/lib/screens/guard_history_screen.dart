@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../ui/app_colors.dart';
@@ -33,108 +34,125 @@ class GuardHistoryScreen extends StatefulWidget {
   State<GuardHistoryScreen> createState() => _GuardHistoryScreenState();
 }
 
+/// Page size for paginated history. Load more fetches next [kHistoryPageSize] docs.
+const int kHistoryPageSize = 30;
+
 class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
   final FirestoreService _firestore = FirestoreService();
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final TextEditingController _searchController = TextEditingController();
+
   List<Map<String, dynamic>> _visitors = [];
+  /// Cursor for "Load more": last document from previous page (null = no more or not loaded).
+  DocumentSnapshot? _lastDoc;
   bool _isLoading = false;
+  bool _isLoadingMore = false;
   String? _error;
+  DateTime? _filterDate;
 
   @override
   void initState() {
     super.initState();
     _loadHistory();
+    _searchController.addListener(() => setState(() {}));
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Map<String, dynamic>> get _filteredVisitors {
+    final query = _searchController.text.trim().toLowerCase();
+    final date = _filterDate;
+
+    return _visitors.where((v) {
+      if (date != null) {
+        DateTime? createdDt;
+        dynamic createdAt = v['createdAt'];
+        if (createdAt is Timestamp) createdDt = createdAt.toDate();
+        else if (createdAt is DateTime) createdDt = createdAt;
+        DateTime? approvedDt;
+        final approvedAt = v['approvedAt'] ?? v['approved_at'];
+        if (approvedAt is Timestamp) approvedDt = approvedAt.toDate();
+        else if (approvedAt is DateTime) approvedDt = approvedAt;
+        bool matchDate(DateTime d) => d.year == date.year && d.month == date.month && d.day == date.day;
+        final onDate = (createdDt != null && matchDate(createdDt)) || (approvedDt != null && matchDate(approvedDt));
+        if (!onDate) return false;
+      }
+      if (query.isEmpty) return true;
+      final name = (v['visitor_name']?.toString() ?? '').toLowerCase();
+      final phone = (v['visitor_phone']?.toString() ?? '').toLowerCase();
+      final type = (v['visitor_type']?.toString() ?? '').toLowerCase();
+      final flat = (v['flat_no']?.toString() ?? '').toLowerCase();
+      final dp = (v['delivery_partner']?.toString() ?? '').toLowerCase();
+      final dpo = (v['delivery_partner_other']?.toString() ?? '').toLowerCase();
+      final status = (v['status']?.toString() ?? '').toLowerCase();
+      return name.contains(query) || phone.contains(query) || type.contains(query) ||
+          flat.contains(query) || dp.contains(query) || dpo.contains(query) || status.contains(query);
+    }).toList();
+  }
+
+  /// One-time fetch: first page of guard history (society-scoped, paginated).
+  /// Resets _lastDoc so pull-to-refresh loads from the start.
   Future<void> _loadHistory() async {
     if (!mounted) return;
     setState(() {
       _isLoading = true;
       _error = null;
+      _lastDoc = null;
     });
 
     try {
-      AppLogger.i("Loading guard history", data: {"guardId": widget.guardId});
-      
-      // Get societyId from membership if not provided
+      AppLogger.i("Loading guard history (first page)", data: {"guardId": widget.guardId});
+
       String? societyId = widget.societyId;
       if (societyId == null || societyId.isEmpty) {
         final membership = await _firestore.getCurrentUserMembership();
         societyId = membership?['societyId'] as String?;
       }
-
       if (societyId == null || societyId.isEmpty) {
         throw Exception("Society ID not found");
       }
 
-      // Query Firestore for visitors created by this guard
-      // Query by guard_uid first, then filter by status in memory to avoid composite index
       final visitorsRef = _db
           .collection('societies')
           .doc(societyId)
           .collection('visitors');
 
-      QuerySnapshot querySnapshot;
-      try {
-        querySnapshot = await visitorsRef
-            .where('guard_uid', isEqualTo: widget.guardId)
-            .orderBy('createdAt', descending: true)
-            .limit(100)
-            .get()
-            .timeout(const Duration(seconds: 10));
-      } catch (e) {
-        AppLogger.w("getHistory timeout or error", error: e.toString());
-        // Return empty snapshot on error
-        querySnapshot = await visitorsRef
-            .where('guard_uid', isEqualTo: widget.guardId)
-            .limit(0)
-            .get();
-      }
+      // Paginated query: guard_uid + status in [APPROVED, REJECTED], orderBy createdAt desc, limit(kHistoryPageSize).
+      // Requires composite index: guard_uid (==), status (in), createdAt (desc).
+      Query<Map<String, dynamic>> query = visitorsRef
+          .where('guard_uid', isEqualTo: widget.guardId)
+          .where('status', whereIn: ['APPROVED', 'REJECTED'])
+          .orderBy('createdAt', descending: true)
+          .limit(kHistoryPageSize);
 
-      // Filter out PENDING in memory and convert to list
-      final allVisitors = querySnapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>?;
-        if (data == null) return null;
-        
-        final status = (data['status'] ?? 'PENDING').toString().toUpperCase();
-        if (status == 'PENDING') return null;
-        
+      QuerySnapshot<Map<String, dynamic>> querySnapshot = await query
+          .get()
+          .timeout(const Duration(seconds: 10));
+
+      final List<Map<String, dynamic>> allVisitors = querySnapshot.docs.map((doc) {
+        final data = doc.data();
         return {
           'visitor_id': doc.id,
           ...data,
         };
-      }).where((v) => v != null).cast<Map<String, dynamic>>().toList();
+      }).toList();
 
-      // Sort by createdAt descending (newest first)
-      allVisitors.sort((a, b) {
-        final aCreated = a['createdAt'];
-        final bCreated = b['createdAt'];
-        
-        DateTime aTime = DateTime(1970);
-        DateTime bTime = DateTime(1970);
-        
-        if (aCreated is Timestamp) {
-          aTime = aCreated.toDate();
-        } else if (aCreated is DateTime) {
-          aTime = aCreated;
-        }
-        
-        if (bCreated is Timestamp) {
-          bTime = bCreated.toDate();
-        } else if (bCreated is DateTime) {
-          bTime = bCreated;
-        }
-        
-        return bTime.compareTo(aTime);
-      });
+      DocumentSnapshot? lastDoc = querySnapshot.docs.isEmpty
+          ? null
+          : querySnapshot.docs.last;
 
       if (mounted) {
         setState(() {
           _visitors = allVisitors;
+          _lastDoc = lastDoc;
           _isLoading = false;
           _error = null;
         });
-        AppLogger.i("Loaded ${_visitors.length} history visitors", data: {
+        AppLogger.i("Loaded ${_visitors.length} history visitors (first page)", data: {
           "guardId": widget.guardId,
           "societyId": societyId,
         });
@@ -148,6 +166,69 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
           _isLoading = false;
           _error = "Connection error. Please check your network and try again.";
         });
+      }
+    }
+  }
+
+  /// Load next page using cursor from previous page. Keeps existing list and appends.
+  void _loadMore() {
+    if (_lastDoc == null || _isLoadingMore || _isLoading) return;
+    _loadMoreAsync();
+  }
+
+  Future<void> _loadMoreAsync() async {
+    if (!mounted || _lastDoc == null) return;
+    setState(() => _isLoadingMore = true);
+
+    try {
+      String? societyId = widget.societyId;
+      if (societyId == null || societyId.isEmpty) {
+        final membership = await _firestore.getCurrentUserMembership();
+        societyId = membership?['societyId'] as String?;
+      }
+      if (societyId == null || societyId.isEmpty) {
+        setState(() => _isLoadingMore = false);
+        return;
+      }
+
+      final visitorsRef = _db
+          .collection('societies')
+          .doc(societyId)
+          .collection('visitors');
+
+      Query<Map<String, dynamic>> query = visitorsRef
+          .where('guard_uid', isEqualTo: widget.guardId)
+          .where('status', whereIn: ['APPROVED', 'REJECTED'])
+          .orderBy('createdAt', descending: true)
+          .startAfterDocument(_lastDoc!)
+          .limit(kHistoryPageSize);
+
+      QuerySnapshot<Map<String, dynamic>> querySnapshot = await query.get();
+
+      final List<Map<String, dynamic>> next = querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'visitor_id': doc.id,
+          ...data,
+        };
+      }).toList();
+
+      DocumentSnapshot? newLastDoc = querySnapshot.docs.isEmpty
+          ? null
+          : querySnapshot.docs.last;
+
+      if (mounted) {
+        setState(() {
+          _visitors = [..._visitors, ...next];
+          _lastDoc = next.length < kHistoryPageSize ? null : newLastDoc;
+          _isLoadingMore = false;
+        });
+        AppLogger.i("Loaded more: +${next.length} (total ${_visitors.length})");
+      }
+    } catch (e, stackTrace) {
+      AppLogger.e("Error loading more history", error: e, stackTrace: stackTrace);
+      if (mounted) {
+        setState(() => _isLoadingMore = false);
       }
     }
   }
@@ -288,20 +369,206 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
               ),
             )
           else
-            RefreshIndicator(
-              onRefresh: _loadHistory,
-              color: AppColors.primary,
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                itemCount: _visitors.length,
-                itemBuilder: (context, index) {
-                  return _buildVisitorCard(_visitors[index]);
-                },
-              ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildFilterBar(),
+                Expanded(
+                  child: _filteredVisitors.isEmpty
+                      ? Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.filter_list_off_rounded, size: 56, color: AppColors.text2),
+                              const SizedBox(height: 16),
+                              const Text(
+                                "No entries match your filter",
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.text2),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                "Try a different search or date",
+                                style: TextStyle(fontSize: 14, color: AppColors.textMuted),
+                              ),
+                              const SizedBox(height: 16),
+                              TextButton.icon(
+                                onPressed: () {
+                                  _searchController.clear();
+                                  setState(() => _filterDate = null);
+                                },
+                                icon: const Icon(Icons.clear_all_rounded, size: 20),
+                                label: const Text("Clear filters"),
+                              ),
+                            ],
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _loadHistory,
+                          color: AppColors.primary,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                            itemCount: _filteredVisitors.length + (_lastDoc != null ? 1 : 0),
+                            itemBuilder: (context, index) {
+                              if (index == _filteredVisitors.length) {
+                                return _buildLoadMoreRow();
+                              }
+                              return _buildVisitorCard(_filteredVisitors[index]);
+                            },
+                          ),
+                        ),
+                ),
+              ],
             ),
           AppLoader.overlay(show: _isLoading, message: "Loading history…"),
         ],
       ),
+      ),
+    );
+  }
+
+  Widget _buildFilterBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      color: AppColors.bg,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: "Search by flat, phone, category, delivery…",
+              hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
+              prefixIcon: Icon(Icons.search_rounded, color: AppColors.primary, size: 22),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear_rounded, size: 20),
+                      onPressed: () => _searchController.clear(),
+                    )
+                  : null,
+              filled: true,
+              fillColor: AppColors.surface,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            ),
+            style: const TextStyle(fontSize: 15),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Text("Date: ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.text2)),
+              GestureDetector(
+                onTap: () => setState(() => _filterDate = null),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _filterDate == null ? AppColors.primary.withOpacity(0.12) : AppColors.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _filterDate == null ? AppColors.primary.withOpacity(0.3) : AppColors.border,
+                    ),
+                  ),
+                  child: Text(
+                    "All dates",
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: _filterDate == null ? AppColors.primary : AppColors.text2,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _filterDate ?? DateTime.now(),
+                    firstDate: DateTime(2020),
+                    lastDate: DateTime.now(),
+                  );
+                  if (picked != null) setState(() => _filterDate = picked);
+                },
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: _filterDate != null ? AppColors.primary.withOpacity(0.12) : AppColors.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: _filterDate != null ? AppColors.primary.withOpacity(0.3) : AppColors.border,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.calendar_today_rounded,
+                        size: 16,
+                        color: _filterDate != null ? AppColors.primary : AppColors.text2,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _filterDate != null
+                            ? "${_filterDate!.day}/${_filterDate!.month}/${_filterDate!.year}"
+                            : "Pick date",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: _filterDate != null ? AppColors.primary : AppColors.text2,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (_filterDate != null) ...[
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: () => setState(() => _filterDate = null),
+                  child: Icon(Icons.close_rounded, size: 20, color: AppColors.text2),
+                ),
+              ],
+            ],
+          ),
+          if (_visitors.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Text(
+              "Showing ${_filteredVisitors.length} of ${_visitors.length} entries",
+              style: TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// "Load more" row at bottom of list when another page is available.
+  Widget _buildLoadMoreRow() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Center(
+        child: _isLoadingMore
+            ? const Padding(
+                padding: EdgeInsets.all(16),
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : TextButton.icon(
+                onPressed: _loadMore,
+                icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                label: const Text("Load more"),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+              ),
       ),
     );
   }
@@ -355,20 +622,29 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
     final residentPhone = (visitorData['resident_phone'] ?? '').toString().trim();
     final status = (visitorData['status'] ?? 'PENDING').toString();
     final createdAt = visitorData['createdAt'];
+    final approvedAtRaw = visitorData['approvedAt'] ?? visitorData['approved_at'];
     final photoUrl = visitorData['photo_url'] ?? visitorData['photoUrl'];
-    
-    // Parse createdAt to DateTime for display
+    final deliveryPartner = (visitorData['delivery_partner']?.toString() ?? '').trim();
+    final deliveryPartnerOther = (visitorData['delivery_partner_other']?.toString() ?? '').trim();
+
     DateTime? createdDateTime;
     if (createdAt != null) {
-      if (createdAt is Timestamp) {
-        createdDateTime = createdAt.toDate();
-      } else if (createdAt is DateTime) {
-        createdDateTime = createdAt;
-      }
+      if (createdAt is Timestamp) createdDateTime = createdAt.toDate();
+      else if (createdAt is DateTime) createdDateTime = createdAt;
     }
-    final displayTime = createdDateTime != null 
-        ? _formatTime(createdDateTime)
-        : 'Recently';
+    DateTime? approvedDateTime;
+    if (approvedAtRaw != null) {
+      if (approvedAtRaw is Timestamp) approvedDateTime = approvedAtRaw.toDate();
+      else if (approvedAtRaw is DateTime) approvedDateTime = approvedAtRaw;
+    }
+
+    final hasDeliveryPartner = visitorType == 'DELIVERY' &&
+        (deliveryPartner.isNotEmpty || deliveryPartnerOther.isNotEmpty);
+    final deliveryDisplay = hasDeliveryPartner
+        ? (deliveryPartner == 'Other'
+            ? (deliveryPartnerOther.isNotEmpty ? deliveryPartnerOther : 'Other')
+            : deliveryPartner)
+        : null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -410,9 +686,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Row: Type + Status
+                // Header Row: Type + Delivery Partner chip (if DELIVERY) + Status
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -429,6 +704,37 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                         ),
                       ),
                     ),
+                    if (deliveryDisplay != null && deliveryDisplay.isNotEmpty) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.local_shipping_outlined, size: 14, color: Colors.orange.shade700),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                deliveryDisplay,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.orange.shade800,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
                     StatusChip(status: status, compact: true),
                   ],
                 ),
@@ -450,19 +756,17 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                       ),
                       child: ClipOval(
                         child: photoUrl != null && photoUrl.isNotEmpty
-                            ? Image.network(
-                                photoUrl,
+                            ? CachedNetworkImage(
+                                imageUrl: photoUrl,
                                 fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: AppColors.primarySoft,
-                                    child: const Icon(
-                                      Icons.person_rounded,
-                                      color: AppColors.primary,
-                                      size: 24,
-                                    ),
-                                  );
-                                },
+                                placeholder: (context, url) => Container(
+                                  color: Colors.grey.shade300,
+                                  child: const Center(child: Icon(Icons.person_rounded, color: AppColors.primary, size: 24)),
+                                ),
+                                errorWidget: (context, url, error) => Container(
+                                  color: AppColors.primarySoft,
+                                  child: const Icon(Icons.person_rounded, color: AppColors.primary, size: 24),
+                                ),
                               )
                             : Container(
                                 color: AppColors.primarySoft,
@@ -589,18 +893,36 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
-                        Icons.access_time_rounded,
+                        Icons.schedule_rounded,
                         size: 14,
                         color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      displayTime,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.text2,
-                        fontWeight: FontWeight.w600,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            "Raised: ${createdDateTime != null ? _formatDateTime(createdDateTime) : '—'}",
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.text2,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          if (approvedDateTime != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              "Approved: ${_formatDateTime(approvedDateTime)}",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppColors.success,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                     ),
                   ],

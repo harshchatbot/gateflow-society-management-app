@@ -78,19 +78,36 @@ class _ResidentNotificationDrawerState extends State<ResidentNotificationDrawer>
         approvalNotifications = allApprovals
             .take(5)
             .map((a) {
-              final visitorName = a['visitor_name']?.toString() ?? 
-                                 a['name']?.toString() ?? 
-                                 a['visitor_phone']?.toString() ?? 
-                                 'Visitor';
+              final rawVisitorName = a['visitor_name']?.toString().trim();
+              final rawName = a['name']?.toString().trim();
+              final rawPhone = a['visitor_phone']?.toString().trim();
+              final visitorName = (rawVisitorName != null && rawVisitorName.isNotEmpty)
+                  ? rawVisitorName
+                  : (rawName != null && rawName.isNotEmpty)
+                      ? rawName
+                      : (rawPhone != null && rawPhone.isNotEmpty)
+                          ? rawPhone
+                          : 'Visitor';
+              final visitorType = a['visitor_type']?.toString() ?? 'Guest';
+              final dp = a['delivery_partner']?.toString().trim();
+              final dpo = a['delivery_partner_other']?.toString().trim();
+              final isDelivery = visitorType.toUpperCase() == 'DELIVERY';
+              final hasDeliveryPartner = isDelivery && ((dp != null && dp.isNotEmpty) || (dpo != null && dpo.isNotEmpty));
+              final deliveryLabel = hasDeliveryPartner
+                  ? (dp == 'Other' ? (dpo?.isNotEmpty == true ? dpo! : 'Other') : (dp ?? ''))
+                  : null;
+              final description = deliveryLabel != null && deliveryLabel.isNotEmpty
+                  ? '$visitorName - $visitorType ($deliveryLabel)'
+                  : '$visitorName - $visitorType';
               return {
                 'type': 'visitor',
                 'id': a['visitor_id']?.toString() ?? '',
                 'title': 'Visitor Approval Request',
-                'description': '$visitorName - ${a['visitor_type']?.toString() ?? 'Guest'}',
+                'description': description,
                 'status': a['status']?.toString() ?? 'PENDING',
                 'created_at': a['created_at']?.toString() ?? '',
                 'visitor_name': visitorName,
-                'visitor_type': a['visitor_type']?.toString() ?? 'GUEST',
+                'visitor_type': visitorType,
               };
             })
             .toList();

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/firestore_service.dart';
@@ -304,12 +305,13 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
             if (photoUrl != null && photoUrl.isNotEmpty)
               ClipRRect(
                 borderRadius: BorderRadius.circular(8),
-                child: Image.network(
-                  photoUrl,
+                child: CachedNetworkImage(
+                  imageUrl: photoUrl,
                   width: 48,
                   height: 48,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => const SizedBox(width: 48, height: 48),
+                  placeholder: (context, url) => Container(width: 48, height: 48, color: Colors.grey.shade300),
+                  errorWidget: (context, url, error) => const SizedBox(width: 48, height: 48),
                 ),
               ),
           ],

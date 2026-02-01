@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:gateflow/models/visitor.dart';
@@ -302,7 +303,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
                 radius: 20,
                 backgroundColor: AppColors.primarySoft,
                 backgroundImage: (v.photoUrl != null && v.photoUrl!.isNotEmpty)
-                    ? NetworkImage(v.photoUrl!)
+                    ? CachedNetworkImageProvider(v.photoUrl!)
                     : null,
                 child: (v.photoUrl == null || v.photoUrl!.isEmpty)
                     ? const Icon(Icons.person, size: 20, color: AppColors.primary)

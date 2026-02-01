@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
@@ -28,6 +30,9 @@ class AdminManageGuardsScreen extends StatefulWidget {
   State<AdminManageGuardsScreen> createState() => _AdminManageGuardsScreenState();
 }
 
+/// Page size for paginated guards list. Load more fetches next [kGuardsPageSize] docs.
+const int kGuardsPageSize = 30;
+
 class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
   late final AdminService _service = AdminService(
     baseUrl: Env.apiBaseUrl,
@@ -37,7 +42,10 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
 
   List<dynamic> _guards = [];
   List<dynamic> _filteredGuards = [];
+  /// Cursor for "Load more" (null = no more or not loaded).
+  DocumentSnapshot? _lastDoc;
   bool _isLoading = false;
+  bool _isLoadingMore = false;
   String? _error;
   final TextEditingController _searchController = TextEditingController();
 
@@ -78,39 +86,49 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
     });
   }
 
+  /// One-time fetch: first page of guards (paginated). Resets _lastDoc on refresh.
   Future<void> _loadGuards() async {
     if (!mounted) return;
     setState(() {
       _isLoading = true;
       _error = null;
+      _lastDoc = null;
     });
 
     try {
-      final members = await _firestore.getMembers(
+      final result = await _firestore.getMembersPage(
         societyId: widget.societyId,
         systemRole: 'guard',
+        limit: kGuardsPageSize,
+        startAfter: null,
       );
 
       if (!mounted) return;
 
-      // Adapt Firestore members to existing guard card shape
-      final mapped = members.map((m) {
+      final list = result['list'] as List<dynamic>? ?? [];
+      final lastDoc = result['lastDoc'] as DocumentSnapshot?;
+
+      final mapped = list.map((m) {
+        final data = m as Map<String, dynamic>;
         return {
-          'guard_id': m['uid'] ?? m['id'],
-          'guard_name': m['name'] ?? 'Guard',
-          'phone': m['phone'],
-          'role': (m['systemRole'] ?? 'GUARD').toString().toUpperCase(),
-          'active': m['active'] ?? true,
+          'guard_id': data['uid'] ?? data['id'],
+          'guard_name': data['name'] ?? 'Guard',
+          'phone': data['phone'],
+          'role': (data['systemRole'] ?? 'GUARD').toString().toUpperCase(),
+          'active': data['active'] ?? true,
           'society_id': widget.societyId,
+          'photoUrl': data['photoUrl'],
+          'photo_url': data['photo_url'],
         };
       }).toList();
 
       setState(() {
         _guards = mapped;
         _filteredGuards = _guards;
+        _lastDoc = lastDoc;
         _isLoading = false;
       });
-      AppLogger.i("Loaded ${_guards.length} guards from Firestore");
+      AppLogger.i("Loaded ${_guards.length} guards (first page)");
     } catch (e) {
       AppLogger.e("Error loading guards", error: e);
       if (mounted) {
@@ -136,6 +154,56 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
           ),
         );
       }
+    }
+  }
+
+  void _loadMoreGuards() {
+    if (_lastDoc == null || _isLoadingMore || _isLoading) return;
+    _loadMoreGuardsAsync();
+  }
+
+  Future<void> _loadMoreGuardsAsync() async {
+    if (!mounted || _lastDoc == null) return;
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final result = await _firestore.getMembersPage(
+        societyId: widget.societyId,
+        systemRole: 'guard',
+        limit: kGuardsPageSize,
+        startAfter: _lastDoc,
+      );
+
+      if (!mounted) return;
+
+      final list = result['list'] as List<dynamic>? ?? [];
+      final lastDoc = result['lastDoc'] as DocumentSnapshot?;
+
+      final mapped = list.map((m) {
+        final data = m as Map<String, dynamic>;
+        return {
+          'guard_id': data['uid'] ?? data['id'],
+          'guard_name': data['name'] ?? 'Guard',
+          'phone': data['phone'],
+          'role': (data['systemRole'] ?? 'GUARD').toString().toUpperCase(),
+          'active': data['active'] ?? true,
+          'society_id': widget.societyId,
+          'photoUrl': data['photoUrl'],
+          'photo_url': data['photo_url'],
+        };
+      }).toList();
+
+      setState(() {
+        _guards = [..._guards, ...mapped];
+        _filteredGuards = _guards;
+        _lastDoc = mapped.length < kGuardsPageSize ? null : lastDoc;
+        _isLoadingMore = false;
+      });
+      _filterGuards();
+      AppLogger.i("Loaded more guards: +${mapped.length} (total ${_guards.length})");
+    } catch (e) {
+      AppLogger.e("Error loading more guards", error: e);
+      if (mounted) setState(() => _isLoadingMore = false);
     }
   }
 
@@ -363,10 +431,39 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
       color: AppColors.admin,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-        itemCount: _filteredGuards.length,
+        itemCount: _filteredGuards.length + (_lastDoc != null ? 1 : 0),
         itemBuilder: (context, index) {
-          return _buildGuardCard(_filteredGuards[index]);
+          if (index == _filteredGuards.length) {
+            return _buildLoadMoreRow();
+          }
+          return _buildGuardCard(_filteredGuards[index] as Map<String, dynamic>);
         },
+      ),
+    );
+  }
+
+  Widget _buildLoadMoreRow() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Center(
+        child: _isLoadingMore
+            ? const Padding(
+                padding: EdgeInsets.all(16),
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : TextButton.icon(
+                onPressed: _loadMoreGuards,
+                icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                label: const Text("Load more"),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.admin,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+              ),
       ),
     );
   }
@@ -378,6 +475,8 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
     final role = (guard['role'] ?? 'GUARD').toString().toUpperCase();
     final active = (guard['active'] ?? 'TRUE').toString().toUpperCase() == 'TRUE';
     final isAdmin = role == 'ADMIN';
+    final photoUrl = (guard['photoUrl'] ?? guard['photo_url'] ?? '').toString().trim();
+    final hasPhoto = photoUrl.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -401,16 +500,13 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            _showGuardDetails(guard);
-          },
+          onTap: () => _showGuardDetails(guard),
           borderRadius: BorderRadius.circular(18),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Row: Name + Status
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -425,11 +521,33 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                                   ? AppColors.admin.withOpacity(0.15)
                                   : AppColors.primary.withOpacity(0.15),
                               shape: BoxShape.circle,
+                              border: Border.all(color: AppColors.border.withOpacity(0.5)),
                             ),
-                            child: Icon(
-                              isAdmin ? Icons.admin_panel_settings_rounded : Icons.shield_rounded,
-                              color: isAdmin ? AppColors.admin : AppColors.primary,
-                              size: 24,
+                            child: ClipOval(
+                              child: hasPhoto
+                                  ? CachedNetworkImage(
+                                      imageUrl: photoUrl,
+                                      fit: BoxFit.cover,
+                                      width: 48,
+                                      height: 48,
+                                      placeholder: (_, __) => Center(
+                                        child: Icon(
+                                          isAdmin ? Icons.admin_panel_settings_rounded : Icons.shield_rounded,
+                                          color: isAdmin ? AppColors.admin : AppColors.primary,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      errorWidget: (_, __, ___) => Icon(
+                                        isAdmin ? Icons.admin_panel_settings_rounded : Icons.shield_rounded,
+                                        color: isAdmin ? AppColors.admin : AppColors.primary,
+                                        size: 24,
+                                      ),
+                                    )
+                                  : Icon(
+                                      isAdmin ? Icons.admin_panel_settings_rounded : Icons.shield_rounded,
+                                      color: isAdmin ? AppColors.admin : AppColors.primary,
+                                      size: 24,
+                                    ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -496,7 +614,6 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                 const Divider(height: 1),
                 const SizedBox(height: 12),
 
-                // Details
                 _buildDetailRow(Icons.badge_rounded, "Guard ID", guardId),
                 if (phone != 'N/A') ...[
                   const SizedBox(height: 8),
@@ -545,6 +662,9 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
   }
 
   void _showGuardDetails(Map<String, dynamic> guard) {
+    final photoUrl = (guard['photoUrl'] ?? guard['photo_url'] ?? '').toString().trim();
+    final hasPhoto = photoUrl.isNotEmpty;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -577,21 +697,49 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
               ),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.admin.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
+                  GestureDetector(
+                    onTap: hasPhoto
+                        ? () {
+                            Navigator.of(context).pop();
+                            _showFullScreenImage(photoUrl);
+                          }
+                        : null,
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: AppColors.admin.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: hasPhoto
+                            ? CachedNetworkImage(
+                                imageUrl: photoUrl,
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) => const Center(
+                                  child: Icon(Icons.shield_rounded, color: AppColors.admin, size: 28),
+                                ),
+                                errorWidget: (_, __, ___) => const Icon(
+                                  Icons.shield_rounded,
+                                  color: AppColors.admin,
+                                  size: 28,
+                                ),
+                              )
+                            : const Icon(Icons.shield_rounded, color: AppColors.admin, size: 28),
+                      ),
                     ),
-                    child: const Icon(Icons.shield_rounded, color: AppColors.admin, size: 24),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    "Guard Details",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.text,
+                  const Expanded(
+                    child: Text(
+                      "Guard Details",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.text,
+                      ),
                     ),
                   ),
                 ],
@@ -607,6 +755,35 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                 _buildDetailSection("Society ID", guard['society_id'] ?? 'N/A'),
               const SizedBox(height: 20),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showFullScreenImage(String imageUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+            title: const Text("Photo", style: TextStyle(color: Colors.white)),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4,
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.contain,
+                placeholder: (_, __) => const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+                errorWidget: (_, __, ___) => const Icon(Icons.broken_image_rounded, color: Colors.white, size: 64),
+              ),
+            ),
           ),
         ),
       ),

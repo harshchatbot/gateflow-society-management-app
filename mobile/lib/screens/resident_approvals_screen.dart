@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/resident_service.dart';
@@ -353,11 +354,20 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
     final visitorId = visitor['visitor_id']?.toString() ?? '';
     final visitorType = visitor['visitor_type']?.toString() ?? 'GUEST';
     final visitorPhone = visitor['visitor_phone']?.toString() ?? '';
+    final visitorName = visitor['visitor_name']?.toString().trim();
+    final deliveryPartner = visitor['delivery_partner']?.toString().trim();
+    final deliveryPartnerOther = visitor['delivery_partner_other']?.toString().trim();
     final status = visitor['status']?.toString() ?? 'PENDING';
     final createdAt = visitor['created_at']?.toString() ?? '';
     final photoUrl = visitor['photo_url']?.toString() ?? visitor['photoUrl']?.toString();
     final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
     final isProcessing = _processingVisitorId == visitorId;
+    final hasDeliveryPartner = visitorType == 'DELIVERY' &&
+        ((deliveryPartner != null && deliveryPartner.isNotEmpty) ||
+            (deliveryPartnerOther != null && deliveryPartnerOther.isNotEmpty));
+    final deliveryDisplay = hasDeliveryPartner
+        ? (deliveryPartner == 'Other' ? (deliveryPartnerOther?.isNotEmpty == true ? deliveryPartnerOther! : 'Other') : (deliveryPartner ?? ''))
+        : null;
 
     return Container(
       padding: const EdgeInsets.all(14),
@@ -379,7 +389,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: Type + Status
+          // Header: Type + Delivery Partner chip (if DELIVERY) + Status
           Row(
             children: [
               Container(
@@ -408,6 +418,36 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                   ],
                 ),
               ),
+              if (deliveryDisplay != null && deliveryDisplay.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.local_shipping_outlined, size: 14, color: Colors.orange.shade700),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                          deliveryDisplay,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.orange.shade800,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               const Spacer(),
               StatusChip(status: status, compact: true),
             ],
@@ -430,19 +470,19 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                     ),
                   ),
                   child: ClipOval(
-                    child: Image.network(
-                      photoUrl,
+                    child: CachedNetworkImage(
+                      imageUrl: photoUrl,
                       fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
-                          color: AppColors.success.withOpacity(0.1),
-                          child: const Icon(
-                            Icons.person_rounded,
-                            color: AppColors.success,
-                            size: 24,
-                          ),
-                        );
-                      },
+                      width: 50,
+                      height: 50,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey.shade300,
+                        child: const Center(child: Icon(Icons.person_rounded, color: AppColors.success, size: 24)),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: AppColors.success.withOpacity(0.1),
+                        child: const Icon(Icons.person_rounded, color: AppColors.success, size: 24),
+                      ),
                     ),
                   ),
                 ),
@@ -452,6 +492,12 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    if (visitorName != null && visitorName.isNotEmpty)
+                      _buildCompactDetailRow(Icons.person_outline_rounded, visitorName),
+                    if (visitorName != null && visitorName.isNotEmpty) const SizedBox(height: 6),
+                    if (deliveryDisplay != null && deliveryDisplay.isNotEmpty)
+                      _buildCompactDetailRow(Icons.local_shipping_outlined, 'Delivery: $deliveryDisplay'),
+                    if (deliveryDisplay != null && deliveryDisplay.isNotEmpty) const SizedBox(height: 6),
                     _buildCompactDetailRow(Icons.phone_rounded, visitorPhone),
                     const SizedBox(height: 6),
                     _buildCompactDetailRow(Icons.access_time_rounded, _formatDateTime(createdAt)),

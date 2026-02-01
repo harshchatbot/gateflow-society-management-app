@@ -78,7 +78,13 @@ class _PoweredByFooterState extends State<PoweredByFooter> {
                   ),
                   recognizer: _ttfRecognizer,
                 ),
-                const TextSpan(text: '  •  Built with ❤️ from Rajasthan, India '),
+                const TextSpan(
+                  text: '  •  Built with ❤️ from Rajasthan, India ',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+
               ],
             ),
           ),

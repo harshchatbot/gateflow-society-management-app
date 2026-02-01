@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
@@ -283,12 +284,16 @@ class _GuardResidentsDirectoryScreenState
                   ),
                   child: ClipOval(
                     child: hasPhoto
-                        ? Image.network(
-                            photoUrl,
+                        ? CachedNetworkImage(
+                            imageUrl: photoUrl,
                             width: 44,
                             height: 44,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
+                            placeholder: (context, url) => Container(
+                              color: Colors.grey.shade300,
+                              child: const Center(child: Icon(Icons.person_rounded, color: AppColors.primary, size: 22)),
+                            ),
+                            errorWidget: (context, url, error) => const Icon(
                               Icons.person_rounded,
                               color: AppColors.primary,
                               size: 22,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/complaint_service.dart';
@@ -487,12 +488,17 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                   const SizedBox(height: 12),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      photoUrl,
+                    child: CachedNetworkImage(
+                      imageUrl: photoUrl,
                       height: 140,
                       width: double.infinity,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      placeholder: (context, url) => Container(
+                        height: 140,
+                        color: Colors.grey.shade300,
+                        child: const Center(child: Icon(Icons.image_outlined, color: AppColors.textMuted, size: 40)),
+                      ),
+                      errorWidget: (context, url, error) => Container(
                         height: 140,
                         color: AppColors.bg,
                         child: const Center(
@@ -702,12 +708,17 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                 const SizedBox(height: 16),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
-                  child: Image.network(
-                    photoUrl,
+                  child: CachedNetworkImage(
+                    imageUrl: photoUrl,
                     width: double.infinity,
                     height: 200,
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Container(
+                    placeholder: (context, url) => Container(
+                      height: 200,
+                      color: Colors.grey.shade300,
+                      child: const Center(child: Icon(Icons.image_outlined, color: AppColors.textMuted, size: 48)),
+                    ),
+                    errorWidget: (context, url, error) => Container(
                       height: 200,
                       color: AppColors.bg,
                       child: const Center(

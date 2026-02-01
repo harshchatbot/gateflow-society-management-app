@@ -40,6 +40,10 @@ class FirebaseVisitorService {
     required String visitorPhone,
     required File photoFile,
     String? residentPhone,
+    String? visitorName,
+    String? deliveryPartner,
+    String? deliveryPartnerOther,
+    String? vehicleNumber,
   }) async {
     try {
       final uid = currentUid;
@@ -107,6 +111,7 @@ class FirebaseVisitorService {
 
       // 5) Create Firestore document
       final now = FieldValue.serverTimestamp();
+      final isDelivery = visitorType.toUpperCase() == 'DELIVERY';
       final visitorData = {
         "visitor_id": visitorId,
         "society_id": societyId,
@@ -118,6 +123,11 @@ class FirebaseVisitorService {
         "photo_url": photoUrl,
         "createdAt": now,
         "updatedAt": now,
+        "entry_mode": "walk_in",
+        if (visitorName != null && visitorName.isNotEmpty) "visitor_name": visitorName.trim(),
+        if (vehicleNumber != null && vehicleNumber.isNotEmpty) "vehicle_number": vehicleNumber.trim(),
+        if (isDelivery && deliveryPartner != null && deliveryPartner.isNotEmpty) "delivery_partner": deliveryPartner.trim(),
+        if (isDelivery && deliveryPartnerOther != null && deliveryPartnerOther.isNotEmpty) "delivery_partner_other": deliveryPartnerOther.trim(),
       };
 
       final visitorRef = _visitorsRef(societyId).doc(visitorId);
@@ -173,6 +183,10 @@ class FirebaseVisitorService {
     required String visitorType,
     required String visitorPhone,
     String? residentPhone,
+    String? visitorName,
+    String? deliveryPartner,
+    String? deliveryPartnerOther,
+    String? vehicleNumber,
   }) async {
     try {
       final uid = currentUid;
@@ -196,6 +210,7 @@ class FirebaseVisitorService {
       AppLogger.d("Generated visitor ID", data: {"visitorId": visitorId});
 
       final now = FieldValue.serverTimestamp();
+      final isDelivery = visitorType.toUpperCase() == 'DELIVERY';
       final visitorData = {
         "visitor_id": visitorId,
         "society_id": societyId,
@@ -206,7 +221,12 @@ class FirebaseVisitorService {
         "status": "PENDING",
         "createdAt": now,
         "updatedAt": now,
+        "entry_mode": "walk_in",
         if (residentPhone != null && residentPhone.isNotEmpty) "resident_phone": residentPhone.trim(),
+        if (visitorName != null && visitorName.isNotEmpty) "visitor_name": visitorName.trim(),
+        if (vehicleNumber != null && vehicleNumber.isNotEmpty) "vehicle_number": vehicleNumber.trim(),
+        if (isDelivery && deliveryPartner != null && deliveryPartner.isNotEmpty) "delivery_partner": deliveryPartner.trim(),
+        if (isDelivery && deliveryPartnerOther != null && deliveryPartnerOther.isNotEmpty) "delivery_partner_other": deliveryPartnerOther.trim(),
       };
 
       final visitorRef = _visitorsRef(societyId).doc(visitorId);
@@ -301,8 +321,9 @@ class FirebaseVisitorService {
     return AppError(userMessage: userMessage, technicalMessage: technical);
   }
 
-  /// Get pending approvals for a flat
-  /// Returns list of visitors with status = "PENDING" for the given flat_no
+  /// Get pending approvals for a flat (one-time get, scoped to society).
+  /// Returns list of visitors with status = "PENDING" for the given flat_no.
+  /// Limit 50 to avoid loading too many at once.
   Future<Result<List<Map<String, dynamic>>>> getPendingApprovals({
     required String societyId,
     required String flatNo,
@@ -320,6 +341,7 @@ class FirebaseVisitorService {
           .where('flat_no', isEqualTo: normalizedFlatNo)
           .where('status', isEqualTo: 'PENDING')
           .orderBy('createdAt', descending: true)
+          .limit(50)
           .get();
 
       final List<Map<String, dynamic>> visitors = [];
@@ -484,13 +506,16 @@ class FirebaseVisitorService {
           approvedAt = (data['approved_at'] as Timestamp).toDate();
         }
         
-        // Format data to match backend API response format
+        // Format data to match backend API response format (include delivery/visitor name for resident UI)
         visitors.add({
           'visitor_id': data['visitor_id'] ?? doc.id,
           'society_id': data['society_id'] ?? societyId,
           'flat_no': data['flat_no'] ?? normalizedFlatNo,
           'visitor_type': data['visitor_type'] ?? 'GUEST',
           'visitor_phone': data['visitor_phone'] ?? '',
+          'visitor_name': data['visitor_name'],
+          'delivery_partner': data['delivery_partner'],
+          'delivery_partner_other': data['delivery_partner_other'],
           'status': data['status'] ?? '',
           'created_at': createdAt.toIso8601String(),
           'approved_at': approvedAt?.toIso8601String(),
@@ -514,6 +539,83 @@ class FirebaseVisitorService {
       );
       AppLogger.e("getHistory unknown error", error: err.technicalMessage, stackTrace: stackTrace);
       return Result.failure(err);
+    }
+  }
+
+  /// Paginated resident history: one-time get(), scoped to society.
+  /// Uses orderBy(createdAt, descending) + limit + startAfterDocument for "Load more".
+  /// Returns { 'visitors': List<Map>, 'lastDoc': DocumentSnapshot? } for next page.
+  /// Requires composite index: flat_no (==), status (in), createdAt (desc).
+  Future<Result<Map<String, dynamic>>> getHistoryPage({
+    required String societyId,
+    required String flatNo,
+    int limit = 30,
+    DocumentSnapshot? startAfter,
+  }) async {
+    try {
+      final visitorsRef = _visitorsRef(societyId);
+      final normalizedFlatNo = flatNo.trim().toUpperCase();
+
+      final baseQuery = visitorsRef
+          .where('flat_no', isEqualTo: normalizedFlatNo)
+          .where('status', whereIn: ['APPROVED', 'REJECTED'])
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+
+      final querySnapshot = startAfter == null
+          ? await baseQuery.get()
+          : await baseQuery.startAfterDocument(startAfter).get();
+
+      final List<Map<String, dynamic>> visitors = [];
+      for (var doc in querySnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        DateTime createdAt;
+        if (data['createdAt'] is Timestamp) {
+          createdAt = (data['createdAt'] as Timestamp).toDate();
+        } else {
+          createdAt = DateTime.now();
+        }
+        DateTime? approvedAt;
+        if (data['approved_at'] is Timestamp) {
+          approvedAt = (data['approved_at'] as Timestamp).toDate();
+        }
+        visitors.add({
+          'visitor_id': data['visitor_id'] ?? doc.id,
+          'society_id': data['society_id'] ?? societyId,
+          'flat_no': data['flat_no'] ?? normalizedFlatNo,
+          'visitor_type': data['visitor_type'] ?? 'GUEST',
+          'visitor_phone': data['visitor_phone'] ?? '',
+          'visitor_name': data['visitor_name'],
+          'delivery_partner': data['delivery_partner'],
+          'delivery_partner_other': data['delivery_partner_other'],
+          'status': data['status'] ?? '',
+          'created_at': createdAt.toIso8601String(),
+          'approved_at': approvedAt?.toIso8601String(),
+          'approved_by': data['approved_by'],
+          'guard_id': data['guard_uid'] ?? '',
+          'photo_url': data['photo_url'],
+          'note': data['note'],
+        });
+      }
+
+      final DocumentSnapshot? lastDoc = querySnapshot.docs.isEmpty
+          ? null
+          : querySnapshot.docs.last;
+
+      return Result.success({
+        'visitors': visitors,
+        'lastDoc': lastDoc,
+      });
+    } on FirebaseException catch (e) {
+      final err = _mapFirebaseError(e);
+      AppLogger.e("getHistoryPage FirebaseException", error: err.technicalMessage);
+      return Result.failure(err);
+    } catch (e, stackTrace) {
+      AppLogger.e("getHistoryPage unknown error", error: e, stackTrace: stackTrace);
+      return Result.failure(AppError(
+        userMessage: "Failed to load history",
+        technicalMessage: e.toString(),
+      ));
     }
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:confetti/confetti.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:gateflow/models/visitor.dart';
@@ -161,14 +162,20 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
           fit: StackFit.expand,
           children: [
             if (hasPhoto)
-              Image.network(
-                _visitor.photoUrl!,
+              CachedNetworkImage(
+                imageUrl: _visitor.photoUrl!,
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
+                placeholder: (context, url) => Container(
+                  color: Colors.grey.shade300,
+                  child: Center(
+                    child: Icon(AppIcons.more, color: AppColors.textMuted.withOpacity(0.8), size: 40),
+                  ),
+                ),
+                errorWidget: (context, url, error) => Container(
                   color: AppColors.bg,
                   child: Center(
                     child: Icon(
-                      AppIcons.more, // ✅ replaces image_not_supported
+                      AppIcons.more,
                       color: AppColors.textMuted.withOpacity(0.8),
                       size: 40,
                     ),

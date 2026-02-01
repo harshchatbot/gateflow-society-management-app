@@ -18,7 +18,7 @@ class HowSentinelWorksScreen extends StatelessWidget {
     },
     {
       'title': '3. Get approved (Resident/Admin)',
-      'body': 'Society admin approves your request. Guards are added by Admin via QR.',
+      'body': 'Society admin approves your request. Guards join using a 6-digit admin code with expiry.',
     },
     {
       'title': '4. Use your dashboard',

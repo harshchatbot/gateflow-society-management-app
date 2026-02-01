@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'firebase_visitor_service.dart';
@@ -100,26 +101,52 @@ class ResidentService {
     }
   }
 
+  /// One-time fetch of first page of history (for dashboard/stats).
+  /// Returns list of visitors only; for full pagination use getHistoryPage.
   Future<ApiResult<List<dynamic>>> getHistory({
     required String societyId,
     required String flatNo,
-    int limit = 50,
+    int limit = 100,
   }) async {
     try {
-      // Use Firebase directly instead of backend API
-      final result = await _firebaseVisitorService.getHistory(
+      final result = await _firebaseVisitorService.getHistoryPage(
         societyId: societyId,
         flatNo: flatNo,
         limit: limit,
+        startAfter: null,
       );
-      
       if (result.isSuccess && result.data != null) {
-        return ApiResult.success(result.data!);
-      } else {
-        return ApiResult.failure(result.error?.userMessage ?? "Failed to load history");
+        final list = result.data!['visitors'] as List<dynamic>? ?? [];
+        return ApiResult.success(list);
       }
+      return ApiResult.failure(result.error?.userMessage ?? "Failed to load history");
     } catch (e) {
       debugPrint("getHistory error: $e");
+      return ApiResult.failure("Connection error: ${e.toString()}");
+    }
+  }
+
+  /// Paginated history: first page use startAfter: null, next pages pass lastDoc.
+  /// Returns { 'visitors': List<Map>, 'lastDoc': DocumentSnapshot? }.
+  Future<ApiResult<Map<String, dynamic>>> getHistoryPage({
+    required String societyId,
+    required String flatNo,
+    int limit = 30,
+    DocumentSnapshot? startAfter,
+  }) async {
+    try {
+      final result = await _firebaseVisitorService.getHistoryPage(
+        societyId: societyId,
+        flatNo: flatNo,
+        limit: limit,
+        startAfter: startAfter,
+      );
+      if (result.isSuccess && result.data != null) {
+        return ApiResult.success(result.data!);
+      }
+      return ApiResult.failure(result.error?.userMessage ?? "Failed to load history");
+    } catch (e) {
+      debugPrint("getHistoryPage error: $e");
       return ApiResult.failure("Connection error: ${e.toString()}");
     }
   }

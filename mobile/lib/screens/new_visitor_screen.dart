@@ -42,8 +42,11 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
+  final _visitorNameController = TextEditingController();
   final _flatNoController = TextEditingController();
   final _visitorPhoneController = TextEditingController();
+  final _vehicleNumberController = TextEditingController();
+  final _deliveryPartnerOtherController = TextEditingController();
   final _visitorService = FirebaseVisitorService();
   final _firestore = FirestoreService();
 
@@ -51,6 +54,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   File? _visitorPhoto;
 
   String _selectedVisitorType = 'GUEST';
+  String? _selectedDeliveryPartner; // Only used when category = DELIVERY
   bool _isLoading = false;
   Visitor? _createdVisitor;
 
@@ -68,8 +72,11 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   @override
   void dispose() {
     _flatNoController.removeListener(_onFlatChanged);
+    _visitorNameController.dispose();
     _flatNoController.dispose();
     _visitorPhoneController.dispose();
+    _vehicleNumberController.dispose();
+    _deliveryPartnerOtherController.dispose();
     super.dispose();
   }
 
@@ -179,6 +186,14 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       AppLogger.w('Resident phone lookup failed (continuing without)', error: e.toString());
     }
 
+    final visitorName = _visitorNameController.text.trim().isEmpty ? null : _visitorNameController.text.trim();
+    final vehicleNumber = _vehicleNumberController.text.trim().isEmpty ? null : _vehicleNumberController.text.trim();
+    final isDelivery = _selectedVisitorType == 'DELIVERY';
+    final deliveryPartner = isDelivery ? (_selectedDeliveryPartner?.trim().isEmpty ?? true ? null : _selectedDeliveryPartner!.trim()) : null;
+    final deliveryPartnerOther = isDelivery && _selectedDeliveryPartner == 'Other'
+        ? (_deliveryPartnerOtherController.text.trim().isEmpty ? null : _deliveryPartnerOtherController.text.trim())
+        : null;
+
     final result = (_visitorPhoto != null)
         ? await _visitorService.createVisitorWithPhoto(
             societyId: widget.societyId,
@@ -187,6 +202,10 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             visitorPhone: _visitorPhoneController.text.trim(),
             photoFile: _visitorPhoto!,
             residentPhone: residentPhone,
+            visitorName: visitorName,
+            deliveryPartner: deliveryPartner,
+            deliveryPartnerOther: deliveryPartnerOther,
+            vehicleNumber: vehicleNumber,
           )
         : await _visitorService.createVisitor(
             societyId: widget.societyId,
@@ -194,6 +213,10 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             visitorType: _selectedVisitorType,
             visitorPhone: _visitorPhoneController.text.trim(),
             residentPhone: residentPhone,
+            visitorName: visitorName,
+            deliveryPartner: deliveryPartner,
+            deliveryPartnerOther: deliveryPartnerOther,
+            vehicleNumber: vehicleNumber,
           );
 
     if (!mounted) return;
@@ -224,9 +247,13 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
   void _clearForm() {
     setState(() {
+      _visitorNameController.clear();
       _flatNoController.clear();
       _visitorPhoneController.clear();
+      _vehicleNumberController.clear();
+      _deliveryPartnerOtherController.clear();
       _selectedVisitorType = 'GUEST';
+      _selectedDeliveryPartner = null;
       _createdVisitor = null;
       _visitorPhoto = null;
       _flatOwnerName = null;
@@ -360,6 +387,10 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     );
   }
 
+  static const List<String> _deliveryPartners = [
+    'Zomato', 'Swiggy', 'Blinkit', 'Zepto', 'Amazon', 'Flipkart', 'Dunzo', 'Other',
+  ];
+
   Widget _buildInputCard() {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -371,6 +402,13 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          _buildFieldLabel("Visitor Name (optional)"),
+          _buildOptionalTextField(
+            controller: _visitorNameController,
+            hint: "e.g. Rahul / Zomato Delivery",
+            icon: Icons.person_outline_rounded,
+          ),
+          const SizedBox(height: 18),
           _buildFieldLabel("Visitor Mobile"),
           _buildTextField(
             controller: _visitorPhoneController,
@@ -384,6 +422,13 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             controller: _flatNoController,
             hint: "e.g. B-402",
             icon: AppIcons.flat,
+          ),
+          const SizedBox(height: 18),
+          _buildFieldLabel("Vehicle Number (optional)"),
+          _buildOptionalTextField(
+            controller: _vehicleNumberController,
+            hint: "e.g. RJ14 AB 1234",
+            icon: Icons.directions_car_outlined,
           ),
           if (_flatOwnerLoading) ...[
             const SizedBox(height: 10),
@@ -455,6 +500,24 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               _buildTypePill("CAB", AppIcons.cab),
             ],
           ),
+          if (_selectedVisitorType == 'DELIVERY') ...[
+            const SizedBox(height: 18),
+            _buildFieldLabel("Delivery Partner"),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _deliveryPartners.map((p) => _buildDeliveryPartnerChip(p)).toList(),
+            ),
+            if (_selectedDeliveryPartner == 'Other') ...[
+              const SizedBox(height: 12),
+              _buildOptionalTextField(
+                controller: _deliveryPartnerOtherController,
+                hint: "Other Partner Name",
+                icon: Icons.store_outlined,
+              ),
+            ],
+          ],
           const SizedBox(height: 25),
           SizedBox(
             width: double.infinity,
@@ -491,6 +554,40 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     );
   }
 
+  Widget _buildOptionalTextField({
+    required TextEditingController controller,
+    required String hint,
+    required IconData icon,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: TextInputType.text,
+      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      decoration: InputDecoration(
+        hintText: hint,
+        prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
+        filled: true,
+        fillColor: AppColors.bg,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+      ),
+    );
+  }
+
+  Widget _buildDeliveryPartnerChip(String label) {
+    final isSelected = _selectedDeliveryPartner == label;
+    return FilterChip(
+      label: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isSelected ? Colors.white : AppColors.text2)),
+      selected: isSelected,
+      onSelected: (selected) => setState(() {
+        _selectedDeliveryPartner = selected ? label : null;
+        if (label != 'Other') _deliveryPartnerOtherController.clear();
+      }),
+      selectedColor: AppColors.primary,
+      checkmarkColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    );
+  }
+
   Widget _buildFieldLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, left: 4),
@@ -502,7 +599,13 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     final bool isSelected = _selectedVisitorType == type;
     return Expanded(
       child: InkWell(
-        onTap: () => setState(() => _selectedVisitorType = type),
+        onTap: () => setState(() {
+          _selectedVisitorType = type;
+          if (type != 'DELIVERY') {
+            _selectedDeliveryPartner = null;
+            _deliveryPartnerOtherController.clear();
+          }
+        }),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(

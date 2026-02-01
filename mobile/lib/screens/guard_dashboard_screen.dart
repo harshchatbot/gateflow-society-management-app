@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../ui/app_colors.dart';
@@ -491,7 +492,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           child: CircleAvatar(
             backgroundColor: Colors.white24,
             backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                ? NetworkImage(_photoUrl!)
+                ? CachedNetworkImageProvider(_photoUrl!)
                 : null,
             child: (_photoUrl == null || _photoUrl!.isEmpty)
                 ? const Icon(

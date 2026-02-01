@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/admin_service.dart';
@@ -31,6 +33,9 @@ class AdminManageResidentsScreen extends StatefulWidget {
   State<AdminManageResidentsScreen> createState() => _AdminManageResidentsScreenState();
 }
 
+/// Page size for paginated residents list. Load more fetches next [kResidentsPageSize] docs.
+const int kResidentsPageSize = 30;
+
 class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen> with SingleTickerProviderStateMixin {
   final FirestoreService _firestore = FirestoreService();
   final ResidentSignupService _signupService = ResidentSignupService(); // keep (approval flow)
@@ -38,7 +43,10 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
   List<dynamic> _residents = [];
   List<dynamic> _filteredResidents = [];
   List<dynamic> _pendingSignups = [];
+  /// Cursor for "Load more" on residents tab (null = no more or not loaded).
+  DocumentSnapshot? _lastDoc;
   bool _isLoading = false;
+  bool _isLoadingMore = false;
   String? _error;
   final TextEditingController _searchController = TextEditingController();
   late TabController _tabController;
@@ -102,29 +110,36 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
     });
   }
 
-    Future<void> _loadResidents() async {
+  /// One-time fetch: first page of residents (paginated). Resets _lastDoc on refresh.
+  Future<void> _loadResidents() async {
     if (!mounted) return;
     setState(() {
       _isLoading = true;
       _error = null;
+      _lastDoc = null;
     });
 
     try {
-      // ✅ Firestore source of truth (no backend)
-      final members = await _firestore.getMembers(
+      final result = await _firestore.getMembersPage(
         societyId: widget.societyId,
-        systemRole: "resident",
+        systemRole: 'resident',
+        limit: kResidentsPageSize,
+        startAfter: null,
       );
 
       if (!mounted) return;
 
+      final list = result['list'] as List<dynamic>? ?? [];
+      final lastDoc = result['lastDoc'] as DocumentSnapshot?;
+
       setState(() {
-        _residents = members;
+        _residents = list;
         _filteredResidents = _residents;
+        _lastDoc = lastDoc;
         _isLoading = false;
       });
 
-      AppLogger.i("Loaded ${_residents.length} residents (Firestore)");
+      AppLogger.i("Loaded ${_residents.length} residents (first page)");
     } catch (e, st) {
       AppLogger.e("Error loading residents (Firestore)", error: e, stackTrace: st);
       if (!mounted) return;
@@ -133,6 +148,43 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
         _error = "Failed to load residents";
       });
       _showError("Failed to load residents");
+    }
+  }
+
+  /// Load next page of residents. Keeps existing list and appends.
+  void _loadMoreResidents() {
+    if (_lastDoc == null || _isLoadingMore || _isLoading) return;
+    _loadMoreResidentsAsync();
+  }
+
+  Future<void> _loadMoreResidentsAsync() async {
+    if (!mounted || _lastDoc == null) return;
+    setState(() => _isLoadingMore = true);
+
+    try {
+      final result = await _firestore.getMembersPage(
+        societyId: widget.societyId,
+        systemRole: 'resident',
+        limit: kResidentsPageSize,
+        startAfter: _lastDoc,
+      );
+
+      if (!mounted) return;
+
+      final list = result['list'] as List<dynamic>? ?? [];
+      final lastDoc = result['lastDoc'] as DocumentSnapshot?;
+
+      setState(() {
+        _residents = [..._residents, ...list];
+        _filteredResidents = _residents;
+        _lastDoc = list.length < kResidentsPageSize ? null : lastDoc;
+        _isLoadingMore = false;
+      });
+      _filterResidents();
+      AppLogger.i("Loaded more residents: +${list.length} (total ${_residents.length})");
+    } catch (e, st) {
+      AppLogger.e("Error loading more residents", error: e, stackTrace: st);
+      if (mounted) setState(() => _isLoadingMore = false);
     }
   }
 
@@ -584,10 +636,39 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
       color: AppColors.admin,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-        itemCount: _filteredResidents.length,
+        itemCount: _filteredResidents.length + (_lastDoc != null ? 1 : 0),
         itemBuilder: (context, index) {
-          return _buildResidentCard(_filteredResidents[index]);
+          if (index == _filteredResidents.length) {
+            return _buildLoadMoreRow();
+          }
+          return _buildResidentCard(_filteredResidents[index] as Map<String, dynamic>);
         },
+      ),
+    );
+  }
+
+  Widget _buildLoadMoreRow() {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Center(
+        child: _isLoadingMore
+            ? const Padding(
+                padding: EdgeInsets.all(16),
+                child: SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              )
+            : TextButton.icon(
+                onPressed: _loadMoreResidents,
+                icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
+                label: const Text("Load more"),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppColors.admin,
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                ),
+              ),
       ),
     );
   }
@@ -599,6 +680,8 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
     final residentId = (resident['resident_id'] ?? 'N/A').toString();
     final role = (resident['role'] ?? 'RESIDENT').toString();
     final active = (resident['active'] ?? 'TRUE').toString().toUpperCase() == 'TRUE';
+    final photoUrl = (resident['photoUrl'] ?? resident['photo_url'] ?? '').toString().trim();
+    final hasPhoto = photoUrl.isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -620,17 +703,13 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: () {
-            // TODO: Navigate to resident details/edit screen
-            _showResidentDetails(resident);
-          },
+          onTap: () => _showResidentDetails(resident),
           borderRadius: BorderRadius.circular(18),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header Row: Name + Status
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -643,11 +722,29 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                             decoration: BoxDecoration(
                               color: AppColors.admin.withOpacity(0.15),
                               shape: BoxShape.circle,
+                              border: Border.all(color: AppColors.border.withOpacity(0.5)),
                             ),
-                            child: Icon(
-                              Icons.person_rounded,
-                              color: AppColors.admin,
-                              size: 24,
+                            child: ClipOval(
+                              child: hasPhoto
+                                  ? CachedNetworkImage(
+                                      imageUrl: photoUrl,
+                                      fit: BoxFit.cover,
+                                      width: 48,
+                                      height: 48,
+                                      placeholder: (_, __) => const Center(
+                                        child: Icon(Icons.person_rounded, color: AppColors.admin, size: 24),
+                                      ),
+                                      errorWidget: (_, __, ___) => const Icon(
+                                        Icons.person_rounded,
+                                        color: AppColors.admin,
+                                        size: 24,
+                                      ),
+                                    )
+                                  : const Icon(
+                                      Icons.person_rounded,
+                                      color: AppColors.admin,
+                                      size: 24,
+                                    ),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -701,7 +798,6 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                 const Divider(height: 1),
                 const SizedBox(height: 12),
 
-                // Details
                 _buildDetailRow(Icons.home_rounded, "Flat", flatNo),
                 const SizedBox(height: 8),
                 _buildDetailRow(Icons.phone_rounded, "Phone", phone),
@@ -750,6 +846,9 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
   }
 
   void _showResidentDetails(Map<String, dynamic> resident) {
+    final photoUrl = (resident['photoUrl'] ?? resident['photo_url'] ?? '').toString().trim();
+    final hasPhoto = photoUrl.isNotEmpty;
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -782,21 +881,49 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
               ),
               Row(
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: AppColors.admin.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
+                  GestureDetector(
+                    onTap: hasPhoto
+                        ? () {
+                            Navigator.of(context).pop();
+                            _showFullScreenImage(photoUrl);
+                          }
+                        : null,
+                    child: Container(
+                      width: 56,
+                      height: 56,
+                      decoration: BoxDecoration(
+                        color: AppColors.admin.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: hasPhoto
+                            ? CachedNetworkImage(
+                                imageUrl: photoUrl,
+                                fit: BoxFit.cover,
+                                placeholder: (_, __) => const Center(
+                                  child: Icon(Icons.person_rounded, color: AppColors.admin, size: 28),
+                                ),
+                                errorWidget: (_, __, ___) => const Icon(
+                                  Icons.person_rounded,
+                                  color: AppColors.admin,
+                                  size: 28,
+                                ),
+                              )
+                            : const Icon(Icons.person_rounded, color: AppColors.admin, size: 28),
+                      ),
                     ),
-                    child: const Icon(Icons.person_rounded, color: AppColors.admin, size: 24),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
-                    "Resident Details",
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.text,
+                  const Expanded(
+                    child: Text(
+                      "Resident Details",
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.text,
+                      ),
                     ),
                   ),
                 ],
@@ -810,6 +937,35 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
               _buildDetailSection("Status", (resident['active'] ?? 'TRUE').toString().toUpperCase() == 'TRUE' ? 'Active' : 'Inactive'),
               const SizedBox(height: 20),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showFullScreenImage(String imageUrl) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            iconTheme: const IconThemeData(color: Colors.white),
+            title: const Text("Photo", style: TextStyle(color: Colors.white)),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              minScale: 0.5,
+              maxScale: 4,
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.contain,
+                placeholder: (_, __) => const Center(
+                  child: CircularProgressIndicator(color: Colors.white),
+                ),
+                errorWidget: (_, __, ___) => const Icon(Icons.broken_image_rounded, color: Colors.white, size: 64),
+              ),
+            ),
           ),
         ),
       ),

@@ -1221,6 +1221,40 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     }
   }
 
+  /// Paginated SOS requests: one-time get(), returns list and lastDoc for "Load more".
+  Future<Map<String, dynamic>> getSosRequestsPage({
+    required String societyId,
+    int limit = 30,
+    DocumentSnapshot? startAfter,
+  }) async {
+    try {
+      final baseQuery = _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('sos_requests')
+          .orderBy('createdAt', descending: true)
+          .limit(limit);
+
+      final snap = startAfter == null
+          ? await baseQuery.get()
+          : await baseQuery.startAfterDocument(startAfter).get();
+
+      final list = snap.docs.map((d) {
+        final data = d.data() as Map<String, dynamic>? ?? {};
+        return {
+          'sosId': d.id,
+          ...data,
+        };
+      }).toList();
+
+      final lastDoc = snap.docs.isEmpty ? null : snap.docs.last;
+      return {'list': list, 'lastDoc': lastDoc};
+    } catch (e, st) {
+      AppLogger.e('Error getting SOS requests page', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
   Future<String> createSosRequest({
     required String societyId,
     required String residentId,
@@ -1365,16 +1399,49 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     final snap = await query.get();
     return snap.docs.map((d) {
       final data = d.data() as Map<String, dynamic>;
-      return {
-        'id': d.id,
-        ...data,
-        // extra aliases so UI works with old keys too
-        'resident_id': data['uid'] ?? d.id,
-        'resident_name': data['name'] ?? data['residentName'],
-        'flat_no': data['flatNo'] ?? data['flat_no'],
-        'resident_phone': data['phone'] ?? data['mobile'],
-      };
+      return _mapMemberDoc(d.id, data);
     }).toList();
+  }
+
+  /// Paginated members: one-time get(), orderBy document ID, returns list and lastDoc for "Load more".
+  /// Requires composite index: systemRole (==), __name__ (asc) if not auto-created.
+  Future<Map<String, dynamic>> getMembersPage({
+    required String societyId,
+    required String systemRole,
+    int limit = 30,
+    DocumentSnapshot? startAfter,
+  }) async {
+    final baseQuery = _firestore
+        .collection('societies')
+        .doc(societyId)
+        .collection('members')
+        .where('systemRole', isEqualTo: systemRole)
+        .orderBy(FieldPath.documentId)
+        .limit(limit);
+
+    final snap = startAfter == null
+        ? await baseQuery.get()
+        : await baseQuery.startAfterDocument(startAfter).get();
+    final list = snap.docs.map((d) {
+      final data = d.data() as Map<String, dynamic>;
+      return _mapMemberDoc(d.id, data);
+    }).toList();
+
+    final lastDoc = snap.docs.isEmpty ? null : snap.docs.last;
+    return {'list': list, 'lastDoc': lastDoc};
+  }
+
+  Map<String, dynamic> _mapMemberDoc(String docId, Map<String, dynamic> data) {
+    return {
+      'id': docId,
+      ...data,
+      'resident_id': data['uid'] ?? docId,
+      'resident_name': data['name'] ?? data['residentName'],
+      'flat_no': data['flatNo'] ?? data['flat_no'],
+      'resident_phone': data['phone'] ?? data['mobile'],
+      'guard_id': data['uid'] ?? docId,
+      'guard_name': data['name'] ?? data['guardName'] ?? 'Guard',
+    };
   }
 
   // ============================================

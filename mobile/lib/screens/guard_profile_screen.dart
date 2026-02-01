@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
@@ -139,7 +140,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         backgroundImage: _localSelfie != null
                             ? FileImage(File(_localSelfie!.path))
                             : (_photoUrl != null && _photoUrl!.isNotEmpty
-                                ? NetworkImage(_photoUrl!)
+                                ? CachedNetworkImageProvider(_photoUrl!)
                                 : null) as ImageProvider<Object>?,
                         child: _localSelfie == null && (_photoUrl == null || _photoUrl!.isEmpty)
                             ? const Icon(Icons.person, size: 50, color: Colors.white)
@@ -173,10 +174,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   // 1. Duty Status & Shift Card
                   _buildDutyCard(),
                   const SizedBox(height: 20),
-
-                  // 2. Performance Stats (Leaderboard Style)
-                  _buildPerformanceStats(),
-                  const SizedBox(height: 25),
 
                   // Profile & Contact
                   _buildProfileForm(),
@@ -656,37 +653,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         );
       }
     }
-  }
-
-  Widget _buildPerformanceStats() {
-    return Row(
-      children: [
-        _buildStatBox("4.8 ★", "Rating", Colors.orange),
-        const SizedBox(width: 12),
-        _buildStatBox("128", "Points", AppColors.primary),
-        const SizedBox(width: 12),
-        _buildStatBox("12h", "Shift", Colors.purple),
-      ],
-    );
-  }
-
-  Widget _buildStatBox(String value, String label, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 14),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2)),
-        ),
-        child: Column(
-          children: [
-            Text(value, style: TextStyle(color: color, fontWeight: FontWeight.w900, fontSize: 18)),
-            Text(label, style: const TextStyle(color: AppColors.text2, fontSize: 11, fontWeight: FontWeight.bold)),
-          ],
-        ),
-      ),
-    );
   }
 
   Widget _buildTaskGrid() {

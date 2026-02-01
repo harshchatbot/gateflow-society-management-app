@@ -34,6 +34,7 @@ dependencies:
 
   #photo
   image_picker: ^1.1.2
+  cached_network_image: ^3.3.1
 
   # SVG rendering (for logo.png)
   flutter_svg: ^2.0.9
