@@ -72,6 +72,9 @@ dependencies:
   # In-app guided tour (coach marks)
   showcaseview: ^3.0.0
 
+  # Charts (dashboard visitors last 7 days)
+  fl_chart: ^0.69.0
+
 
 dev_dependencies:
   flutter_test:
@@ -96,3 +99,4 @@ flutter:
     - assets/.env
     - assets/images/
     - assets/illustrations/
+    - assets/mascot/

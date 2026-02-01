@@ -20,6 +20,10 @@ import 'sos_detail_screen.dart';
 import 'guard_residents_directory_screen.dart';
 import 'guard_violations_list_screen.dart';
 import '../widgets/guard_notification_drawer.dart';
+import '../widgets/visitors_chart.dart';
+import '../widgets/dashboard_hero.dart';
+import '../widgets/dashboard_stat_card.dart';
+import '../widgets/dashboard_quick_action.dart';
 
 class GuardDashboardScreen extends StatefulWidget {
   final String guardId;
@@ -57,6 +61,8 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   bool _isLoading = false;
   List<Visitor> _recentVisitors = [];
   int _sosBadgeCount = 0;
+  /// Visitor counts per day for last 7 days (day-6 .. today). Used for dashboard chart.
+  List<int>? _visitorsByDayLast7;
 
   @override
   void initState() {
@@ -264,6 +270,17 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         }
       }
 
+      // Load last-7-days counts for chart (no extra query if we already have data; lightweight)
+      List<int> visitorsByDayLast7 = List.filled(7, 0);
+      try {
+        visitorsByDayLast7 = await _firestore.getVisitorCountsByDayLast7Days(
+          societyId: widget.societyId,
+          guardId: widget.guardId,
+        );
+      } catch (e) {
+        AppLogger.w("getVisitorCountsByDayLast7Days failed", error: e.toString());
+      }
+
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -275,6 +292,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               .where((v) => (v['status'] as String).toUpperCase() == 'APPROVED')
               .length;
           _recentVisitors = recentVisitors;
+          _visitorsByDayLast7 = visitorsByDayLast7;
         });
       }
 
@@ -459,6 +477,13 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildStatsRow(),
+                    if (_visitorsByDayLast7 != null) ...[
+                      const SizedBox(height: 16),
+                      VisitorsChart(
+                        countsByDay: _visitorsByDayLast7!,
+                        barColor: AppColors.primary,
+                      ),
+                    ],
                     const SizedBox(height: 24),
                   ],
                   const Text(

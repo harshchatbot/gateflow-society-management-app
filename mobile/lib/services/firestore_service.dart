@@ -1120,6 +1120,54 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     }
   }
 
+  /// Visitor counts per day for the last 7 days (for dashboard chart).
+  /// Returns list of 7 counts: [day-6, day-5, ..., today] (local calendar days).
+  /// [guardId] if set filters to that guard's entries only; otherwise society-wide.
+  Future<List<int>> getVisitorCountsByDayLast7Days({
+    required String societyId,
+    String? guardId,
+  }) async {
+    try {
+      final now = DateTime.now();
+      final todayStart = DateTime(now.year, now.month, now.day);
+      final sevenDaysAgoStart = todayStart.subtract(const Duration(days: 6));
+
+      var query = _visitorsRef(societyId);
+      if (guardId != null && guardId.isNotEmpty) {
+        query = query.where('guard_uid', isEqualTo: guardId);
+      }
+      final snapshot = await query.limit(400).get();
+
+      final counts = List<int>.filled(7, 0);
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        if (data == null) continue;
+        final createdAt = data['createdAt'];
+        if (createdAt == null) continue;
+        DateTime date;
+        if (createdAt is Timestamp) {
+          date = createdAt.toDate().toLocal();
+        } else if (createdAt is DateTime) {
+          date = createdAt.toLocal();
+        } else {
+          continue;
+        }
+        final dayStart = DateTime(date.year, date.month, date.day);
+        if (dayStart.isBefore(sevenDaysAgoStart) || dayStart.isAfter(todayStart)) continue;
+        final index = dayStart.difference(sevenDaysAgoStart).inDays;
+        if (index >= 0 && index < 7) {
+          counts[index]++;
+        }
+      }
+
+      AppLogger.i('Visitor counts by day (last 7)', data: {'counts': counts, 'guardId': guardId});
+      return counts;
+    } catch (e, stackTrace) {
+      AppLogger.e('Error getVisitorCountsByDayLast7Days', error: e, stackTrace: stackTrace);
+      return List<int>.filled(7, 0);
+    }
+  }
+
   /// ============================================
   /// SOS / Emergency Requests
   /// ============================================
