@@ -9,6 +9,7 @@ import 'notice_board_screen.dart';
 import '../ui/app_colors.dart';
 import '../ui/floating_bottom_nav.dart';
 import '../services/notification_service.dart';
+import '../core/society_modules.dart';
 
 /// Admin Shell Screen
 /// 
@@ -38,12 +39,16 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   int? _wantedResidentsSubTab;
   final Map<int, bool> _screenInitialized = {};
   final GlobalKey<State<AdminDashboardScreen>> _dashboardKey = GlobalKey<State<AdminDashboardScreen>>();
+  bool _modulesReady = false;
 
   @override
   void initState() {
     super.initState();
     _screenInitialized[0] = true;
     _subscribeToNotifications();
+    SocietyModules.refresh(widget.societyId).then((_) {
+      if (mounted) setState(() => _modulesReady = true);
+    });
   }
 
   void _onStartTourRequested() {
@@ -87,29 +92,49 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     });
   }
 
+  /// Build nav items and tab->screen mapping from enabled modules.
+  List<FloatingNavItem> _buildNavItems() {
+    final items = <FloatingNavItem>[
+      const FloatingNavItem(icon: Icons.dashboard_rounded, label: "Dashboard"),
+    ];
+    if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
+      items.add(const FloatingNavItem(icon: Icons.report_problem_rounded, label: "Complaints"));
+    }
+    if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
+      items.add(const FloatingNavItem(icon: Icons.notifications_rounded, label: "Notices"));
+    }
+    items.add(const FloatingNavItem(icon: Icons.person_rounded, label: "Profile"));
+    return items;
+  }
+
+  List<int> _buildTabToScreenIndex() {
+    final list = <int>[0]; // Dashboard
+    if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) list.add(3);
+    if (SocietyModules.isEnabled(SocietyModuleIds.notices)) list.add(4);
+    list.add(5); // Profile
+    return list;
+  }
+
+  int _getCurrentTabIndex() {
+    final tabToScreen = _buildTabToScreenIndex();
+    for (var i = 0; i < tabToScreen.length; i++) {
+      if (tabToScreen[i] == _currentIndex) return i;
+    }
+    return 0;
+  }
+
   /// Handle taps from the bottom navigation bar.
-  /// Admin bottom nav only shows: Dashboard, Complaints, Notices, Profile.
-  /// We map these tab indices to the appropriate screen indices:
-  /// 0 -> Dashboard (screen 0)
-  /// 1 -> Complaints (screen 3)
-  /// 2 -> Notices (screen 4)
-  /// 3 -> Profile (screen 5)
   void _onBottomNavTap(int tabIndex) {
-    switch (tabIndex) {
-      case 0:
-        _navigateToScreen(0);
-        break;
-      case 1:
-        _navigateToScreen(3);
-        break;
-      case 2:
-        _navigateToScreen(4);
-        break;
-      case 3:
-        _navigateToScreen(5);
-        break;
-      default:
-        _navigateToScreen(0);
+    if (!_modulesReady) {
+      if (tabIndex == 0) _navigateToScreen(0);
+      else if (tabIndex == 1) _navigateToScreen(5);
+      return;
+    }
+    final tabToScreen = _buildTabToScreenIndex();
+    if (tabIndex >= 0 && tabIndex < tabToScreen.length) {
+      _navigateToScreen(tabToScreen[tabIndex]);
+    } else {
+      _navigateToScreen(0);
     }
   }
 
@@ -200,6 +225,10 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final navItems = _modulesReady ? _buildNavItems() : [
+      const FloatingNavItem(icon: Icons.dashboard_rounded, label: "Dashboard"),
+      const FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
+    ];
     return Scaffold(
       backgroundColor: AppColors.bg,
       body: IndexedStack(
@@ -207,22 +236,10 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
         children: List.generate(6, (index) => _buildScreen(index)),
       ),
       bottomNavigationBar: SocietyBottomNav(
-        // Map current screen index back to the tab index for highlighting
-        currentIndex: _currentIndex == 0
-            ? 0
-            : _currentIndex == 3
-                ? 1
-                : _currentIndex == 4
-                    ? 2
-                    : 3,
+        currentIndex: _modulesReady ? _getCurrentTabIndex() : (_currentIndex == 0 ? 0 : 1),
         onTap: _onBottomNavTap,
-        showCenterButton: false, // No center button for admin
-        items: const [
-          FloatingNavItem(icon: Icons.dashboard_rounded, label: "Dashboard"),
-          FloatingNavItem(icon: Icons.report_problem_rounded, label: "Complaints"),
-          FloatingNavItem(icon: Icons.notifications_rounded, label: "Notices"),
-          FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
-        ],
+        showCenterButton: false,
+        items: navItems,
       ),
     );
   }

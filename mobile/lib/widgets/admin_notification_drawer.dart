@@ -9,6 +9,7 @@ import '../services/resident_signup_service.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
+import '../core/society_modules.dart';
 
 /// Admin Notification Drawer
 ///
@@ -85,12 +86,17 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
         }).toList();
       }
 
-      // Load pending complaints
-      final complaintsResult = await _complaintService.getAllComplaints(societyId: widget.societyId);
+      // Load pending complaints (only if module enabled)
+      dynamic complaintsResult;
+      if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
+        complaintsResult = await _complaintService.getAllComplaints(societyId: widget.societyId);
+      } else {
+        complaintsResult = null;
+      }
       int pendingComplaints = 0;
       List<Map<String, dynamic>> complaintNotifications = [];
 
-      if (complaintsResult.isSuccess && complaintsResult.data != null) {
+      if (complaintsResult != null && complaintsResult.isSuccess && complaintsResult.data != null) {
         final allComplaints = complaintsResult.data!;
         pendingComplaints = allComplaints.where((c) {
           final status = (c['status'] ?? '').toString().toUpperCase();
@@ -119,15 +125,15 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
         complaintNotifications = recentPending;
       }
 
-      // Load recent notices (created in last 24 hours)
-      final noticesResult = await _noticeService.getNotices(
-        societyId: widget.societyId,
-        activeOnly: true,
-      );
+      // Load recent notices (only if module enabled)
       List<Map<String, dynamic>> noticeNotifications = [];
       int recentNotices = 0;
-
-      if (noticesResult.isSuccess && noticesResult.data != null) {
+      if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
+        final noticesResult = await _noticeService.getNotices(
+          societyId: widget.societyId,
+          activeOnly: true,
+        );
+        if (noticesResult.isSuccess && noticesResult.data != null) {
         final allNotices = noticesResult.data!;
         final now = DateTime.now();
         
@@ -168,13 +174,15 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
               };
             })
             .toList();
+        }
       }
 
-      // Load open SOS alerts from Firestore for this society (treated as actionable notifications)
+      // Load open SOS alerts (only if module enabled)
       List<Map<String, dynamic>> sosNotifications = [];
       int openSos = 0;
-      try {
-        final sosList = await _firestore.getSosRequests(
+      if (SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+        try {
+          final sosList = await _firestore.getSosRequests(
           societyId: widget.societyId,
           limit: 50,
         );
@@ -208,8 +216,9 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
             'resident_name': residentName,
           };
         }).toList();
-      } catch (e, st) {
-        AppLogger.e("Error loading SOS notifications (admin drawer)", error: e, stackTrace: st);
+        } catch (e, st) {
+          AppLogger.e("Error loading SOS notifications (admin drawer)", error: e, stackTrace: st);
+        }
       }
 
       // Combine and sort by created_at (most recent first)
@@ -377,7 +386,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
             ),
           ),
 
-          // Summary Cards (horizontal scroll to avoid overflow on narrow screens)
+          // Summary Cards (horizontal scroll, filtered by enabled modules)
           SizedBox(
             height: 100,
             child: ListView(
@@ -393,36 +402,42 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                     color: AppColors.success,
                   ),
                 ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 120,
-                  child: _buildSummaryCard(
-                    icon: Icons.report_problem_rounded,
-                    label: "Pending Complaints",
-                    count: _pendingComplaintsCount,
-                    color: AppColors.warning,
+                if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) ...[
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 120,
+                    child: _buildSummaryCard(
+                      icon: Icons.report_problem_rounded,
+                      label: "Pending Complaints",
+                      count: _pendingComplaintsCount,
+                      color: AppColors.warning,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 120,
-                  child: _buildSummaryCard(
-                    icon: Icons.notifications_rounded,
-                    label: "New Notices",
-                    count: _recentNoticesCount,
-                    color: AppColors.admin,
+                ],
+                if (SocietyModules.isEnabled(SocietyModuleIds.notices)) ...[
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 120,
+                    child: _buildSummaryCard(
+                      icon: Icons.notifications_rounded,
+                      label: "New Notices",
+                      count: _recentNoticesCount,
+                      color: AppColors.admin,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 120,
-                  child: _buildSummaryCard(
-                    icon: Icons.sos_rounded,
-                    label: "Open SOS",
-                    count: _openSosCount,
-                    color: AppColors.error,
+                ],
+                if (SocietyModules.isEnabled(SocietyModuleIds.sos)) ...[
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 120,
+                    child: _buildSummaryCard(
+                      icon: Icons.sos_rounded,
+                      label: "Open SOS",
+                      count: _openSosCount,
+                      color: AppColors.error,
+                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ),

@@ -169,8 +169,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             _notificationCount += 1;
           });
         }
-      } else if (type == 'sos') {
-        // Simple SOS badge to highlight attention
+      } else if (type == 'sos' && SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+        // Simple SOS badge to highlight attention (only when module enabled)
         if (mounted) {
           setState(() {
             _sosBadgeCount = 1;
@@ -180,10 +180,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
     notificationService.setOnNotificationTap((data) {
       final type = (data['type'] ?? '').toString();
-      if (type == 'complaint') {
-        // Navigate to complaints tab (index 3)
+      if (type == 'complaint' && SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
         _navigateToTab(3);
-      } else if (type == 'notice') {
+      } else if (type == 'notice' && SocietyModules.isEnabled(SocietyModuleIds.notices)) {
         // Mark notices as read for this session and navigate to notices tab (index 4)
         if (mounted) {
           setState(() {
@@ -191,7 +190,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           });
         }
         _navigateToTab(4);
-      } else if (type == 'sos') {
+      } else if (type == 'sos' && SocietyModules.isEnabled(SocietyModuleIds.sos)) {
         final societyId = (data['society_id'] ?? widget.societyId).toString();
         final flatNo = (data['flat_no'] ?? '').toString();
         final residentName = (data['resident_name'] ?? 'Resident').toString();
@@ -225,39 +224,42 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     try {
       int totalCount = 0;
       
-      // Count pending complaints
-      final complaintsResult = await _complaintService.getAllComplaints(societyId: widget.societyId);
-      if (complaintsResult.isSuccess && complaintsResult.data != null) {
-        final pendingComplaints = complaintsResult.data!.where((c) {
-          final status = (c['status'] ?? '').toString().toUpperCase();
-          return status == 'PENDING' || status == 'IN_PROGRESS';
-        }).length;
-        totalCount += pendingComplaints;
+      // Count pending complaints (only if module enabled)
+      if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
+        final complaintsResult = await _complaintService.getAllComplaints(societyId: widget.societyId);
+        if (complaintsResult.isSuccess && complaintsResult.data != null) {
+          final pendingComplaints = complaintsResult.data!.where((c) {
+            final status = (c['status'] ?? '').toString().toUpperCase();
+            return status == 'PENDING' || status == 'IN_PROGRESS';
+          }).length;
+          totalCount += pendingComplaints;
+        }
       }
       
-      // Count recent notices (created in last 24 hours) only once to seed unread count
-      final noticesResult = await _noticeService.getNotices(
-        societyId: widget.societyId,
-        activeOnly: true,
-      );
-      if (!_initializedUnreadNotices && noticesResult.isSuccess && noticesResult.data != null) {
-        final now = DateTime.now();
-        final recentNotices = noticesResult.data!.where((n) {
-          try {
-            final createdAt = n['created_at']?.toString() ?? '';
-            if (createdAt.isEmpty) return false;
-            final created = DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
-            final hoursDiff = now.difference(created).inHours;
-            return hoursDiff <= 24; // Notices from last 24 hours
-          } catch (e) {
-            return false;
-          }
-        }).length;
-        _unreadNoticesCount = recentNotices;
-        _initializedUnreadNotices = true;
+      // Count recent notices (only if module enabled)
+      if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
+        final noticesResult = await _noticeService.getNotices(
+          societyId: widget.societyId,
+          activeOnly: true,
+        );
+        if (!_initializedUnreadNotices && noticesResult.isSuccess && noticesResult.data != null) {
+          final now = DateTime.now();
+          final recentNotices = noticesResult.data!.where((n) {
+            try {
+              final createdAt = n['created_at']?.toString() ?? '';
+              if (createdAt.isEmpty) return false;
+              final created = DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
+              final hoursDiff = now.difference(created).inHours;
+              return hoursDiff <= 24; // Notices from last 24 hours
+            } catch (e) {
+              return false;
+            }
+          }).length;
+          _unreadNoticesCount = recentNotices;
+          _initializedUnreadNotices = true;
+        }
+        totalCount += _unreadNoticesCount;
       }
-
-      totalCount += _unreadNoticesCount;
 
       // Count pending resident signups
       final signupsResult = await _signupService.getPendingSignups(societyId: widget.societyId);

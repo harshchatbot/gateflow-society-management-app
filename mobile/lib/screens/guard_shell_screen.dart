@@ -13,6 +13,7 @@ import '../ui/app_colors.dart';
 import '../ui/floating_bottom_nav.dart'; // Use shared SocietyBottomNav
 import 'guard_profile_screen.dart';
 import '../services/notification_service.dart';
+import '../core/society_modules.dart';
 
 
 
@@ -35,11 +36,23 @@ class GuardShellScreen extends StatefulWidget {
 class _GuardShellScreenState extends State<GuardShellScreen> {
   int _index = 0;
   final GlobalKey<State<GuardDashboardScreen>> _dashboardKey = GlobalKey<State<GuardDashboardScreen>>();
+  bool _modulesReady = false;
 
   @override
   void initState() {
     super.initState();
     _subscribeToNotifications();
+    SocietyModules.refresh(widget.societyId).then((_) {
+      if (mounted) {
+        setState(() {
+          _modulesReady = true;
+          // If we were on Profile (index 1) in 2-screen layout, map to Profile in 5-screen
+          if (_index == 1 && SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
+            _index = 4;
+          }
+        });
+      }
+    });
   }
 
   Future<void> _subscribeToNotifications() async {
@@ -69,64 +82,112 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
     });
   }
 
-  late final List<Widget> _screens = [
-    GuardDashboardScreen(
-      key: _dashboardKey,
-      guardId: widget.guardId,
-      guardName: widget.guardName,
-      societyId: widget.societyId,
-      onTapNewEntry: () => setState(() => _index = 2),
-      onTapVisitors: () => setState(() => _index = 1),
-    ),
-    VisitorListScreen(
-      guardId: widget.guardId,
-      onBackPressed: () => setState(() => _index = 0),
-    ),
-    NewVisitorScreen(
-      guardId: widget.guardId,
-      guardName: widget.guardName,
-      societyId: widget.societyId,
-      onBackPressed: () => setState(() => _index = 0),
-    ),
-    GuardHistoryScreen(
-      guardId: widget.guardId,
-      onBackPressed: () => setState(() => _index = 0),
-    ),
-    ProfileScreen(
-      guardId: widget.guardId,
-      guardName: widget.guardName,
-      societyId: widget.societyId,
-      onBackPressed: () => setState(() => _index = 0),
-      onStartTourRequested: _onStartTourRequested,
-    ),
-  ];
+  List<Widget> _buildScreens() {
+    final hasVisitor = SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
+    return [
+      GuardDashboardScreen(
+        key: _dashboardKey,
+        guardId: widget.guardId,
+        guardName: widget.guardName,
+        societyId: widget.societyId,
+        onTapNewEntry: hasVisitor ? () => setState(() => _index = 2) : null,
+        onTapVisitors: hasVisitor ? () => setState(() => _index = 1) : null,
+      ),
+      if (hasVisitor) ...[
+        VisitorListScreen(
+          guardId: widget.guardId,
+          onBackPressed: () => setState(() => _index = 0),
+        ),
+        NewVisitorScreen(
+          guardId: widget.guardId,
+          guardName: widget.guardName,
+          societyId: widget.societyId,
+          onBackPressed: () => setState(() => _index = 0),
+        ),
+        GuardHistoryScreen(
+          guardId: widget.guardId,
+          onBackPressed: () => setState(() => _index = 0),
+        ),
+      ],
+      ProfileScreen(
+        guardId: widget.guardId,
+        guardName: widget.guardName,
+        societyId: widget.societyId,
+        onBackPressed: () => setState(() => _index = 0),
+        onStartTourRequested: _onStartTourRequested,
+      ),
+    ];
+  }
+
+  List<FloatingNavItem> _buildNavItems() {
+    final hasVisitor = SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
+    if (!hasVisitor) {
+      return const [
+        FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
+        FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
+      ];
+    }
+    return const [
+      FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
+      FloatingNavItem(icon: Icons.groups_rounded, label: "Visitors"),
+      FloatingNavItem(icon: Icons.qr_code_scanner, label: "Entry"),
+      FloatingNavItem(icon: Icons.history_rounded, label: "History"),
+      FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
+    ];
+  }
+
+  int _getProfileIndex() {
+    return SocietyModules.isEnabled(SocietyModuleIds.visitorManagement) ? 4 : 1;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final hasVisitor = _modulesReady && SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
+    final screens = _modulesReady ? _buildScreens() : [
+      GuardDashboardScreen(
+        key: _dashboardKey,
+        guardId: widget.guardId,
+        guardName: widget.guardName,
+        societyId: widget.societyId,
+        onTapNewEntry: null,
+        onTapVisitors: null,
+      ),
+      ProfileScreen(
+        guardId: widget.guardId,
+        guardName: widget.guardName,
+        societyId: widget.societyId,
+        onBackPressed: () => setState(() => _index = 0),
+        onStartTourRequested: _onStartTourRequested,
+      ),
+    ];
+    if (_index >= screens.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _index = 0);
+      });
+    }
+    final clampedIndex = _index.clamp(0, screens.length - 1);
+    final navItems = _modulesReady ? _buildNavItems() : const [
+      FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
+      FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
+    ];
     return Scaffold(
       extendBody: true,
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           IndexedStack(
-            index: _index,
-            children: _screens,
+            index: clampedIndex,
+            children: screens,
           ),
           Align(
             alignment: Alignment.bottomCenter,
             child: SocietyBottomNav(
-              currentIndex: _index,
+              currentIndex: clampedIndex,
               onTap: (i) => setState(() => _index = i),
-              showCenterButton: true, // Guard has center FAB button
-              centerIndex: 2, // Entry screen
+              showCenterButton: hasVisitor,
+              centerIndex: hasVisitor ? 2 : 1,
               centerIcon: Icons.qr_code_scanner,
-              items: const [
-                FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
-                FloatingNavItem(icon: Icons.groups_rounded, label: "Visitors"),
-                FloatingNavItem(icon: Icons.qr_code_scanner, label: "Entry"), // Center button
-                FloatingNavItem(icon: Icons.history_rounded, label: "History"),
-                FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
-              ],
+              items: navItems,
             ),
           ),
         ],

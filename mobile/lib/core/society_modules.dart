@@ -31,6 +31,14 @@ class SocietyModules {
 
   static final FirestoreService _firestore = FirestoreService();
 
+  /// Force refresh module cache from Firestore (e.g. when shell mounts).
+  static Future<void> refresh(String societyId) async {
+    if (societyId.isEmpty) return;
+    _cachedSocietyId = null;
+    _cachedModules = {};
+    await ensureLoaded(societyId);
+  }
+
   /// Load society doc and cache modules for [societyId]. Call before showing dashboards.
   /// If society has no `modules` field, all modules are treated as enabled (backward compatible).
   static Future<void> ensureLoaded(String societyId) async {

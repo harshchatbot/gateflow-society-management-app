@@ -11,6 +11,7 @@ import 'resident_profile_screen.dart';
 import 'notice_board_screen.dart';
 import '../ui/app_colors.dart';
 import '../services/notification_service.dart';
+import '../core/society_modules.dart';
 
 class ResidentShellScreen extends StatefulWidget {
   final String residentId;
@@ -33,11 +34,15 @@ class ResidentShellScreen extends StatefulWidget {
 class _ResidentShellScreenState extends State<ResidentShellScreen> {
   int _index = 0;
   final GlobalKey<State<ResidentDashboardScreen>> _dashboardKey = GlobalKey<State<ResidentDashboardScreen>>();
+  bool _modulesReady = false;
 
   @override
   void initState() {
     super.initState();
     _subscribeToNotifications();
+    SocietyModules.refresh(widget.societyId).then((_) {
+      if (mounted) setState(() => _modulesReady = true);
+    });
   }
 
   void _onStartTourRequested() {
@@ -71,68 +76,125 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
     }
   }
 
-  late final List<Widget> _screens = [
-    ResidentDashboardScreen(
-      key: _dashboardKey,
-      residentId: widget.residentId,
-      residentName: widget.residentName,
-      societyId: widget.societyId,
-      flatNo: widget.flatNo,
-      onNavigateToApprovals: () => setState(() => _index = 1),
-      onNavigateToHistory: () => setState(() => _index = 2),
-      onNavigateToComplaints: () => setState(() => _index = 3),
-      onNavigateToNotices: () => setState(() => _index = 4),
-    ),
-    ResidentApprovalsScreen(
-      residentId: widget.residentId,
-      societyId: widget.societyId,
-      flatNo: widget.flatNo,
-      onBackPressed: () => setState(() => _index = 0),
-    ),
-    ResidentHistoryScreen(
-      residentId: widget.residentId,
-      societyId: widget.societyId,
-      flatNo: widget.flatNo,
-      onBackPressed: () => setState(() => _index = 0),
-    ),
-    ResidentComplaintsListScreen(
-      residentId: widget.residentId,
-      societyId: widget.societyId,
-      flatNo: widget.flatNo,
-      onBackPressed: () => setState(() => _index = 0),
-    ),
-    NoticeBoardScreen(
-      societyId: widget.societyId,
-      themeColor: AppColors.success, // Green theme for residents
-      useScaffold: false, // Don't use Scaffold when used as tab
-      onBackPressed: () => setState(() => _index = 0),
-    ),
-    ResidentProfileScreen(
-      residentId: widget.residentId,
-      residentName: widget.residentName,
-      societyId: widget.societyId,
-      flatNo: widget.flatNo,
-      onBackPressed: () => setState(() => _index = 0),
-      onStartTourRequested: _onStartTourRequested,
-    ),
-  ];
+  List<Widget> _buildScreens() {
+    final hasVisitor = SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
+    final hasComplaints = SocietyModules.isEnabled(SocietyModuleIds.complaints);
+    final hasNotices = SocietyModules.isEnabled(SocietyModuleIds.notices);
+    final complaintsIdx = hasVisitor ? 3 : 1;
+    final noticesIdx = hasVisitor ? (hasComplaints ? 4 : 3) : (hasComplaints ? 2 : 1);
+
+    return [
+      ResidentDashboardScreen(
+        key: _dashboardKey,
+        residentId: widget.residentId,
+        residentName: widget.residentName,
+        societyId: widget.societyId,
+        flatNo: widget.flatNo,
+        onNavigateToApprovals: hasVisitor ? () => setState(() => _index = 1) : null,
+        onNavigateToHistory: hasVisitor ? () => setState(() => _index = 2) : null,
+        onNavigateToComplaints: hasComplaints ? () => setState(() => _index = complaintsIdx) : null,
+        onNavigateToNotices: hasNotices ? () => setState(() => _index = noticesIdx) : null,
+      ),
+      if (hasVisitor) ...[
+        ResidentApprovalsScreen(
+          residentId: widget.residentId,
+          societyId: widget.societyId,
+          flatNo: widget.flatNo,
+          onBackPressed: () => setState(() => _index = 0),
+        ),
+        ResidentHistoryScreen(
+          residentId: widget.residentId,
+          societyId: widget.societyId,
+          flatNo: widget.flatNo,
+          onBackPressed: () => setState(() => _index = 0),
+        ),
+      ],
+      if (hasComplaints)
+        ResidentComplaintsListScreen(
+          residentId: widget.residentId,
+          societyId: widget.societyId,
+          flatNo: widget.flatNo,
+          onBackPressed: () => setState(() => _index = 0),
+        ),
+      if (hasNotices)
+        NoticeBoardScreen(
+          societyId: widget.societyId,
+          themeColor: AppColors.success,
+          useScaffold: false,
+          onBackPressed: () => setState(() => _index = 0),
+        ),
+      ResidentProfileScreen(
+        residentId: widget.residentId,
+        residentName: widget.residentName,
+        societyId: widget.societyId,
+        flatNo: widget.flatNo,
+        onBackPressed: () => setState(() => _index = 0),
+        onStartTourRequested: _onStartTourRequested,
+      ),
+    ];
+  }
+
+  List<FloatingNavItem> _buildNavItems() {
+    final hasVisitor = SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
+    final hasComplaints = SocietyModules.isEnabled(SocietyModuleIds.complaints);
+    final hasNotices = SocietyModules.isEnabled(SocietyModuleIds.notices);
+    final items = <FloatingNavItem>[
+      const FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
+    ];
+    if (hasVisitor) {
+      items.add(const FloatingNavItem(icon: Icons.verified_rounded, label: "Approvals"));
+      items.add(const FloatingNavItem(icon: Icons.history_rounded, label: "History"));
+    }
+    if (hasComplaints) {
+      items.add(const FloatingNavItem(icon: Icons.report_problem_rounded, label: "Complaints"));
+    }
+    if (hasNotices) {
+      items.add(const FloatingNavItem(icon: Icons.notifications_rounded, label: "Notices"));
+    }
+    items.add(const FloatingNavItem(icon: Icons.person_rounded, label: "Profile"));
+    return items;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final screens = _modulesReady ? _buildScreens() : [
+      ResidentDashboardScreen(
+        key: _dashboardKey,
+        residentId: widget.residentId,
+        residentName: widget.residentName,
+        societyId: widget.societyId,
+        flatNo: widget.flatNo,
+        onNavigateToApprovals: null,
+        onNavigateToHistory: null,
+        onNavigateToComplaints: null,
+        onNavigateToNotices: null,
+      ),
+      ResidentProfileScreen(
+        residentId: widget.residentId,
+        residentName: widget.residentName,
+        societyId: widget.societyId,
+        flatNo: widget.flatNo,
+        onBackPressed: () => setState(() => _index = 0),
+        onStartTourRequested: _onStartTourRequested,
+      ),
+    ];
+    if (_index >= screens.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _index = 0);
+      });
+    }
+    final clampedIndex = _index.clamp(0, screens.length - 1);
+    final navItems = _modulesReady ? _buildNavItems() : const [
+      FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
+      FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
+    ];
     return Scaffold(
-      body: _screens[_index],
+      body: screens[clampedIndex],
       bottomNavigationBar: SocietyBottomNav(
-        currentIndex: _index,
+        currentIndex: clampedIndex,
         onTap: (i) => setState(() => _index = i),
-        showCenterButton: false, // ✅ Resident: no FAB
-        items: const [
-          FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
-          FloatingNavItem(icon: Icons.verified_rounded, label: "Approvals"),
-          FloatingNavItem(icon: Icons.history_rounded, label: "History"),
-          FloatingNavItem(icon: Icons.report_problem_rounded, label: "Complaints"),
-          FloatingNavItem(icon: Icons.notifications_rounded, label: "Notices"),
-          FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
-        ],
+        showCenterButton: false,
+        items: navItems,
       ),
     );
   }
