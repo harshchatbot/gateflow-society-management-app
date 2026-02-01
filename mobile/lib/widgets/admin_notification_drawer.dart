@@ -10,6 +10,7 @@ import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../core/society_modules.dart';
+import '../screens/sos_detail_screen.dart';
 
 /// Admin Notification Drawer
 ///
@@ -580,22 +581,24 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
     final status = notification['status'] ?? '';
     final time = _formatTime(notification['created_at']);
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
+    return GestureDetector(
+      onTap: () => _handleNotificationTap(notification),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
@@ -703,6 +706,45 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           ),
         ],
       ),
+      ),
     );
+  }
+
+  void _handleNotificationTap(Map<String, dynamic> notification) {
+    final type = notification['type'] ?? '';
+    final id = notification['id'] ?? '';
+    
+    if (id.isEmpty) return;
+
+    Navigator.pop(context); // Close drawer
+
+    switch (type) {
+      case 'sos':
+        if (!SocietyModules.isEnabled(SocietyModuleIds.sos)) return;
+        final flatNo = notification['flat_no'] ?? '';
+        final residentName = notification['resident_name'] ?? 'Resident';
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SosDetailScreen(
+              societyId: widget.societyId,
+              sosId: id,
+              flatNo: flatNo,
+              residentName: residentName,
+              residentPhone: null,
+            ),
+          ),
+        );
+        break;
+      case 'resident_signup':
+        widget.onNavigateToPendingSignup?.call();
+        break;
+      case 'complaint':
+        // Navigate to complaints - admin shell handles this
+        break;
+      case 'notice':
+        // Navigate to notices
+        break;
+    }
   }
 }

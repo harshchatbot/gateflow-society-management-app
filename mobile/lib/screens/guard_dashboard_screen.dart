@@ -96,9 +96,20 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
 
   void _setupNotificationListener() {
     final notificationService = NotificationService();
+    notificationService.setOnNotificationReceived((data) {
+      final type = (data['type'] ?? '').toString();
+      if (type == 'sos' && SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+        // Increment SOS badge when notification received
+        if (mounted) {
+          setState(() {
+            _sosBadgeCount = 1;
+          });
+        }
+      }
+    });
     notificationService.setOnNotificationTap((data) {
       final type = (data['type'] ?? '').toString();
-      if (type == 'sos') {
+      if (type == 'sos' && SocietyModules.isEnabled(SocietyModuleIds.sos)) {
         final societyId = (data['society_id'] ?? widget.societyId).toString();
         final flatNo = (data['flat_no'] ?? '').toString();
         final residentName = (data['resident_name'] ?? 'Resident').toString();
@@ -522,8 +533,19 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             IconButton(
               icon: const Icon(Icons.notifications_rounded, color: Colors.white),
               onPressed: () {
-                // Navigate to visitor list to see pending approvals
-                if (widget.onTapVisitors != null) {
+                // If SOS badge is present, navigate to SOS Alerts; otherwise visitors
+                if (_sosBadgeCount > 0 && SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+                  setState(() => _sosBadgeCount = 0);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SosAlertsScreen(
+                        societyId: widget.societyId,
+                        role: 'guard',
+                      ),
+                    ),
+                  );
+                } else if (widget.onTapVisitors != null) {
                   widget.onTapVisitors!();
                 }
               },
