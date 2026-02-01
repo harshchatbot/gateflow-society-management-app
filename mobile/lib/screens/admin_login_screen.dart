@@ -577,10 +577,10 @@ class _PremiumField extends StatelessWidget {
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.admin.withOpacity(0.15), // Purple for admin
+                  color: AppColors.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: AppColors.admin, size: 20),
+                child: Icon(icon, color: AppColors.primary, size: 20),
               ),
               suffixIcon: suffixIcon,
               hintText: hint,

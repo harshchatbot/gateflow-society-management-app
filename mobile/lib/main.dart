@@ -9,7 +9,7 @@ import 'firebase_options.dart'; // <--- The generated file
 import 'core/theme.dart';
 import 'services/notification_service.dart';
 
-import 'screens/app_splash_screen.dart';
+import 'screens/app_bootstrap_screen.dart';
 
 
 // Background message handler (must be top-level)
@@ -64,7 +64,6 @@ Future<void> main() async {
   }
 
 
-  // Always start with splash screen - it will handle navigation
   runApp(const MyApp());
 }
 
@@ -77,7 +76,7 @@ class MyApp extends StatelessWidget {
       title: 'Sentinel',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
-      home: const AppSplashScreen(),
+      home: const AppBootstrapScreen(),
     );
   }
 }

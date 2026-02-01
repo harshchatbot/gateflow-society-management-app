@@ -27,11 +27,16 @@ if (flutterVersionName == null) {
 android {
     namespace = "com.gateflow.app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    ndkVersion "25.1.8937393"
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        coreLibraryDesugaringEnabled true
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    kotlinOptions {
+        jvmTarget = "17"
     }
 
     defaultConfig {
@@ -58,10 +63,8 @@ flutter {
     source = "../.."
 }
 
-
-gradle
-   dependencies {
-       // ... existing dependencies
-       implementation platform('com.google.firebase:firebase-bom:32.7.0')
-       implementation 'com.google.firebase:firebase-messaging'
-   }
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    implementation platform('com.google.firebase:firebase-bom:32.7.0')
+    implementation 'com.google.firebase:firebase-messaging'
+}
