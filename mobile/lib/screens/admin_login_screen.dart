@@ -221,15 +221,19 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             ),
           ),
           onPressed: () {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
-            );
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+              );
+            }
           },
         ),
       ),
       body: Stack(
         children: [
-          // Gradient Background (Purple theme)
+          // Gradient Background (single onboarding theme)
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -237,7 +241,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.admin.withOpacity(0.15), // Purple gradient for admin
+                    AppColors.primary.withOpacity(0.15),
                     AppColors.bg,
                     AppColors.bg,
                   ],
@@ -268,38 +272,33 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   Widget _buildBrandHeader() {
     return Column(
       children: [
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.admin, Color(0xFF7C3AED)], // Purple gradient
-            ),
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.admin.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+        SizedBox(
+          width: 200,
+          height: 160,
+          child: Image.asset(
+            'assets/illustrations/illustration_login_admin.png',
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Container(
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
               ),
-            ],
-          ),
-          child: const Icon(
-            Icons.admin_panel_settings_rounded,
-            size: 50,
-            color: Colors.white,
+              child: const Icon(
+                Icons.admin_panel_settings_rounded,
+                size: 64,
+                color: AppColors.primary,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
         const Text(
           "Admin Login",
           style: TextStyle(
-            fontSize: 32,
+            fontSize: 28,
             fontWeight: FontWeight.w900,
             color: AppColors.text,
-            letterSpacing: -1,
+            letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 8),
@@ -422,7 +421,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 child: const Text(
                   "Forgot password?",
                   style: TextStyle(
-                    color: AppColors.admin,
+                    color: AppColors.primary,
                     fontWeight: FontWeight.w800,
                     fontSize: 13,
                   ),
@@ -435,7 +434,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.admin, // Purple button
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shadowColor: Colors.transparent,
@@ -477,7 +476,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                       child: const Text(
                         "Sign Up",
                         style: TextStyle(
-                          color: AppColors.admin,
+                          color: AppColors.primary,
                           fontWeight: FontWeight.w900,
                           fontSize: 14,
                         ),
@@ -496,7 +495,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   child: Text(
                     "Create New Society (Super Admin)",
                     style: TextStyle(
-                      color: AppColors.admin.withOpacity(0.8),
+                      color: AppColors.primary.withOpacity(0.8),
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
                     ),

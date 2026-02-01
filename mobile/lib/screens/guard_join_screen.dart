@@ -195,6 +195,30 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
     }
   }
 
+  Widget _buildIllustrationHeader() {
+    return Center(
+      child: SizedBox(
+        width: 160,
+        height: 120,
+        child: Image.asset(
+          'assets/illustrations/illustration_signup_guard.png',
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => Container(
+            decoration: BoxDecoration(
+              color: AppColors.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Icon(
+              Icons.shield_rounded,
+              size: 56,
+              color: AppColors.primary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final hasCode = _societyId != null;
@@ -202,7 +226,7 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
-        backgroundColor: AppColors.bg,
+        backgroundColor: Colors.transparent,
         elevation: 0,
         iconTheme: const IconThemeData(color: AppColors.text),
         title: const Text(
@@ -215,12 +239,29 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
       ),
       body: Stack(
         children: [
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.primary.withOpacity(0.12),
+                    AppColors.bg,
+                    AppColors.bg,
+                  ],
+                ),
+              ),
+            ),
+          ),
           SafeArea(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  _buildIllustrationHeader(),
+                  const SizedBox(height: 20),
                   if (_error != null) ...[
                     Container(
                       padding: const EdgeInsets.all(12),

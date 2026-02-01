@@ -151,15 +151,19 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
             ),
           ),
           onPressed: () {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
-            );
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
+              );
+            }
           },
         ),
       ),
       body: Stack(
         children: [
-          // Gradient Background
+          // Gradient Background (onboarding theme)
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -167,7 +171,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.success.withOpacity(0.15),
+                    AppColors.primary.withOpacity(0.15),
                     AppColors.bg,
                     AppColors.bg,
                   ],
@@ -201,38 +205,33 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
   Widget _buildBrandHeader() {
     return Column(
       children: [
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.success, AppColors.success.withOpacity(0.7)],
-            ),
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.success.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+        SizedBox(
+          width: 200,
+          height: 140,
+          child: Image.asset(
+            'assets/illustrations/illustration_signup_resident.png',
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Container(
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
               ),
-            ],
-          ),
-          child: const Icon(
-            Icons.person_add_rounded,
-            size: 50,
-            color: Colors.white,
+              child: const Icon(
+                Icons.person_add_rounded,
+                size: 64,
+                color: AppColors.primary,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
         const Text(
           "Resident Signup",
           style: TextStyle(
-            fontSize: 32,
+            fontSize: 28,
             fontWeight: FontWeight.w900,
             color: AppColors.text,
-            letterSpacing: -1,
+            letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 8),
@@ -421,7 +420,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleSignup,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.success,
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shadowColor: Colors.transparent,
@@ -459,7 +458,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
                   child: const Text(
                     "Login",
                     style: TextStyle(
-                      color: AppColors.success,
+                      color: AppColors.primary,
                       fontWeight: FontWeight.w800,
                       fontSize: 14,
                     ),
@@ -479,7 +478,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.success.withOpacity(0.3)),
+        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
@@ -494,12 +493,12 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: AppColors.success.withOpacity(0.15),
+              color: AppColors.primary.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.check_circle_rounded,
-              color: AppColors.success,
+              color: AppColors.primary,
               size: 50,
             ),
           ),
@@ -533,8 +532,8 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
                   MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
                 );
               },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -638,10 +637,10 @@ class _PremiumField extends StatelessWidget {
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.15),
+                  color: AppColors.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: AppColors.success, size: 20),
+                child: Icon(icon, color: AppColors.primary, size: 20),
               ),
               suffixIcon: suffixIcon,
               hintText: hint,

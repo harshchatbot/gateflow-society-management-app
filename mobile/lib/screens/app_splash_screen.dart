@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import '../ui/app_colors.dart';
 import 'role_select_screen.dart';
+import 'onboarding_welcome_screen.dart';
 import 'guard_shell_screen.dart';
 import 'resident_shell_screen.dart';
 import 'admin_shell_screen.dart';
@@ -264,9 +265,9 @@ class _AppSplashScreenState extends State<AppSplashScreen>
         }
       }
 
-      // Final fallback: go to role select
+      // Final fallback: go to onboarding welcome (first-time / not logged in)
       if (targetScreen == null) {
-        targetScreen = const RoleSelectScreen();
+        targetScreen = const OnboardingWelcomeScreen();
       }
 
       // Navigate to target screen
@@ -283,7 +284,7 @@ class _AppSplashScreenState extends State<AppSplashScreen>
       // Ensure we always navigate somewhere
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+          MaterialPageRoute(builder: (_) => const OnboardingWelcomeScreen()),
         );
       }
     }

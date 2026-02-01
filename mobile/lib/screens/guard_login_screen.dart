@@ -246,9 +246,13 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
             ),
           ),
           onPressed: () {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
-            );
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+              );
+            }
           },
         ),
       ),
@@ -293,38 +297,33 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
   Widget _buildBrandHeader() {
     return Column(
       children: [
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.primary, Color(0xFF1E40AF)],
-            ),
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primary.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+        SizedBox(
+          width: 200,
+          height: 160,
+          child: Image.asset(
+            'assets/illustrations/illustration_login_guard.png',
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Container(
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
               ),
-            ],
-          ),
-          child: const Icon(
-            AppIcons.guard,
-            size: 50,
-            color: Colors.white,
+              child: const Icon(
+                AppIcons.guard,
+                size: 64,
+                color: AppColors.primary,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
         const Text(
           "Guard Login",
           style: TextStyle(
-            fontSize: 32,
+            fontSize: 28,
             fontWeight: FontWeight.w900,
             color: AppColors.text,
-            letterSpacing: -1,
+            letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 8),

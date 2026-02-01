@@ -132,15 +132,19 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
             ),
           ),
           onPressed: () {
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
-            );
+            if (Navigator.of(context).canPop()) {
+              Navigator.of(context).pop();
+            } else {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
+              );
+            }
           },
         ),
       ),
       body: Stack(
         children: [
-          // Gradient Background
+          // Gradient Background (onboarding theme)
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -148,7 +152,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.admin.withOpacity(0.15),
+                    AppColors.primary.withOpacity(0.15),
                     AppColors.bg,
                     AppColors.bg,
                   ],
@@ -182,38 +186,33 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
   Widget _buildBrandHeader() {
     return Column(
       children: [
-        Container(
-          width: 100,
-          height: 100,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.admin, AppColors.admin.withOpacity(0.7)],
-            ),
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.admin.withOpacity(0.3),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
+        SizedBox(
+          width: 200,
+          height: 140,
+          child: Image.asset(
+            'assets/illustrations/illustration_signup_admin.png',
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Container(
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(24),
               ),
-            ],
-          ),
-          child: const Icon(
-            Icons.person_add_rounded,
-            size: 50,
-            color: Colors.white,
+              child: const Icon(
+                Icons.person_add_rounded,
+                size: 64,
+                color: AppColors.primary,
+              ),
+            ),
           ),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 24),
         const Text(
           "Admin Signup",
           style: TextStyle(
-            fontSize: 32,
+            fontSize: 28,
             fontWeight: FontWeight.w900,
             color: AppColors.text,
-            letterSpacing: -1,
+            letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 8),
@@ -437,7 +436,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleSignup,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.admin,
+                  backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shadowColor: Colors.transparent,
@@ -477,7 +476,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
                       child: const Text(
                         "Login",
                         style: TextStyle(
-                          color: AppColors.admin,
+                          color: AppColors.primary,
                           fontWeight: FontWeight.w800,
                           fontSize: 14,
                         ),
@@ -496,7 +495,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
                   child: Text(
                     "Create New Society (Super Admin)",
                     style: TextStyle(
-                      color: AppColors.admin.withOpacity(0.8),
+                      color: AppColors.primary.withOpacity(0.8),
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
                     ),
@@ -531,12 +530,12 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: AppColors.admin.withOpacity(0.15),
+              color: AppColors.primary.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.check_circle_rounded,
-              color: AppColors.admin,
+              color: AppColors.primary,
               size: 50,
             ),
           ),
@@ -571,7 +570,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.admin,
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -675,10 +674,10 @@ class _PremiumField extends StatelessWidget {
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.admin.withOpacity(0.15),
+                  color: AppColors.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: AppColors.admin, size: 20),
+                child: Icon(icon, color: AppColors.primary, size: 20),
               ),
               suffixIcon: suffixIcon,
               hintText: hint,
