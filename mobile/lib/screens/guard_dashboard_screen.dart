@@ -19,6 +19,7 @@ import 'sos_alerts_screen.dart';
 import 'sos_detail_screen.dart';
 import 'guard_residents_directory_screen.dart';
 import 'guard_violations_list_screen.dart';
+import '../widgets/guard_notification_drawer.dart';
 
 class GuardDashboardScreen extends StatefulWidget {
   final String guardId;
@@ -136,6 +137,20 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         );
       }
     });
+  }
+
+  void _showNotificationDrawer() {
+    if (_sosBadgeCount > 0 && mounted) {
+      setState(() => _sosBadgeCount = 0);
+    }
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => GuardNotificationDrawer(
+        societyId: widget.societyId,
+      ),
+    );
   }
 
   Future<void> _syncDashboard() async {
@@ -528,28 +543,12 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             ],
           ),
         ),
-        // Notification Bell Icon
+        // Notification Bell Icon — opens notification drawer (SOS & notices)
         Stack(
           children: [
             IconButton(
               icon: const Icon(Icons.notifications_rounded, color: Colors.white),
-              onPressed: () {
-                // If SOS badge is present, navigate to SOS Alerts; otherwise visitors
-                if (_sosBadgeCount > 0 && SocietyModules.isEnabled(SocietyModuleIds.sos)) {
-                  setState(() => _sosBadgeCount = 0);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => SosAlertsScreen(
-                        societyId: widget.societyId,
-                        role: 'guard',
-                      ),
-                    ),
-                  );
-                } else if (widget.onTapVisitors != null) {
-                  widget.onTapVisitors!();
-                }
-              },
+              onPressed: _showNotificationDrawer,
             ),
             if (pendingCount + _sosBadgeCount > 0)
               Positioned(
