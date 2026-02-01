@@ -6,6 +6,8 @@ import '../core/app_logger.dart';
 import '../services/firestore_service.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/invite_claim_service.dart';
+import '../core/session_gate_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 // UI system
 import '../ui/app_colors.dart';
@@ -120,7 +122,23 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
         return;
       }
 
-      // 5) Save session
+      // 5a) Post-login gate: block if society inactive
+      final gate = SessionGateService();
+      final gateResult = await gate.validateSessionAfterLogin(uid);
+      if (!gateResult.allowed) {
+        await FirebaseAuth.instance.signOut();
+        await Storage.clearAllSessions();
+        await Storage.clearFirebaseSession();
+        GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+        );
+        return;
+      }
+
+      // 6) Save session
       await Storage.saveFirebaseSession(
         uid: uid,
         societyId: societyId,

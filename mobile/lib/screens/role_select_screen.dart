@@ -5,9 +5,33 @@ import 'admin_login_screen.dart';
 import 'how_sentinel_works_screen.dart';
 import '../widgets/powered_by_footer.dart';
 import '../ui/app_colors.dart';
+import '../core/session_gate_service.dart';
 
-class RoleSelectScreen extends StatelessWidget {
+class RoleSelectScreen extends StatefulWidget {
   const RoleSelectScreen({super.key});
+
+  @override
+  State<RoleSelectScreen> createState() => _RoleSelectScreenState();
+}
+
+class _RoleSelectScreenState extends State<RoleSelectScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final message = GateBlockMessage.take();
+      if (message != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            backgroundColor: Colors.orange.shade800,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -368,3 +392,4 @@ class _RoleCardState extends State<_RoleCard> with SingleTickerProviderStateMixi
     );
   }
 }
+

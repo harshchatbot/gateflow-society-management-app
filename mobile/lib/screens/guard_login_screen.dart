@@ -16,8 +16,8 @@ import 'guard_join_screen.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
-import '../services/invite_claim_service.dart'; // <-- adjust path as per your project
-import 'package:firebase_auth/firebase_auth.dart';
+import '../services/invite_claim_service.dart';
+import '../core/session_gate_service.dart';
 
 
 class GuardLoginScreen extends StatefulWidget {
@@ -116,7 +116,23 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
         throw Exception("User is not a guard (role=$systemRole).");
       }
 
-      // 5) Save session
+      // 5) Post-login gate: block if membership or society inactive
+      final gate = SessionGateService();
+      final gateResult = await gate.validateSessionAfterLogin(uid);
+      if (!gateResult.allowed) {
+        await FirebaseAuth.instance.signOut();
+        await Storage.clearAllSessions();
+        await Storage.clearFirebaseSession();
+        GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+        );
+        return;
+      }
+
+      // 6) Save session
       await Storage.saveFirebaseSession(
         uid: uid,
         societyId: societyId,

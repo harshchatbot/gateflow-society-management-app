@@ -8,6 +8,7 @@ import 'admin_shell_screen.dart';
 import '../core/storage.dart';
 import '../core/society_modules.dart';
 import '../services/firestore_service.dart';
+import '../core/session_gate_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class AppSplashScreen extends StatefulWidget {
@@ -150,22 +151,21 @@ class _AppSplashScreenState extends State<AppSplashScreen>
     Widget? targetScreen;
 
     try {
-      // Check Firebase Auth first
+      // Check Firebase Auth first — run post-login gate (membership + society active)
       final firebaseUser = FirebaseAuth.instance.currentUser;
       if (firebaseUser != null) {
         try {
-          final firestore = FirestoreService();
-          final membership = await firestore.getCurrentUserMembership().timeout(
+          final gate = SessionGateService();
+          final gateResult = await gate.validateSessionAfterLogin(firebaseUser.uid).timeout(
             const Duration(seconds: 5),
-            onTimeout: () {
-              if (kDebugMode) {
-                debugPrint("Timeout loading membership");
-              }
-              return null;
-            },
+            onTimeout: () => GateResult.blocked(
+              GateBlockReason.membershipNotFound,
+              'This society is currently inactive. Please contact the society admin.',
+            ),
           );
 
-          if (membership != null && mounted) {
+          if (gateResult.allowed && gateResult.memberInfo != null && mounted) {
+            final membership = gateResult.memberInfo!;
             final societyId = membership['societyId'] as String? ?? '';
             if (societyId.isNotEmpty) {
               await SocietyModules.ensureLoaded(societyId);
@@ -197,19 +197,28 @@ class _AppSplashScreenState extends State<AppSplashScreen>
               );
             }
           }
+
+          if (!gateResult.allowed && mounted) {
+            try {
+              await FirebaseAuth.instance.signOut();
+              await Storage.clearAllSessions();
+              await Storage.clearFirebaseSession();
+              SocietyModules.clear();
+              GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
+            } catch (_) {}
+            targetScreen = const RoleSelectScreen();
+          }
         } catch (e, stackTrace) {
           if (kDebugMode) {
-            debugPrint("Error loading membership: $e");
+            debugPrint("Error in splash gate: $e");
             debugPrint("Stack trace: $stackTrace");
           }
-          // On error, sign out and go to role select
           try {
             await FirebaseAuth.instance.signOut();
             await Storage.clearAllSessions();
+            await Storage.clearFirebaseSession();
             SocietyModules.clear();
-          } catch (_) {
-            // Ignore sign out errors
-          }
+          } catch (_) {}
         }
       }
 

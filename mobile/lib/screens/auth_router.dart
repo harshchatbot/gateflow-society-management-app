@@ -2,10 +2,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../core/storage.dart';
+import '../core/session_gate_service.dart';
 import '../ui/app_loader.dart';
 import 'join_society_screen.dart';
+import 'role_select_screen.dart';
 import 'guard_shell_screen.dart';
-// TODO: resident shell later
+import 'resident_shell_screen.dart';
+import 'admin_shell_screen.dart';
 
 class AuthRouter extends StatefulWidget {
   const AuthRouter({super.key});
@@ -23,28 +27,32 @@ class _AuthRouterState extends State<AuthRouter> {
 
   Future<void> _route() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      // You already have login screen routing
-      return;
-    }
+    if (user == null) return;
 
-    final db = FirebaseFirestore.instance;
-    final pointerSnap = await db.collection('members').doc(user.uid).get();
+    final gate = SessionGateService();
+    final gateResult = await gate.validateSessionAfterLogin(user.uid);
 
     if (!mounted) return;
 
-    if (!pointerSnap.exists) {
+    if (!gateResult.allowed) {
+      await FirebaseAuth.instance.signOut();
+      await Storage.clearAllSessions();
+      await Storage.clearFirebaseSession();
+      GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const JoinSocietyScreen()),
+        MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
       );
       return;
     }
 
-    final data = pointerSnap.data() ?? {};
-    final societyId = data['societyId']?.toString();
-    final systemRole = data['systemRole']?.toString();
+    final membership = gateResult.memberInfo!;
+    final societyId = membership['societyId']?.toString() ?? '';
+    final systemRole = membership['systemRole']?.toString() ?? '';
+    final name = membership['name']?.toString() ?? '';
+    final flatNo = membership['flatNo']?.toString();
+    final societyRole = membership['societyRole']?.toString();
 
-    if (societyId == null || societyId.isEmpty) {
+    if (societyId.isEmpty) {
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const JoinSocietyScreen()),
       );
@@ -52,22 +60,11 @@ class _AuthRouterState extends State<AuthRouter> {
     }
 
     if (systemRole == 'guard') {
-      // fetch member name optionally
-      final memberSnap = await db
-          .collection('societies')
-          .doc(societyId)
-          .collection('members')
-          .doc(user.uid)
-          .get();
-
-      final member = memberSnap.data() ?? {};
-      final guardName = (member['name'] ?? 'Guard').toString();
-
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => GuardShellScreen(
             guardId: user.uid,
-            guardName: guardName,
+            guardName: name.isNotEmpty ? name : 'Guard',
             societyId: societyId,
           ),
         ),
@@ -75,7 +72,34 @@ class _AuthRouterState extends State<AuthRouter> {
       return;
     }
 
-    // TODO: resident route
+    if (systemRole == 'resident' && flatNo != null && flatNo.isNotEmpty) {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => ResidentShellScreen(
+            residentId: user.uid,
+            residentName: name.isNotEmpty ? name : 'Resident',
+            societyId: societyId,
+            flatNo: flatNo,
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (systemRole == 'admin' || systemRole == 'super_admin') {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(
+          builder: (_) => AdminShellScreen(
+            adminId: user.uid,
+            adminName: name.isNotEmpty ? name : 'Admin',
+            societyId: societyId,
+            role: (societyRole ?? 'ADMIN').toUpperCase(),
+          ),
+        ),
+      );
+      return;
+    }
+
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const JoinSocietyScreen()),
     );

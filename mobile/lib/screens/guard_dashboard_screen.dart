@@ -220,9 +220,9 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                createdDate.isBefore(endOfDay);
       }).map((doc) {
         final data = doc.data() as Map<String, dynamic>?;
-        return {
-          'status': data?['status'] ?? 'PENDING',
-        };
+        // Use actual status; do not default to PENDING so badge count is accurate
+        final status = (data?['status']?.toString() ?? '').toUpperCase();
+        return {'status': status};
       }).toList();
 
       // 3. Get recent visitors (last 5, ordered by createdAt descending)
@@ -565,7 +565,9 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                     minHeight: 18,
                   ),
                   child: Text(
-                    pendingCount > 9 ? "9+" : pendingCount.toString(),
+                    (pendingCount + _sosBadgeCount) > 9
+                        ? "9+"
+                        : (pendingCount + _sosBadgeCount).toString(),
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 10,

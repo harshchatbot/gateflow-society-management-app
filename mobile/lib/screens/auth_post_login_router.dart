@@ -2,10 +2,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../core/storage.dart';
+import '../core/session_gate_service.dart';
 import '../ui/app_loader.dart';
 import '../services/invite_claim_service.dart';
 import 'guard_shell_screen.dart';
-// TODO: add resident shell when you build it
+import 'role_select_screen.dart';
 
 class AuthPostLoginRouter extends StatefulWidget {
   final String defaultSocietyId; // you must pass societyId you’re onboarding into
@@ -70,6 +72,21 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
 
         societyId = result.societyId;
         systemRole = result.systemRole;
+      }
+
+      // Post-login gate: block if membership or society inactive
+      final gate = SessionGateService();
+      final gateResult = await gate.validateSessionAfterLogin(user.uid);
+      if (!mounted) return;
+      if (!gateResult.allowed) {
+        await FirebaseAuth.instance.signOut();
+        await Storage.clearAllSessions();
+        await Storage.clearFirebaseSession();
+        GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+        );
+        return;
       }
 
       // Route based on role

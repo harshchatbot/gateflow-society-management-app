@@ -11,6 +11,8 @@ import 'admin_onboarding_screen.dart';
 import 'admin_signup_screen.dart';
 import 'admin_pending_approval_screen.dart';
 import '../services/admin_signup_service.dart';
+import '../core/session_gate_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -108,6 +110,22 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         MaterialPageRoute(
           builder: (_) => AdminPendingApprovalScreen(email: userEmail ?? email),
         ),
+      );
+      return;
+    }
+
+    // Step 2c: Post-login gate: block if society inactive
+    final gate = SessionGateService();
+    final gateResult = await gate.validateSessionAfterLogin(uid);
+    if (!gateResult.allowed) {
+      await FirebaseAuth.instance.signOut();
+      await Storage.clearAllSessions();
+      await Storage.clearFirebaseSession();
+      GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
       );
       return;
     }
