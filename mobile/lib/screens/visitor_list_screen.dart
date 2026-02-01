@@ -8,6 +8,8 @@ import 'visitor_details_screen.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../core/app_logger.dart';
+import '../core/society_modules.dart';
+import '../widgets/module_disabled_placeholder.dart';
 
 class VisitorListScreen extends StatefulWidget {
   final String guardId;
@@ -372,6 +374,9 @@ class _VisitorListScreenState extends State<VisitorListScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (!SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
+      return ModuleDisabledPlaceholder(onBack: widget.onBackPressed);
+    }
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {

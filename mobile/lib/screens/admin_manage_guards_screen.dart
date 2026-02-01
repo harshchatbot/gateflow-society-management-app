@@ -134,7 +134,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
+            margin: const EdgeInsets.all(24),
             action: SnackBarAction(
               label: "Retry",
               textColor: Colors.white,
@@ -649,7 +649,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
   }
 
   void _showGuardJoinQr(BuildContext context) {
-    final expiry = DateTime.now().add(const Duration(hours: 1));
+    final expiry = DateTime.now().add(const Duration(hours: 24));
 
     final payload = jsonEncode({
       'type': 'guard_join_v1',
@@ -665,121 +665,142 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 16),
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(2),
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
                 ),
-              ),
-              const Text(
-                "Guard Join QR",
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.text,
+                const Text(
+                  "Guard Join QR",
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    color: AppColors.text,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "Ask the guard to scan this QR from the Guard app within 24 hours.",
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.text2,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
+                const SizedBox(height: 8),
+                Text(
+                  "Ask the guard to scan this QR from the Guard app within 24 hours.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.text2,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 20,
-                      offset: const Offset(0, 8),
+                const SizedBox(height: 16),
+
+                // ✅ QR Container (quiet-zone + high contrast)
+                Container(
+                  padding: const EdgeInsets.all(24), // ✅ was 16
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: QrImageView(
+                    data: payload,
+                    version: QrVersions.auto,
+                    size: 280,
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.black,
+                    errorCorrectionLevel: QrErrorCorrectLevel.M,
+                    gapless: false, // ✅ important for mobile_scanner
+                  ),
+                ),
+
+                const SizedBox(height: 12),
+                Text(
+                  "Valid until: ${expiry.toLocal()}",
+                  style: TextStyle(
+                    color: AppColors.text2,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.border),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text(
+                          "Close",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.text2,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          await _shareGuardJoinQr(payload);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.admin,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        icon: const Icon(Icons.ios_share_rounded, size: 18),
+                        label: const Text(
+                          "Share QR",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                child: QrImageView(
-                  data: payload,
-                  version: QrVersions.auto,
-                  size: 220,
-                  backgroundColor: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                "Valid until: ${expiry.toLocal()}",
-                style: TextStyle(
-                  color: AppColors.text2,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.border),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        "Close",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.text2,
-                        ),
-                      ),
-                    ),
+                const SizedBox(height: 8),
+
+                // ✅ Optional: tiny tip (helps reduce support issues)
+                Text(
+                  "Tip: If sharing on WhatsApp, share the QR as a Document for best scanning.",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppColors.text2.withOpacity(0.75),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        await _shareGuardJoinQr(payload);
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.admin,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: const Icon(Icons.ios_share_rounded, size: 18),
-                      label: const Text(
-                        "Share QR",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 13,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-            ],
+                ),
+              ],
+            ),
           ),
         );
       },
     );
   }
+
 
   Future<void> _shareGuardJoinQr(String payload) async {
     try {

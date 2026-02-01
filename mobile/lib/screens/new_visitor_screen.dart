@@ -17,6 +17,8 @@ import 'guard_login_screen.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../ui/app_icons.dart';
+import '../core/society_modules.dart';
+import '../widgets/module_disabled_placeholder.dart';
 
 class NewVisitorScreen extends StatefulWidget {
   final String guardId;
@@ -252,6 +254,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
+      return ModuleDisabledPlaceholder(onBack: widget.onBackPressed);
+    }
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {

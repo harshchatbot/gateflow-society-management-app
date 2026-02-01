@@ -5,23 +5,29 @@ import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/complaint_service.dart';
 import '../services/notice_service.dart';
+import '../services/resident_signup_service.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 
 /// Admin Notification Drawer
-/// 
+///
 /// Shows recent notifications for admins:
+/// - Pending resident signups
 /// - Pending complaints
 /// - Recent notices
+/// - Open SOS
 class AdminNotificationDrawer extends StatefulWidget {
   final String societyId;
   final String adminId;
+  /// Called when admin taps a pending signup item; caller should close drawer and navigate to pending signup screen.
+  final VoidCallback? onNavigateToPendingSignup;
 
   const AdminNotificationDrawer({
     super.key,
     required this.societyId,
     required this.adminId,
+    this.onNavigateToPendingSignup,
   });
 
   @override
@@ -37,10 +43,12 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
     baseUrl: Env.apiBaseUrl,
   );
 
+  final ResidentSignupService _signupService = ResidentSignupService();
   final FirestoreService _firestore = FirestoreService();
 
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
+  int _pendingSignupsCount = 0;
   int _pendingComplaintsCount = 0;
   int _recentNoticesCount = 0;
   int _openSosCount = 0;
@@ -56,6 +64,27 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
     setState(() => _isLoading = true);
 
     try {
+      // Load pending resident signups
+      int pendingSignups = 0;
+      List<Map<String, dynamic>> signupNotifications = [];
+      final signupsResult = await _signupService.getPendingSignups(societyId: widget.societyId);
+      if (signupsResult.isSuccess && signupsResult.data != null) {
+        final list = signupsResult.data!;
+        pendingSignups = list.length;
+        signupNotifications = list.take(5).map((s) {
+          return {
+            'type': 'resident_signup',
+            'id': s['signup_id']?.toString() ?? s['uid']?.toString() ?? '',
+            'title': 'Resident signup: ${(s['name'] ?? '').toString().isNotEmpty ? s['name'] : (s['email'] ?? 'Unknown')}',
+            'description': 'Flat ${s['flat_no'] ?? '–'} • ${s['email'] ?? ''}',
+            'status': 'PENDING',
+            'created_at': s['created_at']?.toString() ?? '',
+            'flat_no': s['flat_no']?.toString() ?? '',
+            'resident_name': s['name']?.toString() ?? 'Unknown',
+          };
+        }).toList();
+      }
+
       // Load pending complaints
       final complaintsResult = await _complaintService.getAllComplaints(societyId: widget.societyId);
       int pendingComplaints = 0;
@@ -185,6 +214,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
 
       // Combine and sort by created_at (most recent first)
       final allNotifications = [
+        ...signupNotifications,
         ...sosNotifications,
         ...complaintNotifications,
         ...noticeNotifications,
@@ -203,6 +233,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
       if (mounted) {
         setState(() {
           _notifications = allNotifications;
+          _pendingSignupsCount = pendingSignups;
           _pendingComplaintsCount = pendingComplaints;
           _recentNoticesCount = recentNotices;
           _openSosCount = openSos;
@@ -211,6 +242,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
       }
 
       AppLogger.i("Admin notifications loaded", data: {
+        "pending_signups": pendingSignups,
         "pending_complaints": pendingComplaints,
         "recent_notices": recentNotices,
         "open_sos": openSos,
@@ -252,12 +284,16 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
 
   IconData _getNotificationIcon(String type) {
     switch (type) {
+      case 'resident_signup':
+        return Icons.person_add_rounded;
       case 'complaint':
         return Icons.report_problem_rounded;
       case 'visitor':
         return Icons.person_add_rounded;
       case 'notice':
         return Icons.notifications_rounded;
+      case 'sos':
+        return Icons.sos_rounded;
       default:
         return Icons.notifications_rounded;
     }
@@ -265,6 +301,8 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
 
   Color _getNotificationIconColor(String type) {
     switch (type) {
+      case 'resident_signup':
+        return AppColors.success;
       case 'sos':
         return AppColors.error;
       case 'complaint':
@@ -339,12 +377,25 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
             ),
           ),
 
-          // Summary Cards
-          Container(
-            padding: const EdgeInsets.all(16),
-            child: Row(
+          // Summary Cards (horizontal scroll to avoid overflow on narrow screens)
+          SizedBox(
+            height: 100,
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
               children: [
-                Expanded(
+                SizedBox(
+                  width: 120,
+                  child: _buildSummaryCard(
+                    icon: Icons.person_add_rounded,
+                    label: "Pending Signups",
+                    count: _pendingSignupsCount,
+                    color: AppColors.success,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 120,
                   child: _buildSummaryCard(
                     icon: Icons.report_problem_rounded,
                     label: "Pending Complaints",
@@ -352,8 +403,9 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                     color: AppColors.warning,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 120,
                   child: _buildSummaryCard(
                     icon: Icons.notifications_rounded,
                     label: "New Notices",
@@ -361,8 +413,9 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                     color: AppColors.admin,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 120,
                   child: _buildSummaryCard(
                     icon: Icons.sos_rounded,
                     label: "Open SOS",
@@ -424,7 +477,18 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: _notifications.length,
                           itemBuilder: (context, index) {
-                            return _buildNotificationItem(_notifications[index]);
+                            final notification = _notifications[index];
+                            final type = notification['type'] ?? '';
+                            final isSignup = type == 'resident_signup';
+                            return InkWell(
+                              onTap: isSignup && widget.onNavigateToPendingSignup != null
+                                  ? () {
+                                      widget.onNavigateToPendingSignup!();
+                                    }
+                                  : null,
+                              borderRadius: BorderRadius.circular(16),
+                              child: _buildNotificationItem(notification),
+                            );
                           },
                         ),
                       ),

@@ -6,6 +6,7 @@ import 'guard_shell_screen.dart';
 import 'resident_shell_screen.dart';
 import 'admin_shell_screen.dart';
 import '../core/storage.dart';
+import '../core/society_modules.dart';
 import '../services/firestore_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -166,6 +167,9 @@ class _AppSplashScreenState extends State<AppSplashScreen>
 
           if (membership != null && mounted) {
             final societyId = membership['societyId'] as String? ?? '';
+            if (societyId.isNotEmpty) {
+              await SocietyModules.ensureLoaded(societyId);
+            }
             final systemRole = membership['systemRole'] as String? ?? '';
             final name = membership['name'] as String? ?? '';
             final flatNo = membership['flatNo'] as String?;
@@ -202,6 +206,7 @@ class _AppSplashScreenState extends State<AppSplashScreen>
           try {
             await FirebaseAuth.instance.signOut();
             await Storage.clearAllSessions();
+            SocietyModules.clear();
           } catch (_) {
             // Ignore sign out errors
           }
@@ -216,6 +221,7 @@ class _AppSplashScreenState extends State<AppSplashScreen>
           final adminSession = await Storage.getAdminSession();
 
           if (residentSession != null) {
+            await SocietyModules.ensureLoaded(residentSession.societyId);
             targetScreen = ResidentShellScreen(
               residentId: residentSession.residentId,
               residentName: residentSession.residentName,
@@ -223,6 +229,7 @@ class _AppSplashScreenState extends State<AppSplashScreen>
               flatNo: residentSession.flatNo,
             );
           } else if (guardSession != null) {
+            await SocietyModules.ensureLoaded(guardSession.societyId);
             targetScreen = GuardShellScreen(
               guardId: guardSession.guardId,
               guardName: guardSession.guardName.isNotEmpty
@@ -233,6 +240,7 @@ class _AppSplashScreenState extends State<AppSplashScreen>
                   : "Society",
             );
           } else if (adminSession != null) {
+            await SocietyModules.ensureLoaded(adminSession.societyId);
             targetScreen = AdminShellScreen(
               adminId: adminSession.adminId,
               adminName: adminSession.adminName,

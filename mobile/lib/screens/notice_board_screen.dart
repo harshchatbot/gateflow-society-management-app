@@ -4,6 +4,8 @@ import '../ui/app_loader.dart';
 import '../services/notice_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
+import '../core/society_modules.dart';
+import '../widgets/module_disabled_placeholder.dart';
 import 'admin_manage_notices_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -438,8 +440,11 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!SocietyModules.isEnabled(SocietyModuleIds.notices)) {
+      return ModuleDisabledPlaceholder(onBack: widget.onBackPressed);
+    }
     final content = _buildScreen();
-    
+
     // If useScaffold is false (used as tab), return content directly (back button is in header)
     // If useScaffold is true (standalone), wrap in Scaffold with AppBar
     if (!widget.useScaffold) {

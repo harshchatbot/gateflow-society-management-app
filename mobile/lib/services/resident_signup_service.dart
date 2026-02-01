@@ -9,7 +9,8 @@ import 'firestore_service.dart';
 class Result<T> {
   final T? data;
   final AppError? error;
-  bool get isSuccess => data != null && error == null;
+  /// Success when no error; data may be null for void operations (e.g. rejectSignup)
+  bool get isSuccess => error == null;
 
   Result.success(this.data) : error = null;
   Result.failure(this.error) : data = null;
@@ -101,7 +102,7 @@ class ResidentSignupService {
         "flatNo": normalizedFlatNo,
       });
 
-      // 2) Create Firebase Auth user
+      // 2) Create Firebase Auth user FIRST (needed for authenticated queries)
       UserCredential userCredential;
       try {
         userCredential = await _auth.createUserWithEmailAndPassword(
@@ -129,7 +130,40 @@ class ResidentSignupService {
         ));
       }
 
-      // 3) Create society member doc (active=false)
+      // 3) Check for duplicate phone number (ACTIVE residents only)
+      // Must be done AFTER auth so user is authenticated for Firestore query
+      if (normalizedPhone.isNotEmpty) {
+        AppLogger.i("Checking for duplicate phone number");
+        try {
+          final firestoreService = FirestoreService();
+          final duplicateUid = await firestoreService.checkDuplicatePhone(
+            societyId: societyId,
+            phone: normalizedPhone,
+          );
+          if (duplicateUid != null) {
+            AppLogger.w("Duplicate phone number found", data: {
+              "phone": normalizedPhone,
+              "existingUid": duplicateUid,
+            });
+            // Delete the just-created auth account since phone is duplicate
+            try {
+              await userCredential.user?.delete();
+              AppLogger.i("Deleted auth account due to duplicate phone");
+            } catch (deleteError) {
+              AppLogger.e("Failed to delete auth account after duplicate phone", error: deleteError);
+            }
+            return Result.failure(AppError(
+              userMessage: "This phone number is already registered in this society. Please use a different phone number or contact admin.",
+              technicalMessage: "DUPLICATE_PHONE: $normalizedPhone already exists for uid=$duplicateUid",
+            ));
+          }
+        } catch (e, st) {
+          AppLogger.e("Error checking duplicate phone, proceeding anyway", error: e, stackTrace: st);
+          // Don't block signup if duplicate check fails - better to allow than block
+        }
+      }
+
+      // 5) Create society member doc (active=false)
       final societyMemberRef = _firestore
           .collection('societies')
           .doc(societyId)
@@ -149,7 +183,7 @@ class ResidentSignupService {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      // 4) Root pointer (keep in sync)
+      // 6) Root pointer (keep in sync)
       final rootPointerRef = _firestore.collection('members').doc(uid);
       final pointerData = {
         'uid': uid,
@@ -211,6 +245,10 @@ class ResidentSignupService {
       for (var doc in querySnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         
+        // doc.id IS the uid (document is created with uid as the document ID)
+        // Always use doc.id as the primary identifier for consistency
+        final uid = doc.id;
+        
         // Convert Firestore Timestamp to ISO string
         DateTime createdAt;
         if (data['createdAt'] is Timestamp) {
@@ -222,7 +260,7 @@ class ResidentSignupService {
         }
 
         signups.add({
-          'signup_id': data['uid'] ?? doc.id, // Use uid as signup_id for consistency
+          'signup_id': uid, // Use doc.id directly (this is the uid)
           'society_id': data['societyId'] ?? societyId,
           'name': data['name'] ?? '',
           'email': data['email'] ?? '',
@@ -230,7 +268,7 @@ class ResidentSignupService {
           'flat_no': data['flatNo'] ?? data['flat_no'] ?? '',
           'status': 'PENDING',
           'created_at': createdAt.toIso8601String(),
-          'uid': data['uid'] ?? doc.id, // Include uid for approval
+          'uid': uid, // Use doc.id directly
         });
       }
 
@@ -353,16 +391,34 @@ class ResidentSignupService {
 
   /// Reject a signup request (for admin)
   /// New flow: Delete member document and root pointer
+  /// Also handles legacy residentSignups collection
   Future<Result<void>> rejectSignup({
     required String societyId,
-    required String signupId, // This is now the uid
+    required String signupId, // This is the uid (document ID)
     required String adminUid,
     String? reason,
   }) async {
     try {
-      // signupId is now the uid (from the new flow)
-      final uid = signupId;
+      // signupId is the uid (document ID in the members collection)
+      final uid = signupId.trim();
       
+      if (uid.isEmpty) {
+        AppLogger.e("rejectSignup called with empty signupId");
+        return Result.failure(AppError(
+          userMessage: "Invalid signup request",
+          technicalMessage: "signupId is empty",
+        ));
+      }
+
+      AppLogger.i("Rejecting signup", data: {
+        "uid": uid,
+        "societyId": societyId,
+        "adminUid": adminUid,
+      });
+      
+      bool documentDeleted = false;
+      
+      // Try to delete from members collection (new flow)
       final memberRef = _firestore
           .collection('societies')
           .doc(societyId)
@@ -371,15 +427,41 @@ class ResidentSignupService {
 
       final memberDoc = await memberRef.get();
 
-      if (!memberDoc.exists) {
-        return Result.failure(AppError(
-          userMessage: "Resident not found",
-          technicalMessage: "Member $uid not found in society $societyId",
-        ));
+      if (memberDoc.exists) {
+        await memberRef.delete();
+        documentDeleted = true;
+        AppLogger.i("Deleted member document", data: {"path": memberRef.path});
+      } else {
+        AppLogger.w("Member document not found, checking legacy collection", data: {
+          "uid": uid,
+          "path": memberRef.path,
+        });
       }
 
-      // Delete member document
-      await memberRef.delete();
+      // Also try to delete from legacy residentSignups collection
+      try {
+        final legacyRef = _firestore
+            .collection('societies')
+            .doc(societyId)
+            .collection('residentSignups')
+            .doc(uid);
+        
+        final legacyDoc = await legacyRef.get();
+        if (legacyDoc.exists) {
+          await legacyRef.delete();
+          documentDeleted = true;
+          AppLogger.i("Deleted legacy signup document", data: {"path": legacyRef.path});
+        }
+      } catch (e) {
+        AppLogger.w("Error checking/deleting legacy signup", data: {"error": e.toString()});
+      }
+
+      if (!documentDeleted) {
+        // Document not found in either collection - might have been already deleted
+        AppLogger.w("No document found to delete - may have been already rejected");
+        // Return success anyway since the goal (removing the signup) is achieved
+        return Result.success(null);
+      }
 
       // Delete root pointer (optional - wrap in try-catch since rules may restrict)
       try {

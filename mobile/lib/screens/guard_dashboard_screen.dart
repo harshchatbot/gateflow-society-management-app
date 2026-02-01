@@ -7,6 +7,7 @@ import '../ui/app_loader.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
 import '../core/tour_storage.dart';
+import '../core/society_modules.dart';
 import '../models/visitor.dart';
 import 'notice_board_screen.dart';
 import 'role_select_screen.dart';
@@ -68,7 +69,9 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     final seen = await TourStorage.hasSeenTourGuard();
     if (mounted && !seen) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) startTour();
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) startTour();
+        });
       });
     }
   }
@@ -79,7 +82,12 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   void startTour() {
     if (_showCaseContext == null || !mounted) return;
     try {
-      final keys = [_keyNewEntry, _keyVisitors, _keySosAlerts];
+      final keys = <GlobalKey<State<StatefulWidget>>>[];
+      if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
+        keys.addAll([_keyNewEntry, _keyVisitors]);
+      }
+      if (SocietyModules.isEnabled(SocietyModuleIds.sos)) keys.add(_keySosAlerts);
+      if (keys.isEmpty) return;
       ShowCaseWidget.of(_showCaseContext!).startShowCase(keys);
     } catch (_) {
       if (mounted) TourStorage.setHasSeenTourGuard();
@@ -369,6 +377,8 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return ShowCaseWidget(
+      enableAutoScroll: true,
+      scrollDuration: const Duration(milliseconds: 400),
       onFinish: () {
         TourStorage.setHasSeenTourGuard();
       },
@@ -411,18 +421,19 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 20),
 
-                  const Text(
-                    "Today at a glance",
-                    style: TextStyle(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
+                  if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) ...[
+                    const Text(
+                      "Today at a glance",
+                      style: TextStyle(
+                        color: AppColors.text,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildStatsRow(),
-
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 12),
+                    _buildStatsRow(),
+                    const SizedBox(height: 24),
+                  ],
                   const Text(
                     "Your actions",
                     style: TextStyle(
@@ -434,8 +445,10 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                   const SizedBox(height: 12),
                   _buildActionGrid(),
 
-                  const SizedBox(height: 25),
-                  _buildRecentActivitySection(),
+                  if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) ...[
+                    const SizedBox(height: 25),
+                    _buildRecentActivitySection(),
+                  ],
                 ],
               ),
             ),
@@ -631,13 +644,9 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   }
 
   Widget _buildActionGrid() {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 3,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      children: [
+    final children = <Widget>[];
+    if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
+      children.addAll([
         Showcase(
           key: _keyNewEntry,
           title: "New Visitor Entry",
@@ -650,6 +659,10 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           description: "View today's visitors and full history.",
           child: _QuickAction(label: "Visitors", icon: Icons.groups_rounded, tint: AppColors.success, onTap: widget.onTapVisitors),
         ),
+      ]);
+    }
+    if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
+      children.add(
         _QuickAction(
           label: "Notices",
           icon: Icons.notifications_rounded,
@@ -666,6 +679,10 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             );
           },
         ),
+      );
+    }
+    if (SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+      children.add(
         Showcase(
           key: _keySosAlerts,
           title: "SOS Alerts",
@@ -692,21 +709,27 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             },
           ),
         ),
-        _QuickAction(
-          label: "Residents",
-          icon: Icons.people_rounded,
-          tint: AppColors.admin,
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => GuardResidentsDirectoryScreen(
-                  societyId: widget.societyId,
-                ),
+        );
+    }
+    children.add(
+      _QuickAction(
+        label: "Residents",
+        icon: Icons.people_rounded,
+        tint: AppColors.admin,
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => GuardResidentsDirectoryScreen(
+                societyId: widget.societyId,
               ),
-            );
+            ),
+          );
           },
-        ),
+      ),
+    );
+    if (SocietyModules.isEnabled(SocietyModuleIds.violations)) {
+      children.add(
         _QuickAction(
           label: "Violations",
           icon: Icons.directions_car_rounded,
@@ -723,7 +746,15 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             );
           },
         ),
-      ],
+      );
+    }
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 3,
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      children: children,
     );
   }
 

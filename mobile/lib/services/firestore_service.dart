@@ -63,6 +63,15 @@ class FirestoreService {
   // SOCIETY OPERATIONS
   // ============================================
 
+  /// Default modules for new societies (all enabled). Controlled via DB; no UI toggles.
+  static Map<String, bool> get defaultSocietyModules => {
+        'visitor_management': true,
+        'complaints': true,
+        'notices': true,
+        'violations': true,
+        'sos': true,
+      };
+
   /// Create a new society
   Future<Map<String, dynamic>> createSociety({
     required String societyId,
@@ -81,6 +90,7 @@ class FirestoreService {
         'active': true,
         'createdAt': FieldValue.serverTimestamp(),
         'createdByUid': createdByUid,
+        'modules': defaultSocietyModules,
       };
 
       // Create society document
@@ -1348,6 +1358,94 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
       });
     } catch (e, st) {
       AppLogger.e('Error updating guard profile', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
+  // ============================================
+  // PHONE DUPLICATE CHECK
+  // ============================================
+
+  /// Check if phone number is already used by an ACTIVE member in the society.
+  /// Returns the existing member's UID if duplicate found, null otherwise.
+  /// Excludes the current user (excludeUid) from the check.
+  Future<String?> checkDuplicatePhone({
+    required String societyId,
+    required String phone,
+    String? excludeUid,
+  }) async {
+    try {
+      if (phone.trim().isEmpty) return null;
+      
+      final normalizedPhone = phone.trim().replaceAll(RegExp(r'[^\d+]'), '');
+      if (normalizedPhone.isEmpty) return null;
+
+      final querySnapshot = await _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('members')
+          .where('phone', isEqualTo: normalizedPhone)
+          .where('active', isEqualTo: true)
+          .where('systemRole', isEqualTo: 'resident')
+          .limit(5)
+          .get();
+
+      for (final doc in querySnapshot.docs) {
+        final uid = doc.data()['uid']?.toString();
+        if (uid != null && uid != excludeUid) {
+          AppLogger.i('Duplicate phone found', data: {
+            'phone': normalizedPhone,
+            'existingUid': uid,
+            'societyId': societyId,
+          });
+          return uid;
+        }
+      }
+
+      return null;
+    } catch (e, st) {
+      AppLogger.e('Error checking duplicate phone', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
+  // ============================================
+  // MEMBER DEACTIVATION
+  // ============================================
+
+  /// Deactivate a member's account in a society.
+  /// Sets active=false, allowing them to join another society.
+  /// Only the member themselves or an admin can deactivate.
+  Future<void> deactivateMember({
+    required String societyId,
+    required String uid,
+  }) async {
+    try {
+      final batch = _firestore.batch();
+
+      // Update society member doc
+      final memberRef = _memberRef(societyId, uid);
+      batch.update(memberRef, {
+        'active': false,
+        'deactivatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      // Update root pointer
+      final rootPointerRef = _firestore.collection('members').doc(uid);
+      batch.update(rootPointerRef, {
+        'active': false,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      await batch.commit();
+
+      AppLogger.i('Member deactivated', data: {
+        'societyId': societyId,
+        'uid': uid,
+      });
+    } catch (e, st) {
+      AppLogger.e('Error deactivating member', error: e, stackTrace: st);
       rethrow;
     }
   }

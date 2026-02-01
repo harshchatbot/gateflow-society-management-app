@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:showcaseview/showcaseview.dart';
@@ -8,9 +9,11 @@ import '../services/complaint_service.dart';
 import '../services/notice_service.dart';
 import '../services/notification_service.dart';
 import '../services/firestore_service.dart';
+import '../services/resident_signup_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../core/tour_storage.dart';
+import '../core/society_modules.dart';
 import 'notice_board_screen.dart';
 import 'sos_detail_screen.dart';
 import 'sos_alerts_screen.dart';
@@ -29,7 +32,8 @@ class AdminDashboardScreen extends StatefulWidget {
   final String adminName;
   final String societyId;
   final String? systemRole; // admin or super_admin
-  final Function(int)? onTabNavigate; // Callback to navigate to tabs
+  /// Callback to navigate to tabs. Second arg optional: 1 = open Residents on Pending signups tab.
+  final void Function(int index, [int? residentsSubTab])? onTabNavigate;
 
   const AdminDashboardScreen({
     super.key,
@@ -67,6 +71,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     baseUrl: Env.apiBaseUrl,
   );
 
+  final ResidentSignupService _signupService = ResidentSignupService();
+
   int _notificationCount = 0;
   int _sosBadgeCount = 0;
   int _unreadNoticesCount = 0;
@@ -74,21 +80,45 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   final FirestoreService _firestore = FirestoreService();
   String? _photoUrl;
 
+  StreamSubscription<QuerySnapshot>? _pendingSignupsSubscription;
+
   @override
   void initState() {
     super.initState();
     _loadStats();
     _loadNotificationCount();
     _setupNotificationListener();
+    _setupPendingSignupsListener();
     _loadAdminProfile();
     _maybeAutoRunTour();
+  }
+
+  @override
+  void dispose() {
+    _pendingSignupsSubscription?.cancel();
+    super.dispose();
+  }
+
+  void _setupPendingSignupsListener() {
+    _pendingSignupsSubscription = FirebaseFirestore.instance
+        .collection('societies')
+        .doc(widget.societyId)
+        .collection('members')
+        .where('systemRole', isEqualTo: 'resident')
+        .where('active', isEqualTo: false)
+        .snapshots()
+        .listen((_) {
+      if (mounted) _loadNotificationCount();
+    });
   }
 
   void _maybeAutoRunTour() async {
     final seen = await TourStorage.hasSeenTourForRole(widget.systemRole ?? 'admin');
     if (mounted && !seen) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) startTour();
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) startTour();
+        });
       });
     }
   }
@@ -99,7 +129,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void startTour() {
     if (_showCaseContext == null || !mounted) return;
     try {
-      final keys = [_keyResidents, _keyGuards, _keyComplaints, _keyNotices, _keySos];
+      final keys = <GlobalKey<State<StatefulWidget>>>[_keyResidents, _keyGuards];
+      if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) keys.add(_keyComplaints);
+      if (SocietyModules.isEnabled(SocietyModuleIds.notices)) keys.add(_keyNotices);
+      if (SocietyModules.isEnabled(SocietyModuleIds.sos)) keys.add(_keySos);
+      if (keys.isEmpty) return;
       ShowCaseWidget.of(_showCaseContext!).startShowCase(keys);
     } catch (_) {
       if (mounted) TourStorage.setHasSeenTourForRole(widget.systemRole ?? 'admin');
@@ -224,7 +258,13 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       }
 
       totalCount += _unreadNoticesCount;
-      
+
+      // Count pending resident signups
+      final signupsResult = await _signupService.getPendingSignups(societyId: widget.societyId);
+      if (signupsResult.isSuccess && signupsResult.data != null) {
+        totalCount += signupsResult.data!.length;
+      }
+
       if (mounted) {
         setState(() {
           _notificationCount = totalCount;
@@ -243,6 +283,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       builder: (context) => AdminNotificationDrawer(
         societyId: widget.societyId,
         adminId: widget.adminId,
+        onNavigateToPendingSignup: () {
+          Navigator.pop(context);
+          widget.onTabNavigate?.call(1, 1);
+        },
       ),
     ).then((_) {
       // User has seen notifications; clear unread notices and SOS badge for this session
@@ -256,9 +300,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
   }
 
-  void _navigateToTab(int index) {
+  void _navigateToTab(int index, [int? residentsSubTab]) {
     if (widget.onTabNavigate != null) {
-      widget.onTabNavigate!(index);
+      widget.onTabNavigate!(index, residentsSubTab);
     } else {
       // Fallback: Try to find AdminShellScreen in the widget tree
       final context = this.context;
@@ -342,6 +386,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return ShowCaseWidget(
+      enableAutoScroll: true,
+      scrollDuration: const Duration(milliseconds: 400),
       onFinish: () {
         TourStorage.setHasSeenTourForRole(widget.systemRole ?? 'admin');
       },
@@ -602,32 +648,28 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Widget _buildStatsGrid() {
     final stats = _stats!;
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.4, // Slightly adjusted to prevent overflow
-      children: [
-        _StatCard(
-          label: "Residents",
-          value: (stats['total_residents'] ?? 0).toString(),
-          icon: Icons.people_rounded,
-          color: AppColors.admin,
-        ),
-        _StatCard(
-          label: "Guards",
-          value: (stats['total_guards'] ?? 0).toString(),
-          icon: Icons.shield_rounded,
-          color: AppColors.primary,
-        ),
-        _StatCard(
-          label: "Flats",
-          value: (stats['total_flats'] ?? 0).toString(),
-          icon: Icons.home_rounded,
-          color: AppColors.success,
-        ),
+    final children = <Widget>[
+      _StatCard(
+        label: "Residents",
+        value: (stats['total_residents'] ?? 0).toString(),
+        icon: Icons.people_rounded,
+        color: AppColors.admin,
+      ),
+      _StatCard(
+        label: "Guards",
+        value: (stats['total_guards'] ?? 0).toString(),
+        icon: Icons.shield_rounded,
+        color: AppColors.primary,
+      ),
+      _StatCard(
+        label: "Flats",
+        value: (stats['total_flats'] ?? 0).toString(),
+        icon: Icons.home_rounded,
+        color: AppColors.success,
+      ),
+    ];
+    if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
+      children.addAll([
         _StatCard(
           label: "Visitors Today",
           value: (stats['visitors_today'] ?? 0).toString(),
@@ -646,60 +688,65 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           icon: Icons.verified_user_outlined,
           color: AppColors.success,
         ),
-      ],
-    );
-  }
-
-  Widget _buildActionGrid() {
+      ]);
+    }
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: 2,
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 1.3,
-      children: [
-        Showcase(
-          key: _keyResidents,
-          title: "Approve Residents",
-          description: "View and approve pending resident signups.",
-          child: _ActionItem(
-            icon: Icons.people_rounded,
-            title: "Residents Directory",
-            subtitle: "View residents directory",
-            color: AppColors.admin,
-            onTap: () => _navigateToTab(1),
-          ),
+      childAspectRatio: 1.4,
+      children: children,
+    );
+  }
+
+  Widget _buildActionGrid() {
+    final children = <Widget>[
+      Showcase(
+        key: _keyResidents,
+        title: "Approve Residents",
+        description: "View and approve pending resident signups.",
+        child: _ActionItem(
+          icon: Icons.people_rounded,
+          title: "Residents Directory",
+          subtitle: "View residents directory",
+          color: AppColors.admin,
+          onTap: () => _navigateToTab(1),
         ),
-        Showcase(
-          key: _keyGuards,
-          title: "Share Society Code / QR",
-          description: "Generate Guard Join QR so guards can join your society.",
-          child: _ActionItem(
-            icon: Icons.shield_rounded,
-            title: "Security Staff",
-            subtitle: "View security staff",
-            color: AppColors.primary,
-            onTap: () => _navigateToTab(2),
-          ),
+      ),
+      Showcase(
+        key: _keyGuards,
+        title: "Share Society Code / QR",
+        description: "Generate Guard Join QR so guards can join your society.",
+        child: _ActionItem(
+          icon: Icons.shield_rounded,
+          title: "Security Staff",
+          subtitle: "View security staff",
+          color: AppColors.primary,
+          onTap: () => _navigateToTab(2),
         ),
-        _ActionItem(
-          icon: Icons.home_rounded,
-          title: "Manage Flats",
-          subtitle: "View & manage flats",
-          color: AppColors.success,
-          onTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text("Flats management coming soon!"),
-                backgroundColor: AppColors.admin,
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                margin: const EdgeInsets.all(16),
-              ),
-            );
-          },
-        ),
+      ),
+      _ActionItem(
+        icon: Icons.home_rounded,
+        title: "Manage Flats",
+        subtitle: "View & manage flats",
+        color: AppColors.success,
+        onTap: () {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text("Flats management coming soon!"),
+              backgroundColor: AppColors.admin,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.all(16),
+            ),
+          );
+        },
+      ),
+    ];
+    if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
+      children.add(
         Showcase(
           key: _keyComplaints,
           title: "Complaints",
@@ -712,6 +759,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             onTap: () => _navigateToTab(3),
           ),
         ),
+      );
+    }
+    if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
+      children.add(
         Showcase(
           key: _keyNotices,
           title: "Create Notice",
@@ -724,6 +775,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             onTap: () => _navigateToTab(4),
           ),
         ),
+      );
+    }
+    if (SocietyModules.isEnabled(SocietyModuleIds.violations)) {
+      children.add(
         _ActionItem(
           icon: Icons.directions_car_rounded,
           title: "Violations",
@@ -743,6 +798,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             );
           },
         ),
+      );
+    }
+    if (SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+      children.add(
         Showcase(
           key: _keySos,
           title: "SOS Alerts",
@@ -765,26 +824,38 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             },
           ),
         ),
-        if (widget.systemRole?.toLowerCase() == 'super_admin')
-          _ActionItem(
-            icon: Icons.admin_panel_settings_rounded,
-            title: "Manage Admins",
-            subtitle: "Approve admin signups",
-            color: AppColors.admin,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => AdminManageAdminsScreen(
-                    adminId: widget.adminId,
-                    societyId: widget.societyId,
-                    systemRole: widget.systemRole,
-                  ),
+      );
+    }
+    if (widget.systemRole?.toLowerCase() == 'super_admin') {
+      children.add(
+        _ActionItem(
+          icon: Icons.admin_panel_settings_rounded,
+          title: "Manage Admins",
+          subtitle: "Approve admin signups",
+          color: AppColors.admin,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AdminManageAdminsScreen(
+                  adminId: widget.adminId,
+                  societyId: widget.societyId,
+                  systemRole: widget.systemRole,
                 ),
-              );
-            },
-          ),
-      ],
+              ),
+            );
+          },
+        ),
+      );
+    }
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.3,
+      children: children,
     );
   }
 

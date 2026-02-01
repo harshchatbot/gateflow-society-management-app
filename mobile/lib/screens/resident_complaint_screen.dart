@@ -7,6 +7,8 @@ import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/complaint_service.dart';
 import '../core/app_logger.dart';
+import '../core/society_modules.dart';
+import '../widgets/module_disabled_placeholder.dart';
 import '../core/env.dart';
 
 /// Resident Complaint Screen
@@ -214,6 +216,9 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
+      return const ModuleDisabledPlaceholder();
+    }
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(

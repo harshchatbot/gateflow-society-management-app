@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Sentinel needs camera access to scan the Guard Join QR code when onboarding as a guard.</string>
 </dict>
 </plist>

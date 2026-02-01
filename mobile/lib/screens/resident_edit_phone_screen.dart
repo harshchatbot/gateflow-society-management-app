@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
 import '../core/app_logger.dart';
 import '../services/resident_service.dart';
+import '../services/firestore_service.dart';
 import '../core/env.dart';
 import '../widgets/app_text_field.dart';
 import '../ui/app_loader.dart';
@@ -63,6 +64,36 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Check for duplicate phone number
+      final newPhone = _phoneController.text.trim();
+      final normalizedPhone = newPhone.replaceAll(RegExp(r'[^\d+]'), '');
+      if (normalizedPhone.isNotEmpty) {
+        final firestoreService = FirestoreService();
+        final duplicateUid = await firestoreService.checkDuplicatePhone(
+          societyId: widget.societyId,
+          phone: normalizedPhone,
+          excludeUid: widget.residentId,
+        );
+        if (duplicateUid != null) {
+          if (!mounted) return;
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                "This phone number is already registered in this society. Please use a different number.",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: AppColors.error,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.all(16),
+              duration: const Duration(seconds: 4),
+            ),
+          );
+          return;
+        }
+      }
+
       final result = await _residentService.updateProfile(
         residentId: widget.residentId,
         societyId: widget.societyId,

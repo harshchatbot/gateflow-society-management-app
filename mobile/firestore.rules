@@ -27,9 +27,10 @@ service cloud.firestore {
       && (request.resource.data.active == true || request.resource.data.active == false);
 
     // ✅ allow:
-    // - user updating their own pointer
+    // - user updating their own pointer (including deactivation)
     // - OR admin/super_admin updating pointer of someone in the same society (for approval)
     allow update: if signedIn() && (
+      // Self update (including deactivation: active true->false)
       request.auth.uid == uid
       || (
         request.resource.data.societyId is string
@@ -138,12 +139,22 @@ service cloud.firestore {
 
         // Update:
         // - Self can update own member doc even if inactive (profile-only)
+        // - Self can deactivate (set active=false)
         // - Admin can update any member (approval, role, etc.)
         allow update: if signedIn() && (
           // Guards: allow self-profile updates (phone/email/photo/shift) without strict role checks
           (
             uid == request.auth.uid
             && member(societyId).data.systemRole == "guard"
+          )
+          // Self deactivation: allow setting active from true to false
+          || (
+            uid == request.auth.uid
+            && resource.data.active == true
+            && request.resource.data.active == false
+            && request.resource.data.uid == resource.data.uid
+            && request.resource.data.societyId == resource.data.societyId
+            && request.resource.data.systemRole == resource.data.systemRole
           )
           // Other roles: Self update (even if inactive) — but cannot change role or active
           || (

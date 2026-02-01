@@ -35,6 +35,7 @@ class AdminShellScreen extends StatefulWidget {
 
 class _AdminShellScreenState extends State<AdminShellScreen> {
   int _currentIndex = 0;
+  int? _wantedResidentsSubTab;
   final Map<int, bool> _screenInitialized = {};
   final GlobalKey<State<AdminDashboardScreen>> _dashboardKey = GlobalKey<State<AdminDashboardScreen>>();
 
@@ -48,9 +49,12 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   void _onStartTourRequested() {
     setState(() => _currentIndex = 0);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        (_dashboardKey.currentState as dynamic)?.startTour();
-      } catch (_) {}
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (!mounted) return;
+        try {
+          (_dashboardKey.currentState as dynamic)?.startTour();
+        } catch (_) {}
+      });
     });
   }
 
@@ -70,12 +74,16 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   }
 
   /// Navigate to a specific screen index in the IndexedStack.
-  /// Used by dashboard quick actions (e.g., Manage Residents, Guards, Complaints, Notices).
-  void _navigateToScreen(int screenIndex) {
+  /// [residentsSubTab] when 1: open Residents screen on Pending signups tab.
+  void _navigateToScreen(int screenIndex, {int? residentsSubTab}) {
     setState(() {
       _currentIndex = screenIndex;
-      // Mark screen as initialized when first viewed
       _screenInitialized[screenIndex] = true;
+      if (screenIndex == 1) {
+        _wantedResidentsSubTab = residentsSubTab;
+      } else {
+        _wantedResidentsSubTab = null;
+      }
     });
   }
 
@@ -120,12 +128,19 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           adminName: widget.adminName,
           societyId: widget.societyId,
           systemRole: widget.systemRole,
-          onTabNavigate: _navigateToScreen,
+          onTabNavigate: (int index, [int? subTab]) => _navigateToScreen(index, residentsSubTab: subTab),
         );
       case 1:
+        final initialTab = _wantedResidentsSubTab ?? 0;
+        if (_wantedResidentsSubTab != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() => _wantedResidentsSubTab = null);
+          });
+        }
         return AdminManageResidentsScreen(
           adminId: widget.adminId,
           societyId: widget.societyId,
+          initialTabIndex: initialTab,
           onBackPressed: () {
             setState(() {
               _currentIndex = 0;

@@ -4,6 +4,7 @@ import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
+import '../core/society_modules.dart';
 import '../services/firestore_service.dart';
 import 'role_select_screen.dart';
 import 'admin_edit_image_screen.dart';
@@ -281,7 +282,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       
       // 3. Clear Firebase session storage
       await Storage.clearFirebaseSession();
-      
+      SocietyModules.clear();
+
       AppLogger.i("Admin session cleared - logout successful");
 
       if (!mounted) return;

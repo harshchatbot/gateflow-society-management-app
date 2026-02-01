@@ -3,6 +3,8 @@ import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
+import '../core/society_modules.dart';
+import '../widgets/module_disabled_placeholder.dart';
 
 /// Resident My Violations Screen
 ///
@@ -93,6 +95,9 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!SocietyModules.isEnabled(SocietyModuleIds.violations)) {
+      return ModuleDisabledPlaceholder(onBack: widget.onBackPressed);
+    }
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(

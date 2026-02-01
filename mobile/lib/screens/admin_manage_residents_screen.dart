@@ -16,12 +16,15 @@ class AdminManageResidentsScreen extends StatefulWidget {
   final String adminId;
   final String societyId;
   final VoidCallback? onBackPressed;
+  /// 0 = Residents list, 1 = Pending signups tab
+  final int initialTabIndex;
 
   const AdminManageResidentsScreen({
     super.key,
     required this.adminId,
     required this.societyId,
     this.onBackPressed,
+    this.initialTabIndex = 0,
   });
 
   @override
@@ -58,6 +61,14 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
     _loadResidents();
     _loadPendingSignups();
     _searchController.addListener(_filterResidents);
+    if (widget.initialTabIndex == 1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _tabController.index != 1) {
+          _tabController.animateTo(1);
+          setState(() => _currentTabIndex = 1);
+        }
+      });
+    }
   }
 
   @override
@@ -868,7 +879,15 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
     final phone = (signup['phone'] ?? signup['mobile'] ?? 'N/A').toString();
     final flatNo = (signup['flatNo'] ?? signup['flat_no'] ?? 'N/A').toString();
 
-    final signupId = (signup['signup_id'] ?? signup['uid'] ?? signup['id'] ?? '').toString();
+    // signupId is the document ID (uid) from the members collection
+    final signupId = (signup['signup_id'] ?? signup['uid'] ?? '').toString().trim();
+    
+    // Log if signupId is empty for debugging
+    if (signupId.isEmpty) {
+      AppLogger.w("Signup card has empty signupId", data: {
+        "signup": signup,
+      });
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),

@@ -8,6 +8,7 @@ import 'package:image_picker/image_picker.dart';
 import '../ui/app_colors.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
+import '../core/society_modules.dart';
 import '../services/firestore_service.dart';
 import 'role_select_screen.dart';
 import 'get_started_screen.dart';
@@ -741,7 +742,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             
             // 3. Clear Firebase session storage
             await Storage.clearFirebaseSession();
-            
+            SocietyModules.clear();
+
             AppLogger.i("Guard session cleared - logout successful");
             if (context.mounted) {
               Navigator.of(context).pushAndRemoveUntil(

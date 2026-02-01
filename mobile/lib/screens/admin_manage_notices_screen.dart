@@ -4,6 +4,8 @@ import '../ui/app_loader.dart';
 import '../services/notice_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
+import '../core/society_modules.dart';
+import '../widgets/module_disabled_placeholder.dart';
 import 'admin_create_notice_screen.dart';
 
 /// Admin Manage Notices Screen
@@ -167,6 +169,9 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!SocietyModules.isEnabled(SocietyModuleIds.notices)) {
+      return ModuleDisabledPlaceholder(onBack: widget.onBackPressed);
+    }
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(

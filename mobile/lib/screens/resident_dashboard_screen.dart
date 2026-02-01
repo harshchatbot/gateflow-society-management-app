@@ -8,6 +8,7 @@ import '../services/notification_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../core/tour_storage.dart';
+import '../core/society_modules.dart';
 import 'resident_complaint_screen.dart';
 import 'resident_complaints_list_screen.dart';
 import 'resident_violations_screen.dart';
@@ -85,7 +86,9 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     final seen = await TourStorage.hasSeenTourResident();
     if (mounted && !seen) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) startTour();
+        Future.delayed(const Duration(milliseconds: 500), () {
+          if (mounted) startTour();
+        });
       });
     }
   }
@@ -96,7 +99,11 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   void startTour() {
     if (_showCaseContext == null || !mounted) return;
     try {
-      final keys = [_keyApprovals, _keyComplaints, _keySos];
+      final keys = <GlobalKey<State<StatefulWidget>>>[];
+      if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) keys.add(_keyApprovals);
+      if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) keys.add(_keyComplaints);
+      if (SocietyModules.isEnabled(SocietyModuleIds.sos)) keys.add(_keySos);
+      if (keys.isEmpty) return;
       ShowCaseWidget.of(_showCaseContext!).startShowCase(keys);
     } catch (_) {
       if (mounted) TourStorage.setHasSeenTourResident();
@@ -329,6 +336,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return ShowCaseWidget(
+      enableAutoScroll: true,
+      scrollDuration: const Duration(milliseconds: 400),
       onFinish: () {
         TourStorage.setHasSeenTourResident();
       },
@@ -377,18 +386,19 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 20),
 
-                  const Text(
-                    "Today at a glance",
-                    style: TextStyle(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
+                  if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) ...[
+                    const Text(
+                      "Today at a glance",
+                      style: TextStyle(
+                        color: AppColors.text,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildStatsRow(),
-
-                  const SizedBox(height: 24),
+                    const SizedBox(height: 12),
+                    _buildStatsRow(),
+                    const SizedBox(height: 24),
+                  ],
                   const Text(
                     "Your actions",
                     style: TextStyle(
@@ -626,14 +636,9 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   }
 
   Widget _buildActionGrid() {
-    return GridView.count(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      crossAxisCount: 2,
-      mainAxisSpacing: 12,
-      crossAxisSpacing: 12,
-      childAspectRatio: 1.4,
-      children: [
+    final children = <Widget>[];
+    if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
+      children.add(
         Showcase(
           key: _keyApprovals,
           title: "Approve / Reject Visitors",
@@ -661,6 +666,34 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             },
           ),
         ),
+      );
+      children.add(
+        _buildActionCard(
+          icon: Icons.history_rounded,
+          title: "View History",
+          subtitle: "Past decisions",
+          color: AppColors.success,
+          onTap: () {
+            if (widget.onNavigateToHistory != null) {
+              widget.onNavigateToHistory!();
+            } else {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ResidentHistoryScreen(
+                    residentId: widget.residentId,
+                    societyId: widget.societyId,
+                    flatNo: widget.flatNo,
+                  ),
+                ),
+              );
+            }
+          },
+        ),
+      );
+    }
+    if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
+      children.add(
         _buildActionCard(
           icon: Icons.report_problem_rounded,
           title: "Raise Complaint",
@@ -680,6 +713,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             );
           },
         ),
+      );
+      children.add(
         Showcase(
           key: _keyComplaints,
           title: "Complaints",
@@ -707,28 +742,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             },
           ),
         ),
-        _buildActionCard(
-          icon: Icons.history_rounded,
-          title: "View History",
-          subtitle: "Past decisions",
-          color: AppColors.success,
-          onTap: () {
-            if (widget.onNavigateToHistory != null) {
-              widget.onNavigateToHistory!();
-            } else {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ResidentHistoryScreen(
-                    residentId: widget.residentId,
-                    societyId: widget.societyId,
-                    flatNo: widget.flatNo,
-                  ),
-                ),
-              );
-            }
-          },
-        ),
+      );
+    }
+    if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
+      children.add(
         _buildActionCard(
           icon: Icons.notifications_rounded,
           title: "Notice Board",
@@ -750,6 +767,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             }
           },
         ),
+      );
+    }
+    if (SocietyModules.isEnabled(SocietyModuleIds.violations)) {
+      children.add(
         _buildActionCard(
           icon: Icons.directions_car_rounded,
           title: "My Violations",
@@ -769,6 +790,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             );
           },
         ),
+      );
+    }
+    if (SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+      children.add(
         Showcase(
           key: _keySos,
           title: "Emergency SOS",
@@ -781,7 +806,16 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             onTap: _showSosConfirmDialog,
           ),
         ),
-      ],
+      );
+    }
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: 2,
+      mainAxisSpacing: 12,
+      crossAxisSpacing: 12,
+      childAspectRatio: 1.4,
+      children: children,
     );
   }
 

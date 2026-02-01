@@ -60,9 +60,12 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
   void _onStartTourRequested() {
     setState(() => _index = 0);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      try {
-        (_dashboardKey.currentState as dynamic)?.startTour();
-      } catch (_) {}
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (!mounted) return;
+        try {
+          (_dashboardKey.currentState as dynamic)?.startTour();
+        } catch (_) {}
+      });
     });
   }
 

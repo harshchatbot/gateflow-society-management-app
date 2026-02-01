@@ -4,7 +4,9 @@ import '../ui/app_loader.dart';
 import '../services/complaint_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
+import '../core/society_modules.dart';
 import '../widgets/status_chip.dart';
+import '../widgets/module_disabled_placeholder.dart';
 
 /// Resident Complaints List Screen
 /// 
@@ -110,6 +112,9 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
 
   @override
   Widget build(BuildContext context) {
+    if (!SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
+      return ModuleDisabledPlaceholder(onBack: widget.onBackPressed);
+    }
     return PopScope(
       canPop: false,
       onPopInvoked: (didPop) {

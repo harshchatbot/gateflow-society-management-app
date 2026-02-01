@@ -4,6 +4,8 @@ import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
+import '../core/society_modules.dart';
+import '../widgets/module_disabled_placeholder.dart';
 
 class SosDetailScreen extends StatefulWidget {
   final String societyId;
@@ -93,6 +95,9 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (!SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+      return const ModuleDisabledPlaceholder();
+    }
     final phone = widget.residentPhone;
     final data = _doc?.data() ?? {};
     final status = (data['status'] ?? 'OPEN').toString();

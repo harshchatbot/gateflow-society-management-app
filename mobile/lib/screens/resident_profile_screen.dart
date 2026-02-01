@@ -4,6 +4,7 @@ import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
+import '../core/society_modules.dart';
 import '../services/firestore_service.dart';
 import 'role_select_screen.dart';
 import 'resident_notification_settings_screen.dart';
@@ -69,6 +70,118 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
     }
   }
 
+  Future<void> _handleDeactivate() async {
+    // Show confirmation dialog with detailed explanation
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_rounded, color: AppColors.warning, size: 28),
+            SizedBox(width: 12),
+            Text(
+              "Deactivate Account",
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "This will deactivate your membership in this society.",
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 12),
+            Text("After deactivation:"),
+            SizedBox(height: 8),
+            Text("• You will be logged out"),
+            Text("• You can join another society"),
+            Text("• Only one active society at a time"),
+            SizedBox(height: 12),
+            Text(
+              "Are you sure you want to continue?",
+              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.error),
+            ),
+          ],
+        ),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: AppColors.border),
+              foregroundColor: AppColors.text,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text(
+              "Cancel",
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
+          const SizedBox(width: 8),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.warning,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text(
+              "Deactivate",
+              style: TextStyle(fontWeight: FontWeight.w900),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isLoggingOut = true);
+
+    try {
+      // Deactivate membership
+      await _firestore.deactivateMember(
+        societyId: widget.societyId,
+        uid: widget.residentId,
+      );
+
+      // Sign out and clear session
+      await FirebaseAuth.instance.signOut();
+      await Storage.clearResidentSession();
+      await Storage.clearFirebaseSession();
+      SocietyModules.clear();
+
+      AppLogger.i("Account deactivated successfully");
+
+      if (!mounted) return;
+
+      // Navigate to role select screen
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const RoleSelectScreen()),
+        (route) => false,
+      );
+    } catch (e, st) {
+      AppLogger.e("Error deactivating account", error: e, stackTrace: st);
+      if (mounted) {
+        setState(() => _isLoggingOut = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              "Error deactivating account. Please try again.",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            backgroundColor: AppColors.error,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _handleLogout() async {
     // Show confirmation dialog
     final confirmed = await showDialog<bool>(
@@ -123,7 +236,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
       
       // 3. Clear Firebase session storage
       await Storage.clearFirebaseSession();
-      
+      SocietyModules.clear();
+
       AppLogger.i("Resident session cleared - logout successful");
 
       if (!mounted) return;
@@ -266,6 +380,10 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                   // Settings Section
                   _buildSettingsSection(),
                   const SizedBox(height: 30),
+
+                  // Deactivate Account Button
+                  _buildDeactivateButton(),
+                  const SizedBox(height: 16),
 
                   // Logout Button
                   _buildLogoutButton(),
@@ -600,6 +718,29 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               color: AppColors.text2,
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeactivateButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 54,
+      child: OutlinedButton.icon(
+        onPressed: _isLoggingOut ? null : _handleDeactivate,
+        icon: const Icon(Icons.person_off_rounded, color: AppColors.warning),
+        label: const Text(
+          "DEACTIVATE ACCOUNT",
+          style: TextStyle(
+            color: AppColors.warning,
+            fontWeight: FontWeight.w900,
+            fontSize: 16,
+          ),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: AppColors.warning, width: 2),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
     );
