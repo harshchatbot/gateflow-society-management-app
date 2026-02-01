@@ -68,10 +68,6 @@ dependencies:
   path_provider: ^2.1.4
   share_plus: ^10.1.2
 
-  # QR & Scanner (guard onboarding only)
-  qr_flutter: ^4.1.0
-  mobile_scanner: ^5.1.1
-
   # In-app guided tour (coach marks)
   showcaseview: ^3.0.0
 

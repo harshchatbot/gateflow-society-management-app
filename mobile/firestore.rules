@@ -389,6 +389,14 @@ service cloud.firestore {
         );
     }
 
+    // ------------------------
+    // Guard join codes (6-digit, 24h validity). Admin creates; guard reads by code to get societyId.
+    // ------------------------
+    match /guard_join_codes/{code} {
+      allow read: if true;
+      allow create: if signedIn() && isAdmin(request.resource.data.societyId);
+      allow update, delete: if signedIn() && isAdmin(resource.data.societyId);
+    }
 
     // Default deny everything else
     match /{document=**} {

@@ -1,12 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:convert';
-import 'dart:io';
-import 'dart:ui' as ui;
-
-import 'package:path_provider/path_provider.dart';
-import 'package:qr_flutter/qr_flutter.dart';
-import 'package:share_plus/share_plus.dart';
-import 'package:uuid/uuid.dart';
+import 'package:flutter/services.dart';
 
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
@@ -180,10 +173,10 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                 color: AppColors.admin.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.qr_code_rounded, color: AppColors.admin, size: 20),
+              child: const Icon(Icons.pin_rounded, color: AppColors.admin, size: 20),
             ),
             onPressed: () {
-              _showGuardJoinQr(context);
+              _showGuardJoinCode(context);
             },
           ),
           const SizedBox(width: 4),
@@ -648,14 +641,19 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
     );
   }
 
-  void _showGuardJoinQr(BuildContext context) {
+  Future<void> _showGuardJoinCode(BuildContext context) async {
     final expiry = DateTime.now().add(const Duration(hours: 24));
-
-    final payload = jsonEncode({
-      'type': 'guard_join_v1',
-      'societyId': widget.societyId,
-      'exp': expiry.millisecondsSinceEpoch,
-    });
+    final code = await _firestore.createGuardJoinCode(widget.societyId);
+    if (!context.mounted) return;
+    if (code == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Failed to generate code. Please try again."),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
 
     showModalBottomSheet(
       context: context,
@@ -681,7 +679,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                   ),
                 ),
                 const Text(
-                  "Guard Join QR",
+                  "Guard Join Code",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
@@ -690,7 +688,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Ask the guard to scan this QR from the Guard app within 24 hours.",
+                  "Ask the guard to enter this 6-digit code in the Guard app within 24 hours.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: AppColors.text2,
@@ -698,33 +696,25 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                const SizedBox(height: 16),
-
-                // ✅ QR Container (quiet-zone + high contrast)
+                const SizedBox(height: 20),
                 Container(
-                  padding: const EdgeInsets.all(24), // ✅ was 16
+                  padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.admin.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
+                    border: Border.all(color: AppColors.admin.withOpacity(0.3)),
                   ),
-                  child: QrImageView(
-                    data: payload,
-                    version: QrVersions.auto,
-                    size: 280,
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black,
-                    errorCorrectionLevel: QrErrorCorrectLevel.M,
-                    gapless: false, // ✅ important for mobile_scanner
+                  child: Text(
+                    code,
+                    style: const TextStyle(
+                      fontSize: 42,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 12,
+                      color: AppColors.admin,
+                      fontFamily: 'monospace',
+                    ),
                   ),
                 ),
-
                 const SizedBox(height: 12),
                 Text(
                   "Valid until: ${expiry.toLocal()}",
@@ -734,8 +724,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                const SizedBox(height: 16),
-
+                const SizedBox(height: 20),
                 Row(
                   children: [
                     Expanded(
@@ -759,8 +748,14 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () async {
-                          await _shareGuardJoinQr(payload);
+                        onPressed: () {
+                          Clipboard.setData(ClipboardData(text: code));
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text("Code copied to clipboard"),
+                              behavior: SnackBarBehavior.floating,
+                            ),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.admin,
@@ -769,9 +764,9 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        icon: const Icon(Icons.ios_share_rounded, size: 18),
+                        icon: const Icon(Icons.copy_rounded, size: 18),
                         label: const Text(
-                          "Share QR",
+                          "Copy",
                           style: TextStyle(
                             fontWeight: FontWeight.w800,
                             fontSize: 13,
@@ -781,54 +776,11 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-
-                // ✅ Optional: tiny tip (helps reduce support issues)
-                Text(
-                  "Tip: If sharing on WhatsApp, share the QR as a Document for best scanning.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.text2.withOpacity(0.75),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
               ],
             ),
           ),
         );
       },
     );
-  }
-
-
-  Future<void> _shareGuardJoinQr(String payload) async {
-    try {
-      final qrPainter = QrPainter(
-        data: payload,
-        version: QrVersions.auto,
-        gapless: true,
-        color: Colors.black,
-        emptyColor: Colors.white,
-      );
-
-      final imageData = await qrPainter.toImageData(
-        800,
-        format: ui.ImageByteFormat.png,
-      );
-      if (imageData == null) return;
-
-      final bytes = imageData.buffer.asUint8List();
-      final tmpDir = await getTemporaryDirectory();
-      final file = File('${tmpDir.path}/guard_join_qr.png');
-      await file.writeAsBytes(bytes);
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Guard Join QR for society ${widget.societyId}',
-      );
-    } catch (e, st) {
-      AppLogger.e("Share Guard Join QR failed", error: e, stackTrace: st);
-    }
   }
 }

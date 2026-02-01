@@ -1,11 +1,8 @@
-import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../core/app_logger.dart';
 import '../core/storage.dart';
@@ -26,54 +23,27 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
   final FirebaseAuthService _authService = FirebaseAuthService();
   final FirestoreService _firestore = FirestoreService();
 
+  final _codeController = TextEditingController();
   final _nameController = TextEditingController();
   final _usernameController = TextEditingController();
   final _pinController = TextEditingController();
   final _shiftController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
-  bool _isScanning = true;
+  bool _isVerifying = false;
   bool _isProcessing = false;
   String? _societyId;
   String? _error;
   XFile? _selfie;
-  String? _lastScannedRaw;
-  DateTime? _lastScanTime;
-  bool _showManualEntry = false;
-  bool _isDecodingImage = false;
-  final _manualCodeController = TextEditingController();
-
-  late final MobileScannerController _scannerController;
-  StreamSubscription<BarcodeCapture>? _barcodeSub;
-  Timer? _scanTimeout;
 
   @override
   void initState() {
     super.initState();
-    _scannerController = MobileScannerController(
-      formats: [BarcodeFormat.qrCode],
-      detectionSpeed: DetectionSpeed.normal,
-      facing: CameraFacing.back,
-    );
-
-    // ✅ Fallback: if QR isn't detected in 6 seconds, show manual entry
-    _scanTimeout = Timer(const Duration(seconds: 6), () {
-      if (!mounted) return;
-      if (_societyId == null) {
-        setState(() {
-          _showManualEntry = true;
-          _error = "QR not detected. Increase brightness or paste society ID/JSON.";
-        });
-      }
-    });
   }
-
 
   @override
   void dispose() {
-    _scanTimeout?.cancel();
-    _scannerController.dispose();
-    _manualCodeController.dispose();
+    _codeController.dispose();
     _nameController.dispose();
     _usernameController.dispose();
     _pinController.dispose();
@@ -81,168 +51,38 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
     super.dispose();
   }
 
-
-  void _processBarcodeCapture(BarcodeCapture capture) {
-  if (!_isScanning || !mounted) return;
-  if (capture.barcodes.isEmpty) return;
-
-  // ✅ Debug (optional)
-  AppLogger.i("QR detect fired", data: {
-    "count": capture.barcodes.length,
-    "raw": capture.barcodes.first.rawValue,
-    "display": capture.barcodes.first.displayValue,
-  });
-
-  // Try each barcode; some devices put content in displayValue only
-  String? raw;
-  for (final barcode in capture.barcodes) {
-    raw = barcode.rawValue ?? barcode.displayValue;
-    if (raw != null && raw.isNotEmpty) break;
-  }
-  if (raw == null || raw.isEmpty) return;
-
-  _applyScannedPayload(raw);
-  }
-
-
-  /// Parse guard_join_v1 JSON and update state. Used by both scanner and manual paste.
-  void _applyScannedPayload(String raw) {
-    // Debounce: ignore same content within 2 seconds
-    final now = DateTime.now();
-    if (_lastScannedRaw == raw && _lastScanTime != null && now.difference(_lastScanTime!).inSeconds < 2) {
+  Future<void> _verifyCode() async {
+    final code = _codeController.text.trim();
+    if (code.length != 6 || int.tryParse(code) == null) {
+      setState(() => _error = "Please enter a valid 6-digit code.");
       return;
     }
-    _lastScannedRaw = raw;
-    _lastScanTime = now;
-
-    try {
-      final trimmed = raw.trim();
-      if (trimmed.isEmpty) {
-        throw Exception("Empty content");
-      }
-      final decoded = jsonDecode(trimmed);
-      if (decoded is! Map<String, dynamic>) {
-        throw Exception("Invalid QR payload");
-      }
-
-      final type = decoded['type']?.toString();
-      final societyId = (decoded['societyId'] ?? decoded['society_id'])?.toString()?.trim();
-      final exp = decoded['exp'];
-
-      if (type != 'guard_join_v1') {
-        throw Exception("Unsupported QR type");
-      }
-      if (societyId == null || societyId.isEmpty) {
-        throw Exception("QR missing fields");
-      }
-
-      if (exp is num) {
-        final expiry = DateTime.fromMillisecondsSinceEpoch(exp.toInt());
-        if (DateTime.now().isAfter(expiry)) {
-          throw Exception("QR code has expired");
-        }
-      }
-
-      if (!mounted) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-
-        // ✅ STEP E: cancel fallback timer once QR is successfully scanned
-        _scanTimeout?.cancel();
-
-        setState(() {
-          _isScanning = false;
-          _societyId = societyId;
-          _error = null;
-          _showManualEntry = false;
-          _isDecodingImage = false;
-        });
-      });
-
-    } catch (e, st) {
-      AppLogger.e("GuardJoinScreen QR parse error", error: e, stackTrace: st);
-      if (!mounted) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        setState(() {
-          _error = "Invalid or expired QR code. Please ask admin to regenerate.";
-        });
-      });
-    }
-  }
-
-  /// Pick QR image from gallery (e.g. image received on WhatsApp from admin).
-  Future<void> _pickQrImage() async {
-    if (_isDecodingImage || !mounted) return;
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 100,
-    );
-    if (picked == null || !mounted) return;
-
     setState(() {
-      _isDecodingImage = true;
       _error = null;
+      _isVerifying = true;
     });
-
     try {
-      final capture = await _scannerController.analyzeImage(picked.path);
+      final societyId = await _firestore.getGuardJoinCode(code);
       if (!mounted) return;
-      if (capture == null || capture.barcodes.isEmpty) {
+      if (societyId != null && societyId.isNotEmpty) {
         setState(() {
-          _isDecodingImage = false;
-          _error = "No QR code found in this image. Try a clearer image or scan with camera.";
+          _societyId = societyId;
+          _isVerifying = false;
         });
-        return;
-      }
-      String? raw;
-      for (final barcode in capture.barcodes) {
-        raw = barcode.rawValue ?? barcode.displayValue;
-        if (raw != null && raw.isNotEmpty) break;
-      }
-      if (raw != null && raw.isNotEmpty) {
-        _applyScannedPayload(raw);
       } else {
         setState(() {
-          _isDecodingImage = false;
-          _error = "Could not read QR from image. Try another image or paste the JSON.";
+          _error = "Invalid or expired code. Please ask admin for a new code.";
+          _isVerifying = false;
         });
-        return;
       }
     } catch (e, st) {
-      AppLogger.e("GuardJoinScreen QR image decode error", error: e, stackTrace: st);
+      AppLogger.e("GuardJoinScreen verify code error", error: e, stackTrace: st);
       if (!mounted) return;
       setState(() {
-        _isDecodingImage = false;
-        _error = "Could not read QR from image. Try another image or paste the JSON.";
+        _error = "Could not verify code. Please try again.";
+        _isVerifying = false;
       });
-      return;
     }
-    if (mounted) setState(() => _isDecodingImage = false);
-  }
-
-  void _tryManualCode() {
-    final text = _manualCodeController.text.trim();
-    if (text.isEmpty) {
-      setState(() => _error = "Paste the JSON from the QR or enter the society ID.");
-      return;
-    }
-    setState(() => _error = null);
-    // If it looks like JSON, parse as guard_join_v1
-    final trimmed = text.trim();
-    if (trimmed.startsWith('{')) {
-      _applyScannedPayload(trimmed);
-      return;
-    }
-    // Otherwise treat as society ID only (skip expiry check)
-    if (!mounted) return;
-    setState(() {
-      _societyId = trimmed;
-      _isScanning = false;
-      _error = null;
-      _showManualEntry = false;
-    });
   }
 
   Future<void> _handleJoin() async {
@@ -250,7 +90,7 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
     final societyId = _societyId;
     if (societyId == null) {
       setState(() {
-        _error = "QR not scanned. Please scan a valid Guard Join QR.";
+        _error = "Please enter the 6-digit code from your admin first.";
       });
       return;
     }
@@ -350,14 +190,14 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
       if (!mounted) return;
       setState(() {
         _isProcessing = false;
-        _error = "Failed to join as guard. Please try again or ask admin to regenerate QR.";
+        _error = "Failed to join as guard. Please try again or ask admin for a new code.";
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final hasScanned = _societyId != null;
+    final hasCode = _societyId != null;
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -376,7 +216,7 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
       body: Stack(
         children: [
           SafeArea(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -407,34 +247,10 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                     ),
                     const SizedBox(height: 12),
                   ],
-                  Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    height: 260,
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: hasScanned
-                          ? Center(
-                              child: Icon(
-                                Icons.check_circle_rounded,
-                                color: AppColors.success,
-                                size: 64,
-                              ),
-                            )
-                          : MobileScanner(
-                              controller: _scannerController,
-                              onDetect: _processBarcodeCapture,
-                            ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
                   Text(
-                    hasScanned
-                        ? "QR scanned successfully.\nSet a 6-digit password to complete setup."
-                        : "Ask your admin to show the Guard Join QR, then scan it to start.",
+                    hasCode
+                        ? "Code verified. Set a 6-digit password to complete setup."
+                        : "Enter the 6-digit code from your admin to join as a guard.",
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       color: AppColors.text2,
@@ -442,85 +258,53 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  if (!hasScanned) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      "If the camera doesn’t start, allow camera access when your device asks.",
+                  if (!hasCode) ...[
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _codeController,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.text2.withOpacity(0.8),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 8,
+                        fontFamily: 'monospace',
                       ),
+                      decoration: InputDecoration(
+                        hintText: "000000",
+                        counterText: "",
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+                      ),
+                      onChanged: (_) => setState(() => _error = null),
                     ),
-                    const SizedBox(height: 12),
-                    OutlinedButton.icon(
-                      onPressed: _isDecodingImage ? null : _pickQrImage,
-                      style: OutlinedButton.styleFrom(
-                        side: BorderSide(color: AppColors.primary),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      icon: _isDecodingImage
-                          ? SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary),
-                            )
-                          : Icon(Icons.upload_rounded, size: 18, color: AppColors.primary),
-                      label: Text(
-                        _isDecodingImage ? "Reading QR…" : "Upload QR image (e.g. from WhatsApp)",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
-                          fontSize: 13,
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 52,
+                      child: ElevatedButton.icon(
+                        onPressed: _isVerifying ? null : _verifyCode,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton.icon(
-                      onPressed: () => setState(() {
-                        _showManualEntry = !_showManualEntry;
-                        if (!_showManualEntry) _error = null;
-                      }),
-                      icon: Icon(Icons.keyboard_rounded, size: 18, color: AppColors.primary),
-                      label: Text(
-                        _showManualEntry ? "Hide manual entry" : "Having trouble? Paste JSON or society ID",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.primary,
-                          fontSize: 13,
+                        icon: _isVerifying
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Icon(Icons.arrow_forward_rounded),
+                        label: Text(
+                          _isVerifying ? "Verifying…" : "Continue",
+                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
                         ),
                       ),
                     ),
-                    if (_showManualEntry) ...[
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _manualCodeController,
-                        maxLines: 4,
-                        decoration: InputDecoration(
-                          hintText: 'Paste the JSON from the QR, or just the society ID',
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        ),
-                        style: const TextStyle(fontSize: 12, fontFamily: 'monospace'),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        height: 44,
-                        child: ElevatedButton(
-                          onPressed: _tryManualCode,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                          child: const Text("Use this", style: TextStyle(fontWeight: FontWeight.w800)),
-                        ),
-                      ),
-                    ],
                   ],
                   const SizedBox(height: 16),
-                  if (hasScanned) ...[
+                  if (hasCode) ...[
                     Form(
                       key: _formKey,
                       child: Column(

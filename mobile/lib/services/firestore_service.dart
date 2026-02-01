@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../core/app_logger.dart';
@@ -58,6 +60,51 @@ class FirestoreService {
 
   /// Get society codes collection reference
   CollectionReference get _societyCodesRef => _firestore.collection('societyCodes');
+
+  /// Guard join codes (6-digit, 24h). Document ID = code.
+  CollectionReference get _guardJoinCodesRef => _firestore.collection('guard_join_codes');
+
+  // ============================================
+  // GUARD JOIN CODE (6-digit, replaces QR)
+  // ============================================
+
+  /// Create a 6-digit guard join code for the society. Valid 24 hours.
+  /// Returns the code string (e.g. "847291") or null on failure.
+  Future<String?> createGuardJoinCode(String societyId) async {
+    final expiry = DateTime.now().add(const Duration(hours: 24));
+    final code = (100000 + Random().nextInt(900000)).toString();
+    final ref = _guardJoinCodesRef.doc(code);
+    try {
+      await ref.set({
+        'societyId': societyId,
+        'exp': Timestamp.fromDate(expiry),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+      AppLogger.i('Guard join code created', data: {'code': code, 'societyId': societyId});
+      return code;
+    } catch (e, stackTrace) {
+      AppLogger.e('Error creating guard join code', error: e, stackTrace: stackTrace);
+      return null;
+    }
+  }
+
+  /// Look up a 6-digit guard join code. Returns societyId if valid and not expired, else null.
+  Future<String?> getGuardJoinCode(String code) async {
+    final trimmed = code.trim();
+    if (trimmed.length != 6 || int.tryParse(trimmed) == null) return null;
+    try {
+      final doc = await _guardJoinCodesRef.doc(trimmed).get();
+      if (!doc.exists) return null;
+      final data = doc.data() as Map<String, dynamic>?;
+      if (data == null) return null;
+      final exp = data['exp'];
+      if (exp is Timestamp && DateTime.now().isAfter(exp.toDate())) return null;
+      return data['societyId'] as String?;
+    } catch (e, stackTrace) {
+      AppLogger.e('Error getting guard join code', error: e, stackTrace: stackTrace);
+      return null;
+    }
+  }
 
   // ============================================
   // SOCIETY OPERATIONS
