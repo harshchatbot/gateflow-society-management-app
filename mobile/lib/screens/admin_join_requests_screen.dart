@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 
 import '../core/app_logger.dart';
 import '../services/firestore_service.dart';
+import '../services/resident_signup_service.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 
-/// Admin screen: review and approve/reject resident join requests
-/// from public_societies/{societyId}/join_requests.
+/// Admin screen: single place for all pending residents.
+/// Shows (1) Join requests from Find Society flow (public_societies/.../join_requests)
+/// and (2) Pending signups from society-code flow (members with active=false).
 class AdminJoinRequestsScreen extends StatefulWidget {
   final String societyId;
 
@@ -20,8 +22,12 @@ class AdminJoinRequestsScreen extends StatefulWidget {
 
 class _AdminJoinRequestsScreenState extends State<AdminJoinRequestsScreen> {
   final FirestoreService _firestore = FirestoreService();
+  final ResidentSignupService _signupService = ResidentSignupService();
   bool _loading = true;
   List<Map<String, dynamic>> _requests = [];
+
+  static const String _sourceJoinRequest = 'join_request';
+  static const String _sourcePendingSignup = 'pending_signup';
 
   @override
   void initState() {
@@ -32,11 +38,30 @@ class _AdminJoinRequestsScreenState extends State<AdminJoinRequestsScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
-      final list =
+      final joinList =
           await _firestore.getResidentJoinRequestsForAdmin(widget.societyId);
+      for (final r in joinList) {
+        r['source'] = _sourceJoinRequest;
+      }
+
+      final signupsResult =
+          await _signupService.getPendingSignups(societyId: widget.societyId);
+      final signupList = signupsResult.data ?? [];
+      final pendingSignups = signupList.map<Map<String, dynamic>>((s) {
+        return {
+          'source': _sourcePendingSignup,
+          'uid': s['uid'] ?? s['signup_id'],
+          'name': s['name'] ?? 'Resident',
+          'phone': s['phone'] ?? '',
+          'unitLabel': s['flat_no'] ?? '',
+          'email': s['email'] ?? '',
+        };
+      }).toList();
+
+      final combined = [...joinList, ...pendingSignups];
       if (!mounted) return;
       setState(() {
-        _requests = list;
+        _requests = combined;
         _loading = false;
       });
     } catch (e, st) {
@@ -53,12 +78,39 @@ class _AdminJoinRequestsScreenState extends State<AdminJoinRequestsScreen> {
   }
 
   Future<void> _approve(Map<String, dynamic> req) async {
+    final source = req['source'] as String?;
     final uid = req['uid'] as String;
+    final adminUid = FirebaseAuth.instance.currentUser?.uid ?? 'admin';
+
+    if (source == _sourcePendingSignup) {
+      final result = await _signupService.approveSignup(
+        societyId: widget.societyId,
+        signupId: uid,
+        adminUid: adminUid,
+      );
+      await _load();
+      if (!mounted) return;
+      if (result.isSuccess) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Signup approved'),
+            backgroundColor: AppColors.success,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.error?.userMessage ?? 'Failed to approve'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
     final unitLabel = (req['unitLabel'] as String?) ?? '';
     final name = (req['name'] as String?) ?? 'Resident';
     final phone = (req['phone'] as String?) ?? '';
-    final handledByUid = FirebaseAuth.instance.currentUser?.uid ?? 'admin';
-
     try {
       await _firestore.approveResidentJoinRequest(
         societyId: widget.societyId,
@@ -66,7 +118,7 @@ class _AdminJoinRequestsScreenState extends State<AdminJoinRequestsScreen> {
         unitLabel: unitLabel,
         name: name,
         phoneE164: phone,
-        handledByUid: handledByUid,
+        handledByUid: adminUid,
       );
       await _load();
       if (!mounted) return;
@@ -94,13 +146,41 @@ class _AdminJoinRequestsScreenState extends State<AdminJoinRequestsScreen> {
   }
 
   Future<void> _reject(Map<String, dynamic> req) async {
+    final source = req['source'] as String?;
     final uid = req['uid'] as String;
-    final handledByUid = FirebaseAuth.instance.currentUser?.uid ?? 'admin';
+    final adminUid = FirebaseAuth.instance.currentUser?.uid ?? 'admin';
+
+    if (source == _sourcePendingSignup) {
+      final result = await _signupService.rejectSignup(
+        societyId: widget.societyId,
+        signupId: uid,
+        adminUid: adminUid,
+      );
+      await _load();
+      if (!mounted) return;
+      if (result.isSuccess) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Signup rejected'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.error?.userMessage ?? 'Failed to reject'),
+            backgroundColor: AppColors.error,
+          ),
+        );
+      }
+      return;
+    }
+
     try {
       await _firestore.rejectResidentJoinRequest(
         societyId: widget.societyId,
         uid: uid,
-        handledByUid: handledByUid,
+        handledByUid: adminUid,
       );
       await _load();
       if (!mounted) return;
@@ -141,10 +221,10 @@ class _AdminJoinRequestsScreenState extends State<AdminJoinRequestsScreen> {
       ),
       body: _loading
           ? Center(child: AppLoader.inline())
-          : _requests.isEmpty
+              : _requests.isEmpty
               ? Center(
                   child: Text(
-                    'No pending join requests.',
+                    'No pending join requests or signups.',
                     style: TextStyle(
                       color: AppColors.text2,
                       fontWeight: FontWeight.w600,
@@ -160,6 +240,8 @@ class _AdminJoinRequestsScreenState extends State<AdminJoinRequestsScreen> {
                     final name = (r['name'] as String?) ?? 'Resident';
                     final phone = (r['phone'] as String?) ?? '';
                     final unitLabel = (r['unitLabel'] as String?) ?? '';
+                    final source = r['source'] as String?;
+                    final isFindSociety = source == _sourceJoinRequest;
                     return Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -177,13 +259,41 @@ class _AdminJoinRequestsScreenState extends State<AdminJoinRequestsScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            name,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                              color: AppColors.text,
-                            ),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.text,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: isFindSociety
+                                      ? AppColors.primary.withOpacity(0.12)
+                                      : AppColors.text2.withOpacity(0.12),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  isFindSociety
+                                      ? 'Find Society'
+                                      : 'Society code',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w700,
+                                    color: isFindSociety
+                                        ? AppColors.primary
+                                        : AppColors.text2,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 4),
                           Text(

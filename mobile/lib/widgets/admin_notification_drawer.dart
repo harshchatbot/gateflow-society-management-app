@@ -66,26 +66,43 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
     setState(() => _isLoading = true);
 
     try {
-      // Load pending resident signups
+      // Load pending residents: Join Requests (Find Society) + society-code signups
       int pendingSignups = 0;
       List<Map<String, dynamic>> signupNotifications = [];
-      final signupsResult = await _signupService.getPendingSignups(societyId: widget.societyId);
+      final joinList =
+          await _firestore.getResidentJoinRequestsForAdmin(widget.societyId);
+      for (final r in joinList.take(5)) {
+        signupNotifications.add({
+          'type': 'resident_signup',
+          'id': r['uid']?.toString() ?? '',
+          'title': 'Join request: ${(r['name'] ?? 'Resident').toString()}',
+          'description': 'Unit ${r['unitLabel'] ?? '–'}',
+          'status': 'PENDING',
+          'created_at': (r['createdAt'] as dynamic)?.toString() ?? '',
+          'flat_no': r['unitLabel']?.toString() ?? '',
+          'resident_name': r['name']?.toString() ?? 'Resident',
+        });
+      }
+      pendingSignups = joinList.length;
+      final signupsResult =
+          await _signupService.getPendingSignups(societyId: widget.societyId);
       if (signupsResult.isSuccess && signupsResult.data != null) {
         final list = signupsResult.data!;
-        pendingSignups = list.length;
-        signupNotifications = list.take(5).map((s) {
-          return {
+        pendingSignups += list.length;
+        for (final s in list.take(5)) {
+          signupNotifications.add({
             'type': 'resident_signup',
             'id': s['signup_id']?.toString() ?? s['uid']?.toString() ?? '',
-            'title': 'Resident signup: ${(s['name'] ?? '').toString().isNotEmpty ? s['name'] : (s['email'] ?? 'Unknown')}',
+            'title': 'Society code signup: ${(s['name'] ?? '').toString().isNotEmpty ? s['name'] : (s['email'] ?? 'Unknown')}',
             'description': 'Flat ${s['flat_no'] ?? '–'} • ${s['email'] ?? ''}',
             'status': 'PENDING',
             'created_at': s['created_at']?.toString() ?? '',
             'flat_no': s['flat_no']?.toString() ?? '',
             'resident_name': s['name']?.toString() ?? 'Unknown',
-          };
-        }).toList();
+          });
+        }
       }
+      signupNotifications = signupNotifications.take(5).toList();
 
       // Load pending complaints (only if module enabled)
       dynamic complaintsResult;
@@ -398,7 +415,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                   width: 120,
                   child: _buildSummaryCard(
                     icon: Icons.person_add_rounded,
-                    label: "Pending Signups",
+                    label: "Pending Residents",
                     count: _pendingSignupsCount,
                     color: AppColors.success,
                   ),

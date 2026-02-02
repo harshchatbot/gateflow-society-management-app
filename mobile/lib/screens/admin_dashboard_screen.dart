@@ -270,8 +270,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         totalCount += _unreadNoticesCount;
       }
 
-      // Count pending resident signups
-      final signupsResult = await _signupService.getPendingSignups(societyId: widget.societyId);
+      // Count pending residents: Join Requests (Find Society) + society-code signups
+      try {
+        final joinRequests =
+            await _firestore.getResidentJoinRequestsForAdmin(widget.societyId);
+        totalCount += joinRequests.length;
+      } catch (_) {}
+      final signupsResult =
+          await _signupService.getPendingSignups(societyId: widget.societyId);
       if (signupsResult.isSuccess && signupsResult.data != null) {
         totalCount += signupsResult.data!.length;
       }
@@ -296,7 +302,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         adminId: widget.adminId,
         onNavigateToPendingSignup: () {
           Navigator.pop(context);
-          widget.onTabNavigate?.call(1, 1);
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AdminJoinRequestsScreen(
+                societyId: widget.societyId,
+              ),
+            ),
+          );
         },
       ),
     ).then((_) {
@@ -887,7 +900,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     }
     if (widget.systemRole?.toLowerCase() == 'super_admin') {
-      // Super_admin can also sync search name for their society
+      // Super_admin can approve join requests and sync search name for their society
+      children.add(
+        DashboardQuickAction(
+          label: "Join Requests",
+          icon: Icons.how_to_reg_rounded,
+          tint: AppColors.primary,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AdminJoinRequestsScreen(
+                  societyId: widget.societyId,
+                ),
+              ),
+            );
+          },
+        ),
+      );
       children.add(
         DashboardQuickAction(
           label: "Sync search name",

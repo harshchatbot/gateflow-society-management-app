@@ -16,8 +16,8 @@ service cloud.firestore {
     // Used to resolve societyId WITHOUT collectionGroup queries
     // =========================
     match /members/{uid} {
-    // user can read their own pointer
-    allow read: if signedIn() && request.auth.uid == uid;
+    // user can read their own pointer; any signed-in user can read (needed for phone-availability check during admin approve)
+    allow read: if signedIn();
 
     // user can create their own pointer
     allow create: if signedIn()
@@ -436,6 +436,13 @@ service cloud.firestore {
           get(/databases/$(database)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.systemRole == "admin"
           || get(/databases/$(database)/documents/societies/$(societyId)/members/$(request.auth.uid)).data.systemRole == "super_admin"
         );
+    }
+
+    // ------------------------
+    // unique_phones/{phoneHash} - one active account per phone. Read/write for phone check and setMemberPhone (approve, profile link).
+    // ------------------------
+    match /unique_phones/{phoneHash} {
+      allow read, write: if signedIn();
     }
 
     // ------------------------

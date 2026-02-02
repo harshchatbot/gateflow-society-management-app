@@ -4,11 +4,9 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/admin_service.dart';
-import '../services/resident_signup_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../services/firestore_service.dart';
-
 
 /// Admin Manage Residents Screen
 /// 
@@ -18,15 +16,11 @@ class AdminManageResidentsScreen extends StatefulWidget {
   final String adminId;
   final String societyId;
   final VoidCallback? onBackPressed;
-  /// 0 = Residents list, 1 = Pending signups tab
-  final int initialTabIndex;
-
   const AdminManageResidentsScreen({
     super.key,
     required this.adminId,
     required this.societyId,
     this.onBackPressed,
-    this.initialTabIndex = 0,
   });
 
   @override
@@ -36,52 +30,27 @@ class AdminManageResidentsScreen extends StatefulWidget {
 /// Page size for paginated residents list. Load more fetches next [kResidentsPageSize] docs.
 const int kResidentsPageSize = 30;
 
-class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen> with SingleTickerProviderStateMixin {
+class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen> {
   final FirestoreService _firestore = FirestoreService();
-  final ResidentSignupService _signupService = ResidentSignupService(); // keep (approval flow)
 
   List<dynamic> _residents = [];
   List<dynamic> _filteredResidents = [];
-  List<dynamic> _pendingSignups = [];
-  /// Cursor for "Load more" on residents tab (null = no more or not loaded).
+  /// Cursor for "Load more" (null = no more or not loaded).
   DocumentSnapshot? _lastDoc;
   bool _isLoading = false;
   bool _isLoadingMore = false;
   String? _error;
   final TextEditingController _searchController = TextEditingController();
-  late TabController _tabController;
-  int _currentTabIndex = 0;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      if (_tabController.indexIsChanging) {
-        setState(() {
-          _currentTabIndex = _tabController.index;
-        });
-        if (_tabController.index == 1) {
-          _loadPendingSignups();
-        }
-      }
-    });
     _loadResidents();
-    _loadPendingSignups();
     _searchController.addListener(_filterResidents);
-    if (widget.initialTabIndex == 1) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _tabController.index != 1) {
-          _tabController.animateTo(1);
-          setState(() => _currentTabIndex = 1);
-        }
-      });
-    }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
@@ -189,161 +158,6 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
   }
 
 
-  Future<void> _loadPendingSignups() async {
-    if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final result = await _signupService.getPendingSignups(
-        societyId: widget.societyId,
-      );
-
-      if (!mounted) return;
-
-      if (result.isSuccess && result.data != null) {
-        setState(() {
-          _pendingSignups = result.data!;
-          _isLoading = false;
-        });
-        AppLogger.i("Loaded ${_pendingSignups.length} pending signups");
-      } else {
-        setState(() {
-          _isLoading = false;
-          _error = (result.error?.toString()) ?? "Failed to load pending signups";
-
-        });
-        AppLogger.w("Failed to load pending signups: ${result.error}");
-      }
-    } catch (e) {
-      AppLogger.e("Error loading pending signups", error: e);
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-          _error = "Connection error. Please try again.";
-        });
-      }
-    }
-  }
-
-  Future<void> _handleApproveSignup(String signupId) async {
-    if (!mounted) return;
-    setState(() => _isLoading = true);
-
-    try {
-      final result = await _signupService.approveSignup(
-        societyId: widget.societyId,
-        signupId: signupId,
-        adminUid: widget.adminId,
-      );
-
-      if (!mounted) return;
-
-      if (result.isSuccess) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  "Signup approved successfully",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.success,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-        _loadPendingSignups();
-        _loadResidents(); // Refresh residents list
-      } else {
-        setState(() => _isLoading = false);
-        _showError(result.error?.userMessage ?? "Failed to approve signup");
-      }
-    } catch (e) {
-      AppLogger.e("Error approving signup", error: e);
-      if (mounted) {
-        setState(() => _isLoading = false);
-        _showError("An error occurred. Please try again.");
-      }
-    }
-  }
-
-  Future<void> _handleRejectSignup(String signupId) async {
-    if (!mounted) return;
-    
-    // Show confirmation dialog
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Reject Signup Request"),
-        content: const Text("Are you sure you want to reject this signup request?"),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text("Cancel"),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: AppColors.error),
-            child: const Text("Reject"),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true) return;
-
-    setState(() => _isLoading = true);
-
-    try {
-      final result = await _signupService.rejectSignup(
-        societyId: widget.societyId,
-        signupId: signupId,
-        adminUid: widget.adminId,
-      );
-
-      if (!mounted) return;
-
-      if (result.isSuccess) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Row(
-              children: [
-                Icon(Icons.cancel, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  "Signup rejected",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
-            backgroundColor: AppColors.error,
-            behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            margin: const EdgeInsets.all(16),
-          ),
-        );
-        _loadPendingSignups();
-      } else {
-        setState(() => _isLoading = false);
-        _showError(result.error?.userMessage ?? "Failed to reject signup");
-      }
-    } catch (e) {
-      AppLogger.e("Error rejecting signup", error: e);
-      if (mounted) {
-        setState(() => _isLoading = false);
-        _showError("An error occurred. Please try again.");
-      }
-    }
-  }
-
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -401,119 +215,54 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
         children: [
           Column(
             children: [
-              // Tabs
+              // Search Bar
               Container(
+                padding: const EdgeInsets.all(16),
                 color: AppColors.bg,
-                child: TabBar(
-                  controller: _tabController,
-                  indicatorColor: AppColors.primary,
-                  labelColor: AppColors.primary,
-                  unselectedLabelColor: AppColors.text2,
-                  labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
-                  tabs: [
-                    Tab(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text("Residents"),
-                          if (_residents.isNotEmpty)
-                            Container(
-                              margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                "${_residents.length}",
-                                style: TextStyle(
-                                  color: AppColors.primary,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                        ],
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppColors.border),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.02),
+                        blurRadius: 10,
+                        offset: const Offset(0, 2),
                       ),
-                    ),
-                    Tab(
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Text("Pending Signups"),
-                          if (_pendingSignups.isNotEmpty)
-                            Container(
-                              margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: AppColors.error.withOpacity(0.15),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                "${_pendingSignups.length}",
-                                style: TextStyle(
-                                  color: AppColors.error,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Search Bar (only for residents tab)
-              if (_currentTabIndex == 0)
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  color: AppColors.bg,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: (_) => _filterResidents(),
+                    decoration: InputDecoration(
+                      hintText: "Search by name, flat, phone...",
+                      hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                      prefixIcon: Container(
+                        margin: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                      ],
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      onChanged: (_) => _filterResidents(),
-                      decoration: InputDecoration(
-                        hintText: "Search by name, flat, phone...",
-                        hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
-                        prefixIcon: Container(
-                          margin: const EdgeInsets.all(12),
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.15),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: const Icon(Icons.search_rounded, color: AppColors.primary, size: 20),
-                        ),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear_rounded, color: AppColors.textMuted, size: 20),
-                                onPressed: () {
-                                  _searchController.clear();
-                                },
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        child: const Icon(Icons.search_rounded, color: AppColors.primary, size: 20),
                       ),
+                      suffixIcon: _searchController.text.isNotEmpty
+                          ? IconButton(
+                              icon: const Icon(Icons.clear_rounded, color: AppColors.textMuted, size: 20),
+                              onPressed: () {
+                                _searchController.clear();
+                              },
+                            )
+                          : null,
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     ),
                   ),
                 ),
-
+              ),
               // Results Count
-              if (_currentTabIndex == 0 && _filteredResidents.isNotEmpty)
+              if (_filteredResidents.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
@@ -529,20 +278,11 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                     ],
                   ),
                 ),
-
               // Content
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [
-                    _buildContent(),
-                    _buildPendingSignupsContent(),
-                  ],
-                ),
-              ),
+              Expanded(child: _buildContent()),
             ],
           ),
-          AppLoader.overlay(show: _isLoading, message: _currentTabIndex == 0 ? "Loading residents…" : "Loading signups…"),
+          AppLoader.overlay(show: _isLoading, message: "Loading residents…"),
         ],
       ),
     );
@@ -971,204 +711,6 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
       ),
     );
   }
-
-  Widget _buildPendingSignupsContent() {
-    if (_pendingSignups.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.check_circle_outline,
-                  size: 64,
-                  color: AppColors.success,
-                ),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                "No pending signups",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                  color: AppColors.text,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                "All signup requests are processed",
-                style: TextStyle(
-                  fontSize: 15,
-                  color: AppColors.text2,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: _loadPendingSignups,
-      color: AppColors.primary,
-      child: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-        itemCount: _pendingSignups.length,
-        itemBuilder: (context, index) {
-          return _buildSignupCard(_pendingSignups[index]);
-        },
-      ),
-    );
-  }
-
-  Widget _buildSignupCard(Map<String, dynamic> signup) {
-    final name = (signup['name'] ?? signup['residentName'] ?? 'Unknown').toString();
-    final email = (signup['email'] ?? 'N/A').toString();
-    final phone = (signup['phone'] ?? signup['mobile'] ?? 'N/A').toString();
-    final flatNo = (signup['flatNo'] ?? signup['flat_no'] ?? 'N/A').toString();
-
-    // signupId is the document ID (uid) from the members collection
-    final signupId = (signup['signup_id'] ?? signup['uid'] ?? '').toString().trim();
-    
-    // Log if signupId is empty for debugging
-    if (signupId.isEmpty) {
-      AppLogger.w("Signup card has empty signupId", data: {
-        "signup": signup,
-      });
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: AppColors.error.withOpacity(0.3),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 8,
-            offset: const Offset(0, 3),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.person_add_rounded, color: AppColors.error, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        name,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: AppColors.text,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        email,
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: AppColors.text2,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Text(
-                    "PENDING",
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.error,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            _buildDetailRow(Icons.home_rounded, "Flat", flatNo),
-            const SizedBox(height: 8),
-            _buildDetailRow(Icons.phone_rounded, "Phone", phone),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _isLoading || signupId.isEmpty ? null : () => _handleRejectSignup(signupId),
-                    icon: const Icon(Icons.close_rounded, size: 18),
-                    label: const Text(
-                      "Reject",
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: AppColors.error, width: 1.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      foregroundColor: AppColors.error,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: ElevatedButton.icon(
-                    onPressed: _isLoading || signupId.isEmpty ? null : () => _handleApproveSignup(signupId),
-                    icon: const Icon(Icons.check_rounded, size: 18),
-                    label: const Text(
-                      "Approve",
-                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
-                    ),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      backgroundColor: AppColors.success,
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
 
   Widget _buildDetailSection(String label, String value) {
     return Padding(

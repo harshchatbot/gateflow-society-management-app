@@ -36,7 +36,6 @@ class AdminShellScreen extends StatefulWidget {
 
 class _AdminShellScreenState extends State<AdminShellScreen> {
   int _currentIndex = 0;
-  int? _wantedResidentsSubTab;
   final Map<int, bool> _screenInitialized = {};
   final GlobalKey<State<AdminDashboardScreen>> _dashboardKey = GlobalKey<State<AdminDashboardScreen>>();
   bool _modulesReady = false;
@@ -79,16 +78,10 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   }
 
   /// Navigate to a specific screen index in the IndexedStack.
-  /// [residentsSubTab] when 1: open Residents screen on Pending signups tab.
   void _navigateToScreen(int screenIndex, {int? residentsSubTab}) {
     setState(() {
       _currentIndex = screenIndex;
       _screenInitialized[screenIndex] = true;
-      if (screenIndex == 1) {
-        _wantedResidentsSubTab = residentsSubTab;
-      } else {
-        _wantedResidentsSubTab = null;
-      }
     });
   }
 
@@ -156,16 +149,9 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           onTabNavigate: (int index, [int? subTab]) => _navigateToScreen(index, residentsSubTab: subTab),
         );
       case 1:
-        final initialTab = _wantedResidentsSubTab ?? 0;
-        if (_wantedResidentsSubTab != null) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) setState(() => _wantedResidentsSubTab = null);
-          });
-        }
         return AdminManageResidentsScreen(
           adminId: widget.adminId,
           societyId: widget.societyId,
-          initialTabIndex: initialTab,
           onBackPressed: () {
             setState(() {
               _currentIndex = 0;
