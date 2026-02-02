@@ -8,7 +8,6 @@ import '../services/admin_service.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/invite_claim_service.dart';
-import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import 'admin_shell_screen.dart';
 import 'admin_login_screen.dart';
@@ -19,7 +18,7 @@ import '../services/invite_bulk_upload_service.dart';
 /// Admin Onboarding Screen
 ///
 /// Allows new admins to register/create their account.
-/// Theme: Purple/Admin theme
+/// Theme: Sentinel (unified)
 class AdminOnboardingScreen extends StatefulWidget {
   const AdminOnboardingScreen({super.key});
 
@@ -288,10 +287,10 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Row(
-            children: const [
-              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-              SizedBox(width: 8),
-              Expanded(
+            children: [
+              Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 20),
+              const SizedBox(width: 8),
+              const Expanded(
                 child: Text(
                   "Account created successfully!",
                   style: TextStyle(fontWeight: FontWeight.bold),
@@ -299,7 +298,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               ),
             ],
           ),
-          backgroundColor: AppColors.primary,
+          backgroundColor: Theme.of(context).colorScheme.primary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
@@ -337,7 +336,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg, style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppColors.error,
+        backgroundColor: Theme.of(context).colorScheme.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
@@ -347,8 +346,9 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -356,7 +356,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
+              color: theme.colorScheme.surface.withOpacity(0.9),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
@@ -366,9 +366,9 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                 ),
               ],
             ),
-            child: const Icon(
+            child: Icon(
               Icons.arrow_back_rounded,
-              color: AppColors.text,
+              color: theme.colorScheme.onSurface,
               size: 20,
             ),
           ),
@@ -389,9 +389,9 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.primary.withOpacity(0.15),
-                    AppColors.bg,
-                    AppColors.bg,
+                    theme.colorScheme.primary.withOpacity(0.15),
+                    theme.scaffoldBackgroundColor,
+                    theme.scaffoldBackgroundColor,
                   ],
                 ),
               ),
@@ -428,11 +428,11 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               maxBlastForce: 18,
               minBlastForce: 5,
               gravity: 0.25,
-              colors: const [
-                AppColors.primary,
-                AppColors.success,
-                Colors.orangeAccent,
-                Colors.blueAccent,
+              colors: [
+                theme.colorScheme.primary,
+                theme.colorScheme.tertiary,
+                theme.colorScheme.secondary,
+                theme.colorScheme.primary.withOpacity(0.8),
               ],
             ),
           ),
@@ -447,6 +447,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   // ---------------------------
 
   Widget _buildBrandHeader() {
+    final theme = Theme.of(context);
     return Column(
       children: [
         SizedBox(
@@ -457,13 +458,13 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => Container(
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: theme.colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(
                 _isCreatingSociety ? Icons.groups_rounded : Icons.person_add_rounded,
                 size: 64,
-                color: AppColors.primary,
+                color: theme.colorScheme.primary,
               ),
             ),
           ),
@@ -473,10 +474,10 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           _isCreatingSociety
               ? "Create New Society"
               : "Join Society",
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w900,
-            color: AppColors.text,
+            color: theme.colorScheme.onSurface,
             letterSpacing: -0.5,
           ),
           textAlign: TextAlign.center,
@@ -487,7 +488,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               ? "Set up your society and become super admin"
               : "Claim your admin invite to join",
           style: TextStyle(
-            color: AppColors.text2,
+            color: theme.colorScheme.onSurface.withOpacity(0.7),
             fontWeight: FontWeight.w600,
             fontSize: 15,
           ),
@@ -532,12 +533,13 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
 
 
   Widget _buildRegistrationForm() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
@@ -556,7 +558,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.text2,
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -566,9 +568,9 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.bg,
+                color: theme.scaffoldBackgroundColor,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: theme.dividerColor),
               ),
               child: Row(
                 children: [
@@ -641,21 +643,21 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           "State",
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.text2,
+                            color: theme.colorScheme.onSurface.withOpacity(0.7),
                             letterSpacing: 0.2,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
-                            color: AppColors.bg,
+                            color: theme.scaffoldBackgroundColor,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(color: theme.dividerColor),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.02),
@@ -667,15 +669,15 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                           child: DropdownButtonFormField<String>(
                             value: _selectedState,
                             isExpanded: true,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              prefixIcon: Icon(Icons.map_rounded, color: AppColors.primary),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              prefixIcon: Icon(Icons.map_rounded, color: theme.colorScheme.primary),
                             ),
-                            hint: const Text(
+                            hint: Text(
                               "Select state",
                               style: TextStyle(
-                                color: AppColors.textMuted,
+                                color: theme.colorScheme.onSurface.withOpacity(0.6),
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -686,10 +688,10 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                                       child: Text(
                                         st['name'] ?? '',
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
-                                          color: AppColors.text,
+                                          color: theme.colorScheme.onSurface,
                                         ),
                                       ),
                                     ))
@@ -726,21 +728,21 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           "City",
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
-                            color: AppColors.text2,
+                            color: theme.colorScheme.onSurface.withOpacity(0.7),
                             letterSpacing: 0.2,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Container(
                           decoration: BoxDecoration(
-                            color: AppColors.bg,
+                            color: theme.scaffoldBackgroundColor,
                             borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(color: theme.dividerColor),
                             boxShadow: [
                               BoxShadow(
                                 color: Colors.black.withOpacity(0.02),
@@ -752,15 +754,15 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                           child: DropdownButtonFormField<String>(
                             value: _selectedCity,
                             isExpanded: true,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              prefixIcon: Icon(Icons.location_on_rounded, color: AppColors.primary),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                              prefixIcon: Icon(Icons.location_on_rounded, color: theme.colorScheme.primary),
                             ),
-                            hint: const Text(
+                            hint: Text(
                               "Select city",
                               style: TextStyle(
-                                color: AppColors.textMuted,
+                                color: theme.colorScheme.onSurface.withOpacity(0.6),
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -771,10 +773,10 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                                       child: Text(
                                         city['name'] ?? '',
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontSize: 16,
                                           fontWeight: FontWeight.w700,
-                                          color: AppColors.text,
+                                          color: theme.colorScheme.onSurface,
                                         ),
                                       ),
                                     ))
@@ -790,10 +792,10 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                                 : (value) {
                                     setState(() => _selectedCity = value);
                                   },
-                            disabledHint: const Text(
+                            disabledHint: Text(
                               "Select state first",
                               style: TextStyle(
-                                color: AppColors.textMuted,
+                                color: theme.colorScheme.onSurface.withOpacity(0.6),
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -879,19 +881,19 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               children: [
                 Text(
                   _isCreatingSociety ? "Role (for new society creator)" : "Role",
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    color: AppColors.text2,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
                     letterSpacing: 0.2,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Container(
                   decoration: BoxDecoration(
-                    color: AppColors.bg,
+                    color: theme.scaffoldBackgroundColor,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: theme.dividerColor),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.02),
@@ -907,10 +909,10 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.15),
+                          color: theme.colorScheme.primary.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.admin_panel_settings_rounded, color: AppColors.primary, size: 20),
+                        child: Icon(Icons.admin_panel_settings_rounded, color: theme.colorScheme.primary, size: 20),
                       ),
                       hintText: "Select role",
                       border: InputBorder.none,
@@ -924,10 +926,10 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                         value: role,
                         child: Text(
                           role == "SUPER_ADMIN" ? "SUPER ADMIN" : role,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.text,
+                            color: theme.colorScheme.onSurface,
                           ),
                         ),
                       );
@@ -952,7 +954,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePin ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  color: AppColors.text2,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                   size: 20,
                 ),
                 onPressed: () => setState(() => _obscurePin = !_obscurePin),
@@ -977,7 +979,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscureConfirmPin ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  color: AppColors.text2,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                   size: 20,
                 ),
                 onPressed: () => setState(() => _obscureConfirmPin = !_obscureConfirmPin),
@@ -995,8 +997,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleRegister,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
                   elevation: 0,
                   shadowColor: Colors.transparent,
                   shape: RoundedRectangleBorder(
@@ -1021,7 +1023,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                 Text(
                   "Already have an account? ",
                   style: TextStyle(
-                    color: AppColors.text2,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1032,10 +1034,10 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                       MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
                     );
                   },
-                  child: const Text(
+                  child: Text(
                     "Login",
                     style: TextStyle(
-                      color: AppColors.primary,
+                      color: theme.colorScheme.primary,
                       fontWeight: FontWeight.w900,
                       fontSize: 14,
                     ),
@@ -1077,24 +1079,25 @@ class _PremiumField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            color: AppColors.text2,
+            color: theme.colorScheme.onSurface.withOpacity(0.7),
             letterSpacing: 0.2,
           ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.bg,
+            color: theme.scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: theme.dividerColor),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.02),
@@ -1110,25 +1113,25 @@ class _PremiumField extends StatelessWidget {
             keyboardType: keyboardType,
             onFieldSubmitted: onSubmitted,
             validator: validator,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: AppColors.text,
+              color: theme.colorScheme.onSurface,
             ),
             decoration: InputDecoration(
               prefixIcon: Container(
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15),
+                  color: theme.colorScheme.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+                child: Icon(icon, color: theme.colorScheme.primary, size: 20),
               ),
               suffixIcon: suffixIcon,
               hintText: hint,
-              hintStyle: const TextStyle(
-                color: AppColors.textMuted,
+              hintStyle: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),

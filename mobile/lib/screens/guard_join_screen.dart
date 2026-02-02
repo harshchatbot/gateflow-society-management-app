@@ -9,7 +9,6 @@ import '../core/app_logger.dart';
 import '../core/storage.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
-import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import 'guard_shell_screen.dart';
 
@@ -223,6 +222,7 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
   }
 
   Widget _buildIllustrationHeader() {
+    final theme = Theme.of(context);
     return Center(
       child: SizedBox(
         width: 160,
@@ -232,13 +232,13 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
           fit: BoxFit.contain,
           errorBuilder: (_, __, ___) => Container(
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
+              color: theme.colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(20),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.shield_rounded,
               size: 56,
-              color: AppColors.primary,
+              color: theme.colorScheme.primary,
             ),
           ),
         ),
@@ -248,18 +248,19 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final hasCode = _societyId != null;
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        iconTheme: const IconThemeData(color: AppColors.text),
-        title: const Text(
+        iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
+        title: Text(
           "Join as Guard",
           style: TextStyle(
-            color: AppColors.text,
+            color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.w900,
           ),
         ),
@@ -273,9 +274,9 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.primary.withOpacity(0.12),
-                    AppColors.bg,
-                    AppColors.bg,
+                    theme.colorScheme.primary.withOpacity(0.12),
+                    theme.scaffoldBackgroundColor,
+                    theme.scaffoldBackgroundColor,
                   ],
                 ),
               ),
@@ -293,18 +294,18 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: AppColors.error.withOpacity(0.08),
+                        color: theme.colorScheme.error.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.error_outline, color: AppColors.error, size: 18),
+                          Icon(Icons.error_outline, color: theme.colorScheme.error, size: 18),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               _error!,
-                              style: const TextStyle(
-                                color: AppColors.error,
+                              style: TextStyle(
+                                color: theme.colorScheme.error,
                                 fontWeight: FontWeight.w600,
                                 fontSize: 13,
                               ),
@@ -321,7 +322,7 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                         : "Enter the 6-digit code from your admin to join as a guard.",
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.text2,
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -353,15 +354,15 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _isVerifying ? null : _verifyCode,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
                         icon: _isVerifying
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 22,
                                 height: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.onPrimary),
                               )
                             : const Icon(Icons.arrow_forward_rounded),
                         label: Text(
@@ -382,10 +383,10 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                             children: [
                               CircleAvatar(
                                 radius: 28,
-                                backgroundColor: AppColors.surface,
+                                backgroundColor: theme.colorScheme.surface,
                                 backgroundImage: _selfie != null ? FileImage(File(_selfie!.path)) : null,
                                 child: _selfie == null
-                                    ? const Icon(Icons.camera_alt_rounded, color: AppColors.text2)
+                                    ? Icon(Icons.camera_alt_rounded, color: theme.colorScheme.onSurface.withOpacity(0.7))
                                     : null,
                               ),
                               const SizedBox(width: 12),
@@ -403,13 +404,13 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                                       });
                                     }
                                   },
-                                  child: const Align(
+                                  child: Align(
                                     alignment: Alignment.centerLeft,
                                     child: Text(
                                       "Add selfie (optional)",
                                       style: TextStyle(
                                         fontWeight: FontWeight.w700,
-                                        color: AppColors.primary,
+                                        color: theme.colorScheme.primary,
                                       ),
                                     ),
                                   ),
@@ -492,8 +493,8 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                       child: ElevatedButton.icon(
                         onPressed: _isProcessing ? null : _handleJoin,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: theme.colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),
