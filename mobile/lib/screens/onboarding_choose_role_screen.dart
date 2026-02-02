@@ -55,26 +55,26 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                   height: 140,
                   width: 160,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Icon(
                     Icons.shield_rounded,
                     size: 64,
-                    color: AppColors.primary,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               ),
             ),
             const SizedBox(height: 20),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 24),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
                 'Choose your role to continue',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
-                  color: AppColors.text,
+                  color: Theme.of(context).colorScheme.onSurface,
                   letterSpacing: -0.5,
                 ),
               ),
@@ -86,7 +86,7 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                 'Select how you\'ll use Sentinel',
                 style: TextStyle(
                   fontSize: 15,
-                  color: AppColors.text2,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -100,12 +100,12 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                   ),
                 );
               },
-              icon: Icon(Icons.info_outline_rounded, size: 18, color: AppColors.primary),
-              label: const Text(
+              icon: Icon(Icons.info_outline_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
+              label: Text(
                 'How Sentinel Works',
                 style: TextStyle(
                   fontWeight: FontWeight.w700,
-                  color: AppColors.primary,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
             ),
@@ -196,10 +196,10 @@ class _OnboardingRoleCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.06),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.06),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: AppColors.primary.withOpacity(0.15),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
               width: 1,
             ),
           ),
@@ -215,11 +215,11 @@ class _OnboardingRoleCard extends StatelessWidget {
                     illustrationPath,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
-                      color: AppColors.primary.withOpacity(0.12),
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
                       child: Icon(
                         fallbackIcon,
                         size: 36,
-                        color: AppColors.primary,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                   ),
@@ -232,10 +232,10 @@ class _OnboardingRoleCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
-                        color: AppColors.text,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -243,7 +243,7 @@ class _OnboardingRoleCard extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.text2,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 2,
@@ -254,7 +254,7 @@ class _OnboardingRoleCard extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: AppColors.primary,
+                color: Theme.of(context).colorScheme.primary,
                 size: 28,
               ),
             ],

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
-import '../ui/app_icons.dart';
-import '../ui/app_loader.dart';
+import '../widgets/sentinel_illustration.dart';
 import 'resident_login_screen.dart';
 import 'resident_shell_screen.dart';
 import 'find_society_screen.dart';
@@ -177,8 +176,9 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -186,19 +186,13 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 10,
-                  offset: const Offset(0, 2),
-                ),
-              ],
+              border: Border.all(color: theme.dividerColor),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.arrow_back_rounded,
-              color: AppColors.text,
+              color: theme.colorScheme.onSurface,
               size: 20,
             ),
           ),
@@ -209,211 +203,166 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
           },
         ),
       ),
-      body: Stack(
-        children: [
-          // Gradient Background
-          Positioned.fill(
-            child: Container(
+      body: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+          children: [
+            const SizedBox(height: 24),
+            const SentinelIllustration(kind: 'pending'),
+            const SizedBox(height: 28),
+            Text(
+              "You're almost in",
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              "Your access request has been sent to the society admin.\nYou'll be notified once it's approved.",
+              style: theme.textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Center(
+              child: SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: theme.colorScheme.primary.withOpacity(0.4),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+            Container(
+              padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primary.withOpacity(0.15),
-                    AppColors.bg,
-                    AppColors.bg,
-                  ],
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: theme.dividerColor),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.email_rounded,
+                        color: theme.colorScheme.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        "Email",
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    widget.email,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: _isChecking ? null : _checkApprovalStatus,
+                icon: _isChecking
+                    ? SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: theme.colorScheme.onPrimary.withOpacity(0.8),
+                        ),
+                      )
+                    : const Icon(Icons.refresh_rounded, size: 20),
+                label: Text(
+                  _isChecking ? "CHECKING..." : "CHECK STATUS",
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                    fontSize: 16,
+                  ),
                 ),
               ),
             ),
-          ),
-          SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.15),
-                        shape: BoxShape.circle,
+            const SizedBox(height: 12),
+            if (_canFindSocietyAgain)
+              SizedBox(
+                width: double.infinity,
+                height: 52,
+                child: OutlinedButton(
+                  onPressed: () async {
+                    await Storage.clearResidentJoinSocietyId();
+                    if (!context.mounted) return;
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(
+                        builder: (_) => const FindSocietyScreen(),
                       ),
-                      child: const Icon(
-                        Icons.pending_actions_rounded,
-                        color: AppColors.primary,
-                        size: 60,
-                      ),
+                    );
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: theme.colorScheme.primary,
+                    side: BorderSide(
+                      color: theme.colorScheme.primary,
+                      width: 1.6,
                     ),
-                    const SizedBox(height: 32),
-                    const Text(
-                      "Pending Approval",
-                      style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.text,
-                        letterSpacing: -0.5,
-                      ),
-                      textAlign: TextAlign.center,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    const SizedBox(height: 16),
-                    Text(
-                      "Your resident signup request is pending approval from the admin.",
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: AppColors.text2,
-                        height: 1.5,
-                      ),
-                      textAlign: TextAlign.center,
+                  ),
+                  child: const Text(
+                    "FIND SOCIETY AGAIN",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 14,
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      "You will be able to login once your request is approved.",
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: AppColors.text2,
-                        height: 1.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 32),
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.email_rounded, color: AppColors.primary, size: 20),
-                              const SizedBox(width: 12),
-                              const Text(
-                                "Email",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppColors.text2,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            widget.email,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.text,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: _isChecking ? null : _checkApprovalStatus,
-                        icon: _isChecking
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: AppLoader.inline(size: 20),
-                              )
-                            : const Icon(Icons.refresh_rounded, size: 20),
-                        label: Text(
-                          _isChecking ? "CHECKING..." : "CHECK STATUS",
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
-                            fontSize: 16,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    if (_canFindSocietyAgain)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: OutlinedButton(
-                          onPressed: () async {
-                            await Storage.clearResidentJoinSocietyId();
-                            if (!context.mounted) return;
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(
-                                builder: (_) => const FindSocietyScreen(),
-                              ),
-                            );
-                          },
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                            side: BorderSide(
-                              color: AppColors.primary,
-                              width: 1.6,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: const Text(
-                            "FIND SOCIETY AGAIN",
-                            style: TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                    if (_canFindSocietyAgain) const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
-                          );
-                        },
-                        icon: const Icon(Icons.arrow_back_rounded, size: 20),
-                        label: const Text(
-                          "BACK TO LOGIN",
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
-                            fontSize: 16,
-                          ),
-                        ),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          side: BorderSide(color: AppColors.primary, width: 2),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
+                  ),
+                ),
+              ),
+            if (_canFindSocietyAgain) const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
+                  );
+                },
+                icon: const Icon(Icons.arrow_back_rounded, size: 20),
+                label: const Text(
+                  "BACK TO LOGIN",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                    fontSize: 16,
+                  ),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: theme.colorScheme.primary,
+                  side: BorderSide(
+                    color: theme.colorScheme.primary,
+                    width: 2,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

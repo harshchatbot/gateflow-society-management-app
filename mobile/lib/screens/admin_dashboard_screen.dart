@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:showcaseview/showcaseview.dart';
-import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/admin_service.dart';
 import '../services/complaint_service.dart';
@@ -334,7 +333,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Navigate to tab $index"),
-          backgroundColor: AppColors.primary,
+          backgroundColor: Theme.of(context).colorScheme.primary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
@@ -396,9 +395,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       await _firestore.updatePublicSocietyNameLower(widget.societyId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Society search name synced. Residents can now find this society by name.'),
-          backgroundColor: AppColors.primary,
+        SnackBar(
+          content: const Text('Society search name synced. Residents can now find this society by name.'),
+          backgroundColor: Theme.of(context).colorScheme.primary,
         ),
       );
     } catch (e, st) {
@@ -407,7 +406,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e is Exception ? e.toString().replaceFirst('Exception: ', '') : 'Sync failed'),
-          backgroundColor: AppColors.error,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
@@ -451,6 +450,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       },
       builder: (context) {
         _showCaseContext = context;
+        final theme = Theme.of(context);
         return PopScope(
           canPop: false,
           onPopInvoked: (didPop) async {
@@ -459,7 +459,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             }
           },
           child: Scaffold(
-            backgroundColor: AppColors.bg,
+            backgroundColor: theme.scaffoldBackgroundColor,
             body: Stack(
         children: [
           // 1) Gradient header (top only)
@@ -474,8 +474,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.primary,
-                    AppColors.primary.withOpacity(0.85),
+                    theme.colorScheme.primary,
+                    theme.colorScheme.primary.withOpacity(0.85),
                   ],
                 ),
               ),
@@ -487,7 +487,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             right: 0,
             top: 260,
             bottom: 0,
-            child: Container(color: AppColors.bg),
+            child: Container(color: theme.scaffoldBackgroundColor),
           ),
           // 3) Scrollable content on top (society card stays above white)
           RefreshIndicator(
@@ -495,7 +495,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               await _loadStats();
               await _loadAdminProfile();
             },
-            color: AppColors.primary,
+            color: theme.colorScheme.primary,
             child: SafeArea(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 134),
@@ -532,8 +532,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               top: 8,
                               child: Container(
                                 padding: const EdgeInsets.all(4),
-                                decoration: const BoxDecoration(
-                                  color: AppColors.error,
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.error,
                                   shape: BoxShape.circle,
                                 ),
                                 constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
@@ -557,10 +557,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 24),
                   if (_stats != null) ...[
-                    const Text(
+                    Text(
                       "Today at a glance",
                       style: TextStyle(
-                        color: AppColors.text,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
                       ),
@@ -572,7 +572,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       if (_visitorsByDayLast7 != null)
                         VisitorsChart(
                           countsByDay: _visitorsByDayLast7!,
-                          barColor: AppColors.primary,
+                          barColor: Theme.of(context).colorScheme.primary,
                         )
                       else
                         const DashboardInsightsCard(),
@@ -580,10 +580,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     const SizedBox(height: 28),
                   ],
                   const SizedBox(height: 28),
-                  const Text(
+                  Text(
                     "Your actions",
                     style: TextStyle(
-                      color: AppColors.text,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w900,
                       fontSize: 16,
                     ),
@@ -617,7 +617,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           color: Colors.white, // solid card
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: AppColors.primary.withOpacity(0.12),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
           ),
         ),
         child: Row(
@@ -627,12 +627,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.12),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 Icons.business_rounded,
-                color: AppColors.primary,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
 
@@ -667,7 +667,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
             Icon(
               Icons.arrow_forward_ios_rounded,
-              color: AppColors.primary.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
               size: 16,
             ),
           ],
@@ -682,9 +682,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Theme.of(context).dividerColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -704,19 +704,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         label: "Residents",
         value: (stats['total_residents'] ?? 0).toString(),
         icon: Icons.people_rounded,
-        color: AppColors.primary,
+        color: Theme.of(context).colorScheme.primary,
       ),
       DashboardStatCard(
         label: "Guards",
         value: (stats['total_guards'] ?? 0).toString(),
         icon: Icons.shield_rounded,
-        color: AppColors.primary,
+        color: Theme.of(context).colorScheme.primary,
       ),
       DashboardStatCard(
         label: "Flats",
         value: (stats['total_flats'] ?? 0).toString(),
         icon: Icons.home_rounded,
-        color: AppColors.primary,
+        color: Theme.of(context).colorScheme.primary,
       ),
     ];
     if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
@@ -725,19 +725,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           label: "Visitors Today",
           value: (stats['visitors_today'] ?? 0).toString(),
           icon: Icons.person_add_rounded,
-          color: AppColors.primary,
+          color: Theme.of(context).colorScheme.primary,
         ),
         DashboardStatCard(
           label: "Pending",
           value: (stats['pending_approvals'] ?? 0).toString(),
           icon: Icons.hourglass_empty_rounded,
-          color: AppColors.primary,
+          color: Theme.of(context).colorScheme.primary,
         ),
         DashboardStatCard(
           label: "Approved Today",
           value: (stats['approved_today'] ?? 0).toString(),
           icon: Icons.verified_user_rounded,
-          color: AppColors.primary,
+          color: Theme.of(context).colorScheme.primary,
         ),
       ]);
     }
@@ -761,7 +761,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: DashboardQuickAction(
           label: "Residents Directory",
           icon: Icons.people_rounded,
-          tint: AppColors.primary,
+          tint: Theme.of(context).colorScheme.primary,
           onTap: () => _navigateToTab(1),
         ),
       ),
@@ -772,19 +772,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: DashboardQuickAction(
           label: "Security Staff",
           icon: Icons.shield_rounded,
-          tint: AppColors.primary,
+          tint: Theme.of(context).colorScheme.primary,
           onTap: () => _navigateToTab(2),
         ),
       ),
       DashboardQuickAction(
         label: "Manage Flats",
         icon: Icons.home_rounded,
-        tint: AppColors.primary,
+        tint: Theme.of(context).colorScheme.primary,
         onTap: () {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text("Flats management coming soon!"),
-              backgroundColor: AppColors.primary,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               margin: const EdgeInsets.all(16),
@@ -802,7 +802,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: DashboardQuickAction(
             label: "Complaints",
             icon: Icons.report_problem_rounded,
-            tint: AppColors.error,
+            tint: Theme.of(context).colorScheme.error,
             onTap: () => _navigateToTab(3),
           ),
         ),
@@ -817,7 +817,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: DashboardQuickAction(
             label: "Notice Board",
             icon: Icons.notifications_rounded,
-            tint: AppColors.primary,
+            tint: Theme.of(context).colorScheme.primary,
             onTap: () => _navigateToTab(4),
           ),
         ),
@@ -828,7 +828,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         DashboardQuickAction(
           label: "Violations",
           icon: Icons.directions_car_rounded,
-          tint: AppColors.primary,
+          tint: Theme.of(context).colorScheme.primary,
           onTap: () {
             Navigator.push(
               context,
@@ -854,7 +854,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: DashboardQuickAction(
             label: "SOS Alerts",
             icon: Icons.sos_rounded,
-            tint: AppColors.error,
+            tint: Theme.of(context).colorScheme.error,
             onTap: () {
               Navigator.push(
                 context,
@@ -876,7 +876,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         DashboardQuickAction(
           label: "Join Requests",
           icon: Icons.how_to_reg_rounded,
-          tint: AppColors.primary,
+          tint: Theme.of(context).colorScheme.primary,
           onTap: () {
             Navigator.push(
               context,
@@ -894,7 +894,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         DashboardQuickAction(
           label: "Sync search name",
           icon: Icons.search_rounded,
-          tint: AppColors.primary,
+          tint: Theme.of(context).colorScheme.primary,
           onTap: _syncPublicSocietySearchName,
         ),
       );
@@ -905,7 +905,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         DashboardQuickAction(
           label: "Join Requests",
           icon: Icons.how_to_reg_rounded,
-          tint: AppColors.primary,
+          tint: Theme.of(context).colorScheme.primary,
           onTap: () {
             Navigator.push(
               context,
@@ -922,7 +922,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         DashboardQuickAction(
           label: "Sync search name",
           icon: Icons.search_rounded,
-          tint: AppColors.primary,
+          tint: Theme.of(context).colorScheme.primary,
           onTap: _syncPublicSocietySearchName,
         ),
       );
@@ -930,7 +930,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         DashboardQuickAction(
           label: "Manage Admins",
           icon: Icons.admin_panel_settings_rounded,
-          tint: AppColors.primary,
+          tint: Theme.of(context).colorScheme.primary,
           onTap: () {
             Navigator.push(
               context,

@@ -396,9 +396,9 @@ class _ResidentNotificationDrawerState extends State<ResidentNotificationDrawer>
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => NoticeBoardScreen(
+                          builder: (ctx) => NoticeBoardScreen(
                             societyId: widget.societyId,
-                            themeColor: AppColors.success,
+                            themeColor: Theme.of(ctx).colorScheme.primary,
                           ),
                         ),
                       );
@@ -408,7 +408,7 @@ class _ResidentNotificationDrawerState extends State<ResidentNotificationDrawer>
                       icon: Icons.notifications_rounded,
                       label: "New Notices",
                       count: _recentNoticesCount,
-                      color: AppColors.success,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
@@ -583,9 +583,9 @@ class _ResidentNotificationDrawerState extends State<ResidentNotificationDrawer>
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => NoticeBoardScreen(
+          builder: (ctx) => NoticeBoardScreen(
             societyId: widget.societyId,
-            themeColor: AppColors.success,
+            themeColor: Theme.of(ctx).colorScheme.primary,
           ),
         ),
       );

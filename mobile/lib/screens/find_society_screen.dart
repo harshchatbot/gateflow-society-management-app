@@ -112,18 +112,18 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
   Future<void> _submitJoinRequest() async {
     if (_selectedSocietyId == null || _selectedUnitId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select society and unit'),
-          backgroundColor: AppColors.error,
+        SnackBar(
+          content: const Text('Please select society and unit'),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
     }
     if (_residencyType == null || (_residencyType != 'OWNER' && _residencyType != 'TENANT')) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select Owner or Tenant'),
-          backgroundColor: AppColors.error,
+        SnackBar(
+          content: const Text('Please select Owner or Tenant'),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -132,9 +132,9 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You are not logged in. Please login again.'),
-          backgroundColor: AppColors.error,
+        SnackBar(
+          content: const Text('You are not logged in. Please login again.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -156,9 +156,9 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
 
     if (societyId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Invalid society selected.'),
-          backgroundColor: AppColors.error,
+        SnackBar(
+          content: const Text('Invalid society selected.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -197,9 +197,9 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
           error: e, stackTrace: st);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to submit request. Please try again.'),
-          backgroundColor: AppColors.error,
+        SnackBar(
+          content: const Text('Failed to submit request. Please try again.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     } finally {
@@ -212,19 +212,19 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+          icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
-        title: const Text(
+        title: Text(
           'Find your society',
           style: TextStyle(
             fontWeight: FontWeight.w900,
-            color: AppColors.text,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),
@@ -237,9 +237,9 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.primary.withOpacity(0.12),
-                    AppColors.bg,
-                    AppColors.bg,
+                    Theme.of(context).colorScheme.primary.withOpacity(0.12),
+                    Theme.of(context).scaffoldBackgroundColor,
+                    Theme.of(context).scaffoldBackgroundColor,
                   ],
                 ),
               ),
@@ -256,7 +256,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                 'Search your society and select your unit to request access.',
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.text2,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -306,21 +306,21 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
         if (_searchController.text.trim().isEmpty && _societies.isEmpty)
           Text(
             'Start typing to search your society.',
-            style: TextStyle(color: AppColors.text2),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
           )
         else if (_societies.isEmpty)
           Text(
             _loadingSocieties
                 ? 'Searching...'
                 : 'No societies found. If your society was recently added or renamed, ask an admin to use "Sync search name" in the app.',
-            style: TextStyle(color: AppColors.text2),
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
           )
         else
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: Theme.of(context).dividerColor),
             ),
             child: Column(
               children: _societies.map((s) {
@@ -329,8 +329,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                 final name = s['name'] as String? ?? id;
                 final cityName = s['cityName'] as String? ?? '';
                 return ListTile(
-                  leading: const Icon(Icons.apartment_rounded,
-                      color: AppColors.primary),
+                  leading: Icon(Icons.apartment_rounded,
+                      color: Theme.of(context).colorScheme.primary),
                   title: Text(
                     name,
                     style: TextStyle(
@@ -343,13 +343,13 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                           cityName,
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.text2,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           ),
                         )
                       : null,
                   trailing: selected
-                      ? const Icon(Icons.check_circle_rounded,
-                          color: AppColors.primary)
+                      ? Icon(Icons.check_circle_rounded,
+                          color: Theme.of(context).colorScheme.primary)
                       : null,
                   onTap: () {
                     setState(() {
@@ -372,7 +372,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
     if (_selectedSocietyId == null) {
       return Text(
         'Select a society to choose your unit.',
-        style: TextStyle(color: AppColors.text2),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
       );
     }
     if (_loadingUnits) {
@@ -381,7 +381,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
     if (_units.isEmpty) {
       return Text(
         'No units configured for this society.',
-        style: TextStyle(color: AppColors.text2),
+        style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
       );
     }
     return DropdownButtonFormField<String>(
@@ -433,7 +433,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,7 +443,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
-              color: AppColors.text,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 16),
@@ -456,7 +456,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w600,
-              color: AppColors.text,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 12),
@@ -488,7 +488,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                   ? _submitJoinRequest
                   : null,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -515,7 +515,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: AppColors.primary),
+        Icon(icon, size: 20, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -525,7 +525,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.text2,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -534,7 +534,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                 value,
                 style: TextStyle(
                   fontSize: 15,
-                  color: AppColors.text,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -552,7 +552,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
   }) {
     final selected = _residencyType == value;
     return Material(
-      color: selected ? AppColors.primary.withOpacity(0.12) : Colors.grey.shade100,
+      color: selected ? Theme.of(context).colorScheme.primary.withOpacity(0.12) : Colors.grey.shade100,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: () => setState(() => _residencyType = value),
@@ -565,7 +565,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
               Icon(
                 icon,
                 size: 20,
-                color: selected ? AppColors.primary : AppColors.text2,
+                color: selected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: 8),
               Text(
@@ -573,7 +573,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: selected ? AppColors.primary : AppColors.text2,
+                  color: selected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
             ],

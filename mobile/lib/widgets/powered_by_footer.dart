@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../ui/app_colors.dart';
 
 class PoweredByFooter extends StatefulWidget {
   const PoweredByFooter({super.key});
@@ -39,11 +38,12 @@ class _PoweredByFooterState extends State<PoweredByFooter> {
 
   @override
   Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Divider(
-          color: AppColors.text2.withOpacity(0.05),
+          color: onSurface.withOpacity(0.05),
           indent: 50,
           endIndent: 50,
         ),
@@ -53,7 +53,7 @@ class _PoweredByFooterState extends State<PoweredByFooter> {
             textAlign: TextAlign.center,
             text: TextSpan(
               style: TextStyle(
-                color: AppColors.text2.withOpacity(0.5),
+                color: onSurface.withOpacity(0.5),
                 fontSize: 10,
                 letterSpacing: 0.5,
               ),
@@ -63,7 +63,7 @@ class _PoweredByFooterState extends State<PoweredByFooter> {
                   text: 'TECHFI LABS',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: AppColors.text2.withOpacity(0.8),
+                    color: onSurface.withOpacity(0.8),
                     decoration: TextDecoration.underline,
                   ),
                   recognizer: _techFiRecognizer,
@@ -73,7 +73,7 @@ class _PoweredByFooterState extends State<PoweredByFooter> {
                   text: 'THE TECHNOLOGY FICTION',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: AppColors.text2.withOpacity(0.8),
+                    color: onSurface.withOpacity(0.8),
                     decoration: TextDecoration.underline,
                   ),
                   recognizer: _ttfRecognizer,

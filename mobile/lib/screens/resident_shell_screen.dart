@@ -9,7 +9,6 @@ import 'resident_history_screen.dart';
 import 'resident_complaints_list_screen.dart';
 import 'resident_profile_screen.dart';
 import 'notice_board_screen.dart';
-import '../ui/app_colors.dart';
 import '../services/notification_service.dart';
 import '../core/society_modules.dart';
 
@@ -119,7 +118,7 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
       if (hasNotices)
         NoticeBoardScreen(
           societyId: widget.societyId,
-          themeColor: AppColors.success,
+          themeColor: Theme.of(context).colorScheme.primary,
           useScaffold: false,
           onBackPressed: () => setState(() => _index = 0),
         ),

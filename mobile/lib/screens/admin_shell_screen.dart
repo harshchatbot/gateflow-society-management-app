@@ -119,8 +119,9 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
   /// Handle taps from the bottom navigation bar.
   void _onBottomNavTap(int tabIndex) {
     if (!_modulesReady) {
-      if (tabIndex == 0) _navigateToScreen(0);
-      else if (tabIndex == 1) _navigateToScreen(5);
+      if (tabIndex == 0) {
+        _navigateToScreen(0);
+      } else if (tabIndex == 1) _navigateToScreen(5);
       return;
     }
     final tabToScreen = _buildTabToScreenIndex();
@@ -135,7 +136,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     // Only build screens that have been viewed at least once
     if (!_screenInitialized.containsKey(index) && index != 0) {
       // Return empty container for uninitialized screens (except dashboard)
-      return Container(color: AppColors.bg);
+      return Container(color: Theme.of(context).scaffoldBackgroundColor);
     }
 
     switch (index) {
@@ -181,7 +182,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
       case 4:
         return NoticeBoardScreen(
           societyId: widget.societyId,
-          themeColor: AppColors.admin,
+          themeColor: Theme.of(context).colorScheme.primary,
           adminId: widget.adminId, // Pass admin ID so manage button shows
           adminName: widget.adminName,
           useScaffold: false, // Don't use Scaffold when used as tab
@@ -205,7 +206,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           onStartTourRequested: _onStartTourRequested,
         );
       default:
-        return Container(color: AppColors.bg);
+        return Container(color: Theme.of(context).scaffoldBackgroundColor);
     }
   }
 
@@ -216,7 +217,7 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
       const FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
     ];
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: IndexedStack(
         index: _currentIndex,
         children: List.generate(6, (index) => _buildScreen(index)),

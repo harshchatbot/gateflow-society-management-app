@@ -1,8 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'app_colors.dart';
 
-/// Premium, calm, security-themed loader. Use AppColors only; lightweight.
+/// Premium, calm, security-themed loader. Uses theme colors.
 /// - [AppLoader.inline] for buttons / inline areas
 /// - [AppLoader.overlay] for page-level (semi-transparent overlay + message)
 /// - [AppLoader.fullscreen] for full-screen branded loading
@@ -68,7 +67,7 @@ class AppLoader extends StatelessWidget {
         if (!show) return const SizedBox.shrink();
         return Positioned.fill(
           child: Container(
-            color: AppColors.text.withOpacity(0.08),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
             child: Center(
               child: _OverlayCard(message: message),
             ),
@@ -79,7 +78,7 @@ class AppLoader extends StatelessWidget {
         return Container(
           width: double.infinity,
           height: double.infinity,
-          color: AppColors.bg,
+          color: Theme.of(context).scaffoldBackgroundColor,
           child: Center(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -95,7 +94,7 @@ class AppLoader extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: AppColors.text2,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -120,16 +119,17 @@ class _OverlayCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final text = (message ?? "").trim();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
-            color: AppColors.text.withOpacity(0.06),
+            color: theme.colorScheme.onSurface.withOpacity(0.06),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -152,7 +152,7 @@ class _OverlayCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.text,
+                  color: theme.colorScheme.onSurface,
                 ),
                 overflow: TextOverflow.ellipsis,
               ),
@@ -202,7 +202,7 @@ class _LoaderRingState extends State<_LoaderRing>
           size: Size(widget.size, widget.size),
           painter: _RingPainter(
             progress: _controller.value,
-            color: AppColors.primary,
+            color: Theme.of(context).colorScheme.primary,
             strokeWidth: (widget.size * 0.12).clamp(2.0, 3.0),
           ),
         );

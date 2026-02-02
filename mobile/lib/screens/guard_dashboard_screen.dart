@@ -438,18 +438,21 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           }
         },
         child: Scaffold(
-        backgroundColor: AppColors.bg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: Stack(
           children: [
           // 1) Gradient header (top only)
           Positioned(
             left: 0, right: 0, top: 0, height: 260,
             child: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [AppColors.primary, Color(0xFF1E40AF)],
+                  colors: [
+                    Theme.of(context).colorScheme.primary,
+                    Theme.of(context).colorScheme.primary.withOpacity(0.85),
+                  ],
                 ),
               ),
             ),
@@ -460,12 +463,12 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             right: 0,
             top: 260,
             bottom: 0,
-            child: Container(color: AppColors.bg),
+            child: Container(color: Theme.of(context).scaffoldBackgroundColor),
           ),
           // 3) Scrollable content on top (society card stays above white)
           RefreshIndicator(
             onRefresh: _syncDashboard,
-            color: AppColors.primary,
+            color: Theme.of(context).colorScheme.primary,
             child: SafeArea(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
@@ -504,8 +507,8 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                                 top: 8,
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.error,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.error,
                                     shape: BoxShape.circle,
                                   ),
                                   constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
@@ -535,10 +538,10 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 24),
                   if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) ...[
-                    const Text(
+                    Text(
                       "Today at a glance",
                       style: TextStyle(
-                        color: AppColors.text,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w900,
                         fontSize: 16,
                       ),
@@ -549,16 +552,16 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                     if (_visitorsByDayLast7 != null)
                       VisitorsChart(
                         countsByDay: _visitorsByDayLast7!,
-                        barColor: AppColors.primary,
+                        barColor: Theme.of(context).colorScheme.primary,
                       )
                     else
                       const DashboardInsightsCard(),
                     const SizedBox(height: 28),
                   ],
-                  const Text(
+                  Text(
                     "Your actions",
                     style: TextStyle(
-                      color: AppColors.text,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w900,
                       fontSize: 16,
                     ),
@@ -596,7 +599,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           color: Colors.white, // solid card
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: AppColors.primary.withOpacity(0.12),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
           ),
         ),
         child: Row(
@@ -606,12 +609,12 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.12),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 Icons.business_rounded,
-                color: AppColors.primary,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
 
@@ -646,7 +649,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
 
             Icon(
               Icons.arrow_forward_ios_rounded,
-              color: AppColors.primary.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
               size: 16,
             ),
           ],
@@ -661,9 +664,9 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Theme.of(context).dividerColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -679,7 +682,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               label: "Today",
               value: todayCount.toString(),
               icon: Icons.today_rounded,
-              color: AppColors.primary,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(width: 8),
@@ -688,7 +691,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               label: "Pending",
               value: pendingCount.toString(),
               icon: Icons.hourglass_empty_rounded,
-              color: AppColors.primary,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(width: 8),
@@ -697,7 +700,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               label: "Approved",
               value: approvedCount.toString(),
               icon: Icons.verified_user_rounded,
-              color: AppColors.primary,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
         ],
@@ -713,13 +716,13 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           key: _keyNewEntry,
           title: "New Visitor Entry",
           description: "Register a new visitor. Resident gets a request to approve.",
-          child: DashboardQuickAction(label: "New Entry", icon: Icons.person_add_rounded, tint: AppColors.primary, onTap: widget.onTapNewEntry),
+          child: DashboardQuickAction(label: "New Entry", icon: Icons.person_add_rounded, tint: Theme.of(context).colorScheme.primary, onTap: widget.onTapNewEntry),
         ),
         Showcase(
           key: _keyVisitors,
           title: "Visitor List / History",
           description: "View today's visitors and full history.",
-          child: DashboardQuickAction(label: "Visitors", icon: Icons.groups_rounded, tint: AppColors.primary, onTap: widget.onTapVisitors),
+          child: DashboardQuickAction(label: "Visitors", icon: Icons.groups_rounded, tint: Theme.of(context).colorScheme.primary, onTap: widget.onTapVisitors),
         ),
       ]);
     }
@@ -728,14 +731,14 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         DashboardQuickAction(
           label: "Notices",
           icon: Icons.notifications_rounded,
-          tint: AppColors.primary,
+          tint: Theme.of(context).colorScheme.primary,
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (context) => NoticeBoardScreen(
                   societyId: widget.societyId,
-                  themeColor: AppColors.primary,
+                  themeColor: Theme.of(context).colorScheme.primary,
                 ),
               ),
             );
@@ -752,7 +755,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           child: DashboardQuickAction(
             label: "SOS Alerts",
             icon: Icons.sos_rounded,
-            tint: AppColors.error,
+            tint: Theme.of(context).colorScheme.error,
             onTap: () {
               if (mounted) {
                 setState(() {
@@ -827,7 +830,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text("Recent Activity", style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 16)),
+            Text("Recent Activity", style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w900, fontSize: 16)),
             TextButton(onPressed: widget.onTapVisitors, child: const Text("View All")),
           ],
         ),
@@ -836,9 +839,9 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           Container(
             padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
             decoration: BoxDecoration(
-              color: AppColors.surface,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppColors.border.withOpacity(0.6)),
+              border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.6)),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.04),
@@ -858,7 +861,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                   errorBuilder: (_, __, ___) => Icon(Icons.person_outline_rounded, size: 56, color: AppColors.text2.withOpacity(0.5)),
                 ),
                 const SizedBox(height: 12),
-                Text(
+                const Text(
                   "No visitors yet today",
                   style: TextStyle(
                     color: AppColors.text2,
@@ -867,7 +870,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
+                const Text(
                   "Add an entry when someone arrives",
                   style: TextStyle(
                     color: AppColors.textMuted,
@@ -906,15 +909,15 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                 margin: const EdgeInsets.only(bottom: 8),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: Theme.of(context).dividerColor),
                 ),
                 child: Row(
                   children: [
                     Icon(
                       _getVisitorTypeIcon(visitor.visitorType),
-                      color: AppColors.primary,
+                      color: Theme.of(context).colorScheme.primary,
                       size: 24,
                     ),
                     const SizedBox(width: 12),
@@ -924,10 +927,10 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                         children: [
                           Text(
                             "${visitor.visitorType} • Flat $displayFlat",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w900,
                               fontSize: 14,
-                              color: AppColors.text,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -954,7 +957,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                               child: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.call_rounded, size: 14, color: AppColors.success),
+                                  const Icon(Icons.call_rounded, size: 14, color: AppColors.success),
                                   const SizedBox(width: 4),
                                   Text(
                                     "Resident: ${visitor.residentPhone}",
@@ -991,7 +994,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                 ),
               ),
             );
-          }).toList(),
+          }),
       ],
     );
   }
@@ -1001,9 +1004,9 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
       context: context,
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
-        decoration: const BoxDecoration(
-          color: AppColors.surface,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         ),
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -1012,7 +1015,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
             const Text("Gate Settings", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
             const SizedBox(height: 20),
             ListTile(
-              leading: const Icon(Icons.notifications_active, color: AppColors.primary),
+              leading: Icon(Icons.notifications_active, color: Theme.of(context).colorScheme.primary),
               title: const Text("Alert Sounds"),
               trailing: Switch.adaptive(value: true, onChanged: (v) {}),
             ),

@@ -160,9 +160,9 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
       final memberPhone = (membership['phone'] ?? '').toString().trim();
       if (memberPhone.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Add your phone in Profile for easier login next time.'),
-            duration: const Duration(seconds: 5),
+          const SnackBar(
+            content: Text('Add your phone in Profile for easier login next time.'),
+            duration: Duration(seconds: 5),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -222,7 +222,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg, style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppColors.error,
+        backgroundColor: Theme.of(context).colorScheme.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
@@ -233,7 +233,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -278,7 +278,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.primary.withOpacity(0.15),
+                    Theme.of(context).colorScheme.primary.withOpacity(0.15),
                     AppColors.bg,
                     AppColors.bg,
                   ],
@@ -315,15 +315,15 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
           child: Image.asset(
             'assets/illustrations/illustration_login_guard.png',
             fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => Container(
+            errorBuilder: (ctx, __, ___) => Container(
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: Theme.of(ctx).colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(
+              child: Icon(
                 AppIcons.guard,
                 size: 64,
-                color: AppColors.primary,
+                color: Theme.of(ctx).colorScheme.primary,
               ),
             ),
           ),
@@ -342,7 +342,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
         Text(
           "Secure Society Access",
           style: TextStyle(
-            color: AppColors.text2,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             fontWeight: FontWeight.w600,
             fontSize: 15,
           ),
@@ -357,7 +357,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.5)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
@@ -376,7 +376,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.text2,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -407,7 +407,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  color: AppColors.text2,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   size: 20,
                 ),
                 onPressed: () {
@@ -468,10 +468,10 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                           }
                         }
                       },
-                child: const Text(
+                child: Text(
                   "Forgot password?",
                   style: TextStyle(
-                    color: AppColors.primary,
+                    color: Theme.of(context).colorScheme.primary,
                     fontWeight: FontWeight.w800,
                     fontSize: 13,
                   ),
@@ -484,7 +484,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shadowColor: Colors.transparent,
@@ -492,9 +492,9 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ).copyWith(
-                  elevation: MaterialStateProperty.resolveWith<double>(
-                    (Set<MaterialState> states) {
-                      if (states.contains(MaterialState.pressed)) {
+                  elevation: WidgetStateProperty.resolveWith<double>(
+                    (Set<WidgetState> states) {
+                      if (states.contains(WidgetState.pressed)) {
                         return 0;
                       }
                       return 0;
@@ -523,15 +523,15 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                         ),
                       );
                     },
-              icon: const Icon(
+              icon: Icon(
                 Icons.qr_code_scanner_rounded,
                 size: 18,
-                color: AppColors.primary,
+                color: Theme.of(context).colorScheme.primary,
               ),
-              label: const Text(
+              label: Text(
                 "Join as Guard",
                 style: TextStyle(
-                  color: AppColors.primary,
+                  color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.w800,
                   fontSize: 13,
                 ),
@@ -578,19 +578,19 @@ class _PremiumField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            color: AppColors.text2,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             letterSpacing: 0.2,
           ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.bg,
+            color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: Theme.of(context).dividerColor),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.02),
@@ -616,15 +616,15 @@ class _PremiumField extends StatelessWidget {
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+                child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
               ),
               suffixIcon: suffixIcon,
               hintText: hint,
-              hintStyle: const TextStyle(
-                color: AppColors.textMuted,
+              hintStyle: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),

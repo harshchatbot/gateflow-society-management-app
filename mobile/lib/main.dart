@@ -3,10 +3,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart'; // Keep this for FCM
-import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart'; // <--- The generated file
 
-import 'core/theme.dart';
+import 'ui/sentinel_theme.dart';
 import 'services/notification_service.dart';
 
 import 'screens/app_bootstrap_screen.dart';
@@ -75,7 +74,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Sentinel',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.light(),
+      theme: SentinelTheme.light(),
       home: const AppBootstrapScreen(),
     );
   }

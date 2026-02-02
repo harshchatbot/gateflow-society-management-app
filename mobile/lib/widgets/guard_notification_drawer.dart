@@ -559,9 +559,9 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => NoticeBoardScreen(
+              builder: (ctx) => NoticeBoardScreen(
                 societyId: widget.societyId,
-                themeColor: AppColors.primary,
+                themeColor: Theme.of(ctx).colorScheme.primary,
               ),
             ),
           );

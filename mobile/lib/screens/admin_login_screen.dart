@@ -68,19 +68,17 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     // Step 2a: If no membership, check for pending admin signup
     if (membership == null) {
       // User has no membership - redirect to pending approval screen
-      if (userEmail != null) {
-        setState(() => _isLoading = false);
-        if (!mounted) return;
-        
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (_) => AdminPendingApprovalScreen(email: userEmail),
-          ),
-        );
-        return;
-      }
+      setState(() => _isLoading = false);
+      if (!mounted) return;
       
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AdminPendingApprovalScreen(email: userEmail),
+        ),
+      );
+      return;
+          
       throw Exception("User membership not found and no email available");
     }
 
@@ -153,9 +151,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     final memberPhone = (membership['phone'] ?? '').toString().trim();
     if (memberPhone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Add your phone in Profile for easier login next time.'),
-          duration: const Duration(seconds: 5),
+        const SnackBar(
+          content: Text('Add your phone in Profile for easier login next time.'),
+          duration: Duration(seconds: 5),
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -208,7 +206,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -226,9 +224,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 ),
               ],
             ),
-            child: const Icon(
+            child: Icon(
               Icons.arrow_back_rounded,
-              color: AppColors.text,
+              color: Theme.of(context).colorScheme.onSurface,
               size: 20,
             ),
           ),
@@ -253,7 +251,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.primary.withOpacity(0.15),
+                    Theme.of(context).colorScheme.primary.withOpacity(0.15),
                     AppColors.bg,
                     AppColors.bg,
                   ],
@@ -290,26 +288,26 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           child: Image.asset(
             'assets/illustrations/illustration_login_admin.png',
             fit: BoxFit.contain,
-            errorBuilder: (_, __, ___) => Container(
+            errorBuilder: (ctx, __, ___) => Container(
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: Theme.of(ctx).colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.admin_panel_settings_rounded,
                 size: 64,
-                color: AppColors.primary,
+                color: Theme.of(ctx).colorScheme.primary,
               ),
             ),
           ),
         ),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           "Admin Login",
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w900,
-            color: AppColors.text,
+            color: Theme.of(context).colorScheme.onSurface,
             letterSpacing: -0.5,
           ),
         ),
@@ -317,7 +315,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         Text(
           "Society Management Portal",
           style: TextStyle(
-            color: AppColors.text2,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             fontWeight: FontWeight.w600,
             fontSize: 15,
           ),
@@ -351,7 +349,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.text2,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -384,7 +382,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  color: AppColors.text2,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   size: 20,
                 ),
                 onPressed: () {
@@ -430,10 +428,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                           _showError("Could not send reset email. Please check the email or try again.");
                         }
                       },
-                child: const Text(
+                child: Text(
                   "Forgot password?",
                   style: TextStyle(
-                    color: AppColors.primary,
+                    color: Theme.of(context).colorScheme.primary,
                     fontWeight: FontWeight.w800,
                     fontSize: 13,
                   ),
@@ -446,7 +444,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
                   foregroundColor: Colors.white,
                   elevation: 0,
                   shadowColor: Colors.transparent,
@@ -473,7 +471,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                     Text(
                       "New admin? ",
                       style: TextStyle(
-                        color: AppColors.text2,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -485,10 +483,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                           MaterialPageRoute(builder: (_) => const AdminSignupScreen()),
                         );
                       },
-                      child: const Text(
+                      child: Text(
                         "Sign Up",
                         style: TextStyle(
-                          color: AppColors.primary,
+                          color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.w900,
                           fontSize: 14,
                         ),
@@ -507,7 +505,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   child: Text(
                     "Create New Society (Super Admin)",
                     style: TextStyle(
-                      color: AppColors.primary.withOpacity(0.8),
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
                       fontWeight: FontWeight.w700,
                       fontSize: 12,
                     ),
@@ -552,19 +550,19 @@ class _PremiumField extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            color: AppColors.text2,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             letterSpacing: 0.2,
           ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.bg,
+            color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: Theme.of(context).dividerColor),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.02),
@@ -579,20 +577,20 @@ class _PremiumField extends StatelessWidget {
             textInputAction: textInputAction,
             onFieldSubmitted: onSubmitted,
             validator: validator,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: AppColors.text,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             decoration: InputDecoration(
               prefixIcon: Container(
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+                child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
               ),
               suffixIcon: suffixIcon,
               hintText: hint,

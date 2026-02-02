@@ -129,13 +129,13 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.bg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: AppColors.bg,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           elevation: 0,
           automaticallyImplyLeading: true,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+            icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
             onPressed: () {
               // If we're in a tab navigation, switch to dashboard
               if (widget.onBackPressed != null) {
@@ -145,10 +145,10 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
               }
             },
           ),
-        title: const Text(
+        title: Text(
           "My Complaints",
           style: TextStyle(
-            color: AppColors.text,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w900,
             fontSize: 20,
           ),
@@ -176,7 +176,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
               // Filter Chips
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                color: AppColors.bg,
+                color: Theme.of(context).scaffoldBackgroundColor,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -204,7 +204,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                       Text(
                         "${_filteredComplaints.length} complaint${_filteredComplaints.length != 1 ? 's' : ''}",
                         style: TextStyle(
-                          color: AppColors.text2,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -227,6 +227,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
   }
 
   Widget _buildFilterChip(String value, String label) {
+    final theme = Theme.of(context);
     final isSelected = _selectedFilter == value;
     return GestureDetector(
       onTap: () => _onFilterChanged(value),
@@ -235,10 +236,10 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
         decoration: BoxDecoration(
           color: isSelected
               ? AppColors.success.withOpacity(0.15)
-              : AppColors.surface,
+              : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.success : AppColors.border,
+            color: isSelected ? AppColors.success : theme.dividerColor,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -247,7 +248,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: isSelected ? AppColors.success : AppColors.text2,
+            color: isSelected ? AppColors.success : theme.colorScheme.onSurface.withOpacity(0.7),
           ),
         ),
       ),
@@ -256,6 +257,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
 
   Widget _buildContent() {
     if (_error != null) {
+      final theme = Theme.of(context);
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -263,16 +265,16 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
+                color: theme.colorScheme.error.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+              child: Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
             ),
             const SizedBox(height: 16),
             Text(
               _error!,
-              style: const TextStyle(
-                color: AppColors.text2,
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -284,7 +286,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
               icon: const Icon(Icons.refresh_rounded),
               label: const Text("Retry"),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
+                backgroundColor: theme.colorScheme.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -314,10 +316,10 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
             const SizedBox(height: 16),
             Text(
               _selectedFilter == "ALL" ? "No complaints yet" : "No ${_selectedFilter.toLowerCase()} complaints",
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
-                color: AppColors.text,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -327,7 +329,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                   : "Try selecting a different filter",
               style: TextStyle(
                 fontSize: 14,
-                color: AppColors.text2,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
@@ -366,9 +368,9 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.5)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -416,20 +418,20 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
                             decoration: BoxDecoration(
-                              color: AppColors.textMuted.withOpacity(0.15),
+                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.lock_rounded, size: 12, color: AppColors.textMuted),
+                                Icon(Icons.lock_rounded, size: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                                 const SizedBox(width: 4),
                                 Text(
                                   "Personal",
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
-                                    color: AppColors.textMuted,
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                   ),
                                 ),
                               ],
@@ -453,13 +455,13 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                       placeholder: (context, url) => Container(
                         height: 140,
                         color: Colors.grey.shade300,
-                        child: const Center(child: Icon(Icons.image_outlined, color: AppColors.textMuted, size: 40)),
+                        child: Center(child: Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 40)),
                       ),
                       errorWidget: (context, url, error) => Container(
                         height: 140,
-                        color: AppColors.bg,
-                        child: const Center(
-                          child: Icon(Icons.broken_image_outlined, color: AppColors.textMuted, size: 40),
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        child: Center(
+                          child: Icon(Icons.broken_image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 40),
                         ),
                       ),
                     ),
@@ -470,10 +472,10 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                 // Title
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
-                    color: AppColors.text,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -486,7 +488,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                     description,
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.text2,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       fontWeight: FontWeight.w500,
                     ),
                     maxLines: 2,
@@ -514,7 +516,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                       _formatDateTime(createdAt),
                       style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.text2,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -546,7 +548,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      backgroundColor: AppColors.surface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.8,
         minChildSize: 0.5,
@@ -565,7 +567,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: Theme.of(context).dividerColor,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -581,12 +583,12 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                     child: const Icon(Icons.report_problem_rounded, color: AppColors.success, size: 24),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     "Complaint Details",
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
-                      color: AppColors.text,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -603,13 +605,13 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                     placeholder: (context, url) => Container(
                       height: 200,
                       color: Colors.grey.shade300,
-                      child: const Center(child: Icon(Icons.image_outlined, color: AppColors.textMuted, size: 48)),
+                      child: Center(child: Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 48)),
                     ),
                     errorWidget: (context, url, error) => Container(
                       height: 200,
-                      color: AppColors.bg,
-                      child: const Center(
-                        child: Icon(Icons.broken_image_outlined, color: AppColors.textMuted, size: 48),
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      child: Center(
+                        child: Icon(Icons.broken_image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 48),
                       ),
                     ),
                   ),
@@ -638,11 +640,11 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
+                      const Row(
                         children: [
-                          const Icon(Icons.admin_panel_settings_rounded, color: AppColors.success, size: 18),
-                          const SizedBox(width: 8),
-                          const Text(
+                          Icon(Icons.admin_panel_settings_rounded, color: AppColors.success, size: 18),
+                          SizedBox(width: 8),
+                          Text(
                             "Admin Response",
                             style: TextStyle(
                               fontSize: 14,
@@ -655,9 +657,9 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                       const SizedBox(height: 8),
                       Text(
                         adminResponse,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: AppColors.text,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -674,6 +676,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
   }
 
   Widget _buildDetailSection(String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -683,16 +686,16 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
             label,
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.text2,
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: AppColors.text,
+              color: theme.colorScheme.onSurface,
               fontWeight: FontWeight.w700,
             ),
           ),

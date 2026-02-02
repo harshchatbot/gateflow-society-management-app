@@ -87,7 +87,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
           if (createdStr.isNotEmpty) createdDt = DateTime.parse(createdStr);
           if (approvedStr.isNotEmpty) approvedDt = DateTime.parse(approvedStr);
         } catch (_) {}
-        final matchDate = (DateTime d) =>
+        matchDate(DateTime d) =>
             d.year == date.year && d.month == date.month && d.day == date.day;
         final onDate = (createdDt != null && matchDate(createdDt)) ||
             (approvedDt != null && matchDate(approvedDt));
@@ -215,13 +215,13 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.bg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: AppColors.bg,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           elevation: 0,
           automaticallyImplyLeading: true,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+            icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
             onPressed: () {
               // If we're in a tab navigation, switch to dashboard
               if (widget.onBackPressed != null) {
@@ -231,17 +231,17 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
               }
             },
           ),
-        title: const Text(
+        title: Text(
           "Approval History",
           style: TextStyle(
-            color: AppColors.text,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w900,
           ),
         ),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh_rounded, color: AppColors.primary),
+            icon: Icon(Icons.refresh_rounded, color: Theme.of(context).colorScheme.primary),
             onPressed: _loadHistory,
           ),
         ],
@@ -253,11 +253,11 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                  Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
                   const SizedBox(height: 16),
                   Text(
                     _error!,
-                    style: const TextStyle(color: AppColors.text2),
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 24),
@@ -273,14 +273,14 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.history_rounded, size: 64, color: AppColors.text2),
+                  Icon(Icons.history_rounded, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     "No history yet",
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.text2,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -288,7 +288,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                     "Your approval history will appear here",
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.textMuted,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                 ],
@@ -305,14 +305,14 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.filter_list_off_rounded, size: 56, color: AppColors.text2),
+                              Icon(Icons.filter_list_off_rounded, size: 56, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                               const SizedBox(height: 16),
-                              const Text(
+                              Text(
                                 "No entries match your filter",
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.text2,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                 ),
                                 textAlign: TextAlign.center,
                               ),
@@ -321,7 +321,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                                 "Try a different search or date",
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: AppColors.textMuted,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                                 ),
                               ),
                               const SizedBox(height: 16),
@@ -363,7 +363,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
   Widget _buildFilterBar() {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      color: AppColors.bg,
+      color: Theme.of(context).scaffoldBackgroundColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -372,8 +372,8 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
             controller: _searchController,
             decoration: InputDecoration(
               hintText: "Search by name, phone, category, delivery…",
-              hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
-              prefixIcon: Icon(Icons.search_rounded, color: AppColors.primary, size: 22),
+              hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 14),
+              prefixIcon: Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.primary, size: 22),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear_rounded, size: 20),
@@ -381,7 +381,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                     )
                   : null,
               filled: true,
-              fillColor: AppColors.surface,
+              fillColor: Theme.of(context).colorScheme.surface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
@@ -400,7 +400,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.text2,
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
               GestureDetector(
@@ -409,13 +409,13 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: _filterDate == null
-                        ? AppColors.primary.withOpacity(0.12)
-                        : AppColors.surface,
+                        ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
+                        : Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: _filterDate == null
-                          ? AppColors.primary.withOpacity(0.3)
-                          : AppColors.border,
+                          ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
+                          : Theme.of(context).dividerColor,
                     ),
                   ),
                   child: Text(
@@ -423,7 +423,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: _filterDate == null ? AppColors.primary : AppColors.text2,
+                      color: _filterDate == null ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                 ),
@@ -443,13 +443,13 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: _filterDate != null
-                        ? AppColors.primary.withOpacity(0.12)
-                        : AppColors.surface,
+                        ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
+                        : Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: _filterDate != null
-                          ? AppColors.primary.withOpacity(0.3)
-                          : AppColors.border,
+                          ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
+                          : Theme.of(context).dividerColor,
                     ),
                   ),
                   child: Row(
@@ -458,7 +458,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                       Icon(
                         Icons.calendar_today_rounded,
                         size: 16,
-                        color: _filterDate != null ? AppColors.primary : AppColors.text2,
+                        color: _filterDate != null ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -468,7 +468,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: _filterDate != null ? AppColors.primary : AppColors.text2,
+                          color: _filterDate != null ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         ),
                       ),
                     ],
@@ -479,7 +479,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: () => setState(() => _filterDate = null),
-                  child: Icon(Icons.close_rounded, size: 20, color: AppColors.text2),
+                  child: Icon(Icons.close_rounded, size: 20, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                 ),
               ],
             ],
@@ -490,7 +490,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
               "Showing ${_filteredHistory.length} of ${_history.length} entries",
               style: TextStyle(
                 fontSize: 12,
-                color: AppColors.textMuted,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -519,7 +519,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                 icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
                 label: const Text("Load more"),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
+                  foregroundColor: Theme.of(context).colorScheme.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
               ),
@@ -550,9 +550,9 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Theme.of(context).dividerColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -569,10 +569,10 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
             children: [
               Text(
                 visitorType,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
-                  color: AppColors.text,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               if (deliveryDisplay != null && deliveryDisplay.isNotEmpty) ...[
@@ -621,7 +621,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                   height: 50,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: Theme.of(context).dividerColor),
                   ),
                   child: ClipOval(
                     child: CachedNetworkImage(
@@ -631,11 +631,11 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                       height: 50,
                       placeholder: (context, url) => Container(
                         color: Colors.grey.shade300,
-                        child: const Center(child: Icon(Icons.person_rounded, color: AppColors.text2, size: 24)),
+                        child: Center(child: Icon(Icons.person_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), size: 24)),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        color: AppColors.bg,
-                        child: const Icon(Icons.person_rounded, color: AppColors.text2, size: 24),
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        child: Icon(Icons.person_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), size: 24),
                       ),
                     ),
                   ),
@@ -678,22 +678,22 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: AppColors.text2),
+        Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
         const SizedBox(width: 8),
         Text(
           "$label: ",
           style: TextStyle(
             fontSize: 13,
-            color: AppColors.text2,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             fontWeight: FontWeight.w600,
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 13,
-              color: AppColors.text,
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w500,
             ),
           ),

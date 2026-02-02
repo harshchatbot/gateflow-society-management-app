@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../ui/app_colors.dart';
 
 /// Placeholder insight card when no time-series data is available.
 /// Shows SENTI idle mascot and a short message. UI only; no logic.
@@ -11,9 +10,9 @@ class DashboardInsightsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border.withOpacity(0.6)),
+        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.6)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -35,10 +34,10 @@ class DashboardInsightsCard extends StatelessWidget {
                 width: 56,
                 height: 56,
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.12),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(Icons.insights_rounded, color: AppColors.primary, size: 28),
+                child: Icon(Icons.insights_rounded, color: Theme.of(context).colorScheme.primary, size: 28),
               ),
             ),
           ),
@@ -49,7 +48,7 @@ class DashboardInsightsCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: AppColors.text2,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,

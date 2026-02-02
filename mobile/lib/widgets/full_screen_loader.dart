@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:gateflow/core/theme.dart';
 
 class FullScreenLoader extends StatelessWidget {
   final String? message;
@@ -8,28 +7,29 @@ class FullScreenLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
-      color: Colors.white.withOpacity(0.9),
+      color: theme.scaffoldBackgroundColor.withOpacity(0.9),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const SizedBox(
+            SizedBox(
               width: 40,
               height: 40,
               child: CircularProgressIndicator(
                 strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primary),
+                valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
               ),
             ),
             if (message != null) ...[
               const SizedBox(height: 16),
               Text(
                 message!,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w600,
-                  color: AppTheme.textPrimary,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ],

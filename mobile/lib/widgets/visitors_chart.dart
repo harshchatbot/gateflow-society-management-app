@@ -17,7 +17,7 @@ class VisitorsChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = barColor ?? AppColors.primary;
+    final color = barColor ?? Theme.of(context).colorScheme.primary;
     final maxY = countsByDay.isEmpty
         ? 1.0
         : (countsByDay.reduce((a, b) => a > b ? a : b).toDouble() + 1).clamp(1.0, double.infinity);
@@ -48,9 +48,9 @@ class VisitorsChart extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.5)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -132,7 +132,7 @@ class VisitorsChart extends StatelessWidget {
                   drawVerticalLine: false,
                   horizontalInterval: maxY > 5 ? (maxY / 5) : 1,
                   getDrawingHorizontalLine: (value) => FlLine(
-                    color: AppColors.border.withOpacity(0.3),
+                    color: Theme.of(context).dividerColor.withOpacity(0.3),
                     strokeWidth: 1,
                   ),
                 ),

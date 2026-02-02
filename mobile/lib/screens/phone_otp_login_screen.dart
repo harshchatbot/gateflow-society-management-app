@@ -7,6 +7,7 @@ import '../core/storage.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import '../ui/app_colors.dart';
+import '../widgets/sentinel_illustration.dart';
 import 'admin_shell_screen.dart';
 import 'admin_signup_screen.dart';
 import 'find_society_screen.dart';
@@ -377,7 +378,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
-      backgroundColor: const Color(0xFFF6F2FF), // soft lavender like reference
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -397,7 +398,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
           },
         ),
       ),
-      body: SafeArea(
+      body: _codeSent ? _buildOtpStepBody(context) : SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
@@ -431,8 +432,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
 
                     // Center card (this is the main “2026” look)
                     _AuthCard(
-                      child:
-                          _codeSent ? _otpCardContent() : _phoneCardContent(),
+                      child: _phoneCardContent(),
                     ),
 
                     const SizedBox(height: 18),
@@ -442,6 +442,145 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  /// OTP step body: ListView with illustration, title, focus card, CTA, resend. No logic changes.
+  Widget _buildOtpStepBody(BuildContext context) {
+    final theme = Theme.of(context);
+    final maskedPhone = _maskPhone(_phoneController.text.trim());
+    return SafeArea(
+      child: ListView(
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        children: [
+          const SentinelIllustration(kind: 'otp'),
+          const SizedBox(height: 18),
+          Text(
+            'Verify your phone',
+            style: theme.textTheme.titleLarge,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "We've sent a one-time code to your number.",
+            style: (theme.textTheme.bodySmall ?? theme.textTheme.bodyMedium)?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
+            ) ?? const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.text2,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '+91 $maskedPhone',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              fontWeight: FontWeight.w600,
+            ) ?? const TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.w600,
+              color: AppColors.text2,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: theme.dividerColor),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Enter code',
+                  style: theme.textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _otpController,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 24,
+                    letterSpacing: 10,
+                    fontWeight: FontWeight.w900,
+                  ),
+                  decoration: InputDecoration(
+                    counterText: '',
+                    hintText: '••••••',
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: theme.dividerColor),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: theme.dividerColor),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.4),
+                    ),
+                  ),
+                  onChanged: (_) => setState(() => _errorMessage = null),
+                ),
+              ],
+            ),
+          ),
+          if (_errorMessage != null) ...[
+            const SizedBox(height: 10),
+            Text(
+              _errorMessage!,
+              style: TextStyle(
+                color: theme.colorScheme.error,
+                fontSize: 12.8,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 52,
+            child: FilledButton(
+              onPressed: _isLoading ? null : _verifyOtp,
+              child: _isLoading
+                  ? const SizedBox(
+                      height: 22,
+                      width: 22,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text(
+                      'Verify & Continue',
+                      style: TextStyle(fontWeight: FontWeight.w900),
+                    ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Center(
+            child: TextButton(
+              onPressed: _isLoading ? null : _sendOtp,
+              child: const Text(
+                'Resend OTP',
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

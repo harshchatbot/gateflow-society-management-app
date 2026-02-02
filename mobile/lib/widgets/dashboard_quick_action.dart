@@ -29,7 +29,7 @@ class DashboardQuickAction extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppColors.border.withOpacity(0.6)),
+            border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.6)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.04),

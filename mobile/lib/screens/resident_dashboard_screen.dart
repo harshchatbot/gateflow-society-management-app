@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:showcaseview/showcaseview.dart';
-import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/resident_service.dart' as resident;
 import '../services/notification_service.dart';
@@ -24,6 +23,7 @@ import '../widgets/dashboard_quick_action.dart';
 import '../widgets/dashboard_insights_card.dart';
 import '../widgets/visitors_chart.dart';
 import '../services/firestore_service.dart';
+import '../ui/sentinel_theme.dart';
 
 /// Resident Dashboard Screen
 ///
@@ -56,7 +56,8 @@ class ResidentDashboardScreen extends StatefulWidget {
   });
 
   @override
-  State<ResidentDashboardScreen> createState() => _ResidentDashboardScreenState();
+  State<ResidentDashboardScreen> createState() =>
+      _ResidentDashboardScreenState();
 }
 
 class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
@@ -65,9 +66,12 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     baseUrl: Env.apiBaseUrl,
   );
 
-  final GlobalKey<State<StatefulWidget>> _keyApprovals = GlobalKey<State<StatefulWidget>>();
-  final GlobalKey<State<StatefulWidget>> _keyComplaints = GlobalKey<State<StatefulWidget>>();
-  final GlobalKey<State<StatefulWidget>> _keySos = GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keyApprovals =
+      GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keyComplaints =
+      GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keySos =
+      GlobalKey<State<StatefulWidget>>();
 
   int _pendingCount = 0;
   int _approvedCount = 0;
@@ -107,8 +111,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     if (_showCaseContext == null || !mounted) return;
     try {
       final keys = <GlobalKey<State<StatefulWidget>>>[];
-      if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) keys.add(_keyApprovals);
-      if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) keys.add(_keyComplaints);
+      if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement))
+        keys.add(_keyApprovals);
+      if (SocietyModules.isEnabled(SocietyModuleIds.complaints))
+        keys.add(_keyComplaints);
       if (SocietyModules.isEnabled(SocietyModuleIds.sos)) keys.add(_keySos);
       if (keys.isEmpty) return;
       ShowCaseWidget.of(_showCaseContext!).startShowCase(keys);
@@ -127,7 +133,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         _phone = membership['phone'] as String?;
       });
     } catch (e, st) {
-      AppLogger.e("Error loading resident profile photo (dashboard)", error: e, stackTrace: st);
+      AppLogger.e("Error loading resident profile photo (dashboard)",
+          error: e, stackTrace: st);
     }
   }
 
@@ -166,7 +173,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           MaterialPageRoute(
             builder: (context) => NoticeBoardScreen(
               societyId: widget.societyId,
-              themeColor: AppColors.primary,
+              themeColor: Theme.of(context).colorScheme.primary,
             ),
           ),
         );
@@ -180,10 +187,12 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   // ✅ Helper: Load notices from Firestore and return as List<Map<String,dynamic>>
   Future<List<Map<String, dynamic>>> _loadNoticesList() async {
     try {
-      final raw = await _firestore.getNotices(
+      final raw = await _firestore
+          .getNotices(
         societyId: widget.societyId,
         activeOnly: true,
-      ).timeout(
+      )
+          .timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           AppLogger.w("getNotices timeout");
@@ -195,7 +204,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         return Map<String, dynamic>.from(n as Map);
       }).toList();
     } catch (e, st) {
-      AppLogger.e("Error loading notices (Firestore)", error: e, stackTrace: st);
+      AppLogger.e("Error loading notices (Firestore)",
+          error: e, stackTrace: st);
       return <Map<String, dynamic>>[];
     }
   }
@@ -210,19 +220,20 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       try {
         approvalsResult = await _service
             .getApprovals(
-              societyId: widget.societyId,
-              flatNo: widget.flatNo,
-            )
+          societyId: widget.societyId,
+          flatNo: widget.flatNo,
+        )
             .timeout(
-              const Duration(seconds: 10),
-              onTimeout: () {
-                AppLogger.w("getApprovals timeout");
-                return resident.ApiResult.failure("Request timeout");
-              },
-            );
+          const Duration(seconds: 10),
+          onTimeout: () {
+            AppLogger.w("getApprovals timeout");
+            return resident.ApiResult.failure("Request timeout");
+          },
+        );
       } catch (e) {
         AppLogger.e("Error loading approvals", error: e);
-        approvalsResult = resident.ApiResult.failure("Failed to load approvals");
+        approvalsResult =
+            resident.ApiResult.failure("Failed to load approvals");
       }
 
       // Load history for stats with timeout
@@ -230,17 +241,17 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       try {
         historyResult = await _service
             .getHistory(
-              societyId: widget.societyId,
-              flatNo: widget.flatNo,
-              limit: 100,
-            )
+          societyId: widget.societyId,
+          flatNo: widget.flatNo,
+          limit: 100,
+        )
             .timeout(
-              const Duration(seconds: 10),
-              onTimeout: () {
-                AppLogger.w("getHistory timeout");
-                return resident.ApiResult.failure("Request timeout");
-              },
-            );
+          const Duration(seconds: 10),
+          onTimeout: () {
+            AppLogger.w("getHistory timeout");
+            return resident.ApiResult.failure("Request timeout");
+          },
+        );
       } catch (e) {
         AppLogger.e("Error loading history", error: e);
         historyResult = resident.ApiResult.failure("Failed to load history");
@@ -248,8 +259,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
       if (!mounted) return;
 
-      if (approvalsResult.isSuccess &&
-          approvalsResult.data != null) {
+      if (approvalsResult.isSuccess && approvalsResult.data != null) {
         _pendingCount = approvalsResult.data!.length;
       }
 
@@ -273,9 +283,11 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
           final recentNotices = noticesList.where((n) {
             try {
-              final createdAtStr = (n['created_at'] ?? n['createdAt'])?.toString() ?? '';
+              final createdAtStr =
+                  (n['created_at'] ?? n['createdAt'])?.toString() ?? '';
               if (createdAtStr.isEmpty) return false;
-              final created = DateTime.parse(createdAtStr.replaceAll("Z", "+00:00"));
+              final created =
+                  DateTime.parse(createdAtStr.replaceAll("Z", "+00:00"));
               final hoursDiff = now.difference(created).inHours;
               return hoursDiff <= 24;
             } catch (_) {
@@ -303,7 +315,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             flatNo: widget.flatNo,
           );
         } catch (e) {
-          AppLogger.w("getVisitorCountsByDayLast7Days failed", error: e.toString());
+          AppLogger.w("getVisitorCountsByDayLast7Days failed",
+              error: e.toString());
         }
       }
 
@@ -374,154 +387,161 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             }
           },
           child: Scaffold(
-            backgroundColor: AppColors.bg,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             body: Stack(
-        children: [
-          // 1) Gradient header (top only)
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 0,
-            height: 260,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primary,
-                    AppColors.primary.withOpacity(0.85),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // 2) White content area behind list so nothing scrolls “under” it
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 260,
-            bottom: 0,
-            child: Container(color: AppColors.bg),
-          ),
-          // 3) Scrollable content on top (society card stays above white)
-          RefreshIndicator(
-            onRefresh: _loadDashboardData,
-            color: AppColors.primary,
-            child: SafeArea(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
-                children: [
-                  DashboardHero(
-                    userName: widget.residentName,
-                    statusMessage: _pendingCount > 0
-                        ? '$_pendingCount approval(s) pending'
-                        : "You're all set",
-                    mascotMood: _pendingCount > 0 ? SentiMood.alert : SentiMood.happy,
-                    avatar: CircleAvatar(
-                      backgroundColor: Colors.white24,
-                      backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                          ? CachedNetworkImageProvider(_photoUrl!)
-                          : null,
-                      child: (_photoUrl == null || _photoUrl!.isEmpty)
-                          ? const Icon(Icons.person_rounded, color: Colors.white)
-                          : null,
+              children: [
+                // 1) Premium header (neutral, Sentinel-aligned)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 0,
+                  height: 260,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          SentinelColors.primary.withOpacity(0.95),
+                          SentinelColors.primary.withOpacity(0.55),
+                        ],
+                      ),
                     ),
-                    trailingActions: Stack(
+                  ),
+                ),
+
+                // 2) Content area background (Sentinel grey)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 260,
+                  bottom: 0,
+                  child: Container(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                  ),
+                ),
+
+                // 3) Scrollable content on top (society card stays above white)
+                RefreshIndicator(
+                  onRefresh: _loadDashboardData,
+                  color: Theme.of(context).colorScheme.primary,
+                  child: SafeArea(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.notifications_rounded, color: Colors.white),
-                          onPressed: () {
-                            if (mounted) {
-                              setState(() {
-                                _unreadNoticesCount = 0;
-                                _notificationCount = _pendingCount;
-                              });
-                            }
-                            showModalBottomSheet(
-                              context: context,
-                              isScrollControlled: true,
-                              backgroundColor: Colors.transparent,
-                              builder: (context) => ResidentNotificationDrawer(
-                                societyId: widget.societyId,
-                                residentId: widget.residentId,
-                                flatNo: widget.flatNo,
-                              ),
-                            ).then((_) {
-                              _loadDashboardData();
-                            });
-                          },
-                        ),
-                        if (_notificationCount > 0)
-                          Positioned(
-                            right: 8,
-                            top: 8,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: const BoxDecoration(
-                                color: AppColors.error,
-                                shape: BoxShape.circle,
-                              ),
-                              constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                              child: Text(
-                                _notificationCount > 9 ? '9+' : _notificationCount.toString(),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
+                        DashboardHero(
+                          userName: widget.residentName,
+                          statusMessage: _pendingCount > 0
+                              ? '$_pendingCount approval(s) pending'
+                              : "You're all set",
+                          mascotMood: _pendingCount > 0
+                              ? SentiMood.alert
+                              : SentiMood.happy,
+                          avatar: CircleAvatar(
+                            backgroundColor: Colors.white24,
+                            backgroundImage:
+                                (_photoUrl != null && _photoUrl!.isNotEmpty)
+                                    ? CachedNetworkImageProvider(_photoUrl!)
+                                    : null,
+                            child: (_photoUrl == null || _photoUrl!.isEmpty)
+                                ? const Icon(Icons.person_rounded,
+                                    color: Colors.white)
+                                : null,
                           ),
+                          trailingActions: Stack(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.notifications_rounded,
+                                    color: Colors.white),
+                                onPressed: () {
+                                  if (mounted) {
+                                    setState(() {
+                                      _unreadNoticesCount = 0;
+                                      _notificationCount = _pendingCount;
+                                    });
+                                  }
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.transparent,
+                                    builder: (context) =>
+                                        ResidentNotificationDrawer(
+                                      societyId: widget.societyId,
+                                      residentId: widget.residentId,
+                                      flatNo: widget.flatNo,
+                                    ),
+                                  ).then((_) {
+                                    _loadDashboardData();
+                                  });
+                                },
+                              ),
+                              if (_notificationCount > 0)
+                                Positioned(
+                                  right: 8,
+                                  top: 8,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.error,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    constraints: const BoxConstraints(
+                                        minWidth: 18, minHeight: 18),
+                                    child: Text(
+                                      _notificationCount > 9
+                                          ? '9+'
+                                          : _notificationCount.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w900,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        _buildPremiumSocietyCard(),
+                        const SizedBox(height: 24),
+                        if (SocietyModules.isEnabled(
+                            SocietyModuleIds.visitorManagement)) ...[
+                          Text(
+                            "Today at a glance",
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 14),
+                          _buildStatsRow(),
+                          const SizedBox(height: 20),
+                          if (_visitorsByDayLast7 != null)
+                            VisitorsChart(
+                              countsByDay: _visitorsByDayLast7!,
+                              barColor: Theme.of(context).colorScheme.primary,
+                            )
+                          else
+                            const DashboardInsightsCard(),
+                          const SizedBox(height: 28),
+                        ],
+                        Text(
+                          "Your Actions",
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 14),
+                        _buildActionGrid(),
+                        const SizedBox(height: 32),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  _buildPremiumSocietyCard(),
-                  const SizedBox(height: 24),
-                  if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) ...[
-                    const Text(
-                      "Today at a glance",
-                      style: TextStyle(
-                        color: AppColors.text,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    _buildStatsRow(),
-                    const SizedBox(height: 20),
-                    if (_visitorsByDayLast7 != null)
-                      VisitorsChart(
-                        countsByDay: _visitorsByDayLast7!,
-                        barColor: AppColors.primary,
-                      )
-                    else
-                      const DashboardInsightsCard(),
-                    const SizedBox(height: 28),
-                  ],
-                  const Text(
-                    "Your actions",
-                    style: TextStyle(
-                      color: AppColors.text,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _buildActionGrid(),
-                  const SizedBox(height: 32),
-                ],
-              ),
+                ),
+
+                if (_isLoading)
+                  AppLoader.overlay(show: true, message: "Loading Dashboard…"),
+              ],
             ),
           ),
-
-          if (_isLoading) AppLoader.overlay(show: true, message: "Loading Dashboard…"),
-        ],
-      ),
-      ),
-    );
+        );
       },
     );
   }
@@ -538,7 +558,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           color: Colors.white, // solid card
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: AppColors.primary.withOpacity(0.12),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
           ),
         ),
         child: Row(
@@ -548,12 +568,12 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.12),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.business_rounded,
-                color: AppColors.primary,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
 
@@ -588,7 +608,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
             Icon(
               Icons.arrow_forward_ios_rounded,
-              color: AppColors.primary.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
               size: 16,
             ),
           ],
@@ -597,16 +617,16 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     );
   }
 
-
   /// Horizontal strip of rounded category chips similar to NoBrokerHood
   /// Stats row wrapped in a subtle card, to feel more like a module
   Widget _buildStatsRow() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -622,7 +642,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
               label: "Pending",
               value: _pendingCount.toString(),
               icon: Icons.pending_actions_rounded,
-              color: AppColors.primary,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(width: 8),
@@ -631,7 +651,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
               label: "Approved",
               value: _approvedCount.toString(),
               icon: Icons.check_circle_rounded,
-              color: AppColors.primary,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(width: 8),
@@ -640,7 +660,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
               label: "Rejected",
               value: _rejectedCount.toString(),
               icon: Icons.cancel_rounded,
-              color: AppColors.primary,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
         ],
@@ -655,11 +675,12 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         Showcase(
           key: _keyApprovals,
           title: "Approve / Reject Visitors",
-          description: "Open here to see pending visitor requests and approve or reject.",
+          description:
+              "Open here to see pending visitor requests and approve or reject.",
           child: DashboardQuickAction(
             label: "Pending Approvals",
             icon: Icons.verified_user_rounded,
-            tint: AppColors.primary,
+            tint: Theme.of(context).colorScheme.primary,
             onTap: () {
               if (widget.onNavigateToApprovals != null) {
                 widget.onNavigateToApprovals!();
@@ -683,7 +704,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         DashboardQuickAction(
           label: "View History",
           icon: Icons.history_rounded,
-          tint: AppColors.primary,
+          tint: Theme.of(context).colorScheme.primary,
           onTap: () {
             if (widget.onNavigateToHistory != null) {
               widget.onNavigateToHistory!();
@@ -708,7 +729,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         DashboardQuickAction(
           label: "Raise Complaint",
           icon: Icons.report_problem_rounded,
-          tint: AppColors.primary,
+          tint: Theme.of(context).colorScheme.primary,
           onTap: () {
             Navigator.push(
               context,
@@ -732,7 +753,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           child: DashboardQuickAction(
             label: "My Complaints",
             icon: Icons.inbox_rounded,
-            tint: AppColors.primary,
+            tint: Theme.of(context).colorScheme.primary,
             onTap: () {
               if (widget.onNavigateToComplaints != null) {
                 widget.onNavigateToComplaints!();
@@ -758,7 +779,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         DashboardQuickAction(
           label: "Notice Board",
           icon: Icons.notifications_rounded,
-          tint: AppColors.primary,
+          tint: Theme.of(context).colorScheme.primary,
           onTap: () {
             if (widget.onNavigateToNotices != null) {
               widget.onNavigateToNotices!();
@@ -768,7 +789,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                 MaterialPageRoute(
                   builder: (context) => NoticeBoardScreen(
                     societyId: widget.societyId,
-                    themeColor: AppColors.primary,
+                    themeColor: Theme.of(context).colorScheme.primary,
                   ),
                 ),
               );
@@ -782,7 +803,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         DashboardQuickAction(
           label: "My Violations",
           icon: Icons.directions_car_rounded,
-          tint: AppColors.primary,
+          tint: Theme.of(context).colorScheme.primary,
           onTap: () {
             Navigator.push(
               context,
@@ -804,11 +825,12 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         Showcase(
           key: _keySos,
           title: "Emergency SOS",
-          description: "Send an instant alert to security and admin in case of emergency.",
+          description:
+              "Send an instant alert to security and admin in case of emergency.",
           child: DashboardQuickAction(
             label: "Emergency SOS",
             icon: Icons.sos_rounded,
-            tint: AppColors.error,
+            tint: Theme.of(context).colorScheme.error,
             onTap: _showSosConfirmDialog,
           ),
         ),
@@ -846,7 +868,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
               await _sendSos();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
+              backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Colors.white,
             ),
             child: const Text('Send SOS'),
@@ -883,9 +905,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('SOS sent to security team'),
-          backgroundColor: AppColors.error,
+          backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -894,14 +917,15 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Failed to send SOS. Please try again or call security.'),
-          backgroundColor: AppColors.error,
+          content: const Text(
+              'Failed to send SOS. Please try again or call security.'),
+          backgroundColor: Theme.of(context).colorScheme.error,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ),
       );
     }
   }
 }
-

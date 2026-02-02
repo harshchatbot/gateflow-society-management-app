@@ -93,24 +93,24 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             ),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               "This will deactivate your membership in this society.",
               style: TextStyle(fontWeight: FontWeight.w600),
             ),
-            SizedBox(height: 12),
-            Text("After deactivation:"),
-            SizedBox(height: 8),
-            Text("• You will be logged out"),
-            Text("• You can join another society"),
-            Text("• Only one active society at a time"),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
+            const Text("After deactivation:"),
+            const SizedBox(height: 8),
+            const Text("• You will be logged out"),
+            const Text("• You can join another society"),
+            const Text("• Only one active society at a time"),
+            const SizedBox(height: 12),
             Text(
               "Are you sure you want to continue?",
-              style: TextStyle(fontWeight: FontWeight.w700, color: AppColors.error),
+              style: TextStyle(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.error),
             ),
           ],
         ),
@@ -118,8 +118,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
           OutlinedButton(
             onPressed: () => Navigator.of(context).pop(false),
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.border),
-              foregroundColor: AppColors.text,
+              side: BorderSide(color: Theme.of(context).dividerColor),
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text(
@@ -180,7 +180,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               "Error deactivating account. Please try again.",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            backgroundColor: AppColors.error,
+            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -204,8 +204,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
           OutlinedButton(
             onPressed: () => Navigator.of(context).pop(false),
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.border),
-              foregroundColor: AppColors.text,
+              side: BorderSide(color: Theme.of(context).dividerColor),
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text(
@@ -217,7 +217,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
+              backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -264,7 +264,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               "Error during logout. Please try again.",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            backgroundColor: AppColors.error,
+            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
@@ -288,14 +288,14 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.bg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: CustomScrollView(
           slivers: [
             // Profile header – unified primary theme
             SliverAppBar(
               expandedHeight: 220,
               pinned: true,
-              backgroundColor: AppColors.primary,
+              backgroundColor: Theme.of(context).colorScheme.primary,
               automaticallyImplyLeading: true,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
@@ -313,8 +313,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.primary,
-                      AppColors.primary.withOpacity(0.85),
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withOpacity(0.85),
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -330,7 +330,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                         border: Border.all(color: Colors.white, width: 3),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.primary.withOpacity(0.3),
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -410,12 +410,13 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
   }
 
   Widget _buildAccountInfoSection() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -432,22 +433,22 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.12),
+                  color: theme.colorScheme.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.info_rounded,
-                  color: AppColors.primary,
+                  color: theme.colorScheme.primary,
                   size: 20,
                 ),
               ),
               const SizedBox(width: 10),
-              const Text(
+              Text(
                 "Account Information",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
-                  color: AppColors.text,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ],
@@ -489,22 +490,23 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         !userEmail.contains('gateflow.local');
     if (hasPhone && hasRealEmail) return const SizedBox.shrink();
 
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Login options", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.text)),
+          Text("Login options", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: theme.colorScheme.onSurface)),
           const SizedBox(height: 12),
           if (!hasPhone)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.phone_android_rounded, color: AppColors.primary),
+              leading: Icon(Icons.phone_android_rounded, color: theme.colorScheme.primary),
               title: const Text("Add phone number", style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle: const Text("Recommended for easier login"),
               trailing: const Icon(Icons.chevron_right_rounded),
@@ -521,7 +523,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
           if (!hasRealEmail)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.email_outlined, color: AppColors.primary),
+              leading: Icon(Icons.email_outlined, color: theme.colorScheme.primary),
               title: const Text("Add email (optional)", style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle: const Text("For recovery and optional login"),
               trailing: const Icon(Icons.chevron_right_rounded),
@@ -610,15 +612,16 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
     required String label,
     required String value,
   }) {
+    final theme = Theme.of(context);
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.12),
+            color: theme.colorScheme.primary.withOpacity(0.12),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, size: 20, color: AppColors.primary),
+          child: Icon(icon, size: 20, color: theme.colorScheme.primary),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -629,16 +632,16 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.text2,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
-                  color: AppColors.text,
+                  color: theme.colorScheme.onSurface,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -650,12 +653,13 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
   }
 
   Widget _buildSettingsSection() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -672,22 +676,22 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.12),
+                  color: theme.colorScheme.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.settings_rounded,
-                  color: AppColors.primary,
+                  color: theme.colorScheme.primary,
                   size: 20,
                 ),
               ),
               const SizedBox(width: 10),
-              const Text(
+              Text(
                 "Settings",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
-                  color: AppColors.text,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ],
@@ -812,15 +816,15 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
           borderRadius: BorderRadius.circular(12),
           color: Colors.transparent,
         ),
-        child: Row(
-          children: [
+      child: Row(
+        children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.12),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: AppColors.primary, size: 22),
+              child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 22),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -829,10 +833,10 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.text,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -840,7 +844,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 13,
-                      color: AppColors.text2,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -850,7 +854,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             Icon(
               Icons.arrow_forward_ios_rounded,
               size: 16,
-              color: AppColors.text2,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ],
         ),
@@ -893,17 +897,17 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                 height: 20,
                 child: AppLoader.inline(size: 20),
               )
-            : const Icon(Icons.logout_rounded, color: AppColors.error),
+            : Icon(Icons.logout_rounded, color: Theme.of(context).colorScheme.error),
         label: Text(
           _isLoggingOut ? "Logging out..." : "LOGOUT",
-          style: const TextStyle(
-            color: AppColors.error,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.error,
             fontWeight: FontWeight.w900,
             fontSize: 16,
           ),
         ),
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: AppColors.error, width: 2),
+          side: BorderSide(color: Theme.of(context).colorScheme.error, width: 2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),

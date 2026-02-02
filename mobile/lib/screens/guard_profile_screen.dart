@@ -101,14 +101,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.bg,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: CustomScrollView(
         slivers: [
           // Premium Profile Header
           SliverAppBar(
             expandedHeight: 220,
             pinned: true,
-            backgroundColor: AppColors.primary,
+            backgroundColor: Theme.of(context).colorScheme.primary,
             automaticallyImplyLeading: true,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
@@ -123,9 +123,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [AppColors.primary, Color(0xFF1E40AF)],
+                    colors: [
+                      Theme.of(context).colorScheme.primary,
+                      Theme.of(context).colorScheme.primary.withOpacity(0.85),
+                    ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
@@ -206,32 +209,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.08),
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                        border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.15),
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.lightbulb_outline_rounded, color: AppColors.primary, size: 22),
+                            child: Icon(Icons.lightbulb_outline_rounded, color: Theme.of(context).colorScheme.primary, size: 22),
                           ),
                           const SizedBox(width: 14),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("Get Started", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.text)),
-                                SizedBox(height: 4),
-                                Text("Quick start guide & interactive tour", style: TextStyle(fontSize: 13, color: AppColors.text2)),
+                                Text("Get Started", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Theme.of(context).colorScheme.onSurface)),
+                                const SizedBox(height: 4),
+                                Text("Quick start guide & interactive tour", style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
                               ],
                             ),
                           ),
-                          Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.primary),
+                          Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
                         ],
                       ),
                     ),
@@ -239,9 +242,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 20),
 
                   // 3. Operational Tasks Grid
-                  const Align(
+                  Align(
                     alignment: Alignment.centerLeft,
-                    child: Text("My Operations", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                    child: Text("My Operations", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Theme.of(context).colorScheme.onSurface)),
                   ),
                   const SizedBox(height: 12),
                   _buildTaskGrid(),
@@ -263,12 +266,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildDutyCard() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -276,9 +280,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text("Duty Status", style: TextStyle(color: AppColors.text2, fontWeight: FontWeight.bold, fontSize: 12)),
+              Text("Duty Status", style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.bold, fontSize: 12)),
               Text(_isOnDuty ? "Currently ON-DUTY" : "OFF-DUTY", 
-                style: TextStyle(color: _isOnDuty ? AppColors.success : AppColors.error, fontWeight: FontWeight.w900, fontSize: 16)),
+                style: TextStyle(color: _isOnDuty ? AppColors.success : theme.colorScheme.error, fontWeight: FontWeight.w900, fontSize: 16)),
             ],
           ),
           Switch.adaptive(
@@ -292,12 +296,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildAccountInfoSection() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -314,22 +319,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.12),
+                  color: theme.colorScheme.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.info_rounded,
-                  color: AppColors.primary,
+                  color: theme.colorScheme.primary,
                   size: 20,
                 ),
               ),
               const SizedBox(width: 10),
-              const Text(
+              Text(
                 "Account Information",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
-                  color: AppColors.text,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ],
@@ -366,12 +371,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         !userEmail.contains('gateflow.local');
     if (hasPhone && hasRealEmail) return const SizedBox.shrink();
 
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,14 +387,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w900,
-              color: AppColors.text,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 12),
           if (!hasPhone)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.phone_android_rounded, color: AppColors.primary),
+              leading: Icon(Icons.phone_android_rounded, color: theme.colorScheme.primary),
               title: const Text("Add phone number", style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle: const Text("Recommended for easier login"),
               trailing: const Icon(Icons.chevron_right_rounded),
@@ -408,7 +414,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (!hasRealEmail)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.email_outlined, color: AppColors.primary),
+              leading: Icon(Icons.email_outlined, color: theme.colorScheme.primary),
               title: const Text("Add email (optional)", style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle: const Text("For recovery and optional login"),
               trailing: const Icon(Icons.chevron_right_rounded),
@@ -522,15 +528,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     required String label,
     required String value,
   }) {
+    final theme = Theme.of(context);
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.12),
+            color: theme.colorScheme.primary.withOpacity(0.12),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, size: 20, color: AppColors.primary),
+          child: Icon(icon, size: 20, color: theme.colorScheme.primary),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -541,16 +548,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.text2,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
-                  color: AppColors.text,
+                  color: theme.colorScheme.onSurface,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -562,22 +569,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildProfileForm() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "Contact & Shift",
             style: TextStyle(
               fontWeight: FontWeight.w900,
               fontSize: 16,
-              color: AppColors.text,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 12),
@@ -608,7 +616,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: ElevatedButton(
               onPressed: _saveProfile,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: theme.colorScheme.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -628,22 +636,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildPasswordCard() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             "Change Password",
             style: TextStyle(
               fontWeight: FontWeight.w900,
               fontSize: 16,
-              color: AppColors.text,
+              color: theme.colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 12),
@@ -671,16 +680,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
             child: OutlinedButton(
               onPressed: _changePassword,
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.primary),
+                side: BorderSide(color: theme.colorScheme.primary),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
-              child: const Text(
+              child: Text(
                 "Update Password",
                 style: TextStyle(
                   fontWeight: FontWeight.w800,
-                  color: AppColors.primary,
+                  color: theme.colorScheme.primary,
                 ),
               ),
             ),
@@ -713,12 +722,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       AppLogger.e("Save guard profile failed", error: e, stackTrace: st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
+          SnackBar(
+            content: const Text(
               "Failed to update profile",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            backgroundColor: AppColors.error,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -764,24 +773,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
     if (newPin.length < 4 || newPin.length > 6 || int.tryParse(newPin) == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
+        SnackBar(
+          content: const Text(
             "Password must be 4–6 digits",
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          backgroundColor: AppColors.error,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
     }
     if (newPin != confirm) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
+        SnackBar(
+          content: const Text(
             "Passwords do not match",
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
-          backgroundColor: AppColors.error,
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
       return;
@@ -809,12 +818,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       AppLogger.e("Update guard password failed", error: e, stackTrace: st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
+          SnackBar(
+            content: const Text(
               "Failed to update password. Please login again and retry.",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            backgroundColor: AppColors.error,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -839,21 +848,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Widget _buildTaskItem(IconData icon, String title, String subtitle) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, color: AppColors.primary, size: 20),
+          Icon(icon, color: theme.colorScheme.primary, size: 20),
           const SizedBox(height: 6),
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
-          Text(subtitle, style: const TextStyle(color: AppColors.textMuted, fontSize: 11)),
+          Text(title, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: theme.colorScheme.onSurface)),
+          Text(subtitle, style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 11)),
         ],
       ),
     );
@@ -894,10 +904,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             }
           }
         },
-        icon: const Icon(Icons.logout_rounded, color: AppColors.error),
-        label: const Text("END SESSION", style: TextStyle(color: AppColors.error, fontWeight: FontWeight.w900)),
+        icon: Icon(Icons.logout_rounded, color: Theme.of(context).colorScheme.error),
+        label: Text("END SESSION", style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w900)),
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: AppColors.error),
+          side: BorderSide(color: Theme.of(context).colorScheme.error),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),

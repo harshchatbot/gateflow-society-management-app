@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../ui/app_colors.dart';
+import '../ui/sentinel_theme.dart';
 import '../ui/app_loader.dart';
 import '../services/notice_service.dart';
 import '../core/app_logger.dart';
@@ -25,7 +25,7 @@ class NoticeBoardScreen extends StatefulWidget {
   const NoticeBoardScreen({
     super.key,
     required this.societyId,
-    this.themeColor = AppColors.primary, // Default to blue
+    this.themeColor = SentinelColors.primary, // Sentinel theme default
     this.adminId,
     this.adminName,
     this.useScaffold = true, // Default to true for backward compatibility
@@ -250,8 +250,9 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   }
 
   Widget _buildScreen() {
+    final theme = Theme.of(context);
     return Container(
-      color: AppColors.surface, // Use AppColors instead of hardcoded
+      color: theme.colorScheme.surface,
       child: Stack(
         children: [
           Column(
@@ -261,7 +262,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 bottom: false,
                 child: Container(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
-                  color: Colors.white,
+                  color: theme.colorScheme.surface,
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -291,12 +292,12 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               "Notices",
                               style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.w900,
-                                color: AppColors.text,
+                                color: theme.colorScheme.onSurface,
                               ),
                             ),
                             const SizedBox(height: 4),
@@ -304,7 +305,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                               "Society announcements & updates",
                               style: TextStyle(
                                 fontSize: 14,
-                                color: AppColors.text2,
+                                color: theme.colorScheme.onSurface.withOpacity(0.7),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -370,7 +371,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               // Filter Chips
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                color: Colors.white,
+                color: theme.colorScheme.surface,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -479,13 +480,13 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.surface,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
           automaticallyImplyLeading: true,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+            icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
             onPressed: () {
               // If we're in a tab navigation, switch to dashboard
               if (widget.onBackPressed != null) {
@@ -529,8 +530,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         chipColor = const Color(0xFFF3E5F5); // Light purple
         iconColor = const Color(0xFF9C27B0); // Purple
       } else {
-        chipColor = AppColors.surface; // Use AppColors instead of hardcoded
-        iconColor = AppColors.text2;
+        chipColor = Theme.of(context).colorScheme.surface;
+        iconColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
       }
     }
 
@@ -564,6 +565,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
 
   Widget _buildContent() {
     if (_error != null) {
+      final theme = Theme.of(context);
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -571,16 +573,16 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
+                color: theme.colorScheme.error.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+              child: Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
             ),
             const SizedBox(height: 16),
             Text(
               _error!,
-              style: const TextStyle(
-                color: AppColors.text2,
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -631,10 +633,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                   const SizedBox(height: 16),
                   Text(
                     _selectedFilter == null ? "No notices" : "No ${_selectedFilter!.toLowerCase()} notices",
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
-                      color: AppColors.text,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -642,7 +644,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                     "New notices from the society will appear here",
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.text2,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       fontWeight: FontWeight.w500,
                     ),
                     textAlign: TextAlign.center,
@@ -720,14 +722,14 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       default: // GENERAL
         icon = Icons.campaign_rounded;
         iconBgColor = const Color(0xFFF5F5F5); // Light grey
-        categoryColor = AppColors.text2;
+        categoryColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
         categoryLabel = "Announcement";
     }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -769,10 +771,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                           Expanded(
                             child: Text(
                               title,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w900,
-                                color: AppColors.text,
+                                color: Theme.of(context).colorScheme.onSurface,
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -783,7 +785,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
-                                color: AppColors.error,
+                                color: Theme.of(context).colorScheme.error,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: const Text(
@@ -804,7 +806,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         content,
                         style: TextStyle(
                           fontSize: 14,
-                          color: AppColors.text2,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           fontWeight: FontWeight.w500,
                           height: 1.4,
                         ),
@@ -836,14 +838,14 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                               Icon(
                                 Icons.access_time_rounded,
                                 size: 14,
-                                color: AppColors.text2,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 _formatDateTime(createdAt),
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: AppColors.text2,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -875,7 +877,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.9,
         minChildSize: 0.5,
@@ -894,32 +896,32 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: Theme.of(context).dividerColor,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w900,
-                  color: AppColors.text,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border.withOpacity(0.3)),
+                  border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.3)),
                 ),
                 child: Text(
                   content,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
-                    color: AppColors.text,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w500,
                     height: 1.6,
                   ),
@@ -928,24 +930,24 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Icon(Icons.person_rounded, size: 16, color: AppColors.text2),
+                  Icon(Icons.person_rounded, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                   const SizedBox(width: 6),
                   Text(
                     adminName,
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.text2,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.access_time_rounded, size: 16, color: AppColors.text2),
+                  Icon(Icons.access_time_rounded, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
                   const SizedBox(width: 6),
                   Text(
                     _formatDateTime(createdAt),
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.text2,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       fontWeight: FontWeight.w600,
                     ),
                   ),

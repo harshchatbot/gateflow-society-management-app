@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import '../ui/app_colors.dart';
 
 /// Mascot mood for SENTI owl. Drives which asset is shown.
 enum SentiMood {
