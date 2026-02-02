@@ -359,7 +359,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             backgroundColor: AppColors.bg,
             body: Stack(
         children: [
-          // Hero header gradient – unified primary theme
+          // 1) Gradient header (top only)
           Positioned(
             left: 0,
             right: 0,
@@ -378,7 +378,15 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
               ),
             ),
           ),
-
+          // 2) White content area behind list so nothing scrolls “under” it
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 260,
+            bottom: 0,
+            child: Container(color: AppColors.bg),
+          ),
+          // 3) Scrollable content on top (society card stays above white)
           RefreshIndicator(
             onRefresh: _loadDashboardData,
             color: AppColors.primary,
@@ -453,8 +461,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                   ),
                   const SizedBox(height: 20),
                   _buildPremiumSocietyCard(),
-                  const SizedBox(height: 20),
-
+                  const SizedBox(height: 24),
                   if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) ...[
                     const Text(
                       "Today at a glance",
@@ -464,11 +471,11 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                         fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     _buildStatsRow(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     const DashboardInsightsCard(),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
                   ],
                   const Text(
                     "Your actions",
@@ -478,8 +485,9 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   _buildActionGrid(),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),

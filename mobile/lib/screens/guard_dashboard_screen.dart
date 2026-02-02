@@ -441,7 +441,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         backgroundColor: AppColors.bg,
         body: Stack(
           children: [
-          // Background Gradient Header
+          // 1) Gradient header (top only)
           Positioned(
             left: 0, right: 0, top: 0, height: 260,
             child: Container(
@@ -454,7 +454,15 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               ),
             ),
           ),
-
+          // 2) White content area behind list so nothing scrolls “under” it
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 260,
+            bottom: 0,
+            child: Container(color: AppColors.bg),
+          ),
+          // 3) Scrollable content on top (society card stays above white)
           RefreshIndicator(
             onRefresh: _syncDashboard,
             color: AppColors.primary,
@@ -525,8 +533,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                   ),
                   const SizedBox(height: 20),
                   _buildPremiumSocietyCard(),
-                  const SizedBox(height: 20),
-
+                  const SizedBox(height: 24),
                   if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) ...[
                     const Text(
                       "Today at a glance",
@@ -536,9 +543,9 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                         fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     _buildStatsRow(),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     if (_visitorsByDayLast7 != null)
                       VisitorsChart(
                         countsByDay: _visitorsByDayLast7!,
@@ -546,7 +553,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                       )
                     else
                       const DashboardInsightsCard(),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
                   ],
                   const Text(
                     "Your actions",
@@ -556,13 +563,13 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   _buildActionGrid(),
-
                   if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) ...[
-                    const SizedBox(height: 25),
+                    const SizedBox(height: 28),
                     _buildRecentActivitySection(),
                   ],
+                  const SizedBox(height: 32),
                 ],
               ),
             ),

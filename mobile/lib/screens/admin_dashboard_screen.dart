@@ -425,7 +425,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             backgroundColor: AppColors.bg,
             body: Stack(
         children: [
-          // Hero header gradient – unified primary theme
+          // 1) Gradient header (top only)
           Positioned(
             top: 0,
             left: 0,
@@ -444,7 +444,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               ),
             ),
           ),
-
+          // 2) White content area behind list so nothing scrolls “under” it
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 260,
+            bottom: 0,
+            child: Container(color: AppColors.bg),
+          ),
+          // 3) Scrollable content on top (society card stays above white)
           RefreshIndicator(
             onRefresh: () async {
               await _loadStats();
@@ -510,10 +518,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   const SizedBox(height: 20),
                   _buildPremiumSocietyCard(),
-                  const SizedBox(height: 20),
-
+                  const SizedBox(height: 24),
                   if (_stats != null) ...[
-                    const SizedBox(height: 24),
                     const Text(
                       "Today at a glance",
                       style: TextStyle(
@@ -522,10 +528,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         fontSize: 16,
                       ),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     _buildStatsSection(),
                     if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) ...[
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 20),
                       if (_visitorsByDayLast7 != null)
                         VisitorsChart(
                           countsByDay: _visitorsByDayLast7!,
@@ -534,9 +540,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       else
                         const DashboardInsightsCard(),
                     ],
+                    const SizedBox(height: 28),
                   ],
-
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 28),
                   const Text(
                     "Your actions",
                     style: TextStyle(
@@ -545,9 +551,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       fontSize: 16,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
                   _buildActionGrid(),
-                  const SizedBox(height: 25),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
