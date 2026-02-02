@@ -12,7 +12,7 @@ import '../widgets/module_disabled_placeholder.dart';
 /// Admin Manage Complaints Screen
 /// 
 /// Allows admins to view and manage all complaints from residents
-/// Theme: Purple/Admin theme
+/// Theme: Sentinel (unified)
 class AdminManageComplaintsScreen extends StatefulWidget {
   final String adminId;
   final String societyId;
@@ -142,7 +142,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg, style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppColors.error,
+        backgroundColor: Theme.of(context).colorScheme.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
@@ -155,13 +155,14 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
     if (!SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
       return ModuleDisabledPlaceholder(onBack: widget.onBackPressed);
     }
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.bg,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+          icon: Icon(Icons.arrow_back_rounded, color: theme.colorScheme.onSurface),
           onPressed: () {
             if (widget.onBackPressed != null) {
               widget.onBackPressed!();
@@ -170,10 +171,10 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             }
           },
         ),
-        title: const Text(
+        title: Text(
           "Manage Complaints",
           style: TextStyle(
-            color: AppColors.text,
+            color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.w900,
             fontSize: 20,
           ),
@@ -184,10 +185,10 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.admin.withOpacity(0.15),
+                color: theme.colorScheme.primary.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.refresh_rounded, color: AppColors.admin, size: 20),
+              child: Icon(Icons.refresh_rounded, color: theme.colorScheme.primary, size: 20),
             ),
             onPressed: _isLoading ? null : _loadComplaints,
           ),
@@ -201,7 +202,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
               // Filter Chips
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                color: AppColors.bg,
+                color: Theme.of(context).scaffoldBackgroundColor,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: Row(
@@ -230,7 +231,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                         child: _buildStatChip(
                           "Total",
                           _complaints.length.toString(),
-                          AppColors.admin,
+                          Theme.of(context).colorScheme.primary,
                         ),
                       ),
                       const SizedBox(width: 8),
@@ -273,11 +274,11 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.admin.withOpacity(0.15)
-              : AppColors.surface,
+              ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
+              : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? AppColors.admin : AppColors.border,
+            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -286,7 +287,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: isSelected ? AppColors.admin : AppColors.text2,
+            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           ),
         ),
       ),
@@ -333,16 +334,16 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.error.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+              child: Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
             ),
             const SizedBox(height: 16),
             Text(
               _error!,
-              style: const TextStyle(
-                color: AppColors.text2,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -354,7 +355,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
               icon: const Icon(Icons.refresh_rounded),
               label: const Text("Retry"),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.admin,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -372,22 +373,22 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.admin.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.inbox_outlined,
                 size: 64,
-                color: AppColors.admin,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(height: 16),
             Text(
               _selectedFilter == "ALL" ? "No complaints yet" : "No ${_selectedFilter.toLowerCase()} complaints",
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
-                color: AppColors.text,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -397,7 +398,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                   : "Try selecting a different filter",
               style: TextStyle(
                 fontSize: 14,
-                color: AppColors.text2,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
@@ -409,7 +410,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
 
     return RefreshIndicator(
       onRefresh: _loadComplaints,
-      color: AppColors.admin,
+      color: Theme.of(context).colorScheme.primary,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         itemCount: _filteredComplaints.length,
@@ -434,12 +435,12 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: status == "PENDING"
               ? AppColors.warning.withOpacity(0.5)
-              : AppColors.border.withOpacity(0.5),
+              : Theme.of(context).dividerColor.withOpacity(0.5),
           width: status == "PENDING" ? 1.5 : 1,
         ),
         boxShadow: [
@@ -469,15 +470,15 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppColors.admin.withOpacity(0.15),
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         category,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.admin,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                       ),
                     ),
@@ -496,14 +497,12 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                       placeholder: (context, url) => Container(
                         height: 140,
                         color: Colors.grey.shade300,
-                        child: const Center(child: Icon(Icons.image_outlined, color: AppColors.textMuted, size: 40)),
+                        child: Center(child: Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), size: 40)),
                       ),
                       errorWidget: (context, url, error) => Container(
                         height: 140,
-                        color: AppColors.bg,
-                        child: const Center(
-                          child: Icon(Icons.broken_image_outlined, color: AppColors.textMuted, size: 40),
-                        ),
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        child: Center(child: Icon(Icons.broken_image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), size: 40)),
                       ),
                     ),
                   ),
@@ -513,11 +512,11 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                 // Title
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w900,
-                    color: AppColors.text,
-                  ),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -529,13 +528,13 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: AppColors.admin.withOpacity(0.1),
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.person_rounded,
                         size: 14,
-                        color: AppColors.admin,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -543,7 +542,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                       residentName,
                       style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.text2,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -551,13 +550,13 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: AppColors.admin.withOpacity(0.1),
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.home_rounded,
                         size: 14,
-                        color: AppColors.admin,
+                        color: Theme.of(context).colorScheme.primary,
                       ),
                     ),
                     const SizedBox(width: 6),
@@ -565,7 +564,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                       "Flat $flatNo",
                       style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.text2,
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -579,7 +578,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                     description,
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.text2,
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       fontWeight: FontWeight.w500,
                     ),
                     maxLines: 2,
@@ -596,13 +595,13 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: AppColors.admin.withOpacity(0.1),
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: const Icon(
+                          child: Icon(
                             Icons.access_time_rounded,
                             size: 14,
-                            color: AppColors.admin,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
                         const SizedBox(width: 8),
@@ -610,7 +609,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                           _formatDateTime(createdAt),
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.text2,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -625,7 +624,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                           style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
                         ),
                         style: TextButton.styleFrom(
-                          foregroundColor: AppColors.admin,
+                          foregroundColor: Theme.of(context).colorScheme.primary,
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         ),
                       ),
@@ -659,7 +658,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      backgroundColor: AppColors.surface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.85,
         minChildSize: 0.5,
@@ -678,7 +677,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: Theme.of(context).dividerColor,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -688,18 +687,18 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.admin.withOpacity(0.15),
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.report_problem_rounded, color: AppColors.admin, size: 24),
+                    child: Icon(Icons.report_problem_rounded, color: Theme.of(context).colorScheme.primary, size: 24),
                   ),
                   const SizedBox(width: 12),
-                  const Text(
+                  Text(
                     "Complaint Details",
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w900,
-                      color: AppColors.text,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -716,14 +715,12 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                     placeholder: (context, url) => Container(
                       height: 200,
                       color: Colors.grey.shade300,
-                      child: const Center(child: Icon(Icons.image_outlined, color: AppColors.textMuted, size: 48)),
+                      child: Center(child: Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), size: 48)),
                     ),
                     errorWidget: (context, url, error) => Container(
                       height: 200,
-                      color: AppColors.bg,
-                      child: const Center(
-                        child: Icon(Icons.broken_image_outlined, color: AppColors.textMuted, size: 48),
-                      ),
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      child: Center(child: Icon(Icons.broken_image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), size: 48)),
                     ),
                   ),
                 ),
@@ -745,23 +742,23 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.admin.withOpacity(0.1),
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.admin.withOpacity(0.3)),
+                    border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          const Icon(Icons.admin_panel_settings_rounded, color: AppColors.admin, size: 18),
+                          Icon(Icons.admin_panel_settings_rounded, color: Theme.of(context).colorScheme.primary, size: 18),
                           const SizedBox(width: 8),
-                          const Text(
+                          Text(
                             "Admin Response",
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.admin,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ],
@@ -769,9 +766,9 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                       const SizedBox(height: 8),
                       Text(
                         adminResponse,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 15,
-                          color: AppColors.text,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -794,7 +791,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                     style: const TextStyle(fontWeight: FontWeight.w900),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.admin,
+                    backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -848,11 +845,11 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? AppColors.admin.withOpacity(0.15)
-                              : AppColors.surface,
+                              ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
+                              : Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: isSelected ? AppColors.admin : AppColors.border,
+                            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
                             width: isSelected ? 2 : 1,
                           ),
                         ),
@@ -861,7 +858,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: isSelected ? AppColors.admin : AppColors.text2,
+                            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           ),
                         ),
                       ),
@@ -881,11 +878,11 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                     hintText: "Add your response or notes...",
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.border),
+                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(color: AppColors.admin, width: 2),
+                      borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
                     ),
                     contentPadding: const EdgeInsets.all(12),
                   ),
@@ -897,8 +894,8 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             OutlinedButton(
               onPressed: () => Navigator.pop(context),
               style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: AppColors.border),
-                foregroundColor: AppColors.text,
+                side: BorderSide(color: Theme.of(context).dividerColor),
+                foregroundColor: Theme.of(context).colorScheme.onSurface,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
               child: const Text("Cancel", style: TextStyle(fontWeight: FontWeight.w700)),
@@ -916,7 +913,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.admin,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -938,16 +935,16 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             label,
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.text2,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: AppColors.text,
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -976,8 +973,8 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
           OutlinedButton(
             onPressed: () => Navigator.pop(context),
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.border),
-              foregroundColor: AppColors.text,
+              side: BorderSide(color: Theme.of(context).dividerColor),
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text("Cancel", style: TextStyle(fontWeight: FontWeight.w700)),

@@ -11,9 +11,9 @@ import '../core/app_logger.dart';
 import '../core/env.dart';
 
 /// Admin Manage Guards Screen
-/// 
+///
 /// Allows admins to view and manage all guards in the society
-/// Theme: Purple/Admin theme
+/// Theme: Sentinel (unified)
 class AdminManageGuardsScreen extends StatefulWidget {
   final String adminId;
   final String societyId;
@@ -142,7 +142,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
               "Failed to load guards. Please try again.",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            backgroundColor: AppColors.error,
+            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(24),
@@ -209,13 +209,14 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.bg,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+          icon: Icon(Icons.arrow_back_rounded, color: theme.colorScheme.onSurface),
           onPressed: () {
             if (widget.onBackPressed != null) {
               widget.onBackPressed!();
@@ -224,10 +225,10 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
             }
           },
         ),
-        title: const Text(
+        title: Text(
           "Manage Guards",
           style: TextStyle(
-            color: AppColors.text,
+            color: theme.colorScheme.onSurface,
             fontWeight: FontWeight.w900,
             fontSize: 20,
           ),
@@ -238,10 +239,10 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.15),
+                color: theme.colorScheme.primary.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.pin_rounded, color: AppColors.primary, size: 20),
+              child: Icon(Icons.pin_rounded, color: theme.colorScheme.primary, size: 20),
             ),
             onPressed: () {
               _showGuardJoinCode(context);
@@ -252,10 +253,10 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.15),
+                color: theme.colorScheme.primary.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.refresh_rounded, color: AppColors.primary, size: 20),
+              child: Icon(Icons.refresh_rounded, color: theme.colorScheme.primary, size: 20),
             ),
             onPressed: _isLoading ? null : _loadGuards,
           ),
@@ -269,12 +270,12 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
               // Search Bar
               Container(
                 padding: const EdgeInsets.all(16),
-                color: AppColors.bg,
+                color: theme.scaffoldBackgroundColor,
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: theme.dividerColor),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.02),
@@ -288,19 +289,19 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                     onChanged: (_) => _filterGuards(),
                     decoration: InputDecoration(
                       hintText: "Search by name, ID, phone, role...",
-                      hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
+                      hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 14),
                       prefixIcon: Container(
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.primary.withOpacity(0.15),
+                          color: theme.colorScheme.primary.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.search_rounded, color: AppColors.primary, size: 20),
+                        child: Icon(Icons.search_rounded, color: theme.colorScheme.primary, size: 20),
                       ),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
-                              icon: const Icon(Icons.clear_rounded, color: AppColors.textMuted, size: 20),
+                              icon: Icon(Icons.clear_rounded, color: theme.colorScheme.onSurface.withOpacity(0.6), size: 20),
                               onPressed: () {
                                 _searchController.clear();
                               },
@@ -322,7 +323,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                       Text(
                         "${_filteredGuards.length} guard${_filteredGuards.length != 1 ? 's' : ''}",
                         style: TextStyle(
-                          color: AppColors.text2,
+                          color: theme.colorScheme.onSurface.withOpacity(0.7),
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -344,6 +345,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
   }
 
   Widget _buildContent() {
+    final theme = Theme.of(context);
     if (_error != null) {
       return Center(
         child: Column(
@@ -352,16 +354,16 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
+                color: theme.colorScheme.error.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+              child: Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
             ),
             const SizedBox(height: 16),
             Text(
               _error!,
-              style: const TextStyle(
-                color: AppColors.text2,
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -373,7 +375,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
               icon: const Icon(Icons.refresh_rounded),
               label: const Text("Retry"),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: theme.colorScheme.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -391,22 +393,22 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: theme.colorScheme.primary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.shield_outlined,
                 size: 64,
-                color: AppColors.primary,
+                color: theme.colorScheme.primary,
               ),
             ),
             const SizedBox(height: 16),
             Text(
               _searchController.text.isNotEmpty ? "No guards found" : "No guards yet",
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
-                color: AppColors.text,
+                color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 8),
@@ -416,7 +418,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                   : "Guards will appear here once added",
               style: TextStyle(
                 fontSize: 14,
-                color: AppColors.text2,
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
@@ -428,7 +430,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
 
     return RefreshIndicator(
       onRefresh: _loadGuards,
-      color: AppColors.primary,
+      color: theme.colorScheme.primary,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         itemCount: _filteredGuards.length + (_lastDoc != null ? 1 : 0),
@@ -443,6 +445,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
   }
 
   Widget _buildLoadMoreRow() {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Center(
@@ -460,7 +463,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                 icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
                 label: const Text("Load more"),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
+                  foregroundColor: theme.colorScheme.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
               ),
@@ -469,6 +472,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
   }
 
   Widget _buildGuardCard(Map<String, dynamic> guard) {
+    final theme = Theme.of(context);
     final guardName = (guard['guard_name'] ?? guard['name'] ?? 'Unknown').toString();
     final guardId = (guard['guard_id'] ?? guard['uid'] ?? guard['id'] ?? 'N/A').toString();
     final phone = (guard['phone'] ?? guard['guard_phone'] ?? 'N/A').toString();
@@ -481,12 +485,12 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: active
-              ? (isAdmin ? AppColors.primary : AppColors.border).withOpacity(0.5)
-              : AppColors.error.withOpacity(0.3),
+              ? (isAdmin ? theme.colorScheme.primary : theme.dividerColor).withOpacity(0.5)
+              : theme.colorScheme.error.withOpacity(0.3),
           width: active ? (isAdmin ? 2 : 1) : 1.5,
         ),
         boxShadow: [
@@ -517,11 +521,9 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: isAdmin
-                                  ? AppColors.primary.withOpacity(0.15)
-                                  : AppColors.primary.withOpacity(0.15),
+                              color: theme.colorScheme.primary.withOpacity(0.15),
                               shape: BoxShape.circle,
-                              border: Border.all(color: AppColors.border.withOpacity(0.5)),
+                              border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
                             ),
                             child: ClipOval(
                               child: hasPhoto
@@ -533,19 +535,19 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                                       placeholder: (_, __) => Center(
                                         child: Icon(
                                           isAdmin ? Icons.admin_panel_settings_rounded : Icons.shield_rounded,
-                                          color: isAdmin ? AppColors.primary : AppColors.primary,
+                                          color: theme.colorScheme.primary,
                                           size: 24,
                                         ),
                                       ),
                                       errorWidget: (_, __, ___) => Icon(
                                         isAdmin ? Icons.admin_panel_settings_rounded : Icons.shield_rounded,
-                                        color: isAdmin ? AppColors.primary : AppColors.primary,
+                                        color: theme.colorScheme.primary,
                                         size: 24,
                                       ),
                                     )
                                   : Icon(
                                       isAdmin ? Icons.admin_panel_settings_rounded : Icons.shield_rounded,
-                                      color: isAdmin ? AppColors.primary : AppColors.primary,
+                                      color: theme.colorScheme.primary,
                                       size: 24,
                                     ),
                             ),
@@ -557,10 +559,10 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                               children: [
                                 Text(
                                   guardName,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 18,
                                     fontWeight: FontWeight.w900,
-                                    color: AppColors.text,
+                                    color: theme.colorScheme.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 2),
@@ -569,9 +571,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: isAdmin
-                                            ? AppColors.primary.withOpacity(0.15)
-                                            : AppColors.primary.withOpacity(0.15),
+                                        color: theme.colorScheme.primary.withOpacity(0.15),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Text(
@@ -579,7 +579,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w800,
-                                          color: isAdmin ? AppColors.primary : AppColors.primary,
+                                          color: theme.colorScheme.primary,
                                         ),
                                       ),
                                     ),
@@ -596,7 +596,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                       decoration: BoxDecoration(
                         color: active
                             ? AppColors.success.withOpacity(0.15)
-                            : AppColors.error.withOpacity(0.15),
+                            : theme.colorScheme.error.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -604,7 +604,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
-                          color: active ? AppColors.success : AppColors.error,
+                          color: active ? AppColors.success : theme.colorScheme.error,
                         ),
                       ),
                     ),
@@ -628,31 +628,32 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
   }
 
   Widget _buildDetailRow(IconData icon, String label, String value) {
+    final theme = Theme.of(context);
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: AppColors.primary.withOpacity(0.1),
+            color: theme.colorScheme.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, size: 16, color: AppColors.primary),
+          child: Icon(icon, size: 16, color: theme.colorScheme.primary),
         ),
         const SizedBox(width: 10),
         Text(
           "$label: ",
           style: TextStyle(
             fontSize: 13,
-            color: AppColors.text2,
+            color: theme.colorScheme.onSurface.withOpacity(0.7),
             fontWeight: FontWeight.w600,
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 14,
-              color: AppColors.text,
+              color: theme.colorScheme.onSurface,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -662,6 +663,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
   }
 
   void _showGuardDetails(Map<String, dynamic> guard) {
+    final theme = Theme.of(context);
     final photoUrl = (guard['photoUrl'] ?? guard['photo_url'] ?? '').toString().trim();
     final hasPhoto = photoUrl.isNotEmpty;
 
@@ -671,7 +673,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      backgroundColor: AppColors.surface,
+      backgroundColor: theme.colorScheme.surface,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.7,
         minChildSize: 0.5,
@@ -690,7 +692,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: theme.dividerColor,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -708,9 +710,9 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.15),
+                        color: theme.colorScheme.primary.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: theme.dividerColor),
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(12),
@@ -718,27 +720,27 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                             ? CachedNetworkImage(
                                 imageUrl: photoUrl,
                                 fit: BoxFit.cover,
-                                placeholder: (_, __) => const Center(
-                                  child: Icon(Icons.shield_rounded, color: AppColors.primary, size: 28),
+                                placeholder: (_, __) => Center(
+                                  child: Icon(Icons.shield_rounded, color: theme.colorScheme.primary, size: 28),
                                 ),
-                                errorWidget: (_, __, ___) => const Icon(
+                                errorWidget: (_, __, ___) => Icon(
                                   Icons.shield_rounded,
-                                  color: AppColors.primary,
+                                  color: theme.colorScheme.primary,
                                   size: 28,
                                 ),
                               )
-                            : const Icon(Icons.shield_rounded, color: AppColors.primary, size: 28),
+                            : Icon(Icons.shield_rounded, color: theme.colorScheme.primary, size: 28),
                       ),
                     ),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       "Guard Details",
                       style: TextStyle(
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
-                        color: AppColors.text,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -791,6 +793,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
   }
 
   Widget _buildDetailSection(String label, String value) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -800,16 +803,16 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
             label,
             style: TextStyle(
               fontSize: 12,
-              color: AppColors.text2,
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
-              color: AppColors.text,
+              color: theme.colorScheme.onSurface,
               fontWeight: FontWeight.w700,
             ),
           ),
@@ -819,14 +822,15 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
   }
 
   Future<void> _showGuardJoinCode(BuildContext context) async {
+    final theme = Theme.of(context);
     final expiry = DateTime.now().add(const Duration(hours: 24));
     final code = await _firestore.createGuardJoinCode(widget.societyId);
     if (!context.mounted) return;
     if (code == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Failed to generate code. Please try again."),
-          backgroundColor: AppColors.error,
+        SnackBar(
+          content: const Text("Failed to generate code. Please try again."),
+          backgroundColor: theme.colorScheme.error,
         ),
       );
       return;
@@ -835,11 +839,12 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: theme.colorScheme.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
+        final sheetTheme = Theme.of(ctx);
         return SafeArea(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -851,16 +856,16 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: AppColors.border,
+                    color: sheetTheme.dividerColor,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                const Text(
+                Text(
                   "Guard Join Code",
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
-                    color: AppColors.text,
+                    color: sheetTheme.colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -868,7 +873,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                   "Ask the guard to enter this 6-digit code in the Guard app within 24 hours.",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: AppColors.text2,
+                    color: sheetTheme.colorScheme.onSurface.withOpacity(0.7),
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                   ),
@@ -877,17 +882,17 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.08),
+                    color: sheetTheme.colorScheme.primary.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                    border: Border.all(color: sheetTheme.colorScheme.primary.withOpacity(0.3)),
                   ),
                   child: Text(
                     code,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 42,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 12,
-                      color: AppColors.primary,
+                      color: sheetTheme.colorScheme.primary,
                       fontFamily: 'monospace',
                     ),
                   ),
@@ -896,7 +901,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                 Text(
                   "Valid until: ${expiry.toLocal()}",
                   style: TextStyle(
-                    color: AppColors.text2,
+                    color: sheetTheme.colorScheme.onSurface.withOpacity(0.7),
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
@@ -908,16 +913,16 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                       child: OutlinedButton(
                         onPressed: () => Navigator.of(ctx).pop(),
                         style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: AppColors.border),
+                          side: BorderSide(color: sheetTheme.dividerColor),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: const Text(
+                        child: Text(
                           "Close",
                           style: TextStyle(
                             fontWeight: FontWeight.w700,
-                            color: AppColors.text2,
+                            color: sheetTheme.colorScheme.onSurface.withOpacity(0.7),
                           ),
                         ),
                       ),
@@ -935,7 +940,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
+                          backgroundColor: sheetTheme.colorScheme.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

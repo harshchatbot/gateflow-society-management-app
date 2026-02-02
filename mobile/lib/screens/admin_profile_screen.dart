@@ -96,12 +96,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               final value = controller.text.trim();
               if (value.isEmpty || !value.contains('@')) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
+                  SnackBar(
+                    content: const Text(
                       "Please enter a valid email.",
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    backgroundColor: AppColors.error,
+                    backgroundColor: Theme.of(context).colorScheme.error,
                   ),
                 );
                 return;
@@ -136,12 +136,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         AppLogger.e("Error updating admin email", error: e, stackTrace: st);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
+            SnackBar(
+              content: const Text(
                 "Failed to update email. Please try again.",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              backgroundColor: AppColors.error,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
@@ -178,12 +178,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               final digits = value.replaceAll(RegExp(r'[^\d+]'), '');
               if (digits.length < 10) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
+                  SnackBar(
+                    content: const Text(
                       "Please enter a valid phone number.",
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
-                    backgroundColor: AppColors.error,
+                    backgroundColor: Theme.of(context).colorScheme.error,
                   ),
                 );
                 return;
@@ -218,12 +218,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         AppLogger.e("Error updating admin phone", error: e, stackTrace: st);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
+            SnackBar(
+              content: const Text(
                 "Failed to update phone number. Please try again.",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
-              backgroundColor: AppColors.error,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
@@ -246,8 +246,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           OutlinedButton(
             onPressed: () => Navigator.of(context).pop(false),
             style: OutlinedButton.styleFrom(
-              side: const BorderSide(color: AppColors.border),
-              foregroundColor: AppColors.text,
+              side: BorderSide(color: Theme.of(context).dividerColor),
+              foregroundColor: Theme.of(context).colorScheme.onSurface,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text(
@@ -259,7 +259,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.error,
+              backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -306,7 +306,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               "Error during logout. Please try again.",
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            backgroundColor: AppColors.error,
+            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
@@ -319,7 +319,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: CustomScrollView(
         slivers: [
           // Profile header – primary theme
@@ -327,7 +327,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             automaticallyImplyLeading: true,
             expandedHeight: 220,
             pinned: true,
-            backgroundColor: AppColors.primary,
+            backgroundColor: Theme.of(context).colorScheme.primary,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
               onPressed: () {
@@ -344,7 +344,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [AppColors.primary, AppColors.primary.withOpacity(0.85)],
+                    colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary.withOpacity(0.85)],
                   ),
                 ),
                 child: Column(
@@ -435,32 +435,32 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.08),
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                        border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: AppColors.primary.withOpacity(0.15),
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.lightbulb_outline_rounded, color: AppColors.primary, size: 22),
+                            child: Icon(Icons.lightbulb_outline_rounded, color: Theme.of(context).colorScheme.primary, size: 22),
                           ),
                           const SizedBox(width: 14),
-                          const Expanded(
+                          Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("Get Started", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppColors.text)),
-                                SizedBox(height: 4),
-                                Text("Quick start guide & interactive tour", style: TextStyle(fontSize: 13, color: AppColors.text2)),
+                                Text("Get Started", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Theme.of(context).colorScheme.onSurface)),
+                                const SizedBox(height: 4),
+                                Text("Quick start guide & interactive tour", style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
                               ],
                             ),
                           ),
-                          Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.primary),
+                          Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
                         ],
                       ),
                     ),
@@ -480,12 +480,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   }
 
   Widget _buildProfileImageSection() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -501,18 +502,18 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.image_rounded, size: 20, color: AppColors.primary),
+                child: Icon(Icons.image_rounded, size: 20, color: theme.colorScheme.primary),
               ),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 "Profile Picture",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
-                  color: AppColors.text,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ],
@@ -536,25 +537,25 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.camera_alt_rounded, color: AppColors.primary, size: 22),
+                  Icon(Icons.camera_alt_rounded, color: theme.colorScheme.primary, size: 22),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       "Upload or change your photo",
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.text,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                   ),
-                  Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.text2),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.7)),
                 ],
               ),
             ),
@@ -565,12 +566,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   }
 
   Widget _buildAccountInfoSection() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -587,18 +589,18 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15), // Purple icon background
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.15), // Purple icon background
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.person_outline, size: 20, color: AppColors.primary),
+                child: Icon(Icons.person_outline, size: 20, color: theme.colorScheme.primary),
               ),
               const SizedBox(width: 12),
-              const Text(
+              Text(
                 "Account Information",
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w900,
-                  color: AppColors.text,
+                  color: theme.colorScheme.onSurface,
                 ),
               ),
             ],
@@ -608,48 +610,48 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             icon: Icons.person_rounded,
             label: "Name",
             value: widget.adminName,
-            iconColor: AppColors.primary,
-            iconBgColor: AppColors.primary.withOpacity(0.15),
+            iconColor: Theme.of(context).colorScheme.primary,
+            iconBgColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
           ),
           const Divider(height: 24),
           _buildInfoRow(
             icon: Icons.badge_rounded,
             label: "Admin ID",
             value: widget.adminId,
-            iconColor: AppColors.primary,
-            iconBgColor: AppColors.primary.withOpacity(0.15),
+            iconColor: Theme.of(context).colorScheme.primary,
+            iconBgColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
           ),
           const Divider(height: 24),
           _buildInfoRow(
             icon: Icons.apartment_rounded,
             label: "Society ID",
             value: widget.societyId,
-            iconColor: AppColors.primary,
-            iconBgColor: AppColors.primary.withOpacity(0.15),
+            iconColor: Theme.of(context).colorScheme.primary,
+            iconBgColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
           ),
           const Divider(height: 24),
           _buildInfoRow(
             icon: Icons.admin_panel_settings_rounded,
             label: "Role",
             value: widget.role,
-            iconColor: AppColors.primary,
-            iconBgColor: AppColors.primary.withOpacity(0.15),
+            iconColor: Theme.of(context).colorScheme.primary,
+            iconBgColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
           ),
           const Divider(height: 24),
           _buildInfoRow(
             icon: Icons.email_rounded,
             label: "Email",
             value: _email?.isNotEmpty == true ? _email! : "Not set",
-            iconColor: AppColors.primary,
-            iconBgColor: AppColors.primary.withOpacity(0.15),
+            iconColor: Theme.of(context).colorScheme.primary,
+            iconBgColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
           ),
           const Divider(height: 24),
           _buildInfoRow(
             icon: Icons.phone_rounded,
             label: "Phone",
             value: _phone?.isNotEmpty == true ? _phone! : "Not set",
-            iconColor: AppColors.primary,
-            iconBgColor: AppColors.primary.withOpacity(0.15),
+            iconColor: Theme.of(context).colorScheme.primary,
+            iconBgColor: Theme.of(context).colorScheme.primary.withOpacity(0.15),
           ),
           const SizedBox(height: 16),
           Row(
@@ -663,8 +665,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.primary.withOpacity(0.6)),
-                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.6)),
+                    foregroundColor: Theme.of(context).colorScheme.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -681,8 +683,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.primary.withOpacity(0.6)),
-                    foregroundColor: AppColors.primary,
+                    side: BorderSide(color: Theme.of(context).colorScheme.primary.withOpacity(0.6)),
+                    foregroundColor: Theme.of(context).colorScheme.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -697,6 +699,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   }
 
   Widget _buildLoginOptionsSection() {
+    final theme = Theme.of(context);
     final hasPhone = (_phone ?? '').trim().isNotEmpty;
     final userEmail = FirebaseAuth.instance.currentUser?.email;
     final hasRealEmail = userEmail != null &&
@@ -707,19 +710,19 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text("Login options", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.text)),
+          Text("Login options", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: theme.colorScheme.onSurface)),
           const SizedBox(height: 12),
           if (!hasPhone)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.phone_android_rounded, color: AppColors.primary),
+              leading: Icon(Icons.phone_android_rounded, color: theme.colorScheme.primary),
               title: const Text("Add phone number", style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle: const Text("Recommended for easier login"),
               trailing: const Icon(Icons.chevron_right_rounded),
@@ -736,7 +739,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           if (!hasRealEmail)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.email_outlined, color: AppColors.primary),
+              leading: Icon(Icons.email_outlined, color: theme.colorScheme.primary),
               title: const Text("Add email (optional)", style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle: const Text("For recovery and optional login"),
               trailing: const Icon(Icons.chevron_right_rounded),
@@ -824,18 +827,21 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
     required IconData icon,
     required String label,
     required String value,
-    Color iconColor = AppColors.primary,
-    Color iconBgColor = AppColors.primarySoft,
+    Color? iconColor,
+    Color? iconBgColor,
   }) {
+    final theme = Theme.of(context);
+    final ico = iconColor ?? theme.colorScheme.primary;
+    final bg = iconBgColor ?? theme.colorScheme.primary.withOpacity(0.15);
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: iconBgColor,
+            color: bg,
             borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(icon, size: 20, color: iconColor),
+          child: Icon(icon, size: 20, color: ico),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -846,16 +852,16 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppColors.text2,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
                   fontWeight: FontWeight.w600,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 value,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
-                  color: AppColors.text,
+                  color: theme.colorScheme.onSurface,
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -867,12 +873,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
   }
 
   Widget _buildBulkUploadSection() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.04),
@@ -888,30 +895,30 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15),
+                  color: theme.colorScheme.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.upload_file_rounded, size: 20, color: AppColors.primary),
+                child: Icon(Icons.upload_file_rounded, size: 20, color: theme.colorScheme.primary),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Text(
                   "Bulk Upload Members",
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w900,
-                    color: AppColors.text,
+                    color: theme.colorScheme.onSurface,
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             "Upload guards and residents in bulk using CSV files. Download sample templates to get started.",
             style: TextStyle(
               fontSize: 13,
-              color: AppColors.text2,
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -931,25 +938,25 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: theme.colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.upload_file_rounded, color: AppColors.primary, size: 22),
+                  Icon(Icons.upload_file_rounded, color: theme.colorScheme.primary, size: 22),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Text(
                       "Open Bulk Upload",
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.text,
+                        color: theme.colorScheme.onSurface,
                       ),
                     ),
                   ),
-                  Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.text2),
+                  Icon(Icons.arrow_forward_ios_rounded, size: 16, color: theme.colorScheme.onSurface.withOpacity(0.7)),
                 ],
               ),
             ),
@@ -971,17 +978,17 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 height: 20,
                 child: AppLoader.inline(size: 20),
               )
-            : const Icon(Icons.logout_rounded, color: AppColors.error),
+            : Icon(Icons.logout_rounded, color: Theme.of(context).colorScheme.error),
         label: Text(
           _isLoggingOut ? "Logging out..." : "LOGOUT",
-          style: const TextStyle(
-            color: AppColors.error,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.error,
             fontWeight: FontWeight.w900,
             fontSize: 16,
           ),
         ),
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: AppColors.error, width: 2),
+          side: BorderSide(color: Theme.of(context).colorScheme.error, width: 2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),
