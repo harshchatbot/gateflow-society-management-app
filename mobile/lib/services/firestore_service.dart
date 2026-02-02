@@ -668,9 +668,11 @@ class FirestoreService {
     // --------------------------------------------
     // 1) SOCIETY MEMBER DOC (source of truth)
     // societies/{societyId}/members/{uid}
+    // Rules require request.resource.data.societyId == societyId for create.
     // --------------------------------------------
     await _memberRef(societyId, uid).set({
       'uid': uid,
+      'societyId': societyId,
       'systemRole': systemRole,
       'societyRole': societyRole,
       'name': name,

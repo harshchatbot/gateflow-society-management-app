@@ -273,13 +273,14 @@ class _VisitorListScreenState extends State<VisitorListScreen>
   }
 
   Widget _buildCompactVisitorCard(Visitor v) {
+    final theme = Theme.of(context);
     final hasResidentPhone = v.residentPhone != null && v.residentPhone!.trim().isNotEmpty;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), // Reduced vertical margin
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border.withOpacity(0.6)),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.6)),
       ),
       child: InkWell(
         onTap: () async {
@@ -301,12 +302,12 @@ class _VisitorListScreenState extends State<VisitorListScreen>
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: AppColors.primarySoft,
+                backgroundColor: theme.colorScheme.primary.withOpacity(0.15),
                 backgroundImage: (v.photoUrl != null && v.photoUrl!.isNotEmpty)
                     ? CachedNetworkImageProvider(v.photoUrl!)
                     : null,
                 child: (v.photoUrl == null || v.photoUrl!.isEmpty)
-                    ? const Icon(Icons.person, size: 20, color: AppColors.primary)
+                    ? Icon(Icons.person, size: 20, color: theme.colorScheme.primary)
                     : null,
               ),
               const SizedBox(width: 12),
@@ -317,15 +318,15 @@ class _VisitorListScreenState extends State<VisitorListScreen>
                   children: [
                     Text(
                       "${v.visitorType} • Flat ${v.flatNo}",
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w900,
-                        color: AppColors.text,
+                        color: theme.colorScheme.onSurface,
                         fontSize: 14,
                       ),
                     ),
                     Text(
                       v.visitorPhone,
-                      style: const TextStyle(fontSize: 12, color: AppColors.text2),
+                      style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.7)),
                     ),
                     if (hasResidentPhone) ...[
                       const SizedBox(height: 2),
@@ -375,6 +376,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     if (!SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
       return ModuleDisabledPlaceholder(onBack: widget.onBackPressed);
     }
@@ -391,12 +393,12 @@ class _VisitorListScreenState extends State<VisitorListScreen>
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.bg,
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: AppColors.bg,
+          backgroundColor: theme.scaffoldBackgroundColor,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.text),
+            icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
             onPressed: () {
               // If we're in a tab navigation (IndexedStack), switch to dashboard
               if (widget.onBackPressed != null) {
@@ -406,11 +408,11 @@ class _VisitorListScreenState extends State<VisitorListScreen>
               }
             },
           ),
-        title: const Text("Visitor Logs", style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w900)),
+        title: Text("Visitor Logs", style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w900)),
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const Icon(Icons.sync_rounded, color: AppColors.primary),
+            icon: Icon(Icons.sync_rounded, color: theme.colorScheme.primary),
             onPressed: () => _tabController.index == 0 ? _loadToday() : _loadByFlat(),
           )
         ],
@@ -420,10 +422,10 @@ class _VisitorListScreenState extends State<VisitorListScreen>
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: TabBar(
               controller: _tabController,
-              indicatorColor: AppColors.primary,
+              indicatorColor: theme.colorScheme.primary,
               indicatorWeight: 3,
-              labelColor: AppColors.primary,
-              unselectedLabelColor: AppColors.textMuted,
+              labelColor: theme.colorScheme.primary,
+              unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(0.6),
               labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
               tabs: const [Tab(text: "Today's List"), Tab(text: "Search by Flat")],
             ),
@@ -433,12 +435,12 @@ class _VisitorListScreenState extends State<VisitorListScreen>
       body: Stack(
         children: [
           TabBarView(
-            controller: _tabController,
-            children: [
+          controller: _tabController,
+          children: [
               // Tab 1: Today with Pull-to-Refresh
               RefreshIndicator(
                 onRefresh: _loadToday,
-                color: AppColors.primary,
+                color: theme.colorScheme.primary,
                 child: _today.isEmpty 
                   ? _buildEmptyState() 
                   : ListView.builder(
@@ -472,23 +474,24 @@ class _VisitorListScreenState extends State<VisitorListScreen>
   }
 
   Widget _buildCompactSearchBar() {
+    final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: TextField(
         controller: _flatController,
         onSubmitted: (_) => _loadByFlat(),
         decoration: InputDecoration(
           hintText: "Enter Flat No (e.g. A-101)",
-          hintStyle: const TextStyle(fontSize: 14),
+          hintStyle: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface.withOpacity(0.6)),
           border: InputBorder.none,
           suffixIcon: IconButton(
-            icon: const Icon(Icons.search, color: AppColors.primary),
+            icon: Icon(Icons.search, color: theme.colorScheme.primary),
             onPressed: _loadByFlat,
           ),
         ),
@@ -498,7 +501,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
 
   Widget _buildEmptyState() {
     return Center(
-      child: Text("No records found", style: TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.bold)),
+      child: Text("No records found", style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.bold)),
     );
   }
 }

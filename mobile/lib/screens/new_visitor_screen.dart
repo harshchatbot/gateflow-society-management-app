@@ -117,11 +117,13 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   Future<void> _lookupFlatOwner() async {
     final flat = _selectedFlatNo?.trim() ?? '';
     if (flat.isEmpty) {
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _flatOwnerName = null;
         _flatOwnerPhone = null;
         _flatOwnerLoading = false;
       });
+      }
       return;
     }
     if (!mounted) return;
@@ -155,11 +157,13 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       }
     } catch (e) {
       AppLogger.w('Flat owner lookup failed', error: e.toString());
-      if (mounted) setState(() {
+      if (mounted) {
+        setState(() {
         _flatOwnerName = null;
         _flatOwnerPhone = null;
         _flatOwnerLoading = false;
       });
+      }
     }
   }
 
@@ -260,7 +264,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message, style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppColors.error,
+        backgroundColor: Theme.of(context).colorScheme.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
@@ -303,6 +307,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     if (!SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
       return ModuleDisabledPlaceholder(onBack: widget.onBackPressed);
     }
@@ -319,13 +324,13 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.bg,
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
           automaticallyImplyLeading: true,
           backgroundColor: Colors.transparent,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.text),
+            icon: Icon(Icons.arrow_back, color: theme.colorScheme.onSurface),
             onPressed: () {
               // If we're in a tab navigation (IndexedStack), switch to dashboard
               if (widget.onBackPressed != null) {
@@ -335,7 +340,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               }
             },
           ),
-        title: const Text('New Entry', style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 22)),
+        title: Text('New Entry', style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w900, fontSize: 22)),
         centerTitle: true,
       ),
       body: Stack(
@@ -369,14 +374,15 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   }
 
   Widget _buildPhotoSection() {
+    final theme = Theme.of(context);
     return Container(
       width: double.infinity,
       height: 220,
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
-        boxShadow: [BoxShadow(color: AppColors.text.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 8))],
+        border: Border.all(color: theme.dividerColor),
+        boxShadow: [BoxShadow(color: theme.colorScheme.onSurface.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 8))],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
@@ -386,9 +392,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(AppIcons.camera, size: 40, color: AppColors.primary.withOpacity(0.5)),
+                    Icon(AppIcons.camera, size: 40, color: theme.colorScheme.primary.withOpacity(0.5)),
                     const SizedBox(height: 12),
-                    const Text("Capture Visitor Photo", style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.text2)),
+                    Text("Capture Visitor Photo", style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withOpacity(0.7))),
                   ],
                 ),
               )
@@ -414,12 +420,13 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   ];
 
   Widget _buildInputCard() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -444,15 +451,15 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               ? Container(
                   padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                   decoration: BoxDecoration(
-                    color: AppColors.surface,
+                    color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(color: theme.dividerColor),
                   ),
                   child: Row(
                     children: [
-                      SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
+                      SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary)),
                       const SizedBox(width: 12),
-                      Text("Loading units...", style: TextStyle(color: AppColors.text2, fontWeight: FontWeight.w600)),
+                      Text("Loading units...", style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w600)),
                     ],
                   ),
                 )
@@ -460,19 +467,19 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                   ? Container(
                       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: theme.dividerColor),
                       ),
-                      child: Text("No units configured for this society.", style: TextStyle(color: AppColors.text2, fontWeight: FontWeight.w600)),
+                      child: Text("No units configured for this society.", style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w600)),
                     )
                   : DropdownButtonFormField<String>(
                       value: _selectedFlatNo,
                       decoration: InputDecoration(
-                        prefixIcon: Icon(AppIcons.flat, color: AppColors.primary.withOpacity(0.8)),
+                        prefixIcon: Icon(AppIcons.flat, color: theme.colorScheme.primary.withOpacity(0.8)),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: theme.colorScheme.surface,
                       ),
                       hint: const Text("Select unit / villa / flat"),
                       items: _flats.map((f) {
@@ -490,12 +497,17 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
           ),
           if (_flatOwnerLoading) ...[
             const SizedBox(height: 10),
-            Row(
-              children: [
-                SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
-                const SizedBox(width: 10),
-                Text("Finding flat owner...", style: TextStyle(fontSize: 12, color: AppColors.text2, fontWeight: FontWeight.w600)),
-              ],
+            Builder(
+              builder: (context) {
+                final t = Theme.of(context);
+                return Row(
+                  children: [
+                    SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: t.colorScheme.primary)),
+                    const SizedBox(width: 10),
+                    Text("Finding flat owner...", style: TextStyle(fontSize: 12, color: t.colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w600)),
+                  ],
+                );
+              },
             ),
           ] else if (_flatOwnerName != null || _flatOwnerPhone != null) ...[
             const SizedBox(height: 10),
@@ -508,23 +520,23 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.person_rounded, size: 20, color: AppColors.success),
+                  const Icon(Icons.person_rounded, size: 20, color: AppColors.success),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Flat owner", style: TextStyle(fontSize: 11, color: AppColors.text2, fontWeight: FontWeight.w600)),
+                        Text("Flat owner", style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w600)),
                         const SizedBox(height: 2),
                         Text(
                           _flatOwnerName ?? '—',
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: AppColors.text),
+                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface),
                         ),
                         if (_flatOwnerPhone != null && _flatOwnerPhone!.isNotEmpty) ...[
                           const SizedBox(height: 2),
                           Text(
                             _flatOwnerPhone!,
-                            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: AppColors.primary),
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary),
                           ),
                         ],
                       ],
@@ -543,7 +555,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             const SizedBox(height: 10),
             Text(
               "No resident found for this flat.",
-              style: TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w600),
+              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.w600),
             ),
           ],
           const SizedBox(height: 18),
@@ -583,11 +595,11 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             child: ElevatedButton(
               onPressed: _isLoading ? null : _handleSubmit,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 elevation: 0,
               ),
-              child: const Text("NOTIFY RESIDENT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+              child: Text("NOTIFY RESIDENT", style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
             ),
           ),
         ],
@@ -596,6 +608,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   }
 
   Widget _buildTextField({required TextEditingController controller, required String hint, required IconData icon, bool isPhone = false}) {
+    final theme = Theme.of(context);
     return TextFormField(
       controller: controller,
       keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
@@ -603,9 +616,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
+        prefixIcon: Icon(icon, color: theme.colorScheme.primary, size: 20),
         filled: true,
-        fillColor: AppColors.bg,
+        fillColor: theme.scaffoldBackgroundColor,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
       ),
       validator: (v) => v!.isEmpty ? "Required" : null,
@@ -617,31 +630,33 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     required String hint,
     required IconData icon,
   }) {
+    final theme = Theme.of(context);
     return TextFormField(
       controller: controller,
       keyboardType: TextInputType.text,
       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
       decoration: InputDecoration(
         hintText: hint,
-        prefixIcon: Icon(icon, color: AppColors.primary, size: 20),
+        prefixIcon: Icon(icon, color: theme.colorScheme.primary, size: 20),
         filled: true,
-        fillColor: AppColors.bg,
+        fillColor: theme.scaffoldBackgroundColor,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
       ),
     );
   }
 
   Widget _buildDeliveryPartnerChip(String label) {
+    final theme = Theme.of(context);
     final isSelected = _selectedDeliveryPartner == label;
     return FilterChip(
-      label: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isSelected ? Colors.white : AppColors.text2)),
+      label: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withOpacity(0.7))),
       selected: isSelected,
       onSelected: (selected) => setState(() {
         _selectedDeliveryPartner = selected ? label : null;
         if (label != 'Other') _deliveryPartnerOtherController.clear();
       }),
-      selectedColor: AppColors.primary,
-      checkmarkColor: Colors.white,
+      selectedColor: theme.colorScheme.primary,
+      checkmarkColor: theme.colorScheme.onPrimary,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     );
   }
@@ -649,11 +664,12 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   Widget _buildFieldLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, left: 4),
-      child: Text(label, style: const TextStyle(fontWeight: FontWeight.w800, color: AppColors.text, fontSize: 13)),
+      child: Text(label, style: TextStyle(fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
     );
   }
 
   Widget _buildTypePill(String type, IconData icon) {
+    final theme = Theme.of(context);
     final bool isSelected = _selectedVisitorType == type;
     return Expanded(
       child: InkWell(
@@ -667,14 +683,14 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? AppColors.primary : AppColors.bg,
+            color: isSelected ? theme.colorScheme.primary : theme.scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             children: [
-              Icon(icon, size: 20, color: isSelected ? Colors.white : AppColors.text2),
+              Icon(icon, size: 20, color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withOpacity(0.7)),
               const SizedBox(height: 4),
-              Text(type, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isSelected ? Colors.white : AppColors.text2)),
+              Text(type, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withOpacity(0.7))),
             ],
           ),
         ),
@@ -683,16 +699,17 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   }
 
   Widget _buildSuccessCard() {
+    final theme = Theme.of(context);
     final v = _createdVisitor!;
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: AppColors.surface, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.success.withOpacity(0.3))),
+      decoration: BoxDecoration(color: theme.colorScheme.surface, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.success.withOpacity(0.3))),
       child: Column(
         children: [
           const CircleAvatar(backgroundColor: AppColors.success, radius: 30, child: Icon(Icons.check, color: Colors.white, size: 35)),
           const SizedBox(height: 16),
           const Text("Notification Sent!", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
-          const Text("Resident has been alerted.", style: TextStyle(color: AppColors.text2)),
+          Text("Resident has been alerted.", style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
           const Divider(height: 32),
           _buildInfoRow("Flat Number", v.flatNo),
           _buildInfoRow("Category", v.visitorType),
@@ -707,7 +724,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             height: 50,
             child: OutlinedButton(
               onPressed: _clearForm,
-              style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), side: const BorderSide(color: AppColors.primary)),
+              style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), side: BorderSide(color: theme.colorScheme.primary)),
               child: const Text("NEW ENTRY", style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
@@ -717,35 +734,37 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   }
 
   Widget _buildInfoRow(String label, String value, {bool isStatus = false}) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.bold)),
+          Text(label, style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.bold)),
           isStatus 
             ? Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(color: AppColors.statusChipBg(value), borderRadius: BorderRadius.circular(8)),
                 child: Text(value, style: TextStyle(color: AppColors.statusChipFg(value), fontWeight: FontWeight.bold, fontSize: 12)),
               )
-            : Text(value, style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.text)),
+            : Text(value, style: TextStyle(fontWeight: FontWeight.w900, color: theme.colorScheme.onSurface)),
         ],
       ),
     );
   }
 
   Widget _buildResidentPhoneRow(String phone) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text("Resident phone", style: const TextStyle(color: AppColors.textMuted, fontWeight: FontWeight.bold)),
+          Text("Resident phone", style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.bold)),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(phone, style: const TextStyle(fontWeight: FontWeight.w900, color: AppColors.text)),
+              Text(phone, style: TextStyle(fontWeight: FontWeight.w900, color: theme.colorScheme.onSurface)),
               const SizedBox(width: 8),
               IconButton(
                 onPressed: () => _launchCall(phone),
