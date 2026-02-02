@@ -57,6 +57,25 @@ class FirestoreService {
     return _societyRef(societyId).collection('flats');
   }
 
+  /// List active flats/units for a society (for guard dropdown when creating visitor).
+  /// Returns list of { id, flatNo } sorted by flatNo.
+  Future<List<Map<String, dynamic>>> getSocietyFlats(String societyId) async {
+    try {
+      final snapshot =
+          await _flatsRef(societyId).where('active', isEqualTo: true).get();
+      final list = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        final flatNo = (data['flatNo'] ?? data['flat_no'] ?? data['label'] ?? doc.id).toString().trim();
+        return {'id': doc.id, 'flatNo': flatNo.isEmpty ? doc.id : flatNo};
+      }).toList();
+      list.sort((a, b) => (a['flatNo'] as String).compareTo(b['flatNo'] as String));
+      return list;
+    } catch (e, st) {
+      AppLogger.e('Error getting society flats', error: e, stackTrace: st);
+      return [];
+    }
+  }
+
   /// Get visitors subcollection reference
   CollectionReference _visitorsRef(String societyId) {
     return _societyRef(societyId).collection('visitors');

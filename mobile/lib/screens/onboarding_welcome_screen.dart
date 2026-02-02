@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../ui/app_colors.dart';
 import '../services/quote_service.dart';
 import 'onboarding_choose_role_screen.dart';
@@ -34,23 +35,25 @@ class _OnboardingWelcomeScreenState extends State<OnboardingWelcomeScreen> {
               semanticLabel: 'Person at desk',
             ),
             const SizedBox(height: 40),
-            const Text(
+            Text(
               'Welcome to Sentinel',
-              style: TextStyle(
+              style: GoogleFonts.outfit(
                 fontSize: 28,
-                fontWeight: FontWeight.w900,
+                fontWeight: FontWeight.w800,
                 color: AppColors.text,
-                letterSpacing: -0.5,
+                letterSpacing: -0.6,
+                height: 1.2,
               ),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 12),
             Text(
               'Secure Society Management',
-              style: TextStyle(
+              style: GoogleFonts.outfit(
                 fontSize: 16,
                 color: AppColors.text2,
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w500,
+                letterSpacing: 0.2,
               ),
               textAlign: TextAlign.center,
             ),
@@ -59,7 +62,7 @@ class _OnboardingWelcomeScreenState extends State<OnboardingWelcomeScreen> {
             _QuoteOfTheDayBubble(quoteFuture: _quoteFuture),
             const SizedBox(height: 24),
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
               child: SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -78,12 +81,25 @@ class _OnboardingWelcomeScreenState extends State<OnboardingWelcomeScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    textStyle: const TextStyle(
+                    textStyle: GoogleFonts.outfit(
                       fontSize: 17,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.3,
                     ),
                   ),
                   child: const Text('Get Started'),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Text(
+                'Made with ❤️ in Rajasthan, India',
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.text2.withOpacity(0.85),
+                  letterSpacing: 0.25,
                 ),
               ),
             ),
@@ -145,21 +161,23 @@ class _QuoteOfTheDayBubble extends StatelessWidget {
                     children: [
                       Text(
                         'Hey, I am Senti',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                        style: GoogleFonts.outfit(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
                           color: AppColors.primary,
                           height: 1.3,
+                          letterSpacing: 0.2,
                         ),
                       ),
                       const SizedBox(height: 10),
                       Text(
                         quote,
-                        style: TextStyle(
+                        style: GoogleFonts.outfit(
                           fontSize: 15,
-                          fontWeight: FontWeight.w600,
+                          fontWeight: FontWeight.w500,
                           color: AppColors.text2,
-                          height: 1.4,
+                          height: 1.45,
+                          letterSpacing: 0.15,
                         ),
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
@@ -169,8 +187,8 @@ class _QuoteOfTheDayBubble extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
-                  width: 152,
-                  height: 152,
+                  width: 176,
+                  height: 176,
                   child: Image.asset(
                     'assets/mascot/senti_namaste.png',
                     fit: BoxFit.contain,

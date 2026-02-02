@@ -143,17 +143,17 @@ class DashboardHero extends StatelessWidget {
   Widget _buildMascot() {
     return Image.asset(
       _mascotAsset(mascotMood),
-      width: 100,
-      height: 100,
+      width: 120,
+      height: 120,
       fit: BoxFit.contain,
       errorBuilder: (_, __, ___) => Container(
-        width: 80,
-        height: 80,
+        width: 96,
+        height: 96,
         decoration: BoxDecoration(
           color: Colors.white24,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Icon(Icons.pets_rounded, color: Colors.white, size: 40),
+        child: const Icon(Icons.pets_rounded, color: Colors.white, size: 48),
       ),
     )
         .animate()

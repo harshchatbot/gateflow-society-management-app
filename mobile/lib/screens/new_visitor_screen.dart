@@ -43,7 +43,6 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
   // Controllers
   final _visitorNameController = TextEditingController();
-  final _flatNoController = TextEditingController();
   final _visitorPhoneController = TextEditingController();
   final _vehicleNumberController = TextEditingController();
   final _deliveryPartnerOtherController = TextEditingController();
@@ -58,6 +57,11 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   bool _isLoading = false;
   Visitor? _createdVisitor;
 
+  // Flats/units for dropdown (loaded from society)
+  List<Map<String, dynamic>> _flats = [];
+  bool _flatsLoading = true;
+  String? _selectedFlatNo; // Selected unit label (flat no, villa label, etc.)
+
   // Flat owner (resident) for current flat — shown so guard can call
   String? _flatOwnerName;
   String? _flatOwnerPhone;
@@ -66,39 +70,52 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   @override
   void initState() {
     super.initState();
-    _flatNoController.addListener(_onFlatChanged);
+    _loadFlats();
   }
 
   @override
   void dispose() {
-    _flatNoController.removeListener(_onFlatChanged);
     _visitorNameController.dispose();
-    _flatNoController.dispose();
     _visitorPhoneController.dispose();
     _vehicleNumberController.dispose();
     _deliveryPartnerOtherController.dispose();
     super.dispose();
   }
 
-  void _onFlatChanged() {
-    _lookupFlatOwnerDebounced();
+  Future<void> _loadFlats() async {
+    setState(() => _flatsLoading = true);
+    try {
+      // Prefer society flats (societies/{id}/flats); if empty, use public_societies units (e.g. Villa-E01)
+      List<Map<String, dynamic>> list = await _firestore.getSocietyFlats(widget.societyId);
+      if (list.isEmpty) {
+        final publicUnits = await _firestore.getPublicSocietyUnits(widget.societyId);
+        list = publicUnits.map((u) {
+          final label = (u['label'] as String?) ?? u['id'] as String;
+          return {'id': u['id'], 'flatNo': label};
+        }).toList();
+      }
+      if (!mounted) return;
+      setState(() {
+        _flats = list;
+        _flatsLoading = false;
+      });
+    } catch (e) {
+      AppLogger.e('NewVisitor: load flats failed', error: e);
+      if (mounted) setState(() => _flatsLoading = false);
+    }
   }
 
-  static const _debounceDuration = Duration(milliseconds: 500);
-  bool _flatOwnerDebounceScheduled = false;
-
-  void _lookupFlatOwnerDebounced() {
-    if (_flatOwnerDebounceScheduled) return;
-    _flatOwnerDebounceScheduled = true;
-    Future.delayed(_debounceDuration, () async {
-      _flatOwnerDebounceScheduled = false;
-      if (!mounted) return;
-      await _lookupFlatOwner();
+  void _onFlatSelected(String? flatNo) {
+    setState(() {
+      _selectedFlatNo = flatNo;
+      _flatOwnerName = null;
+      _flatOwnerPhone = null;
     });
+    if (flatNo != null && flatNo.isNotEmpty) _lookupFlatOwner();
   }
 
   Future<void> _lookupFlatOwner() async {
-    final flat = _flatNoController.text.trim();
+    final flat = _selectedFlatNo?.trim() ?? '';
     if (flat.isEmpty) {
       if (mounted) setState(() {
         _flatOwnerName = null;
@@ -172,7 +189,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         societyId: widget.societyId,
         systemRole: 'resident',
       );
-      final flatNorm = _flatNoController.text.trim().toUpperCase();
+      final flatNorm = (_selectedFlatNo?.trim() ?? '').toUpperCase();
       final matches = members.cast<Map<String, dynamic>>().where((m) {
         final mFlat = (m['flat_no'] ?? m['flatNo'] ?? '').toString().trim().toUpperCase();
         return mFlat == flatNorm;
@@ -194,10 +211,15 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         ? (_deliveryPartnerOtherController.text.trim().isEmpty ? null : _deliveryPartnerOtherController.text.trim())
         : null;
 
+    final flatNo = _selectedFlatNo?.trim() ?? '';
+    if (flatNo.isEmpty) {
+      _showError('Please select a flat / unit');
+      return;
+    }
     final result = (_visitorPhoto != null)
         ? await _visitorService.createVisitorWithPhoto(
             societyId: widget.societyId,
-            flatNo: _flatNoController.text.trim(),
+            flatNo: flatNo,
             visitorType: _selectedVisitorType,
             visitorPhone: _visitorPhoneController.text.trim(),
             photoFile: _visitorPhoto!,
@@ -209,7 +231,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
           )
         : await _visitorService.createVisitor(
             societyId: widget.societyId,
-            flatNo: _flatNoController.text.trim(),
+            flatNo: flatNo,
             visitorType: _selectedVisitorType,
             visitorPhone: _visitorPhoneController.text.trim(),
             residentPhone: residentPhone,
@@ -248,7 +270,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   void _clearForm() {
     setState(() {
       _visitorNameController.clear();
-      _flatNoController.clear();
+      _selectedFlatNo = null;
       _visitorPhoneController.clear();
       _vehicleNumberController.clear();
       _deliveryPartnerOtherController.clear();
@@ -417,12 +439,48 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             isPhone: true,
           ),
           const SizedBox(height: 18),
-          _buildFieldLabel("Flat / Unit Number"),
-          _buildTextField(
-            controller: _flatNoController,
-            hint: "e.g. B-402",
-            icon: AppIcons.flat,
-          ),
+          _buildFieldLabel("Flat / Unit"),
+          _flatsLoading
+              ? Container(
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Row(
+                    children: [
+                      SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primary)),
+                      const SizedBox(width: 12),
+                      Text("Loading units...", style: TextStyle(color: AppColors.text2, fontWeight: FontWeight.w600)),
+                    ],
+                  ),
+                )
+              : _flats.isEmpty
+                  ? Container(
+                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Text("No units configured for this society.", style: TextStyle(color: AppColors.text2, fontWeight: FontWeight.w600)),
+                    )
+                  : DropdownButtonFormField<String>(
+                      value: _selectedFlatNo,
+                      decoration: InputDecoration(
+                        prefixIcon: Icon(AppIcons.flat, color: AppColors.primary.withOpacity(0.8)),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        filled: true,
+                        fillColor: Colors.white,
+                      ),
+                      hint: const Text("Select unit / villa / flat"),
+                      items: _flats.map((f) {
+                        final flatNo = (f['flatNo'] as String?) ?? f['id'] as String;
+                        return DropdownMenuItem<String>(value: flatNo, child: Text(flatNo));
+                      }).toList(),
+                      onChanged: _onFlatSelected,
+                    ),
           const SizedBox(height: 18),
           _buildFieldLabel("Vehicle Number (optional)"),
           _buildOptionalTextField(
@@ -481,7 +539,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                 ],
               ),
             ),
-          ] else if (_flatNoController.text.trim().isNotEmpty) ...[
+          ] else if (_selectedFlatNo != null && _selectedFlatNo!.trim().isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(
               "No resident found for this flat.",

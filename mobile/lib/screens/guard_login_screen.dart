@@ -529,7 +529,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                 color: AppColors.primary,
               ),
               label: const Text(
-                "Join as Guard (Scan QR)",
+                "Join as Guard",
                 style: TextStyle(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w800,
