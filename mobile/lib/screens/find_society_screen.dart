@@ -25,11 +25,13 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
 
   String? _selectedSocietyId;
   String? _selectedUnitId;
+  /// OWNER or TENANT; null until user selects in confirm step.
+  String? _residencyType;
 
   List<Map<String, dynamic>> _societies = [];
   List<Map<String, dynamic>> _units = [];
 
-  String _searchQuery = '';
+  final TextEditingController _searchController = TextEditingController();
   bool _loadingSocieties = false;
   bool _loadingUnits = false;
   bool _submitting = false;
@@ -39,23 +41,20 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
   @override
   void initState() {
     super.initState();
-    // Initial state: wait for user to type a query.
   }
 
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _searchController.dispose();
     super.dispose();
   }
 
   void _onSearchChanged(String value) {
-    setState(() {
-      _searchQuery = value;
-    });
     _searchDebounce?.cancel();
 
     final trimmed = value.trim();
-    if (trimmed.length < 2) {
+    if (trimmed.isEmpty) {
       setState(() {
         _loadingSocieties = false;
         _societies = [];
@@ -120,6 +119,15 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
       );
       return;
     }
+    if (_residencyType == null || (_residencyType != 'OWNER' && _residencyType != 'TENANT')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select Owner or Tenant'),
+          backgroundColor: AppColors.error,
+        ),
+      );
+      return;
+    }
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
@@ -168,6 +176,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
         societyName: societyName,
         cityId: cityId,
         unitLabel: unitLabel,
+        residencyType: _residencyType!,
         name: displayName,
         phoneE164: normalizedPhone,
       );
@@ -255,30 +264,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                   _buildSocietySection(),
                   const SizedBox(height: 16),
                   _buildUnitDropdown(),
-                  const SizedBox(height: 28),
-                  SizedBox(
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: _submitting ? null : _submitJoinRequest,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      child: _submitting
-                          ? AppLoader.inline(size: 22)
-                          : const Text(
-                              'Send Join Request',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                    ),
-                  ),
+                  const SizedBox(height: 24),
+                  _buildConfirmSection(),
                 ],
               ),
             ),
@@ -289,16 +276,24 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
   }
 
   Widget _buildSocietySection() {
-    if (_loadingSocieties) {
-      return Center(child: AppLoader.inline());
-    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         TextField(
+          controller: _searchController,
           decoration: InputDecoration(
             hintText: 'Enter your society name',
             prefixIcon: const Icon(Icons.search_rounded),
+            suffixIcon: _loadingSocieties
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : null,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(14),
             ),
@@ -308,14 +303,16 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
           onChanged: _onSearchChanged,
         ),
         const SizedBox(height: 12),
-        if (_searchQuery.trim().length < 2 && _societies.isEmpty)
+        if (_searchController.text.trim().isEmpty && _societies.isEmpty)
           Text(
             'Start typing to search your society.',
             style: TextStyle(color: AppColors.text2),
           )
         else if (_societies.isEmpty)
           Text(
-            'No societies found.',
+            _loadingSocieties
+                ? 'Searching...'
+                : 'No societies found. If your society was recently added or renamed, ask an admin to use "Sync search name" in the app.',
             style: TextStyle(color: AppColors.text2),
           )
         else
@@ -358,6 +355,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                     setState(() {
                       _selectedSocietyId = id;
                       _selectedUnitId = null;
+                      _residencyType = null;
                       _units = [];
                     });
                     _loadUnits(id);
@@ -405,8 +403,183 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
           )
           .toList(),
       onChanged: (value) {
-        setState(() => _selectedUnitId = value);
+        setState(() {
+          _selectedUnitId = value;
+          _residencyType = null;
+        });
       },
+    );
+  }
+
+  /// Shown only after society and unit are selected: summary + Owner/Tenant + Send button.
+  Widget _buildConfirmSection() {
+    if (_selectedSocietyId == null || _selectedUnitId == null) {
+      return const SizedBox.shrink();
+    }
+
+    final society = _societies.firstWhere(
+          (s) => s['id'] == _selectedSocietyId,
+          orElse: () => <String, dynamic>{},
+        );
+    final unit = _units.firstWhere(
+          (u) => u['id'] == _selectedUnitId,
+          orElse: () => <String, dynamic>{},
+        );
+    final societyName = (society['name'] as String?) ?? _selectedSocietyId ?? '';
+    final unitLabel = (unit['label'] as String?) ?? _selectedUnitId ?? '';
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Confirm your details',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: AppColors.text,
+            ),
+          ),
+          const SizedBox(height: 16),
+          _buildConfirmRow(Icons.apartment_rounded, 'Society', societyName),
+          const SizedBox(height: 10),
+          _buildConfirmRow(Icons.home_rounded, 'Unit', unitLabel),
+          const SizedBox(height: 20),
+          Text(
+            'Are you the owner or tenant of this unit?',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.text,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildResidencyChip(
+                  label: 'Owner',
+                  value: 'OWNER',
+                  icon: Icons.person_rounded,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildResidencyChip(
+                  label: 'Tenant',
+                  value: 'TENANT',
+                  icon: Icons.badge_rounded,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            height: 52,
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: (_residencyType != null && !_submitting)
+                  ? _submitJoinRequest
+                  : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+              child: _submitting
+                  ? AppLoader.inline(size: 22)
+                  : const Text(
+                      'Send Join Request',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConfirmRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: AppColors.primary),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.text2,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 15,
+                  color: AppColors.text,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildResidencyChip({
+    required String label,
+    required String value,
+    required IconData icon,
+  }) {
+    final selected = _residencyType == value;
+    return Material(
+      color: selected ? AppColors.primary.withOpacity(0.12) : Colors.grey.shade100,
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        onTap: () => setState(() => _residencyType = value),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: selected ? AppColors.primary : AppColors.text2,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: selected ? AppColors.primary : AppColors.text2,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

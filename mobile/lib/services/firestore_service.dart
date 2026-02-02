@@ -236,7 +236,7 @@ class FirestoreService {
   Future<List<Map<String, dynamic>>> searchPublicSocietiesByPrefix(
       String query) async {
     final trimmed = query.trim().toLowerCase();
-    if (trimmed.length < 2) return [];
+    if (trimmed.isEmpty) return [];
     try {
       final snapshot = await _publicSocietiesRef
           .where('active', isEqualTo: true)
@@ -351,11 +351,13 @@ class FirestoreService {
 
   /// Create or update a resident join request for the current user under
   /// public_societies/{societyId}/join_requests/{uid}.
+  /// [residencyType] should be 'OWNER' or 'TENANT'.
   Future<void> createResidentJoinRequest({
     required String societyId,
     required String societyName,
     required String cityId,
     required String unitLabel,
+    required String residencyType,
     required String name,
     required String phoneE164,
   }) async {
@@ -376,6 +378,7 @@ class FirestoreService {
         'societyName': societyName,
         'cityId': cityId,
         'unitLabel': unitLabel,
+        'residencyType': residencyType,
         'requestedRole': 'resident',
         'name': name,
         'phone': phoneE164,
