@@ -460,124 +460,141 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
           MediaQuery.of(context).viewInsets.bottom + 24,
         ),
         children: [
-          const SentinelIllustration(kind: 'otp'),
-          const SizedBox(height: 18),
-          Text(
-            'Verify your phone',
-            style: theme.textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            "We've sent a one-time code to your number.",
-            style: (theme.textTheme.bodySmall ?? theme.textTheme.bodyMedium)?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
-            ) ?? const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.text2,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '+91 $maskedPhone',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-            ) ?? const TextStyle(
-              fontSize: 14.5,
-              fontWeight: FontWeight.w600,
-              color: AppColors.text2,
-            ),
-          ),
-          const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.primary.withOpacity(0.06),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: theme.dividerColor),
+              border: Border.all(color: theme.colorScheme.primary.withOpacity(0.10)),
             ),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                const SentinelIllustration(kind: 'otp'),
+                const SizedBox(height: 18),
                 Text(
-                  'Enter code',
-                  style: theme.textTheme.titleMedium,
+                  'Verify your phone',
+                  style: (theme.textTheme.titleLarge ?? const TextStyle()).copyWith(
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  "We've sent a one-time code to your number.",
+                  style: (theme.textTheme.bodySmall ?? theme.textTheme.bodyMedium)?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  ) ?? TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  '+91 $maskedPhone',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ) ?? TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: theme.dividerColor),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Enter code',
+                        style: theme.textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _otpController,
+                        keyboardType: TextInputType.number,
+                        maxLength: 6,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          letterSpacing: 10,
+                          fontWeight: FontWeight.w900,
+                        ),
+                        decoration: InputDecoration(
+                          counterText: '',
+                          hintText: '••••••',
+                          filled: true,
+                          fillColor: theme.colorScheme.surface,
+                          contentPadding:
+                              const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: theme.dividerColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: theme.dividerColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.4),
+                          ),
+                        ),
+                        onChanged: (_) => setState(() => _errorMessage = null),
+                      ),
+                    ],
+                  ),
+                ),
+                if (_errorMessage != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    _errorMessage!,
+                    style: TextStyle(
+                      color: theme.colorScheme.error,
+                      fontSize: 12.8,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                SizedBox(
+                  height: 52,
+                  child: FilledButton(
+                    onPressed: _isLoading ? null : _verifyOtp,
+                    child: _isLoading
+                        ? const SizedBox(
+                            height: 22,
+                            width: 22,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Verify & Continue',
+                            style: TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                  ),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: _otpController,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: 24,
-                    letterSpacing: 10,
-                    fontWeight: FontWeight.w900,
-                  ),
-                  decoration: InputDecoration(
-                    counterText: '',
-                    hintText: '••••••',
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: theme.dividerColor),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: theme.dividerColor),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(14),
-                      borderSide: BorderSide(color: theme.colorScheme.primary, width: 1.4),
+                Center(
+                  child: TextButton(
+                    onPressed: _isLoading ? null : _sendOtp,
+                    child: const Text(
+                      'Resend OTP',
+                      style: TextStyle(fontWeight: FontWeight.w800),
                     ),
                   ),
-                  onChanged: (_) => setState(() => _errorMessage = null),
                 ),
               ],
-            ),
-          ),
-          if (_errorMessage != null) ...[
-            const SizedBox(height: 10),
-            Text(
-              _errorMessage!,
-              style: TextStyle(
-                color: theme.colorScheme.error,
-                fontSize: 12.8,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ],
-          const SizedBox(height: 16),
-          SizedBox(
-            height: 52,
-            child: FilledButton(
-              onPressed: _isLoading ? null : _verifyOtp,
-              child: _isLoading
-                  ? const SizedBox(
-                      height: 22,
-                      width: 22,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Text(
-                      'Verify & Continue',
-                      style: TextStyle(fontWeight: FontWeight.w900),
-                    ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          Center(
-            child: TextButton(
-              onPressed: _isLoading ? null : _sendOtp,
-              child: const Text(
-                'Resend OTP',
-                style: TextStyle(fontWeight: FontWeight.w800),
-              ),
             ),
           ),
         ],
