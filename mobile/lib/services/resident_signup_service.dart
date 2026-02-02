@@ -40,6 +40,8 @@ class ResidentSignupService {
     required String password,
   }) async {
     try {
+      final currentUser = _auth.currentUser;
+
       final normalizedEmail = email.trim().toLowerCase();
       final normalizedPhone = phone.trim();
       final normalizedFlatNo = flatNo.trim().toUpperCase();
@@ -57,11 +59,22 @@ class ResidentSignupService {
         ));
       }
 
-      if (normalizedEmail.isEmpty || !normalizedEmail.contains("@")) {
+      // Email is required only when creating a NEW auth user.
+      // For already-authenticated users (e.g. phone OTP), email is optional.
+      String? effectiveEmail;
+      if (normalizedEmail.isNotEmpty && normalizedEmail.contains("@")) {
+        effectiveEmail = normalizedEmail;
+      } else if (currentUser != null &&
+          currentUser.email != null &&
+          currentUser.email!.contains("@")) {
+        effectiveEmail = currentUser.email!.trim().toLowerCase();
+      } else if (currentUser == null) {
         return Result.failure(AppError(
           userMessage: "Please enter a valid email.",
           technicalMessage: "Invalid email: $email",
         ));
+      } else {
+        effectiveEmail = null; // phone-only signup (email truly optional)
       }
 
       if (normalizedFlatNo.isEmpty) {
@@ -102,32 +115,39 @@ class ResidentSignupService {
         "flatNo": normalizedFlatNo,
       });
 
-      // 2) Create Firebase Auth user FIRST (needed for authenticated queries)
-      UserCredential userCredential;
-      try {
-        userCredential = await _auth.createUserWithEmailAndPassword(
-          email: normalizedEmail,
-          password: password,
-        );
-      } catch (e) {
-        if (e.toString().contains('email-already-in-use')) {
+      // 2) Resolve UID:
+      //    - If user is already authenticated (e.g. Phone OTP), reuse current UID.
+      //    - Otherwise, create Firebase Auth user with email/password (legacy path).
+      UserCredential? userCredential;
+      String uid;
+      if (currentUser != null) {
+        uid = currentUser.uid;
+      } else {
+        try {
+          userCredential = await _auth.createUserWithEmailAndPassword(
+            email: normalizedEmail,
+            password: password,
+          );
+        } catch (e) {
+          if (e.toString().contains('email-already-in-use')) {
+            return Result.failure(AppError(
+              userMessage: "An account with this email already exists. Please login instead.",
+              technicalMessage: "Email already in use: $normalizedEmail",
+            ));
+          }
           return Result.failure(AppError(
-            userMessage: "An account with this email already exists. Please login instead.",
-            technicalMessage: "Email already in use: $normalizedEmail",
+            userMessage: "Failed to create account. Please try again.",
+            technicalMessage: e.toString(),
           ));
         }
-        return Result.failure(AppError(
-          userMessage: "Failed to create account. Please try again.",
-          technicalMessage: e.toString(),
-        ));
-      }
 
-      final uid = userCredential.user?.uid;
-      if (uid == null) {
-        return Result.failure(AppError(
-          userMessage: "Failed to create account",
-          technicalMessage: "UID is null after auth creation",
-        ));
+        uid = userCredential.user?.uid ?? '';
+        if (uid.isEmpty) {
+          return Result.failure(AppError(
+            userMessage: "Failed to create account",
+            technicalMessage: "UID is null after auth creation",
+          ));
+        }
       }
 
       // 3) Check for duplicate phone number (ACTIVE residents only)
@@ -145,12 +165,14 @@ class ResidentSignupService {
               "phone": normalizedPhone,
               "existingUid": duplicateUid,
             });
-            // Delete the just-created auth account since phone is duplicate
-            try {
-              await userCredential.user?.delete();
-              AppLogger.i("Deleted auth account due to duplicate phone");
-            } catch (deleteError) {
-              AppLogger.e("Failed to delete auth account after duplicate phone", error: deleteError);
+            // Delete the just-created auth account since phone is duplicate (legacy path only)
+            if (currentUser == null && userCredential != null) {
+              try {
+                await userCredential.user?.delete();
+                AppLogger.i("Deleted auth account due to duplicate phone");
+              } catch (deleteError) {
+                AppLogger.e("Failed to delete auth account after duplicate phone", error: deleteError);
+              }
             }
             return Result.failure(AppError(
               userMessage: "This phone number is already registered in this society. Please use a different phone number or contact admin.",
@@ -176,7 +198,7 @@ class ResidentSignupService {
         'systemRole': 'resident', // lowercase
         'active': false,          // pending
         'name': name.trim(),
-        'email': normalizedEmail,
+        'email': effectiveEmail,
         'phone': normalizedPhone.isEmpty ? null : normalizedPhone,
         'flatNo': normalizedFlatNo,
         'createdAt': FieldValue.serverTimestamp(),
@@ -191,7 +213,7 @@ class ResidentSignupService {
         'systemRole': 'resident',
         'active': false,
         'name': name.trim(),
-        'email': normalizedEmail,
+        'email': effectiveEmail,
         'phone': normalizedPhone.isEmpty ? null : normalizedPhone,
         'flatNo': normalizedFlatNo,
         'updatedAt': FieldValue.serverTimestamp(),

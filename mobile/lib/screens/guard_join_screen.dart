@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/app_logger.dart';
 import '../core/storage.dart';
@@ -105,27 +106,38 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
     });
 
     try {
-      AppLogger.i("GuardJoinScreen creating guard account", data: {
+      AppLogger.i("GuardJoinScreen creating guard membership", data: {
         'societyId': societyId,
         'username': username,
       });
 
-      final cred = await _authService.createGuardAccountWithUsername(
-        username: username,
-        pin: pin,
-      );
-      final uid = cred.user?.uid;
-      if (uid == null) {
-        throw Exception("Guard account creation failed (uid null)");
-      }
-
-      // Derive email/phone from username
+      // If user is already authenticated (e.g. via Phone OTP), reuse current UID
+      // and skip creating a new Firebase Auth user.
+      final currentUser = FirebaseAuth.instance.currentUser;
       String? email;
       String? phone;
-      if (username.contains('@')) {
-        email = username.toLowerCase();
+      String uid;
+
+      if (currentUser != null) {
+        uid = currentUser.uid;
+        email = currentUser.email;
+        phone = currentUser.phoneNumber;
       } else {
-        phone = username;
+        final cred = await _authService.createGuardAccountWithUsername(
+          username: username,
+          pin: pin,
+        );
+        uid = cred.user?.uid ?? '';
+        if (uid.isEmpty) {
+          throw Exception("Guard account creation failed (uid null)");
+        }
+
+        // Derive email/phone from username (legacy email/PIN flow)
+        if (username.contains('@')) {
+          email = username.toLowerCase();
+        } else {
+          phone = username;
+        }
       }
 
       // Upload selfie if provided
@@ -152,9 +164,24 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
         email: email,
         flatNo: null,
         photoUrl: photoUrl,
-        shiftTimings: _shiftController.text.trim().isEmpty ? null : _shiftController.text.trim(),
+        shiftTimings:
+            _shiftController.text.trim().isEmpty ? null : _shiftController.text.trim(),
         active: true,
       );
+
+      // Ensure phone is registered in root pointer + unique_phones for mobile-first auth.
+      if (phone != null && phone.isNotEmpty) {
+        final normalized = FirebaseAuthService.normalizePhoneForIndia(phone);
+        try {
+          await _firestore.setMemberPhone(
+            societyId: societyId,
+            uid: uid,
+            normalizedE164: normalized,
+          );
+        } catch (_) {
+          // non-fatal
+        }
+      }
 
       await Storage.saveFirebaseSession(
         uid: uid,

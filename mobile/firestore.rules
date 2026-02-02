@@ -174,6 +174,71 @@ service cloud.firestore {
       }
 
       // ------------------------
+      // PUBLIC SOCIETY DIRECTORY (read-only to signed-in users)
+      // public_societies/{societyId}
+      // public_societies/{societyId}/units/{unitId}
+      // public_societies/{societyId}/join_requests/{uid}
+      // ------------------------
+      match /public_societies/{pubSocietyId} {
+        // Any signed-in user can read active public society metadata
+        allow read: if signedIn()
+          && resource.data.active == true;
+
+        // Admins of this society may update nameLower only (for search after name change).
+        allow update: if signedIn()
+          && isAdmin(pubSocietyId)
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nameLower'])
+          && request.resource.data.nameLower is string;
+        // Create/delete managed by backend / admin tools only
+        allow create, delete: if false;
+
+        // Units under a public society
+        match /units/{unitId} {
+          // Any signed-in user can read active units
+          allow read: if signedIn()
+            && resource.data.active == true;
+          // No direct client writes; populated via admin tools / backend
+          allow write: if false;
+        }
+
+        // Resident join requests under a public society
+        match /join_requests/{uid} {
+          function isSelf() {
+            return signedIn() && request.auth.uid == uid;
+          }
+
+          // Helper: is caller admin/super_admin of this society?
+          function isSocietyAdmin() {
+            return isAdmin(pubSocietyId);
+          }
+
+          // Create: signed-in user can create their own join request at docId == auth.uid
+          allow create: if isSelf()
+            && request.resource.data.uid == request.auth.uid
+            && request.resource.data.status == "PENDING";
+
+          // Read single join_request: only self or admins
+          allow get: if isSelf() || isSocietyAdmin();
+
+          // List for admins only (e.g. admin approvals UI)
+          allow list: if isSocietyAdmin();
+
+          // Update:
+          // - Self can update limited fields while status is still PENDING
+          // - Admins can update any fields (including status to APPROVED/REJECTED)
+          allow update: if isSelf()
+              && resource.data.status == "PENDING"
+              && request.resource.data.diff(resource.data).changedKeys().hasOnly(
+                ["name", "unitLabel", "residencyType"]
+              )
+            || isSocietyAdmin();
+
+          // Delete: only admins, for cleanup
+          allow delete: if isSocietyAdmin();
+        }
+      }
+
+      // ------------------------
       // Invites (email-based onboarding)
       // societies/{societyId}/invites/{inviteKey}
       // ------------------------

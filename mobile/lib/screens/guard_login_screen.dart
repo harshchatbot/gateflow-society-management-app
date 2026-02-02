@@ -156,6 +156,18 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
       if (!mounted) return;
       setState(() => _isLoading = false);
 
+      // Non-blocking: suggest adding phone for easier login next time (email-only users).
+      final memberPhone = (membership['phone'] ?? '').toString().trim();
+      if (memberPhone.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Add your phone in Profile for easier login next time.'),
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

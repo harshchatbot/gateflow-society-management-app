@@ -1,9 +1,13 @@
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:crypto/crypto.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../core/app_logger.dart';
 import 'package:flutter/foundation.dart';
+
+import '../core/app_logger.dart';
+import 'firebase_auth_service.dart';
 
 
 
@@ -63,6 +67,66 @@ class FirestoreService {
 
   /// Guard join codes (6-digit, 24h). Document ID = code.
   CollectionReference get _guardJoinCodesRef => _firestore.collection('guard_join_codes');
+
+  /// unique_phones/{phoneHash} - enforces one active account per phone.
+  /// Doc: { uid, updatedAt }. Do not store plaintext phone.
+  static const String _uniquePhonesCollection = 'unique_phones';
+
+  /// Stable hash for phone (E.164) to use as doc id. No plaintext in Firestore.
+  static String _phoneHash(String normalizedE164) {
+    final bytes = utf8.encode(normalizedE164.trim());
+    return sha256.convert(bytes).toString();
+  }
+
+  /// Returns true if [normalizedE164] is available (no other ACTIVE member has it).
+  /// Same uid or deactivated member allows reuse.
+  Future<bool> isPhoneAvailableForUser({
+    required String normalizedE164,
+    required String forUid,
+  }) async {
+    final hash = _phoneHash(normalizedE164);
+    try {
+      final doc = await _firestore.collection(_uniquePhonesCollection).doc(hash).get();
+      if (!doc.exists) return true;
+      final data = doc.data() ?? {};
+      final existingUid = data['uid']?.toString();
+      if (existingUid == null || existingUid == forUid) return true;
+      // Another uid: check if that member is active
+      final pointer = await _firestore.collection('members').doc(existingUid).get();
+      if (!pointer.exists) return true;
+      final pointerData = pointer.data() ?? {};
+      final active = pointerData['active'];
+      if (active == true) return false;
+      return true;
+    } catch (e, st) {
+      AppLogger.e('Error checking phone availability', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
+  /// Updates member phone in society doc, root pointer, and unique_phones.
+  /// Call after linking phone to Firebase user (login or profile link).
+  Future<void> setMemberPhone({
+    required String societyId,
+    required String uid,
+    required String normalizedE164,
+  }) async {
+    final hash = _phoneHash(normalizedE164);
+    try {
+      final batch = _firestore.batch();
+      final memberRef = _memberRef(societyId, uid);
+      batch.set(memberRef, {'phone': normalizedE164, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+      final rootRef = _firestore.collection('members').doc(uid);
+      batch.set(rootRef, {'phone': normalizedE164, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+      final uniqueRef = _firestore.collection(_uniquePhonesCollection).doc(hash);
+      batch.set(uniqueRef, {'uid': uid, 'updatedAt': FieldValue.serverTimestamp()});
+      await batch.commit();
+      AppLogger.i('Member phone set', data: {'uid': uid, 'societyId': societyId});
+    } catch (e, st) {
+      AppLogger.e('Error setting member phone', error: e, stackTrace: st);
+      rethrow;
+    }
+  }
 
   // ============================================
   // GUARD JOIN CODE (6-digit, replaces QR)
@@ -156,6 +220,365 @@ class FirestoreService {
       return societyData;
     } catch (e, stackTrace) {
       AppLogger.e('Error creating society', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  // ============================================
+  // PUBLIC SOCIETY DIRECTORY (Resident onboarding)
+  // ============================================
+
+  CollectionReference get _publicSocietiesRef =>
+      _firestore.collection('public_societies');
+
+  /// Prefix search for active public societies by nameLower.
+  /// Scales with index: where(active==true) + orderBy(nameLower) + startAt/endAt.
+  Future<List<Map<String, dynamic>>> searchPublicSocietiesByPrefix(
+      String query) async {
+    final trimmed = query.trim().toLowerCase();
+    if (trimmed.length < 2) return [];
+    try {
+      final snapshot = await _publicSocietiesRef
+          .where('active', isEqualTo: true)
+          .orderBy('nameLower')
+          .startAt([trimmed])
+          .endAt(['$trimmed\uf8ff'])
+          .limit(25)
+          .get();
+
+      final societies = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        return {
+          'id': doc.id,
+          'name': (data['name'] as String?) ?? doc.id,
+          'cityName': data['cityName'],
+          'stateName': data['stateName'],
+          'active': data['active'] ?? true,
+        };
+      }).toList();
+
+      AppLogger.i('Public societies prefix search',
+          data: {'query': trimmed, 'count': societies.length});
+      return societies;
+    } on FirebaseException catch (e, st) {
+      if (e.code == 'failed-precondition') {
+        AppLogger.e(
+          'Missing index for searchPublicSocietiesByPrefix. '
+          'Expected composite index on {active ASC, nameLower ASC}.',
+          error: e,
+          stackTrace: st,
+          data: {'query': trimmed},
+        );
+      } else {
+        AppLogger.e('Error searching public societies',
+            error: e, stackTrace: st);
+      }
+      return [];
+    } catch (e, st) {
+      AppLogger.e('Error searching public societies (unknown)',
+          error: e, stackTrace: st);
+      return [];
+    }
+  }
+
+  /// Updates nameLower on public_societies/{societyId} from current name.
+  /// Call this after changing a society name so resident search by prefix works.
+  /// Requires: caller must be admin of that society (enforced by rules).
+  Future<void> updatePublicSocietyNameLower(String societyId) async {
+    final docRef = _publicSocietiesRef.doc(societyId);
+    final snapshot = await docRef.get();
+    if (!snapshot.exists) {
+      throw Exception('Public society not found: $societyId');
+    }
+    final data = snapshot.data() as Map<String, dynamic>? ?? {};
+    final name = (data['name'] as String?)?.trim() ?? '';
+    if (name.isEmpty) {
+      throw Exception('Public society has no name to derive nameLower');
+    }
+    final nameLower = name.toLowerCase();
+    await docRef.update({'nameLower': nameLower});
+    AppLogger.i('Public society nameLower updated',
+        data: {'societyId': societyId, 'nameLower': nameLower});
+  }
+
+  /// List active units (villas/flats) for a public society.
+  /// Collection: public_societies/{societyId}/units where active == true.
+  Future<List<Map<String, dynamic>>> getPublicSocietyUnits(
+      String societyId) async {
+    try {
+      final snapshot = await _publicSocietiesRef
+          .doc(societyId)
+          .collection('units')
+          .where('active', isEqualTo: true)
+          .orderBy('sortKey')
+          .get();
+
+      final units = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        return {
+          'id': doc.id,
+          'label': (data['label'] as String?) ?? doc.id,
+          'type': data['type'] ?? 'FLAT',
+          'active': data['active'] ?? true,
+          'sortKey': data['sortKey'],
+        };
+      }).toList();
+
+      AppLogger.i('Public units fetched',
+          data: {'societyId': societyId, 'count': units.length});
+      return units;
+    } on FirebaseException catch (e, st) {
+      if (e.code == 'failed-precondition') {
+        AppLogger.e(
+          'Missing index for getPublicSocietyUnits. '
+          'Expected composite index on {active ASC, sortKey ASC}. '
+          'If querying by type as well, also create {active ASC, type ASC, sortKey ASC}.',
+          error: e,
+          stackTrace: st,
+          data: {'societyId': societyId},
+        );
+      } else {
+        AppLogger.e('Error getting public society units',
+            error: e, stackTrace: st);
+      }
+      return [];
+    } catch (e, st) {
+      AppLogger.e('Error getting public society units (unknown)',
+          error: e, stackTrace: st);
+      return [];
+    }
+  }
+
+  /// Create or update a resident join request for the current user under
+  /// public_societies/{societyId}/join_requests/{uid}.
+  Future<void> createResidentJoinRequest({
+    required String societyId,
+    required String societyName,
+    required String cityId,
+    required String unitLabel,
+    required String name,
+    required String phoneE164,
+  }) async {
+    final uid = currentUid;
+    if (uid == null) {
+      throw StateError('createResidentJoinRequest: currentUid is null');
+    }
+
+    try {
+      final ref = _publicSocietiesRef
+          .doc(societyId)
+          .collection('join_requests')
+          .doc(uid);
+
+      await ref.set({
+        'uid': uid,
+        'societyId': societyId,
+        'societyName': societyName,
+        'cityId': cityId,
+        'unitLabel': unitLabel,
+        'requestedRole': 'resident',
+        'name': name,
+        'phone': phoneE164,
+        'status': 'PENDING',
+        'createdAt': FieldValue.serverTimestamp(),
+        'handledBy': null,
+        'handledAt': null,
+      }, SetOptions(merge: true));
+
+      AppLogger.i('Resident join request created', data: {
+        'uid': uid,
+        'societyId': societyId,
+        'unitLabel': unitLabel,
+      });
+    } catch (e, st) {
+      AppLogger.e('Error creating resident join request',
+          error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
+  /// Get a resident join request for the current user for a known societyId.
+  Future<Map<String, dynamic>?> getResidentJoinRequest({
+    required String societyId,
+  }) async {
+    final uid = currentUid;
+    if (uid == null) return null;
+    try {
+      final doc = await _publicSocietiesRef
+          .doc(societyId)
+          .collection('join_requests')
+          .doc(uid)
+          .get();
+      if (!doc.exists) return null;
+      final data = doc.data() as Map<String, dynamic>? ?? {};
+      data['id'] = doc.id;
+      return data;
+    } catch (e, st) {
+      AppLogger.e('Error getting resident join request',
+          error: e, stackTrace: st);
+      return null;
+    }
+  }
+
+  /// For admin UI: list pending resident join requests for a society.
+  Future<List<Map<String, dynamic>>> getResidentJoinRequestsForAdmin(
+      String societyId) async {
+    try {
+      final snapshot = await _publicSocietiesRef
+          .doc(societyId)
+          .collection('join_requests')
+          .where('requestedRole', isEqualTo: 'resident')
+          .where('status', isEqualTo: 'PENDING')
+          .orderBy('createdAt')
+          .get();
+
+      final list = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        return {
+          'uid': data['uid'] ?? doc.id,
+          'name': data['name'] ?? '',
+          'phone': data['phone'] ?? '',
+          'unitLabel': data['unitLabel'] ?? '',
+          'createdAt': data['createdAt'],
+        };
+      }).toList();
+
+      AppLogger.i('Resident join requests loaded',
+          data: {'societyId': societyId, 'count': list.length});
+      return list;
+    } on FirebaseException catch (e, st) {
+      if (e.code == 'failed-precondition') {
+        AppLogger.e(
+          'Missing index for getResidentJoinRequestsForAdmin. '
+          'Expected composite index on {requestedRole ASC, status ASC, createdAt DESC}.',
+          error: e,
+          stackTrace: st,
+          data: {'societyId': societyId},
+        );
+      } else {
+        AppLogger.e('Error getting resident join requests',
+            error: e, stackTrace: st);
+      }
+      return [];
+    } catch (e, st) {
+      AppLogger.e(
+        'Error getting resident join requests (unknown)',
+        error: e,
+        stackTrace: st,
+      );
+      return [];
+    }
+  }
+
+  /// Approve resident join request: create active resident member and pointer,
+  /// update join_request status, and ensure unique_phones mapping.
+  Future<void> approveResidentJoinRequest({
+    required String societyId,
+    required String uid,
+    required String unitLabel,
+    required String name,
+    required String phoneE164,
+    required String handledByUid,
+  }) async {
+    final normalizedPhone =
+        FirebaseAuthService.normalizePhoneForIndia(phoneE164);
+
+    // Enforce unique phone before committing
+    final available = await isPhoneAvailableForUser(
+      normalizedE164: normalizedPhone,
+      forUid: uid,
+    );
+    if (!available) {
+      throw StateError(
+        'This mobile number is already linked to another active account.',
+      );
+    }
+
+    try {
+      final batch = _firestore.batch();
+
+      final memberRef =
+          _societyRef(societyId).collection('members').doc(uid);
+      final pointerRef = _firestore.collection('members').doc(uid);
+      final joinRef = _publicSocietiesRef
+          .doc(societyId)
+          .collection('join_requests')
+          .doc(uid);
+
+      final now = FieldValue.serverTimestamp();
+
+      batch.set(memberRef, {
+        'uid': uid,
+        'societyId': societyId,
+        'systemRole': 'resident',
+        'active': true,
+        'name': name,
+        'phone': normalizedPhone,
+        'flatNo': unitLabel,
+        'updatedAt': now,
+        'createdAt': now,
+      }, SetOptions(merge: true));
+
+      batch.set(pointerRef, {
+        'uid': uid,
+        'societyId': societyId,
+        'systemRole': 'resident',
+        'active': true,
+        'name': name,
+        'phone': normalizedPhone,
+        'flatNo': unitLabel,
+        'updatedAt': now,
+        'createdAt': now,
+      }, SetOptions(merge: true));
+
+      batch.set(joinRef, {
+        'status': 'APPROVED',
+        'handledBy': handledByUid,
+        'handledAt': now,
+      }, SetOptions(merge: true));
+
+      await batch.commit();
+
+      // Ensure unique_phones + normalized phone everywhere.
+      await setMemberPhone(
+        societyId: societyId,
+        uid: uid,
+        normalizedE164: normalizedPhone,
+      );
+
+      AppLogger.i('Resident join request approved', data: {
+        'uid': uid,
+        'societyId': societyId,
+        'unitLabel': unitLabel,
+      });
+    } catch (e, st) {
+      AppLogger.e('Error approving resident join request',
+          error: e, stackTrace: st);
+      rethrow;
+    }
+  }
+
+  /// Reject resident join request: update status only.
+  Future<void> rejectResidentJoinRequest({
+    required String societyId,
+    required String uid,
+    required String handledByUid,
+  }) async {
+    try {
+      final ref = _publicSocietiesRef
+          .doc(societyId)
+          .collection('join_requests')
+          .doc(uid);
+      await ref.set({
+        'status': 'REJECTED',
+        'handledBy': handledByUid,
+        'handledAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      AppLogger.i('Resident join request rejected',
+          data: {'uid': uid, 'societyId': societyId});
+    } catch (e, st) {
+      AppLogger.e('Error rejecting resident join request',
+          error: e, stackTrace: st);
       rethrow;
     }
   }
@@ -258,6 +681,8 @@ class FirestoreService {
         'systemRole': systemRole,
         'societyRole': societyRole,
         'active': active,
+        if (phone != null) 'phone': phone,
+        if (email != null) 'email': email,
         'updatedAt': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));

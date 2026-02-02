@@ -4,8 +4,10 @@ import '../ui/app_icons.dart';
 import '../ui/app_loader.dart';
 import 'resident_login_screen.dart';
 import 'resident_shell_screen.dart';
+import 'find_society_screen.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
+import '../core/storage.dart';
 
 /// Resident Pending Approval Screen
 /// 
@@ -25,6 +27,7 @@ class ResidentPendingApprovalScreen extends StatefulWidget {
 class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalScreen> {
   final FirestoreService _firestore = FirestoreService();
   bool _isChecking = false;
+  bool _canFindSocietyAgain = false;
 
   Future<void> _checkApprovalStatus() async {
     setState(() => _isChecking = true);
@@ -45,6 +48,9 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
           final flatNo = (membership['flatNo'] as String?)?.trim() ?? '';
           
           if (societyId.isNotEmpty && uid.isNotEmpty) {
+            // Clear any stored pending join society since we're active now.
+            await Storage.clearResidentJoinSocietyId();
+
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(
@@ -58,6 +64,85 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
             );
             return;
           }
+        }
+      }
+
+      // No active membership yet: check join request status if we know the societyId.
+      final pendingSocietyId = await Storage.getResidentJoinSocietyId();
+      if (pendingSocietyId != null) {
+        final jr = await _firestore.getResidentJoinRequest(
+          societyId: pendingSocietyId,
+        );
+        if (jr != null) {
+          final status = (jr['status'] as String?) ?? 'PENDING';
+          if (status == 'APPROVED') {
+            // Try once more to see if membership is active now.
+            final refreshed = await _firestore.getCurrentUserMembership();
+            if (refreshed != null && refreshed['active'] == true) {
+              if (!mounted) return;
+              final societyId = (refreshed['societyId'] as String?) ?? '';
+              final name = (refreshed['name'] as String?) ?? 'Resident';
+              final uid = (refreshed['uid'] as String?) ?? '';
+              final flatNo =
+                  (refreshed['flatNo'] as String?)?.trim() ?? '';
+
+              if (societyId.isNotEmpty && uid.isNotEmpty) {
+                await Storage.clearResidentJoinSocietyId();
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => ResidentShellScreen(
+                      residentId: uid,
+                      residentName: name,
+                      societyId: societyId,
+                      flatNo: flatNo,
+                    ),
+                  ),
+                );
+                return;
+              }
+            }
+
+            if (!mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  "Your request is approved. Finalizing access… please try again in a few seconds.",
+                ),
+                backgroundColor: AppColors.success,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return;
+          }
+          if (status == 'REJECTED') {
+            if (!mounted) return;
+            setState(() {
+              _canFindSocietyAgain = true;
+            });
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                  "Your join request was rejected. You can try finding your society again.",
+                ),
+                backgroundColor: AppColors.error,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            return;
+          }
+          // PENDING
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                "Your join request is pending approval from the admin.",
+              ),
+              backgroundColor: AppColors.warning,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          return;
         }
       }
       
@@ -261,7 +346,41 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 12),
+                    if (_canFindSocietyAgain)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 52,
+                        child: OutlinedButton(
+                          onPressed: () async {
+                            await Storage.clearResidentJoinSocietyId();
+                            if (!context.mounted) return;
+                            Navigator.of(context).pushReplacement(
+                              MaterialPageRoute(
+                                builder: (_) => const FindSocietyScreen(),
+                              ),
+                            );
+                          },
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.primary,
+                            side: BorderSide(
+                              color: AppColors.primary,
+                              width: 1.6,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text(
+                            "FIND SOCIETY AGAIN",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                    if (_canFindSocietyAgain) const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       height: 56,

@@ -1,14 +1,35 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:crypto/crypto.dart';
+import 'dart:async';
 import 'dart:convert';
+
+import 'package:crypto/crypto.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../core/app_logger.dart';
 
+/// Result of phone verification code sent (no OTP stored; used only to complete sign-in).
+class PhoneVerificationResult {
+  final String verificationId;
+  final int? resendToken;
+
+  const PhoneVerificationResult({required this.verificationId, this.resendToken});
+}
+
 /// FirebaseAuthService - Wrapper for Firebase Authentication
-/// 
-/// Handles email/password authentication with deterministic email aliases
-/// for guards and residents to preserve PIN-based UX
+///
+/// Handles:
+/// - Phone OTP as PRIMARY login (mobile-first).
+/// - Email/password as OPTIONAL login; deterministic email aliases for guards/residents.
 class FirebaseAuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+
+  /// Normalize phone to E.164 (India +91). Digits only; if 10 digits prepend +91.
+  /// Do not log this value in plaintext.
+  static String normalizePhoneForIndia(String input) {
+    final digits = input.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.length == 10) return '+91$digits';
+    if (digits.length == 12 && digits.startsWith('91')) return '+$digits';
+    return digits.isEmpty ? input : '+$digits';
+  }
 
   /// Get current user
   User? get currentUser => _auth.currentUser;
@@ -28,6 +49,90 @@ class FirebaseAuthService {
       AppLogger.e('Error signing out', error: e, stackTrace: stackTrace);
       rethrow;
     }
+  }
+
+  // ========== PHONE OTP (PRIMARY LOGIN) ==========
+  // Firebase built-in only; no OTPs stored. Session persistence respected by Firebase.
+
+  /// Sends OTP to [phoneNumber]. Use [normalizePhoneForIndia] for India.
+  /// Returns [PhoneVerificationResult] when code is sent; complete sign-in with [signInWithPhoneCredential].
+  Future<PhoneVerificationResult> verifyPhoneNumber({
+    required String phoneNumber,
+    int? resendToken,
+  }) async {
+    final completer = Completer<PhoneVerificationResult>();
+    await _auth.verifyPhoneNumber(
+      phoneNumber: phoneNumber,
+      verificationCompleted: (PhoneAuthCredential credential) {
+        if (!completer.isCompleted) {
+          completer.completeError(
+            StateError('verificationCompleted called; use signInWithCredential(credential)'),
+          );
+        }
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        if (!completer.isCompleted) completer.completeError(e);
+      },
+      codeSent: (String verificationId, [int? newResendToken]) {
+        if (!completer.isCompleted) {
+          completer.complete(PhoneVerificationResult(
+            verificationId: verificationId,
+            resendToken: newResendToken,
+          ));
+        }
+      },
+      codeAutoRetrievalTimeout: (String _) {},
+      timeout: const Duration(seconds: 120),
+      forceResendingToken: resendToken,
+    );
+    return completer.future;
+  }
+
+  /// Sign in with phone OTP. Call after [verifyPhoneNumber] code is sent.
+  Future<UserCredential> signInWithPhoneCredential({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    final credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+    final cred = await _auth.signInWithCredential(credential);
+    AppLogger.i('Phone sign-in success', data: {'uid': cred.user?.uid});
+    return cred;
+  }
+
+  /// Link phone credential to current user (e.g. existing email user adding phone).
+  /// Requires currentUser != null.
+  Future<UserCredential> linkWithPhoneCredential({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('No current user to link phone');
+    final credential = PhoneAuthProvider.credential(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+    final cred = await user.linkWithCredential(credential);
+    AppLogger.i('Phone linked to user', data: {'uid': cred.user?.uid});
+    return cred;
+  }
+
+  /// Link email/password to current user (optional email in profile).
+  Future<UserCredential> linkWithEmailCredential({
+    required String email,
+    required String password,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null) throw StateError('No current user to link email');
+    final credential = EmailAuthProvider.credential(
+      email: email.trim().toLowerCase(),
+      password: password,
+    );
+    final cred = await user.linkWithCredential(credential);
+    AppLogger.i('Email linked to user', data: {'uid': cred.user?.uid});
+    return cred;
   }
 
   /// Create admin account with email/password

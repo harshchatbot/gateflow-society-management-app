@@ -152,6 +152,18 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
 
       if (!mounted) return;
 
+      // Non-blocking: suggest adding phone for easier login next time (email-only users).
+      final memberPhone = (membership['phone'] ?? '').toString().trim();
+      if (memberPhone.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Add your phone in Profile for easier login next time.'),
+            duration: const Duration(seconds: 5),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(

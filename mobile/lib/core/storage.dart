@@ -66,6 +66,9 @@ class Storage {
   static const String _kAdminSocietyId = "admin_society_id";
   static const String _kAdminRole = "admin_role";
 
+  // Resident join-request helper (directory-based onboarding)
+  static const String _kResidentJoinSocietyId = "resident_join_society_id";
+
   static Future<SharedPreferences> _prefs() async {
     return SharedPreferences.getInstance();
   }
@@ -156,6 +159,24 @@ class Storage {
   static Future<bool> hasResidentSession() async {
     final prefs = await _prefs();
     return (prefs.getString(_kResidentId) ?? "").isNotEmpty;
+  }
+
+  /// Remember which society the resident requested to join (for pending screen).
+  static Future<void> saveResidentJoinSocietyId(String societyId) async {
+    final prefs = await _prefs();
+    await prefs.setString(_kResidentJoinSocietyId, societyId);
+  }
+
+  static Future<String?> getResidentJoinSocietyId() async {
+    final prefs = await _prefs();
+    final v = prefs.getString(_kResidentJoinSocietyId);
+    if (v == null || v.isEmpty) return null;
+    return v;
+  }
+
+  static Future<void> clearResidentJoinSocietyId() async {
+    final prefs = await _prefs();
+    await prefs.remove(_kResidentJoinSocietyId);
   }
 
   // -----------------------------

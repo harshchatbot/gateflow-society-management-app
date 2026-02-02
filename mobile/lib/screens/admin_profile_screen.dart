@@ -6,9 +6,11 @@ import '../ui/app_loader.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
 import '../core/society_modules.dart';
+import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import 'onboarding_choose_role_screen.dart';
 import 'admin_edit_image_screen.dart';
+import 'profile_link_phone_screen.dart';
 import 'super_admin_bulk_upload_screen.dart';
 import 'get_started_screen.dart';
 
@@ -406,6 +408,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                   _buildAccountInfoSection(),
                   const SizedBox(height: 20),
 
+                  // Login options: Add phone / Add email (optional)
+                  _buildLoginOptionsSection(),
+                  const SizedBox(height: 20),
+
                   // Bulk Upload Section (Super Admin only)
                   if (widget.role.toUpperCase() == 'SUPER_ADMIN') ...[
                     _buildBulkUploadSection(),
@@ -688,6 +694,130 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildLoginOptionsSection() {
+    final hasPhone = (_phone ?? '').trim().isNotEmpty;
+    final userEmail = FirebaseAuth.instance.currentUser?.email;
+    final hasRealEmail = userEmail != null &&
+        userEmail.isNotEmpty &&
+        !userEmail.contains('gateflow.local');
+    if (hasPhone && hasRealEmail) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text("Login options", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: AppColors.text)),
+          const SizedBox(height: 12),
+          if (!hasPhone)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.phone_android_rounded, color: AppColors.primary),
+              title: const Text("Add phone number", style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: const Text("Recommended for easier login"),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () async {
+                final added = await Navigator.of(context).push<bool>(
+                  MaterialPageRoute(
+                    builder: (_) => ProfileLinkPhoneScreen(societyId: widget.societyId, uid: widget.adminId),
+                  ),
+                );
+                if (added == true) _loadProfilePhoto();
+              },
+            ),
+          if (!hasPhone && !hasRealEmail) const Divider(height: 16),
+          if (!hasRealEmail)
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(Icons.email_outlined, color: AppColors.primary),
+              title: const Text("Add email (optional)", style: TextStyle(fontWeight: FontWeight.w700)),
+              subtitle: const Text("For recovery and optional login"),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: _showAddEmailLinkDialog,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAddEmailLinkDialog() async {
+    final emailController = TextEditingController();
+    final passwordController = TextEditingController();
+    final confirmController = TextEditingController();
+    final authService = FirebaseAuthService();
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("Add email (optional)", style: TextStyle(fontWeight: FontWeight.w900)),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(labelText: "Email", hintText: "you@example.com"),
+              ),
+              const SizedBox(height: 12),
+              TextField(controller: passwordController, obscureText: true, decoration: const InputDecoration(labelText: "Password")),
+              const SizedBox(height: 12),
+              TextField(controller: confirmController, obscureText: true, decoration: const InputDecoration(labelText: "Confirm password")),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("Cancel")),
+          FilledButton(
+            onPressed: () async {
+              final email = emailController.text.trim();
+              final pass = passwordController.text;
+              final confirm = confirmController.text;
+              if (email.isEmpty || !email.contains('@')) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Enter a valid email")));
+                return;
+              }
+              if (pass.length < 6) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password must be at least 6 characters")));
+                return;
+              }
+              if (pass != confirm) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Passwords do not match")));
+                return;
+              }
+              try {
+                await authService.linkWithEmailCredential(email: email, password: pass);
+                if (!context.mounted) return;
+                Navigator.of(context).pop(true);
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(e is FirebaseAuthException
+                        ? (e.code == 'email-already-in-use' ? "This email is already in use." : "Could not add email.")
+                        : "Something went wrong."),
+                  ),
+                );
+              }
+            },
+            child: const Text("Add"),
+          ),
+        ],
+      ),
+    );
+    if (result == true && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Email added. You can now login with email too."), backgroundColor: AppColors.success),
+      );
+      _loadProfilePhoto();
+    }
   }
 
   Widget _buildInfoRow({

@@ -29,6 +29,8 @@ class AdminSignupService {
     required String societyRole,
   }) async {
     try {
+      final currentUser = _auth.currentUser;
+
       final normalizedEmail = email.trim().toLowerCase();
       final normalizedPhone = phone.trim();
       final normalizedSocietyRole = societyRole.trim().toUpperCase();
@@ -46,11 +48,22 @@ class AdminSignupService {
         ));
       }
 
-      if (normalizedEmail.isEmpty || !normalizedEmail.contains("@")) {
+      // Email is required only when creating a NEW auth user.
+      // For already-authenticated users (e.g. phone OTP), email is optional.
+      String? effectiveEmail;
+      if (normalizedEmail.isNotEmpty && normalizedEmail.contains("@")) {
+        effectiveEmail = normalizedEmail;
+      } else if (currentUser != null &&
+          currentUser.email != null &&
+          currentUser.email!.contains("@")) {
+        effectiveEmail = currentUser.email!.trim().toLowerCase();
+      } else if (currentUser == null) {
         return Result.failure(AppError(
           userMessage: "Please enter a valid email.",
           technicalMessage: "Invalid email: $email",
         ));
+      } else {
+        effectiveEmail = null;
       }
 
       // 1. Resolve societyId from societyCodes/{CODE}
@@ -84,32 +97,39 @@ class AdminSignupService {
         "societyRole": normalizedSocietyRole,
       });
 
-      // 2. Create Firebase Auth user
-      UserCredential userCredential;
-      try {
-        userCredential = await _auth.createUserWithEmailAndPassword(
-          email: normalizedEmail,
-          password: password,
-        );
-      } catch (e) {
-        if (e.toString().contains('email-already-in-use')) {
+      // 2. Resolve UID:
+      //    - If user already authenticated (e.g. Phone OTP), reuse current UID.
+      //    - Otherwise, create Firebase Auth user with email/password (legacy path).
+      UserCredential? userCredential;
+      String uid;
+      if (currentUser != null) {
+        uid = currentUser.uid;
+      } else {
+        try {
+          userCredential = await _auth.createUserWithEmailAndPassword(
+            email: normalizedEmail,
+            password: password,
+          );
+        } catch (e) {
+          if (e.toString().contains('email-already-in-use')) {
+            return Result.failure(AppError(
+              userMessage: "An account with this email already exists. Please login instead.",
+              technicalMessage: "Email already in use: $normalizedEmail",
+            ));
+          }
           return Result.failure(AppError(
-            userMessage: "An account with this email already exists. Please login instead.",
-            technicalMessage: "Email already in use: $normalizedEmail",
+            userMessage: "Failed to create account. Please try again.",
+            technicalMessage: e.toString(),
           ));
         }
-        return Result.failure(AppError(
-          userMessage: "Failed to create account. Please try again.",
-          technicalMessage: e.toString(),
-        ));
-      }
 
-      final uid = userCredential.user?.uid;
-      if (uid == null) {
-        return Result.failure(AppError(
-          userMessage: "Failed to create account",
-          technicalMessage: "UID is null after auth creation",
-        ));
+        uid = userCredential.user?.uid ?? '';
+        if (uid.isEmpty) {
+          return Result.failure(AppError(
+            userMessage: "Failed to create account",
+            technicalMessage: "UID is null after auth creation",
+          ));
+        }
       }
 
       // 3. Create member document with active=false (pending approval)
@@ -125,7 +145,7 @@ class AdminSignupService {
         'systemRole': 'admin',
         'societyRole': normalizedSocietyRole.toLowerCase(),
         'name': name.trim(),
-        'email': normalizedEmail,
+        'email': effectiveEmail,
         'phone': normalizedPhone.isEmpty ? null : normalizedPhone,
         'active': false, // Pending approval
         'createdAt': FieldValue.serverTimestamp(),
@@ -169,7 +189,7 @@ class AdminSignupService {
         'societyId': societyId,
         'systemRole': 'admin',
         'name': name.trim(),
-        'email': normalizedEmail,
+        'email': effectiveEmail,
         'phone': normalizedPhone.isEmpty ? null : normalizedPhone,
         'active': false,
         'updatedAt': FieldValue.serverTimestamp(),

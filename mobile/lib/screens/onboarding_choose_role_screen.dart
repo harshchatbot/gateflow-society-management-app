@@ -4,6 +4,7 @@ import '../core/session_gate_service.dart';
 import 'guard_login_screen.dart';
 import 'resident_login_screen.dart';
 import 'admin_login_screen.dart';
+import 'phone_otp_login_screen.dart';
 import 'how_sentinel_works_screen.dart';
 
 /// Choose Role screen: single theme (primary blue), cards with illustrations.
@@ -134,9 +135,12 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                       illustrationPath: 'assets/illustrations/resident.png',
                       fallbackIcon: Icons.home_rounded,
                       onTap: () {
+                        // Phone OTP is primary for residents.
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (_) => const ResidentLoginScreen(),
+                            builder: (_) => const PhoneOtpLoginScreen(
+                              roleHint: 'resident',
+                            ),
                           ),
                         );
                       },

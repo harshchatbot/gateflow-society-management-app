@@ -5,10 +5,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../core/storage.dart';
 import '../core/society_modules.dart';
 import '../core/session_gate_service.dart';
+import '../core/storage.dart';
 import 'onboarding_welcome_screen.dart';
 import 'onboarding_choose_role_screen.dart';
 import 'guard_shell_screen.dart';
 import 'resident_shell_screen.dart';
+import 'resident_pending_approval_screen.dart';
 import 'admin_shell_screen.dart';
 
 /// App entry: starts with the welcome (namaste) screen and runs session check.
@@ -80,14 +82,31 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
           }
 
           if (!gateResult.allowed && mounted) {
-            try {
-              await FirebaseAuth.instance.signOut();
-              await Storage.clearAllSessions();
-              await Storage.clearFirebaseSession();
-              SocietyModules.clear();
-              GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
-            } catch (_) {}
-            targetScreen = const OnboardingChooseRoleScreen();
+            bool handled = false;
+
+            // Special case: resident with no membership but a pending join request.
+            if (gateResult.blockReason == GateBlockReason.membershipNotFound) {
+              final pendingSocietyId =
+                  await Storage.getResidentJoinSocietyId();
+              if (pendingSocietyId != null) {
+                targetScreen = ResidentPendingApprovalScreen(
+                  email: firebaseUser.email ?? 'Phone login',
+                );
+                handled = true;
+              }
+            }
+
+            if (!handled) {
+              try {
+                await FirebaseAuth.instance.signOut();
+                await Storage.clearAllSessions();
+                await Storage.clearFirebaseSession();
+                SocietyModules.clear();
+                GateBlockMessage.set(gateResult.userMessage ??
+                    'This society is currently inactive. Please contact the society admin.');
+              } catch (_) {}
+              targetScreen = const OnboardingChooseRoleScreen();
+            }
           }
         } catch (e, stackTrace) {
           if (kDebugMode) {

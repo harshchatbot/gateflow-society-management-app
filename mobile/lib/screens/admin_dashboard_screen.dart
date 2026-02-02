@@ -18,6 +18,7 @@ import '../core/society_modules.dart';
 import 'notice_board_screen.dart';
 import 'sos_detail_screen.dart';
 import 'sos_alerts_screen.dart';
+import 'admin_join_requests_screen.dart';
 import 'admin_manage_notices_screen.dart';
 import 'admin_manage_admins_screen.dart';
 import 'admin_manage_violations_screen.dart';
@@ -373,6 +374,29 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _error = "Connection error. Please try again.";
         });
       }
+    }
+  }
+
+  /// Updates nameLower on public_societies so resident search by name works after a rename.
+  Future<void> _syncPublicSocietySearchName() async {
+    try {
+      await _firestore.updatePublicSocietyNameLower(widget.societyId);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Society search name synced. Residents can now find this society by name.'),
+          backgroundColor: AppColors.primary,
+        ),
+      );
+    } catch (e, st) {
+      AppLogger.e('Sync public society nameLower failed', error: e, stackTrace: st);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e is Exception ? e.toString().replaceFirst('Exception: ', '') : 'Sync failed'),
+          backgroundColor: AppColors.error,
+        ),
+      );
     }
   }
 
@@ -833,7 +857,45 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
       );
     }
+    // Resident join requests (admin-only)
+    if ((widget.systemRole ?? '').toLowerCase() == 'admin') {
+      children.add(
+        DashboardQuickAction(
+          label: "Join Requests",
+          icon: Icons.how_to_reg_rounded,
+          tint: AppColors.primary,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => AdminJoinRequestsScreen(
+                  societyId: widget.societyId,
+                ),
+              ),
+            );
+          },
+        ),
+      );
+      // Sync society name for resident search (fixes search after renaming society)
+      children.add(
+        DashboardQuickAction(
+          label: "Sync search name",
+          icon: Icons.search_rounded,
+          tint: AppColors.primary,
+          onTap: _syncPublicSocietySearchName,
+        ),
+      );
+    }
     if (widget.systemRole?.toLowerCase() == 'super_admin') {
+      // Super_admin can also sync search name for their society
+      children.add(
+        DashboardQuickAction(
+          label: "Sync search name",
+          icon: Icons.search_rounded,
+          tint: AppColors.primary,
+          onTap: _syncPublicSocietySearchName,
+        ),
+      );
       children.add(
         DashboardQuickAction(
           label: "Manage Admins",
