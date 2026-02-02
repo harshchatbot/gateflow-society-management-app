@@ -387,10 +387,10 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.admin.withOpacity(0.15),
+                color: AppColors.primary.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.refresh_rounded, color: AppColors.admin, size: 20),
+              child: const Icon(Icons.refresh_rounded, color: AppColors.primary, size: 20),
             ),
             onPressed: _isLoading ? null : _loadResidents,
           ),
@@ -406,8 +406,8 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                 color: AppColors.bg,
                 child: TabBar(
                   controller: _tabController,
-                  indicatorColor: AppColors.admin,
-                  labelColor: AppColors.admin,
+                  indicatorColor: AppColors.primary,
+                  labelColor: AppColors.primary,
                   unselectedLabelColor: AppColors.text2,
                   labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
                   tabs: [
@@ -421,13 +421,13 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                               margin: const EdgeInsets.only(left: 8),
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: AppColors.admin.withOpacity(0.15),
+                                color: AppColors.primary.withOpacity(0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 "${_residents.length}",
                                 style: TextStyle(
-                                  color: AppColors.admin,
+                                  color: AppColors.primary,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w800,
                                 ),
@@ -492,10 +492,10 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                           margin: const EdgeInsets.all(12),
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppColors.admin.withOpacity(0.15),
+                            color: AppColors.primary.withOpacity(0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.search_rounded, color: AppColors.admin, size: 20),
+                          child: const Icon(Icons.search_rounded, color: AppColors.primary, size: 20),
                         ),
                         suffixIcon: _searchController.text.isNotEmpty
                             ? IconButton(
@@ -578,7 +578,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
               icon: const Icon(Icons.refresh_rounded),
               label: const Text("Retry"),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.admin,
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -596,13 +596,13 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.admin.withOpacity(0.1),
+                color: AppColors.primary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.people_outline_rounded,
                 size: 64,
-                color: AppColors.admin,
+                color: AppColors.primary,
               ),
             ),
             const SizedBox(height: 16),
@@ -633,7 +633,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
 
     return RefreshIndicator(
       onRefresh: _loadResidents,
-      color: AppColors.admin,
+      color: AppColors.primary,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         itemCount: _filteredResidents.length + (_lastDoc != null ? 1 : 0),
@@ -665,7 +665,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                 icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
                 label: const Text("Load more"),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.admin,
+                  foregroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
               ),
@@ -720,7 +720,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: AppColors.admin.withOpacity(0.15),
+                              color: AppColors.primary.withOpacity(0.15),
                               shape: BoxShape.circle,
                               border: Border.all(color: AppColors.border.withOpacity(0.5)),
                             ),
@@ -732,17 +732,17 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                                       width: 48,
                                       height: 48,
                                       placeholder: (_, __) => const Center(
-                                        child: Icon(Icons.person_rounded, color: AppColors.admin, size: 24),
+                                        child: Icon(Icons.person_rounded, color: AppColors.primary, size: 24),
                                       ),
                                       errorWidget: (_, __, ___) => const Icon(
                                         Icons.person_rounded,
-                                        color: AppColors.admin,
+                                        color: AppColors.primary,
                                         size: 24,
                                       ),
                                     )
                                   : const Icon(
                                       Icons.person_rounded,
-                                      color: AppColors.admin,
+                                      color: AppColors.primary,
                                       size: 24,
                                     ),
                             ),
@@ -817,10 +817,10 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: AppColors.admin.withOpacity(0.1),
+            color: AppColors.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, size: 16, color: AppColors.admin),
+          child: Icon(icon, size: 16, color: AppColors.primary),
         ),
         const SizedBox(width: 10),
         Text(
@@ -892,7 +892,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: AppColors.admin.withOpacity(0.15),
+                        color: AppColors.primary.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: AppColors.border),
                       ),
@@ -903,15 +903,15 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                                 imageUrl: photoUrl,
                                 fit: BoxFit.cover,
                                 placeholder: (_, __) => const Center(
-                                  child: Icon(Icons.person_rounded, color: AppColors.admin, size: 28),
+                                  child: Icon(Icons.person_rounded, color: AppColors.primary, size: 28),
                                 ),
                                 errorWidget: (_, __, ___) => const Icon(
                                   Icons.person_rounded,
-                                  color: AppColors.admin,
+                                  color: AppColors.primary,
                                   size: 28,
                                 ),
                               )
-                            : const Icon(Icons.person_rounded, color: AppColors.admin, size: 28),
+                            : const Icon(Icons.person_rounded, color: AppColors.primary, size: 28),
                       ),
                     ),
                   ),
@@ -1018,7 +1018,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
 
     return RefreshIndicator(
       onRefresh: _loadPendingSignups,
-      color: AppColors.admin,
+      color: AppColors.primary,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         itemCount: _pendingSignups.length,

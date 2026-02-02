@@ -15,7 +15,7 @@ import 'get_started_screen.dart';
 /// Admin Profile Screen
 /// 
 /// Displays admin information and account settings
-/// Theme: Purple/Admin theme
+/// Theme: Unified primary (blue)
 class AdminProfileScreen extends StatefulWidget {
   final String adminId;
   final String adminName;
@@ -320,12 +320,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       backgroundColor: AppColors.bg,
       body: CustomScrollView(
         slivers: [
-          // Profile Header (purple theme)
+          // Profile header – primary theme
           SliverAppBar(
             automaticallyImplyLeading: true,
             expandedHeight: 220,
             pinned: true,
-            backgroundColor: AppColors.admin, // Purple background
+            backgroundColor: AppColors.primary,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
               onPressed: () {
@@ -338,11 +338,11 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             ),
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [AppColors.admin, Color(0xFF7C3AED)], // Purple gradient
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
+                    colors: [AppColors.primary, AppColors.primary.withOpacity(0.85)],
                   ),
                 ),
                 child: Column(
@@ -429,19 +429,19 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: AppColors.admin.withOpacity(0.08),
+                        color: AppColors.primary.withOpacity(0.08),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.admin.withOpacity(0.3)),
+                        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: AppColors.admin.withOpacity(0.15),
+                              color: AppColors.primary.withOpacity(0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Icon(Icons.lightbulb_outline_rounded, color: AppColors.admin, size: 22),
+                            child: const Icon(Icons.lightbulb_outline_rounded, color: AppColors.primary, size: 22),
                           ),
                           const SizedBox(width: 14),
                           const Expanded(
@@ -454,7 +454,7 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                               ],
                             ),
                           ),
-                          Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.admin),
+                          Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppColors.primary),
                         ],
                       ),
                     ),
@@ -495,10 +495,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.admin.withOpacity(0.15),
+                  color: AppColors.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.image_rounded, size: 20, color: AppColors.admin),
+                child: const Icon(Icons.image_rounded, size: 20, color: AppColors.primary),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -530,13 +530,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: BoxDecoration(
-                color: AppColors.admin.withOpacity(0.1),
+                color: AppColors.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.admin.withOpacity(0.3)),
+                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.camera_alt_rounded, color: AppColors.admin, size: 22),
+                  const Icon(Icons.camera_alt_rounded, color: AppColors.primary, size: 22),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
@@ -581,10 +581,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.admin.withOpacity(0.15), // Purple icon background
+                  color: AppColors.primary.withOpacity(0.15), // Purple icon background
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.person_outline, size: 20, color: AppColors.admin), // Purple icon
+                child: const Icon(Icons.person_outline, size: 20, color: AppColors.primary),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -602,48 +602,48 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             icon: Icons.person_rounded,
             label: "Name",
             value: widget.adminName,
-            iconColor: AppColors.admin,
-            iconBgColor: AppColors.admin.withOpacity(0.15),
+            iconColor: AppColors.primary,
+            iconBgColor: AppColors.primary.withOpacity(0.15),
           ),
           const Divider(height: 24),
           _buildInfoRow(
             icon: Icons.badge_rounded,
             label: "Admin ID",
             value: widget.adminId,
-            iconColor: AppColors.admin,
-            iconBgColor: AppColors.admin.withOpacity(0.15),
+            iconColor: AppColors.primary,
+            iconBgColor: AppColors.primary.withOpacity(0.15),
           ),
           const Divider(height: 24),
           _buildInfoRow(
             icon: Icons.apartment_rounded,
             label: "Society ID",
             value: widget.societyId,
-            iconColor: AppColors.admin,
-            iconBgColor: AppColors.admin.withOpacity(0.15),
+            iconColor: AppColors.primary,
+            iconBgColor: AppColors.primary.withOpacity(0.15),
           ),
           const Divider(height: 24),
           _buildInfoRow(
             icon: Icons.admin_panel_settings_rounded,
             label: "Role",
             value: widget.role,
-            iconColor: AppColors.admin,
-            iconBgColor: AppColors.admin.withOpacity(0.15),
+            iconColor: AppColors.primary,
+            iconBgColor: AppColors.primary.withOpacity(0.15),
           ),
           const Divider(height: 24),
           _buildInfoRow(
             icon: Icons.email_rounded,
             label: "Email",
             value: _email?.isNotEmpty == true ? _email! : "Not set",
-            iconColor: AppColors.admin,
-            iconBgColor: AppColors.admin.withOpacity(0.15),
+            iconColor: AppColors.primary,
+            iconBgColor: AppColors.primary.withOpacity(0.15),
           ),
           const Divider(height: 24),
           _buildInfoRow(
             icon: Icons.phone_rounded,
             label: "Phone",
             value: _phone?.isNotEmpty == true ? _phone! : "Not set",
-            iconColor: AppColors.admin,
-            iconBgColor: AppColors.admin.withOpacity(0.15),
+            iconColor: AppColors.primary,
+            iconBgColor: AppColors.primary.withOpacity(0.15),
           ),
           const SizedBox(height: 16),
           Row(
@@ -657,8 +657,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.admin.withOpacity(0.6)),
-                    foregroundColor: AppColors.admin,
+                    side: BorderSide(color: AppColors.primary.withOpacity(0.6)),
+                    foregroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -675,8 +675,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                   ),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.admin.withOpacity(0.6)),
-                    foregroundColor: AppColors.admin,
+                    side: BorderSide(color: AppColors.primary.withOpacity(0.6)),
+                    foregroundColor: AppColors.primary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -758,10 +758,10 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.admin.withOpacity(0.15),
+                  color: AppColors.primary.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.upload_file_rounded, size: 20, color: AppColors.admin),
+                child: const Icon(Icons.upload_file_rounded, size: 20, color: AppColors.primary),
               ),
               const SizedBox(width: 12),
               const Expanded(
@@ -801,13 +801,13 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
               decoration: BoxDecoration(
-                color: AppColors.admin.withOpacity(0.1),
+                color: AppColors.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: AppColors.admin.withOpacity(0.3)),
+                border: Border.all(color: AppColors.primary.withOpacity(0.3)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.upload_file_rounded, color: AppColors.admin, size: 22),
+                  const Icon(Icons.upload_file_rounded, color: AppColors.primary, size: 22),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(

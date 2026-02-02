@@ -238,10 +238,10 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.admin.withOpacity(0.15),
+                color: AppColors.primary.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.pin_rounded, color: AppColors.admin, size: 20),
+              child: const Icon(Icons.pin_rounded, color: AppColors.primary, size: 20),
             ),
             onPressed: () {
               _showGuardJoinCode(context);
@@ -252,10 +252,10 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.admin.withOpacity(0.15),
+                color: AppColors.primary.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.refresh_rounded, color: AppColors.admin, size: 20),
+              child: const Icon(Icons.refresh_rounded, color: AppColors.primary, size: 20),
             ),
             onPressed: _isLoading ? null : _loadGuards,
           ),
@@ -293,10 +293,10 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: AppColors.admin.withOpacity(0.15),
+                          color: AppColors.primary.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(Icons.search_rounded, color: AppColors.admin, size: 20),
+                        child: const Icon(Icons.search_rounded, color: AppColors.primary, size: 20),
                       ),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
@@ -373,7 +373,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
               icon: const Icon(Icons.refresh_rounded),
               label: const Text("Retry"),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.admin,
+                backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -391,13 +391,13 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.admin.withOpacity(0.1),
+                color: AppColors.primary.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.shield_outlined,
                 size: 64,
-                color: AppColors.admin,
+                color: AppColors.primary,
               ),
             ),
             const SizedBox(height: 16),
@@ -428,7 +428,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
 
     return RefreshIndicator(
       onRefresh: _loadGuards,
-      color: AppColors.admin,
+      color: AppColors.primary,
       child: ListView.builder(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
         itemCount: _filteredGuards.length + (_lastDoc != null ? 1 : 0),
@@ -460,7 +460,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                 icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
                 label: const Text("Load more"),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.admin,
+                  foregroundColor: AppColors.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
               ),
@@ -485,7 +485,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: active
-              ? (isAdmin ? AppColors.admin : AppColors.border).withOpacity(0.5)
+              ? (isAdmin ? AppColors.primary : AppColors.border).withOpacity(0.5)
               : AppColors.error.withOpacity(0.3),
           width: active ? (isAdmin ? 2 : 1) : 1.5,
         ),
@@ -518,7 +518,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                             height: 48,
                             decoration: BoxDecoration(
                               color: isAdmin
-                                  ? AppColors.admin.withOpacity(0.15)
+                                  ? AppColors.primary.withOpacity(0.15)
                                   : AppColors.primary.withOpacity(0.15),
                               shape: BoxShape.circle,
                               border: Border.all(color: AppColors.border.withOpacity(0.5)),
@@ -533,19 +533,19 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                                       placeholder: (_, __) => Center(
                                         child: Icon(
                                           isAdmin ? Icons.admin_panel_settings_rounded : Icons.shield_rounded,
-                                          color: isAdmin ? AppColors.admin : AppColors.primary,
+                                          color: isAdmin ? AppColors.primary : AppColors.primary,
                                           size: 24,
                                         ),
                                       ),
                                       errorWidget: (_, __, ___) => Icon(
                                         isAdmin ? Icons.admin_panel_settings_rounded : Icons.shield_rounded,
-                                        color: isAdmin ? AppColors.admin : AppColors.primary,
+                                        color: isAdmin ? AppColors.primary : AppColors.primary,
                                         size: 24,
                                       ),
                                     )
                                   : Icon(
                                       isAdmin ? Icons.admin_panel_settings_rounded : Icons.shield_rounded,
-                                      color: isAdmin ? AppColors.admin : AppColors.primary,
+                                      color: isAdmin ? AppColors.primary : AppColors.primary,
                                       size: 24,
                                     ),
                             ),
@@ -570,7 +570,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                       decoration: BoxDecoration(
                                         color: isAdmin
-                                            ? AppColors.admin.withOpacity(0.15)
+                                            ? AppColors.primary.withOpacity(0.15)
                                             : AppColors.primary.withOpacity(0.15),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
@@ -579,7 +579,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                                         style: TextStyle(
                                           fontSize: 11,
                                           fontWeight: FontWeight.w800,
-                                          color: isAdmin ? AppColors.admin : AppColors.primary,
+                                          color: isAdmin ? AppColors.primary : AppColors.primary,
                                         ),
                                       ),
                                     ),
@@ -633,10 +633,10 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: AppColors.admin.withOpacity(0.1),
+            color: AppColors.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, size: 16, color: AppColors.admin),
+          child: Icon(icon, size: 16, color: AppColors.primary),
         ),
         const SizedBox(width: 10),
         Text(
@@ -708,7 +708,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: AppColors.admin.withOpacity(0.15),
+                        color: AppColors.primary.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: AppColors.border),
                       ),
@@ -719,15 +719,15 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                                 imageUrl: photoUrl,
                                 fit: BoxFit.cover,
                                 placeholder: (_, __) => const Center(
-                                  child: Icon(Icons.shield_rounded, color: AppColors.admin, size: 28),
+                                  child: Icon(Icons.shield_rounded, color: AppColors.primary, size: 28),
                                 ),
                                 errorWidget: (_, __, ___) => const Icon(
                                   Icons.shield_rounded,
-                                  color: AppColors.admin,
+                                  color: AppColors.primary,
                                   size: 28,
                                 ),
                               )
-                            : const Icon(Icons.shield_rounded, color: AppColors.admin, size: 28),
+                            : const Icon(Icons.shield_rounded, color: AppColors.primary, size: 28),
                       ),
                     ),
                   ),
@@ -877,9 +877,9 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                 Container(
                   padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 32),
                   decoration: BoxDecoration(
-                    color: AppColors.admin.withOpacity(0.08),
+                    color: AppColors.primary.withOpacity(0.08),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.admin.withOpacity(0.3)),
+                    border: Border.all(color: AppColors.primary.withOpacity(0.3)),
                   ),
                   child: Text(
                     code,
@@ -887,7 +887,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                       fontSize: 42,
                       fontWeight: FontWeight.w900,
                       letterSpacing: 12,
-                      color: AppColors.admin,
+                      color: AppColors.primary,
                       fontFamily: 'monospace',
                     ),
                   ),
@@ -935,7 +935,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                           );
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.admin,
+                          backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),

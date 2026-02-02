@@ -461,7 +461,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             color: AppColors.primary,
             child: SafeArea(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 134),
                 children: [
                   DashboardHero(
                     userName: widget.adminName,
@@ -553,7 +553,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                   const SizedBox(height: 14),
                   _buildActionGrid(),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 46),
                 ],
               ),
             ),
@@ -569,54 +569,76 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Widget _buildPremiumSocietyCard() {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.surface.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 50, height: 50,
-            decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(16)),
-            child: const Icon(Icons.business_rounded, color: Colors.white),
+    return Material(
+      elevation: 4,
+      borderRadius: BorderRadius.circular(24),
+      shadowColor: Colors.black.withOpacity(0.15),
+      color: Colors.white, // IMPORTANT: solid material
+      child: Container(
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: Colors.white, // solid card
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: AppColors.primary.withOpacity(0.12),
           ),
-          const SizedBox(width: 15),
-              Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.societyId,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 18,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                const Text(
-                  "Admin Portal Active",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 12,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+        ),
+        child: Row(
+          children: [
+            // Icon container
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.12),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(
+                Icons.business_rounded,
+                color: AppColors.primary,
+              ),
             ),
-          ),
-          const Icon(Icons.arrow_forward_ios_rounded, color: Colors.white, size: 16),
-        ],
+
+            const SizedBox(width: 15),
+
+            // Text
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.societyId,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF1E293B), // dark text
+                      fontWeight: FontWeight.w700,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    "Society Management Active",
+                    style: TextStyle(
+                      color: Color(0xFF64748B), // muted grey
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            Icon(
+              Icons.arrow_forward_ios_rounded,
+              color: AppColors.primary.withOpacity(0.6),
+              size: 16,
+            ),
+          ],
+        ),
       ),
     );
   }
+
 
   /// Wraps the existing stats grid into a soft card module
   Widget _buildStatsSection() {
@@ -688,7 +710,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       crossAxisCount: 2,
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 1.4,
+      childAspectRatio: 1.24,
       children: children,
     );
   }
