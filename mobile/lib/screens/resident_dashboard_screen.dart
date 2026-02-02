@@ -21,6 +21,7 @@ import '../widgets/resident_notification_drawer.dart';
 import '../widgets/dashboard_hero.dart';
 import '../widgets/dashboard_stat_card.dart';
 import '../widgets/dashboard_quick_action.dart';
+import '../widgets/dashboard_insights_card.dart';
 import '../services/firestore_service.dart';
 
 /// Resident Dashboard Screen
@@ -30,7 +31,7 @@ import '../services/firestore_service.dart';
 /// - Quick stats (pending approvals count)
 /// - Quick action cards to navigate to Approvals/History
 ///
-/// Theme: Green/Success theme (matching resident login)
+/// Theme: Unified primary (blue/indigo); no role-specific colors.
 class ResidentDashboardScreen extends StatefulWidget {
   final String residentId;
   final String residentName;
@@ -163,7 +164,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           MaterialPageRoute(
             builder: (context) => NoticeBoardScreen(
               societyId: widget.societyId,
-              themeColor: AppColors.success,
+              themeColor: AppColors.primary,
             ),
           ),
         );
@@ -358,7 +359,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             backgroundColor: AppColors.bg,
             body: Stack(
         children: [
-          // Green Gradient Header Background
+          // Hero header gradient – unified primary theme
           Positioned(
             left: 0,
             right: 0,
@@ -370,8 +371,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.success,
-                    AppColors.success.withOpacity(0.7),
+                    AppColors.primary,
+                    AppColors.primary.withOpacity(0.85),
                   ],
                 ),
               ),
@@ -380,7 +381,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
           RefreshIndicator(
             onRefresh: _loadDashboardData,
-            color: AppColors.success,
+            color: AppColors.primary,
             child: SafeArea(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
@@ -465,6 +466,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildStatsRow(),
+                    const SizedBox(height: 16),
+                    const DashboardInsightsCard(),
                     const SizedBox(height: 24),
                   ],
                   const Text(
@@ -564,7 +567,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
               label: "Pending",
               value: _pendingCount.toString(),
               icon: Icons.pending_actions_rounded,
-              color: AppColors.warning,
+              color: AppColors.primary,
             ),
           ),
           const SizedBox(width: 8),
@@ -573,7 +576,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
               label: "Approved",
               value: _approvedCount.toString(),
               icon: Icons.check_circle_rounded,
-              color: AppColors.success,
+              color: AppColors.primary,
             ),
           ),
           const SizedBox(width: 8),
@@ -582,7 +585,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
               label: "Rejected",
               value: _rejectedCount.toString(),
               icon: Icons.cancel_rounded,
-              color: AppColors.error,
+              color: AppColors.primary,
             ),
           ),
         ],
@@ -601,7 +604,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           child: DashboardQuickAction(
             label: "Pending Approvals",
             icon: Icons.verified_user_rounded,
-            tint: AppColors.warning,
+            tint: AppColors.primary,
             onTap: () {
               if (widget.onNavigateToApprovals != null) {
                 widget.onNavigateToApprovals!();
@@ -625,7 +628,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         DashboardQuickAction(
           label: "View History",
           icon: Icons.history_rounded,
-          tint: AppColors.success,
+          tint: AppColors.primary,
           onTap: () {
             if (widget.onNavigateToHistory != null) {
               widget.onNavigateToHistory!();
@@ -650,7 +653,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         DashboardQuickAction(
           label: "Raise Complaint",
           icon: Icons.report_problem_rounded,
-          tint: AppColors.error,
+          tint: AppColors.primary,
           onTap: () {
             Navigator.push(
               context,
@@ -700,7 +703,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         DashboardQuickAction(
           label: "Notice Board",
           icon: Icons.notifications_rounded,
-          tint: AppColors.warning,
+          tint: AppColors.primary,
           onTap: () {
             if (widget.onNavigateToNotices != null) {
               widget.onNavigateToNotices!();
@@ -710,7 +713,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                 MaterialPageRoute(
                   builder: (context) => NoticeBoardScreen(
                     societyId: widget.societyId,
-                    themeColor: AppColors.success,
+                    themeColor: AppColors.primary,
                   ),
                 ),
               );
@@ -724,7 +727,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         DashboardQuickAction(
           label: "My Violations",
           icon: Icons.directions_car_rounded,
-          tint: AppColors.warning,
+          tint: AppColors.primary,
           onTap: () {
             Navigator.push(
               context,

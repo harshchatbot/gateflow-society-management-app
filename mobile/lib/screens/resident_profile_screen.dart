@@ -22,7 +22,7 @@ import 'get_started_screen.dart';
 /// - Settings section with navigation
 /// - Logout functionality
 /// 
-/// Theme: Green/Success theme (matching resident login and dashboard)
+/// Theme: Unified primary (blue/indigo); no role-specific colors.
 class ResidentProfileScreen extends StatefulWidget {
   final String residentId;
   final String residentName;
@@ -285,11 +285,11 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         backgroundColor: AppColors.bg,
         body: CustomScrollView(
           slivers: [
-            // Green Gradient Profile Header
+            // Profile header – unified primary theme
             SliverAppBar(
               expandedHeight: 220,
               pinned: true,
-              backgroundColor: AppColors.success,
+              backgroundColor: AppColors.primary,
               automaticallyImplyLeading: true,
               leading: IconButton(
                 icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
@@ -307,8 +307,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      AppColors.success,
-                      AppColors.success.withOpacity(0.7),
+                      AppColors.primary,
+                      AppColors.primary.withOpacity(0.85),
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -324,7 +324,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                         border: Border.all(color: Colors.white, width: 3),
                         boxShadow: [
                           BoxShadow(
-                            color: AppColors.success.withOpacity(0.3),
+                            color: AppColors.primary.withOpacity(0.3),
                             blurRadius: 20,
                             offset: const Offset(0, 8),
                           ),
@@ -422,12 +422,12 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.12),
+                  color: AppColors.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
                   Icons.info_rounded,
-                  color: AppColors.success,
+                  color: AppColors.primary,
                   size: 20,
                 ),
               ),
@@ -481,10 +481,10 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppColors.success.withOpacity(0.12),
+            color: AppColors.primary.withOpacity(0.12),
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Icon(icon, size: 20, color: AppColors.success),
+          child: Icon(icon, size: 20, color: AppColors.primary),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -538,12 +538,12 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.12),
+                  color: AppColors.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
                   Icons.settings_rounded,
-                  color: AppColors.success,
+                  color: AppColors.primary,
                   size: 20,
                 ),
               ),
@@ -683,10 +683,10 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.12),
+                color: AppColors.primary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: AppColors.success, size: 22),
+              child: Icon(icon, color: AppColors.primary, size: 22),
             ),
             const SizedBox(width: 16),
             Expanded(

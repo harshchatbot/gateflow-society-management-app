@@ -21,6 +21,7 @@ import 'guard_residents_directory_screen.dart';
 import 'guard_violations_list_screen.dart';
 import '../widgets/guard_notification_drawer.dart';
 import '../widgets/visitors_chart.dart';
+import '../widgets/dashboard_insights_card.dart';
 import '../widgets/dashboard_hero.dart';
 import '../widgets/dashboard_stat_card.dart';
 import '../widgets/dashboard_quick_action.dart';
@@ -466,9 +467,11 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                     statusMessage: (pendingCount + _sosBadgeCount) > 0
                         ? '${pendingCount + _sosBadgeCount} pending · Check approvals'
                         : 'All gates are secure',
-                    mascotMood: (pendingCount + _sosBadgeCount) > 0
-                        ? SentiMood.alert
-                        : (todayCount > 0 ? SentiMood.happy : SentiMood.idle),
+                    mascotMood: _sosBadgeCount > 0
+                        ? SentiMood.warning
+                        : ((pendingCount + _sosBadgeCount) > 0
+                            ? SentiMood.alert
+                            : (todayCount > 0 ? SentiMood.happy : SentiMood.idle)),
                     avatar: CircleAvatar(
                       backgroundColor: Colors.white24,
                       backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
@@ -535,13 +538,14 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildStatsRow(),
-                    if (_visitorsByDayLast7 != null) ...[
-                      const SizedBox(height: 16),
+                    const SizedBox(height: 16),
+                    if (_visitorsByDayLast7 != null)
                       VisitorsChart(
                         countsByDay: _visitorsByDayLast7!,
                         barColor: AppColors.primary,
-                      ),
-                    ],
+                      )
+                    else
+                      const DashboardInsightsCard(),
                     const SizedBox(height: 24),
                   ],
                   const Text(
@@ -636,7 +640,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               label: "Pending",
               value: pendingCount.toString(),
               icon: Icons.hourglass_empty_rounded,
-              color: AppColors.warning,
+              color: AppColors.primary,
             ),
           ),
           const SizedBox(width: 8),
@@ -645,7 +649,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               label: "Approved",
               value: approvedCount.toString(),
               icon: Icons.verified_user_rounded,
-              color: AppColors.success,
+              color: AppColors.primary,
             ),
           ),
         ],
@@ -667,7 +671,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           key: _keyVisitors,
           title: "Visitor List / History",
           description: "View today's visitors and full history.",
-          child: DashboardQuickAction(label: "Visitors", icon: Icons.groups_rounded, tint: AppColors.success, onTap: widget.onTapVisitors),
+          child: DashboardQuickAction(label: "Visitors", icon: Icons.groups_rounded, tint: AppColors.primary, onTap: widget.onTapVisitors),
         ),
       ]);
     }
@@ -676,7 +680,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         DashboardQuickAction(
           label: "Notices",
           icon: Icons.notifications_rounded,
-          tint: AppColors.warning,
+          tint: AppColors.primary,
           onTap: () {
             Navigator.push(
               context,

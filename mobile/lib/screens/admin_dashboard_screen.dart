@@ -27,11 +27,12 @@ import '../widgets/dashboard_hero.dart';
 import '../widgets/dashboard_stat_card.dart';
 import '../widgets/dashboard_quick_action.dart';
 import '../widgets/visitors_chart.dart';
+import '../widgets/dashboard_insights_card.dart';
 
 /// Admin Dashboard Screen
 /// 
 /// Overview screen for admins showing key metrics and quick actions
-/// Theme: Purple/Admin theme
+/// Theme: Unified primary (blue/indigo); no role-specific colors.
 class AdminDashboardScreen extends StatefulWidget {
   final String adminId;
   final String adminName;
@@ -319,7 +320,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Navigate to tab $index"),
-          backgroundColor: AppColors.admin,
+          backgroundColor: AppColors.primary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
@@ -424,18 +425,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             backgroundColor: AppColors.bg,
             body: Stack(
         children: [
-          // Background Gradient Header (purple theme)
+          // Hero header gradient – unified primary theme
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             height: 260,
             child: Container(
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [AppColors.admin, Color(0xFF7C3AED)], // Purple gradient
+                  colors: [
+                    AppColors.primary,
+                    AppColors.primary.withOpacity(0.85),
+                  ],
                 ),
               ),
             ),
@@ -446,7 +450,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               await _loadStats();
               await _loadAdminProfile();
             },
-            color: AppColors.admin, // Purple refresh indicator
+            color: AppColors.primary,
             child: SafeArea(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
@@ -456,7 +460,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     statusMessage: (_notificationCount + _sosBadgeCount) > 0
                         ? '${_notificationCount + _sosBadgeCount} item(s) need attention'
                         : 'Society overview',
-                    mascotMood: (_notificationCount + _sosBadgeCount) > 0 ? SentiMood.alert : SentiMood.idle,
+                    mascotMood: _sosBadgeCount > 0
+                        ? SentiMood.warning
+                        : ((_notificationCount + _sosBadgeCount) > 0 ? SentiMood.alert : SentiMood.idle),
                     avatar: CircleAvatar(
                       backgroundColor: Colors.white24,
                       backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
@@ -518,12 +524,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                     const SizedBox(height: 12),
                     _buildStatsSection(),
-                    if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement) && _visitorsByDayLast7 != null) ...[
+                    if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) ...[
                       const SizedBox(height: 16),
-                      VisitorsChart(
-                        countsByDay: _visitorsByDayLast7!,
-                        barColor: AppColors.admin,
-                      ),
+                      if (_visitorsByDayLast7 != null)
+                        VisitorsChart(
+                          countsByDay: _visitorsByDayLast7!,
+                          barColor: AppColors.primary,
+                        )
+                      else
+                        const DashboardInsightsCard(),
                     ],
                   ],
 
@@ -630,7 +639,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         label: "Residents",
         value: (stats['total_residents'] ?? 0).toString(),
         icon: Icons.people_rounded,
-        color: AppColors.admin,
+        color: AppColors.primary,
       ),
       DashboardStatCard(
         label: "Guards",
@@ -642,7 +651,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         label: "Flats",
         value: (stats['total_flats'] ?? 0).toString(),
         icon: Icons.home_rounded,
-        color: AppColors.success,
+        color: AppColors.primary,
       ),
     ];
     if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
@@ -651,19 +660,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           label: "Visitors Today",
           value: (stats['visitors_today'] ?? 0).toString(),
           icon: Icons.person_add_rounded,
-          color: AppColors.warning,
+          color: AppColors.primary,
         ),
         DashboardStatCard(
           label: "Pending",
           value: (stats['pending_approvals'] ?? 0).toString(),
           icon: Icons.hourglass_empty_rounded,
-          color: AppColors.warning,
+          color: AppColors.primary,
         ),
         DashboardStatCard(
           label: "Approved Today",
           value: (stats['approved_today'] ?? 0).toString(),
           icon: Icons.verified_user_rounded,
-          color: AppColors.success,
+          color: AppColors.primary,
         ),
       ]);
     }
@@ -687,7 +696,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: DashboardQuickAction(
           label: "Residents Directory",
           icon: Icons.people_rounded,
-          tint: AppColors.admin,
+          tint: AppColors.primary,
           onTap: () => _navigateToTab(1),
         ),
       ),
@@ -705,12 +714,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       DashboardQuickAction(
         label: "Manage Flats",
         icon: Icons.home_rounded,
-        tint: AppColors.success,
+        tint: AppColors.primary,
         onTap: () {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text("Flats management coming soon!"),
-              backgroundColor: AppColors.admin,
+              backgroundColor: AppColors.primary,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               margin: const EdgeInsets.all(16),
@@ -743,7 +752,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: DashboardQuickAction(
             label: "Notice Board",
             icon: Icons.notifications_rounded,
-            tint: AppColors.warning,
+            tint: AppColors.primary,
             onTap: () => _navigateToTab(4),
           ),
         ),
@@ -754,7 +763,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         DashboardQuickAction(
           label: "Violations",
           icon: Icons.directions_car_rounded,
-          tint: AppColors.warning,
+          tint: AppColors.primary,
           onTap: () {
             Navigator.push(
               context,
@@ -801,7 +810,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         DashboardQuickAction(
           label: "Manage Admins",
           icon: Icons.admin_panel_settings_rounded,
-          tint: AppColors.admin,
+          tint: AppColors.primary,
           onTap: () {
             Navigator.push(
               context,

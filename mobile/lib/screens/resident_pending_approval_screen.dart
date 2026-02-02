@@ -134,7 +134,7 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.success.withOpacity(0.15),
+                    AppColors.primary.withOpacity(0.15),
                     AppColors.bg,
                     AppColors.bg,
                   ],
@@ -153,12 +153,12 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
                       width: 120,
                       height: 120,
                       decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.15),
+                        color: AppColors.primary.withOpacity(0.15),
                         shape: BoxShape.circle,
                       ),
                       child: const Icon(
                         Icons.pending_actions_rounded,
-                        color: AppColors.success,
+                        color: AppColors.primary,
                         size: 60,
                       ),
                     ),
@@ -206,7 +206,7 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.email_rounded, color: AppColors.success, size: 20),
+                              Icon(Icons.email_rounded, color: AppColors.primary, size: 20),
                               const SizedBox(width: 12),
                               const Text(
                                 "Email",
@@ -252,7 +252,7 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.success,
+                          backgroundColor: AppColors.primary,
                           foregroundColor: Colors.white,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
@@ -281,8 +281,8 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
                           ),
                         ),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.success,
-                          side: BorderSide(color: AppColors.success, width: 2),
+                          foregroundColor: AppColors.primary,
+                          side: BorderSide(color: AppColors.primary, width: 2),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
                           ),
