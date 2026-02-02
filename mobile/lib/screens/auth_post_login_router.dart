@@ -56,7 +56,7 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
       }
 
       // If no pointer, try to claim invite for the society you’re onboarding into
-      if (societyId == null || societyId!.isEmpty) {
+      if (societyId == null || societyId.isEmpty) {
         final claimService = InviteClaimService();
         final result = await claimService.claimInviteForSociety(
           societyId: widget.defaultSocietyId,
@@ -133,7 +133,7 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
+      return Scaffold(
         body: AppLoader.fullscreen(show: true),
       );
     }

@@ -22,6 +22,7 @@ import '../widgets/dashboard_hero.dart';
 import '../widgets/dashboard_stat_card.dart';
 import '../widgets/dashboard_quick_action.dart';
 import '../widgets/dashboard_insights_card.dart';
+import '../widgets/visitors_chart.dart';
 import '../services/firestore_service.dart';
 
 /// Resident Dashboard Screen
@@ -75,6 +76,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   int _unreadNoticesCount = 0;
   bool _initializedUnreadNotices = false;
   bool _isLoading = false;
+  List<int>? _visitorsByDayLast7;
   String? _photoUrl;
   String? _phone;
 
@@ -246,13 +248,12 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
       if (!mounted) return;
 
-      if (approvalsResult != null &&
-          approvalsResult.isSuccess &&
+      if (approvalsResult.isSuccess &&
           approvalsResult.data != null) {
         _pendingCount = approvalsResult.data!.length;
       }
 
-      if (historyResult != null && historyResult.isSuccess && historyResult.data != null) {
+      if (historyResult.isSuccess && historyResult.data != null) {
         final history = historyResult.data!;
         _approvedCount = history.where((item) {
           final status = item['status']?.toString().toUpperCase() ?? '';
@@ -292,8 +293,25 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       // Total notification count = pending approvals + unread informational notices
       _notificationCount = _pendingCount + _unreadNoticesCount;
 
+      // Load last-7-days visitor counts for this flat (chart)
+      List<int>? visitorsByDayLast7;
+      if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement) &&
+          widget.flatNo.isNotEmpty) {
+        try {
+          visitorsByDayLast7 = await _firestore.getVisitorCountsByDayLast7Days(
+            societyId: widget.societyId,
+            flatNo: widget.flatNo,
+          );
+        } catch (e) {
+          AppLogger.w("getVisitorCountsByDayLast7Days failed", error: e.toString());
+        }
+      }
+
       if (mounted) {
-        setState(() => _isLoading = false);
+        setState(() {
+          _isLoading = false;
+          _visitorsByDayLast7 = visitorsByDayLast7;
+        });
       }
 
       AppLogger.i("Resident dashboard loaded", data: {
@@ -474,7 +492,13 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                     const SizedBox(height: 14),
                     _buildStatsRow(),
                     const SizedBox(height: 20),
-                    const DashboardInsightsCard(),
+                    if (_visitorsByDayLast7 != null)
+                      VisitorsChart(
+                        countsByDay: _visitorsByDayLast7!,
+                        barColor: AppColors.primary,
+                      )
+                    else
+                      const DashboardInsightsCard(),
                     const SizedBox(height: 28),
                   ],
                   const Text(
@@ -527,7 +551,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                 color: AppColors.primary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.business_rounded,
                 color: AppColors.primary,
               ),

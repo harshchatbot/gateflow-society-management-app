@@ -216,7 +216,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
+        const Text(
           "Create your admin account",
           style: TextStyle(
             color: AppColors.text2,
@@ -248,7 +248,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
+            const Text(
               "Enter your details",
               style: TextStyle(
                 fontSize: 16,
@@ -328,9 +328,9 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   "Role",
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
                     color: AppColors.text2,
@@ -460,7 +460,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Text(
+                    const Text(
                       "Already have an account? ",
                       style: TextStyle(
                         color: AppColors.text2,
@@ -550,7 +550,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
-          Text(
+          const Text(
             "Your signup request has been sent to the super admin for approval. You will be able to login once your request is approved.",
             style: TextStyle(
               fontSize: 15,

@@ -1570,9 +1570,11 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
   /// Visitor counts per day for the last 7 days (for dashboard chart).
   /// Returns list of 7 counts: [day-6, day-5, ..., today] (local calendar days).
   /// [guardId] if set filters to that guard's entries only; otherwise society-wide.
+  /// [flatNo] if set filters to visitors for that flat (for resident dashboard).
   Future<List<int>> getVisitorCountsByDayLast7Days({
     required String societyId,
     String? guardId,
+    String? flatNo,
   }) async {
     try {
       final now = DateTime.now();
@@ -1586,11 +1588,18 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
               .get()
           : await _visitorsRef(societyId).limit(400).get();
 
+      final flatNorm = (flatNo ?? '').trim().toUpperCase();
+
       final counts = List<int>.filled(7, 0);
       for (final doc in snapshot.docs) {
         final data = doc.data();
         if (data == null) continue;
-        final createdAt = (data as Map<String, dynamic>)['createdAt'];
+        final map = data as Map<String, dynamic>;
+        if (flatNorm.isNotEmpty) {
+          final docFlat = (map['flatNo'] ?? map['flat_no'] ?? '').toString().trim().toUpperCase();
+          if (docFlat != flatNorm) continue;
+        }
+        final createdAt = map['createdAt'];
         if (createdAt == null) continue;
         DateTime date;
         if (createdAt is Timestamp) {
@@ -1608,7 +1617,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         }
       }
 
-      AppLogger.i('Visitor counts by day (last 7)', data: {'counts': counts, 'guardId': guardId});
+      AppLogger.i('Visitor counts by day (last 7)', data: {'counts': counts, 'guardId': guardId, 'flatNo': flatNo});
       return counts;
     } catch (e, stackTrace) {
       AppLogger.e('Error getVisitorCountsByDayLast7Days', error: e, stackTrace: stackTrace);

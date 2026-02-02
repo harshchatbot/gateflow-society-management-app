@@ -39,9 +39,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (context) => NewVisitorScreen(
-              guardId: session['guard_id']!,
-              guardName: session['guard_name']!,
-              societyId: session['society_id']!,
+              guardId: session.guardId,
+              guardName: session.guardName,
+              societyId: session.societyId,
             ),
           ),
         );
