@@ -14,6 +14,7 @@ import 'admin_shell_screen.dart';
 import 'onboarding_choose_role_screen.dart';
 import 'admin_onboarding_screen.dart';
 import 'admin_pending_approval_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum _OtpStep { phone, otp }
 
@@ -150,13 +151,20 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
     final verificationId = _verificationId;
     if (verificationId == null || verificationId.isEmpty) {
+      if (!mounted) return;
       _showError("Session expired. Please request OTP again.");
       setState(() => _step = _OtpStep.phone);
       return;
     }
 
     final smsCode = _otpController.text.trim();
+    if (smsCode.isEmpty || smsCode.length < 4) {
+      if (!mounted) return;
+      _showError("Please enter the OTP.");
+      return;
+    }
 
+    if (!mounted) return;
     setState(() => _isLoading = true);
 
     try {
@@ -170,24 +178,32 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       final uid = cred.user?.uid;
       if (uid == null) throw Exception("Failed to authenticate");
 
+      // IMPORTANT: _postLogin() does membership resolve + recovery + navigation
       await _postLogin(uid: uid);
     } on FirebaseAuthException catch (e, st) {
       AppLogger.e("Admin OTP verify failed", error: e, stackTrace: st);
 
-      String msg = "Invalid OTP. Please try again.";
       final code = e.code.toLowerCase();
-      if (code.contains('invalid-verification-code')) {
+      String msg = "Invalid OTP. Please try again.";
+
+      if (code == 'invalid-verification-code' ||
+          code.contains('invalid-verification-code')) {
         msg = "Invalid OTP. Please check and try again.";
-      } else if (code.contains('session-expired')) {
+      } else if (code == 'session-expired' ||
+          code.contains('session-expired')) {
         msg = "OTP expired. Please request a new OTP.";
-      } else if (code.contains('network-request-failed')) {
+      } else if (code == 'network-request-failed' ||
+          code.contains('network-request-failed')) {
         msg = "Network error. Please check your connection.";
+      } else if (code.contains('too-many-requests')) {
+        msg = "Too many attempts. Please wait and try again.";
       }
 
+      if (!mounted) return;
       _showError(msg);
 
       // For expired sessions, move back to phone step
-      if (code.contains('session-expired')) {
+      if (code == 'session-expired' || code.contains('session-expired')) {
         setState(() {
           _step = _OtpStep.phone;
           _verificationId = null;
@@ -196,24 +212,22 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       }
     } catch (e, st) {
       AppLogger.e("Admin OTP verify unknown error", error: e, stackTrace: st);
+      if (!mounted) return;
       _showError("Login failed. Please try again.");
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
     }
   }
 
   /// Keeps your existing behavior:
   /// membership -> pending approval -> gate -> save session -> shell
   Future<void> _postLogin({required String uid}) async {
-    // Step 2: Resolve membership
     final membership = await _firestore.getCurrentUserMembership();
 
-    final user = FirebaseAuth.instance.currentUser;
-    final phoneLabel = user?.phoneNumber ?? 'Phone login';
-
-    // Step 2a: If no membership -> pending approval screen (same behavior)
     if (!mounted) return;
 
+    // 🚫 No membership → onboarding
     if (membership == null) {
       Navigator.pushReplacement(
         context,
@@ -222,57 +236,58 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       return;
     }
 
-    final societyId = (membership['societyId'] as String?) ?? '';
-    final systemRole =
+    final String? societyId = membership['societyId'] as String?;
+    final String systemRole =
         (membership['systemRole'] as String?)?.toLowerCase() ?? 'admin';
-    final societyRole = membership['societyRole'] as String?;
-    final name = membership['name'] as String? ?? 'Admin';
+    final String? societyRole = membership['societyRole'] as String?;
+    final String name = membership['name'] as String? ?? 'Admin';
     final bool isActive = membership['active'] == true;
 
-    if (societyId.isEmpty) {
-      throw Exception("Society not resolved");
+    // 🚫 Critical guard
+    if (societyId == null || societyId.isEmpty) {
+      _showError("Society not linked to this account.");
+      return;
     }
 
-    // ✅ allow admin OR super_admin
+    // 🚫 Not an admin at all
     if (systemRole != 'admin' && systemRole != 'super_admin') {
-      throw Exception("User is not an admin");
+      _showError("You are not authorized as an admin.");
+      return;
     }
 
-    // Step 2b: pending approval if active == false for admin
-    if (!isActive && systemRole == 'admin') {
-      if (!mounted) return;
+    // ✅ ONLY admin needs approval — super_admin NEVER does
+    if (systemRole == 'admin' && !isActive) {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => AdminPendingApprovalScreen(email: phoneLabel),
+          builder: (_) => AdminPendingApprovalScreen(
+            adminId: uid,
+            societyId: societyId,
+            adminName: name.isNotEmpty ? name : 'Admin',
+          ),
         ),
       );
       return;
     }
 
-    // Step 2c: Gate (block inactive society)
+    // 🔒 Gate inactive societies
     final gate = SessionGateService();
     final gateResult = await gate.validateSessionAfterLogin(uid);
 
     if (!gateResult.allowed) {
       await FirebaseAuth.instance.signOut();
-      await Storage.clearAllSessions();
       await Storage.clearFirebaseSession();
-
-      GateBlockMessage.set(
-        gateResult.userMessage ??
-            'This society is currently inactive. Please contact the society admin.',
-      );
+      await Storage.clearAllSessions();
 
       if (!mounted) return;
-
-      Navigator.of(context).pushReplacement(
+      Navigator.pushReplacement(
+        context,
         MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
       );
       return;
     }
 
-    // Step 3: Save session
+    // ✅ Save unified session
     await Storage.saveFirebaseSession(
       uid: uid,
       societyId: societyId,
@@ -281,28 +296,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       name: name,
     );
 
-    AppLogger.i("Admin login successful (OTP)", data: {
-      'uid': uid,
-      'societyId': societyId,
-      'systemRole': systemRole,
-      'name': name,
-    });
-
     if (!mounted) return;
 
-    // Non-blocking hint
-    final memberPhone = (membership['phone'] ?? '').toString().trim();
-    if (memberPhone.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content:
-              Text('Add your phone in Profile for easier login next time.'),
-          duration: Duration(seconds: 5),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-    }
-
+    // ✅ Go to dashboard
     Navigator.pushReplacement(
       context,
       MaterialPageRoute(

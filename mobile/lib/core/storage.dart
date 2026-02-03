@@ -31,13 +31,19 @@ class AdminSession {
   final String adminId;
   final String adminName;
   final String societyId;
+
+  /// Society role (PRESIDENT/SECRETARY/TREASURER/ADMIN/etc.)
   final String role;
+
+  /// System role (admin | super_admin)
+  final String systemRole;
 
   AdminSession({
     required this.adminId,
     required this.adminName,
     required this.societyId,
     required this.role,
+    required this.systemRole,
   });
 }
 
@@ -51,6 +57,7 @@ class Storage {
       accessibility: KeychainAccessibility.first_unlock,
     ),
   );
+
   // Keys
   static const String _kGuardId = "guard_id";
   static const String _kGuardName = "guard_name";
@@ -65,6 +72,7 @@ class Storage {
   static const String _kAdminName = "admin_name";
   static const String _kAdminSocietyId = "admin_society_id";
   static const String _kAdminRole = "admin_role";
+  static const String _kAdminSystemRole = "admin_system_role"; // ✅ NEW (backward compatible)
 
   // Resident join-request helper (directory-based onboarding)
   static const String _kResidentJoinSocietyId = "resident_join_society_id";
@@ -180,19 +188,21 @@ class Storage {
   }
 
   // -----------------------------
-  // Admin session
+  // Admin session (legacy prefs-based)
   // -----------------------------
   static Future<void> saveAdminSession({
     required String adminId,
     required String adminName,
     required String societyId,
     required String role,
+    String systemRole = 'admin', // ✅ NEW default for compatibility
   }) async {
     final prefs = await _prefs();
     await prefs.setString(_kAdminId, adminId);
     await prefs.setString(_kAdminName, adminName);
     await prefs.setString(_kAdminSocietyId, societyId);
     await prefs.setString(_kAdminRole, role);
+    await prefs.setString(_kAdminSystemRole, _normalizeSystemRole(systemRole));
   }
 
   static Future<void> clearAdminSession() async {
@@ -201,6 +211,7 @@ class Storage {
     await prefs.remove(_kAdminName);
     await prefs.remove(_kAdminSocietyId);
     await prefs.remove(_kAdminRole);
+    await prefs.remove(_kAdminSystemRole); // ✅ NEW
   }
 
   static Future<AdminSession?> getAdminSession() async {
@@ -210,12 +221,24 @@ class Storage {
     final societyId = prefs.getString(_kAdminSocietyId);
     final role = prefs.getString(_kAdminRole);
 
+    // ✅ read systemRole from legacy admin session, else fallback to firebase session, else default
+    final rawSystemRole = prefs.getString(_kAdminSystemRole);
+
+    String systemRole = _normalizeSystemRole(rawSystemRole ?? '');
+    if (systemRole.isEmpty) {
+      // fallback to firebase session if present
+      final fbSystemRole = await _secure.read(key: _kSystemRole);
+      systemRole = _normalizeSystemRole(fbSystemRole ?? 'admin');
+      if (systemRole.isEmpty) systemRole = 'admin';
+    }
+
     if (adminId == null || adminId.isEmpty) return null;
     return AdminSession(
       adminId: adminId,
       adminName: adminName ?? "",
       societyId: societyId ?? "",
       role: role ?? "ADMIN",
+      systemRole: systemRole,
     );
   }
 
@@ -231,7 +254,7 @@ class Storage {
   }
 
   // -----------------------------
-  // Firebase Session (NEW)
+  // Firebase Session (NEW) - unified
   // -----------------------------
   static const String _kUid = "firebase_uid";
   static const String _kSocietyId = "firebase_society_id";
@@ -244,21 +267,25 @@ class Storage {
   static Future<void> saveFirebaseSession({
     required String uid,
     required String societyId,
-    required String systemRole, // "admin" | "guard" | "resident"
+    required String systemRole, // "admin" | "super_admin" | "guard" | "resident"
     String? societyRole,
     required String name,
     String? flatNo,
   }) async {
-    // Use secure storage for identity/session data instead of plain SharedPreferences
     await _secure.write(key: _kUid, value: uid);
     await _secure.write(key: _kSocietyId, value: societyId);
-    await _secure.write(key: _kSystemRole, value: systemRole);
+    await _secure.write(key: _kSystemRole, value: _normalizeSystemRole(systemRole));
     if (societyRole != null) {
       await _secure.write(key: _kSocietyRole, value: societyRole);
+    } else {
+      // keep storage clean
+      await _secure.delete(key: _kSocietyRole);
     }
     await _secure.write(key: _kName, value: name);
     if (flatNo != null) {
       await _secure.write(key: _kFlatNo, value: flatNo);
+    } else {
+      await _secure.delete(key: _kFlatNo);
     }
   }
 
@@ -291,5 +318,22 @@ class Storage {
   static Future<bool> hasFirebaseSession() async {
     final uid = await _secure.read(key: _kUid);
     return (uid ?? "").isNotEmpty;
+  }
+
+  // -----------------------------
+  // Helpers
+  // -----------------------------
+  static String _normalizeSystemRole(String input) {
+    final r = input.trim().toLowerCase();
+    if (r.isEmpty) return '';
+
+    // normalize super admin variants
+    if (r == 'super_admin' || r == 'super admin' || r == 'superadmin') return 'super_admin';
+
+    // keep admin/guard/resident as-is
+    if (r == 'admin' || r == 'guard' || r == 'resident') return r;
+
+    // unknown -> return original normalized (or empty if you want strict)
+    return r;
   }
 }

@@ -5,7 +5,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../core/storage.dart';
 import '../core/society_modules.dart';
 import '../core/session_gate_service.dart';
-import '../core/storage.dart';
 import 'onboarding_welcome_screen.dart';
 import 'onboarding_choose_role_screen.dart';
 import 'guard_shell_screen.dart';
@@ -39,13 +38,14 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
       if (firebaseUser != null) {
         try {
           final gate = SessionGateService();
-          final gateResult = await gate.validateSessionAfterLogin(firebaseUser.uid).timeout(
-            const Duration(seconds: 5),
-            onTimeout: () => GateResult.blocked(
-              GateBlockReason.membershipNotFound,
-              'This society is currently inactive. Please contact the society admin.',
-            ),
-          );
+          final gateResult =
+              await gate.validateSessionAfterLogin(firebaseUser.uid).timeout(
+                    const Duration(seconds: 5),
+                    onTimeout: () => GateResult.blocked(
+                      GateBlockReason.membershipNotFound,
+                      'This society is currently inactive. Please contact the society admin.',
+                    ),
+                  );
 
           if (gateResult.allowed && gateResult.memberInfo != null && mounted) {
             final membership = gateResult.memberInfo!;
@@ -64,6 +64,7 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
                 adminName: name.isNotEmpty ? name : "Admin",
                 societyId: societyId,
                 role: societyRole ?? 'ADMIN',
+                systemRole: systemRole,
               );
             } else if (systemRole == 'guard' && societyId.isNotEmpty) {
               targetScreen = GuardShellScreen(
@@ -71,7 +72,9 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
                 guardName: name.isNotEmpty ? name : "Guard",
                 societyId: societyId,
               );
-            } else if (systemRole == 'resident' && flatNo != null && societyId.isNotEmpty) {
+            } else if (systemRole == 'resident' &&
+                flatNo != null &&
+                societyId.isNotEmpty) {
               targetScreen = ResidentShellScreen(
                 residentId: firebaseUser.uid,
                 residentName: name.isNotEmpty ? name : "Resident",
@@ -86,12 +89,21 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
 
             // Special case: resident with no membership but a pending join request.
             if (gateResult.blockReason == GateBlockReason.membershipNotFound) {
-              final pendingSocietyId =
-                  await Storage.getResidentJoinSocietyId();
+              final pendingSocietyId = await Storage.getResidentJoinSocietyId();
               if (pendingSocietyId != null) {
+                final uid = firebaseUser.uid;
+
+                final contact = firebaseUser.phoneNumber?.trim() ??
+                    firebaseUser.email?.trim() ??
+                    'Phone login';
+
                 targetScreen = ResidentPendingApprovalScreen(
-                  email: firebaseUser.email ?? 'Phone login',
+                  residentId: uid,
+                  societyId: pendingSocietyId,
+                  residentName: 'Resident', // you don’t know name yet
+                  email: contact, // optional
                 );
+
                 handled = true;
               }
             }
@@ -127,7 +139,12 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
           final residentSession = await Storage.getResidentSession();
           final guardSession = await Storage.getGuardSession();
           final adminSession = await Storage.getAdminSession();
-
+          final session = await Storage.getFirebaseSession();
+          final systemRole = (session?['systemRole'] ?? 'admin')
+              .toString()
+              .trim()
+              .toLowerCase();
+          final societyRole = (session?['societyRole'] ?? 'ADMIN').toString();
           if (residentSession != null) {
             await SocietyModules.ensureLoaded(residentSession.societyId);
             targetScreen = ResidentShellScreen(
@@ -140,8 +157,12 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
             await SocietyModules.ensureLoaded(guardSession.societyId);
             targetScreen = GuardShellScreen(
               guardId: guardSession.guardId,
-              guardName: guardSession.guardName.isNotEmpty ? guardSession.guardName : "Guard",
-              societyId: guardSession.societyId.isNotEmpty ? guardSession.societyId : "Society",
+              guardName: guardSession.guardName.isNotEmpty
+                  ? guardSession.guardName
+                  : "Guard",
+              societyId: guardSession.societyId.isNotEmpty
+                  ? guardSession.societyId
+                  : "Society",
             );
           } else if (adminSession != null) {
             await SocietyModules.ensureLoaded(adminSession.societyId);
@@ -150,6 +171,7 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
               adminName: adminSession.adminName,
               societyId: adminSession.societyId,
               role: adminSession.role,
+              systemRole: systemRole,
             );
           }
         } catch (e) {

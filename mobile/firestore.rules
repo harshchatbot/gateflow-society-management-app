@@ -446,5 +446,31 @@ service cloud.firestore {
     match /{document=**} {
       allow read, write: if false;
     }
+
+    // =========================
+    // PHONE INDEX: phone_index/{phoneE164}
+    // Used to recover membership pointers, and quick lookup by phone.
+    // Allow signed-in users to create/update ONLY their own phone doc.
+    // =========================
+    match /phone_index/{phone} {
+      allow read: if signedIn(); // or lock further if you want
+
+      allow create, update: if signedIn()
+        // user can only write index for their OWN verified phone
+        && request.auth.token.phone_number != null
+        && phone == request.auth.token.phone_number
+
+        // must point to themselves
+        && request.resource.data.uid == request.auth.uid
+
+        // required fields present
+        && request.resource.data.societyId is string
+        && request.resource.data.systemRole is string
+        && (request.resource.data.active == true || request.resource.data.active == false);
+
+      // safest: prevent deletes from clients
+      allow delete: if false;
+    }
+
   }
 }

@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../core/storage.dart';
@@ -12,7 +11,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 // UI system
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
-import '../ui/app_icons.dart';
 
 import 'resident_shell_screen.dart';
 import 'resident_pending_approval_screen.dart';
@@ -94,7 +92,8 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
 
       // 4) Extract membership data
       final societyId = (membership['societyId'] as String?)?.trim() ?? '';
-      final systemRole = (membership['systemRole'] as String?)?.trim() ?? 'resident';
+      final systemRole =
+          (membership['systemRole'] as String?)?.trim() ?? 'resident';
       final name = (membership['name'] as String?)?.trim() ?? 'Resident';
       final flatNo = (membership['flatNo'] as String?)?.trim() ?? '';
       final bool isActive = membership['active'] == true;
@@ -109,14 +108,18 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
 
       // 5) Check if resident is pending approval (active == false)
       if (!isActive && systemRole == 'resident') {
-        // Resident has pending approval, redirect to pending approval screen
         setState(() => _isLoading = false);
         if (!mounted) return;
-        
+
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => ResidentPendingApprovalScreen(email: email),
+            builder: (_) => ResidentPendingApprovalScreen(
+              residentId: uid,
+              societyId: societyId,
+              residentName: name.isNotEmpty ? name : 'Resident',
+              email: email, // optional, safe
+            ),
           ),
         );
         return;
@@ -129,7 +132,8 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
         await FirebaseAuth.instance.signOut();
         await Storage.clearAllSessions();
         await Storage.clearFirebaseSession();
-        GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
+        GateBlockMessage.set(gateResult.userMessage ??
+            'This society is currently inactive. Please contact the society admin.');
         if (!mounted) return;
         setState(() => _isLoading = false);
         Navigator.of(context).pushReplacement(
@@ -156,9 +160,10 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
       final memberPhone = (membership['phone'] ?? '').toString().trim();
       if (memberPhone.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text('Add your phone in Profile for easier login next time.'),
-            duration: const Duration(seconds: 5),
+          const SnackBar(
+            content:
+                Text('Add your phone in Profile for easier login next time.'),
+            duration: Duration(seconds: 5),
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -238,7 +243,8 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
               Navigator.of(context).pop();
             } else {
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
+                MaterialPageRoute(
+                    builder: (_) => const OnboardingChooseRoleScreen()),
               );
             }
           },
@@ -276,7 +282,8 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(show: _isLoading, message: "Verifying Credentials…"),
+          AppLoader.overlay(
+              show: _isLoading, message: "Verifying Credentials…"),
         ],
       ),
     );
@@ -315,7 +322,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
+        const Text(
           "Secure Society Access",
           style: TextStyle(
             color: AppColors.text2,
@@ -347,7 +354,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
+            const Text(
               "Enter your credentials",
               style: TextStyle(
                 fontSize: 16,
@@ -385,7 +392,9 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
               onSubmitted: (_) => _handleLogin(),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
                   color: AppColors.text2,
                   size: 20,
                 ),
@@ -409,11 +418,13 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
                     : () async {
                         final email = _emailController.text.trim();
                         if (email.isEmpty || !email.contains('@')) {
-                          _showError("Please enter a valid email address first.");
+                          _showError(
+                              "Please enter a valid email address first.");
                           return;
                         }
                         try {
-                          await _authService.sendPasswordResetEmail(email: email);
+                          await _authService.sendPasswordResetEmail(
+                              email: email);
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
@@ -454,7 +465,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
+                const Text(
                   "Don't have an account? ",
                   style: TextStyle(
                     color: AppColors.text2,
@@ -465,7 +476,8 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const ResidentSignupScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const ResidentSignupScreen()),
                     );
                   },
                   child: const Text(
@@ -493,9 +505,9 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ).copyWith(
-                  elevation: MaterialStateProperty.resolveWith<double>(
-                    (Set<MaterialState> states) {
-                      if (states.contains(MaterialState.pressed)) {
+                  elevation: WidgetStateProperty.resolveWith<double>(
+                    (Set<WidgetState> states) {
+                      if (states.contains(WidgetState.pressed)) {
                         return 0;
                       }
                       return 0;

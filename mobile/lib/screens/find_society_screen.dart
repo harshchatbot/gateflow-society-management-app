@@ -187,10 +187,17 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
       await Storage.saveResidentJoinSocietyId(societyId);
 
       if (!mounted) return;
+      final uid = user.uid;
+      final contact =
+          user.phoneNumber?.trim() ?? user.email?.trim() ?? 'Phone login';
+
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
           builder: (_) => ResidentPendingApprovalScreen(
-            email: user.email ?? 'Phone login',
+            residentId: uid,
+            societyId: societyId,
+            residentName: 'Resident', // name not known yet at this stage
+            email: contact, // optional
           ),
         ),
       );
@@ -260,7 +267,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: BorderSide(color: theme.colorScheme.primary.withOpacity(0.55), width: 1.5),
+        borderSide: BorderSide(
+            color: theme.colorScheme.primary.withOpacity(0.55), width: 1.5),
       ),
     );
   }
@@ -275,7 +283,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: theme.colorScheme.onSurface),
+          icon: Icon(Icons.arrow_back_rounded,
+              color: theme.colorScheme.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
@@ -355,7 +364,6 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
           onChanged: _onSearchChanged,
         ),
         const SizedBox(height: 12),
-
         if (_searchController.text.trim().isEmpty && _societies.isEmpty)
           Text(
             'Start typing to search your society.',
@@ -415,7 +423,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                       title: Text(
                         name,
                         style: TextStyle(
-                          fontWeight: selected ? FontWeight.w900 : FontWeight.w700,
+                          fontWeight:
+                              selected ? FontWeight.w900 : FontWeight.w700,
                           color: theme.colorScheme.onSurface,
                         ),
                       ),
@@ -424,7 +433,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                               cityName,
                               style: TextStyle(
                                 fontSize: 13,
-                                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                color: theme.colorScheme.onSurface
+                                    .withOpacity(0.7),
                                 fontWeight: FontWeight.w600,
                               ),
                             )
@@ -436,7 +446,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                             )
                           : Icon(
                               Icons.chevron_right_rounded,
-                              color: theme.colorScheme.onSurface.withOpacity(0.35),
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.35),
                             ),
                     ),
                   ),
@@ -514,7 +525,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
       orElse: () => <String, dynamic>{},
     );
 
-    final societyName = (society['name'] as String?) ?? _selectedSocietyId ?? '';
+    final societyName =
+        (society['name'] as String?) ?? _selectedSocietyId ?? '';
     final unitLabel = (unit['label'] as String?) ?? _selectedUnitId ?? '';
 
     return Container(
@@ -532,11 +544,9 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
             ),
           ),
           const SizedBox(height: 16),
-
           _buildConfirmRow(Icons.apartment_rounded, 'Society', societyName),
           const SizedBox(height: 10),
           _buildConfirmRow(Icons.home_rounded, 'Unit', unitLabel),
-
           const SizedBox(height: 18),
           Text(
             'Are you the owner or tenant of this unit?',
@@ -547,7 +557,6 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
             ),
           ),
           const SizedBox(height: 12),
-
           Row(
             children: [
               Expanded(
@@ -567,13 +576,14 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
               ),
             ],
           ),
-
           const SizedBox(height: 22),
           SizedBox(
             height: 52,
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: (_residencyType != null && !_submitting) ? _submitJoinRequest : null,
+              onPressed: (_residencyType != null && !_submitting)
+                  ? _submitJoinRequest
+                  : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: theme.colorScheme.onPrimary,
@@ -581,8 +591,10 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(18),
                 ),
-                disabledBackgroundColor: theme.colorScheme.onSurface.withOpacity(0.10),
-                disabledForegroundColor: theme.colorScheme.onSurface.withOpacity(0.45),
+                disabledBackgroundColor:
+                    theme.colorScheme.onSurface.withOpacity(0.10),
+                disabledForegroundColor:
+                    theme.colorScheme.onSurface.withOpacity(0.45),
               ),
               child: _submitting
                   ? AppLoader.inline(size: 22)

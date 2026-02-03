@@ -13,7 +13,7 @@ import 'admin_shell_screen.dart';
 import 'admin_login_screen.dart';
 import '../core/storage.dart';
 import '../services/invite_bulk_upload_service.dart';
-
+import 'package:firebase_auth/firebase_auth.dart';
 
 /// Admin Onboarding Screen
 ///
@@ -72,7 +72,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _confettiController =
+        ConfettiController(duration: const Duration(seconds: 2));
     _loadStates();
   }
 
@@ -140,6 +141,15 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final user = FirebaseAuth.instance.currentUser;
+    final authPhone = user?.phoneNumber;
+
+    if (user == null || authPhone == null || authPhone.isEmpty) {
+      _showError("Please login with OTP first.");
+      setState(() => _isLoading = false);
+      return;
+    }
+
     final societyCode = _societyCodeController.text.trim().toUpperCase();
     final adminName = _adminNameController.text.trim();
     final email = _adminIdController.text.trim();
@@ -203,10 +213,30 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           systemRole: 'super_admin',
           societyRole: _selectedRole.toLowerCase(),
           name: adminName,
-          phone: phone.isEmpty ? null : phone,
+          phone: authPhone,
           email: email, // Include email from form
           active: true,
         );
+
+        await FirebaseFirestore.instance
+            .collection('phone_index')
+            .doc(authPhone) // ✅ MUST be auth phone
+            .set({
+          'uid': uid,
+          'societyId': societyId,
+          'systemRole': 'super_admin',
+          'active': true,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        AppLogger.i("Auth state", data: {
+          "uid": FirebaseAuth.instance.currentUser?.uid,
+          "phone": FirebaseAuth.instance.currentUser?.phoneNumber,
+          "isAnonymous": FirebaseAuth.instance.currentUser?.isAnonymous,
+          "providers": FirebaseAuth.instance.currentUser?.providerData
+              .map((e) => e.providerId)
+              .toList(),
+        });
 
         await _setRootPointer(
           uid: uid,
@@ -217,12 +247,12 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
         // Note: Bulk invite upload can be done later from the dashboard
         // Removed automatic file picker to avoid disrupting onboarding flow
 
-
         // If you want confetti only for new society creation:
         _confettiController.play();
       } else {
         // JOIN SOCIETY = Invite → Self Signup → Claim Invite
-        final existingSocietyId = await _firestore.getSocietyIdByCode(societyCode);
+        final existingSocietyId =
+            await _firestore.getSocietyIdByCode(societyCode);
         if (existingSocietyId == null) {
           setState(() => _isLoading = false);
           _showError("Society not found or inactive for this code.");
@@ -261,7 +291,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
         }, SetOptions(merge: true));
 
         // Root pointer is created in claim batch, but safe to ensure:
-        await _setRootPointer(uid: uid, societyId: societyId, systemRole: 'admin');
+        await _setRootPointer(
+            uid: uid, societyId: societyId, systemRole: 'admin');
       }
 
       // Step 3: Save Firebase session
@@ -288,7 +319,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
         SnackBar(
           content: Row(
             children: [
-              Icon(Icons.check_circle_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 20),
+              Icon(Icons.check_circle_rounded,
+                  color: Theme.of(context).colorScheme.onPrimary, size: 20),
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
@@ -300,7 +332,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           ),
           backgroundColor: Theme.of(context).colorScheme.primary,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 2),
         ),
@@ -314,15 +347,18 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             adminName: adminName,
             societyId: societyId,
             role: _selectedRole,
+            systemRole: systemRoleForSession,
           ),
         ),
       );
     } catch (e, stackTrace) {
-      AppLogger.e("Admin onboarding exception", error: e, stackTrace: stackTrace);
+      AppLogger.e("Admin onboarding exception",
+          error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() => _isLoading = false);
         String errorMsg = "Registration failed. Please try again.";
-        if (e.toString().contains('wrong-password') || e.toString().contains('invalid-credential')) {
+        if (e.toString().contains('wrong-password') ||
+            e.toString().contains('invalid-credential')) {
           errorMsg = "Invalid password. Try again.";
         } else if (e.toString().contains('weak-password')) {
           errorMsg = "Password too weak. Please use at least 6 characters.";
@@ -414,7 +450,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           if (_isLoading || _isLoadingLocations)
             AppLoader.overlay(
               show: true,
-              message: _isLoading ? "Creating your account…" : "Loading locations…",
+              message:
+                  _isLoading ? "Creating your account…" : "Loading locations…",
             ),
 
           // Confetti celebration
@@ -462,7 +499,9 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(
-                _isCreatingSociety ? Icons.groups_rounded : Icons.person_add_rounded,
+                _isCreatingSociety
+                    ? Icons.groups_rounded
+                    : Icons.person_add_rounded,
                 size: 64,
                 color: theme.colorScheme.primary,
               ),
@@ -471,9 +510,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
         ),
         const SizedBox(height: 24),
         Text(
-          _isCreatingSociety
-              ? "Create New Society"
-              : "Join Society",
+          _isCreatingSociety ? "Create New Society" : "Join Society",
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w900,
@@ -499,38 +536,36 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   }
 
   Future<void> _uploadInvitesCsv({
-      required String societyId,
-    }) async {
-      try {
-        setState(() => _isLoading = true);
+    required String societyId,
+  }) async {
+    try {
+      setState(() => _isLoading = true);
 
-        final result = await InviteBulkUploadService().pickCsvAndUploadInvites(
-          societyId: societyId,
-        );
+      final result = await InviteBulkUploadService().pickCsvAndUploadInvites(
+        societyId: societyId,
+      );
 
-        if (!mounted) return;
-        setState(() => _isLoading = false);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
 
-        final msg =
-            "Processed: ${result.processed} | Created: ${result.created} | Skipped: ${result.skipped}";
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg)),
-        );
+      final msg =
+          "Processed: ${result.processed} | Created: ${result.created} | Skipped: ${result.skipped}";
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg)),
+      );
 
-        if (result.errors.isNotEmpty) {
-          // optional: log errors
-          AppLogger.w("Bulk invite upload errors", data: {"errors": result.errors});
-        }
-      } catch (e, st) {
-        AppLogger.e("Bulk invite upload failed", error: e, stackTrace: st);
-        if (!mounted) return;
-        setState(() => _isLoading = false);
-        _showError("Upload failed: ${e.toString()}");
+      if (result.errors.isNotEmpty) {
+        // optional: log errors
+        AppLogger.w("Bulk invite upload errors",
+            data: {"errors": result.errors});
       }
+    } catch (e, st) {
+      AppLogger.e("Bulk invite upload failed", error: e, stackTrace: st);
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      _showError("Upload failed: ${e.toString()}");
     }
-
-
-
+  }
 
   Widget _buildRegistrationForm() {
     final theme = Theme.of(context);
@@ -671,13 +706,16 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                             isExpanded: true,
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              prefixIcon: Icon(Icons.map_rounded, color: theme.colorScheme.primary),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
+                              prefixIcon: Icon(Icons.map_rounded,
+                                  color: theme.colorScheme.primary),
                             ),
                             hint: Text(
                               "Select state",
                               style: TextStyle(
-                                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                color: theme.colorScheme.onSurface
+                                    .withOpacity(0.6),
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -697,7 +735,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                                     ))
                                 .toList(),
                             validator: (value) {
-                              if (_isCreatingSociety && (value == null || value.isEmpty)) {
+                              if (_isCreatingSociety &&
+                                  (value == null || value.isEmpty)) {
                                 return "Please select State";
                               }
                               return null;
@@ -714,7 +753,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                                 _selectedCity = null;
                               });
 
-                              if (_selectedStateId != null && _selectedStateId!.isNotEmpty) {
+                              if (_selectedStateId != null &&
+                                  _selectedStateId!.isNotEmpty) {
                                 _loadCitiesForState(_selectedStateId!);
                               }
                             },
@@ -756,13 +796,16 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                             isExpanded: true,
                             decoration: InputDecoration(
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                              prefixIcon: Icon(Icons.location_on_rounded, color: theme.colorScheme.primary),
+                              contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 14),
+                              prefixIcon: Icon(Icons.location_on_rounded,
+                                  color: theme.colorScheme.primary),
                             ),
                             hint: Text(
                               "Select city",
                               style: TextStyle(
-                                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                color: theme.colorScheme.onSurface
+                                    .withOpacity(0.6),
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -782,12 +825,14 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                                     ))
                                 .toList(),
                             validator: (value) {
-                              if (_isCreatingSociety && (value == null || value.isEmpty)) {
+                              if (_isCreatingSociety &&
+                                  (value == null || value.isEmpty)) {
                                 return "Please select City";
                               }
                               return null;
                             },
-                            onChanged: (_selectedStateId == null || _selectedStateId!.isEmpty)
+                            onChanged: (_selectedStateId == null ||
+                                    _selectedStateId!.isEmpty)
                                 ? null
                                 : (value) {
                                     setState(() => _selectedCity = value);
@@ -795,7 +840,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                             disabledHint: Text(
                               "Select state first",
                               style: TextStyle(
-                                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                color: theme.colorScheme.onSurface
+                                    .withOpacity(0.6),
                                 fontSize: 15,
                                 fontWeight: FontWeight.w500,
                               ),
@@ -867,7 +913,9 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               textInputAction: TextInputAction.next,
               keyboardType: TextInputType.phone,
               validator: (value) {
-                if (value != null && value.trim().isNotEmpty && value.trim().length < 10) {
+                if (value != null &&
+                    value.trim().isNotEmpty &&
+                    value.trim().length < 10) {
                   return "Please enter a valid phone number";
                 }
                 return null;
@@ -880,7 +928,9 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _isCreatingSociety ? "Role (for new society creator)" : "Role",
+                  _isCreatingSociety
+                      ? "Role (for new society creator)"
+                      : "Role",
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
@@ -912,11 +962,13 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                           color: theme.colorScheme.primary.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.admin_panel_settings_rounded, color: theme.colorScheme.primary, size: 20),
+                        child: Icon(Icons.admin_panel_settings_rounded,
+                            color: theme.colorScheme.primary, size: 20),
                       ),
                       hintText: "Select role",
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 18),
                     ),
                     items: (_isCreatingSociety
                             ? ["SUPER_ADMIN"]
@@ -953,15 +1005,19 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               keyboardType: TextInputType.number,
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscurePin ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  _obscurePin
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
                   color: theme.colorScheme.onSurface.withOpacity(0.7),
                   size: 20,
                 ),
                 onPressed: () => setState(() => _obscurePin = !_obscurePin),
               ),
               validator: (value) {
-                if (value == null || value.trim().isEmpty) return "Please enter a PIN";
-                if (value.trim().length < 4) return "PIN must be at least 4 characters";
+                if (value == null || value.trim().isEmpty)
+                  return "Please enter a PIN";
+                if (value.trim().length < 4)
+                  return "PIN must be at least 4 characters";
                 return null;
               },
             ),
@@ -978,15 +1034,20 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               onSubmitted: (_) => _handleRegister(),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureConfirmPin ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                  _obscureConfirmPin
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
                   color: theme.colorScheme.onSurface.withOpacity(0.7),
                   size: 20,
                 ),
-                onPressed: () => setState(() => _obscureConfirmPin = !_obscureConfirmPin),
+                onPressed: () =>
+                    setState(() => _obscureConfirmPin = !_obscureConfirmPin),
               ),
               validator: (value) {
-                if (value == null || value.trim().isEmpty) return "Please confirm your PIN";
-                if (value.trim() != _pinController.text.trim()) return "PINs do not match";
+                if (value == null || value.trim().isEmpty)
+                  return "Please confirm your PIN";
+                if (value.trim() != _pinController.text.trim())
+                  return "PINs do not match";
                 return null;
               },
             ),
@@ -1031,7 +1092,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const AdminLoginScreen()),
                     );
                   },
                   child: Text(
@@ -1136,7 +1198,8 @@ class _PremiumField extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             ),
           ),
         ),

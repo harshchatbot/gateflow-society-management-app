@@ -18,7 +18,7 @@ class AdminShellScreen extends StatefulWidget {
   final String adminName;
   final String societyId;
   final String role;
-  final String? systemRole; // admin or super_admin
+  final String systemRole; // admin or super_admin
 
   const AdminShellScreen({
     super.key,
@@ -26,7 +26,7 @@ class AdminShellScreen extends StatefulWidget {
     required this.adminName,
     required this.societyId,
     required this.role,
-    this.systemRole,
+    required this.systemRole,
   });
 
   @override

@@ -38,7 +38,7 @@ class AdminDashboardScreen extends StatefulWidget {
   final String adminId;
   final String adminName;
   final String societyId;
-  final String? systemRole; // admin or super_admin
+  final String systemRole; // admin or super_admin
   /// Callback to navigate to tabs. Second arg optional: 1 = open Residents on Pending signups tab.
   final void Function(int index, [int? residentsSubTab])? onTabNavigate;
 
@@ -47,7 +47,7 @@ class AdminDashboardScreen extends StatefulWidget {
     required this.adminId,
     required this.adminName,
     required this.societyId,
-    this.systemRole,
+    required this.systemRole,
     this.onTabNavigate,
   });
 

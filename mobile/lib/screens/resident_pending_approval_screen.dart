@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../ui/app_colors.dart';
 import '../widgets/sentinel_illustration.dart';
 import 'resident_login_screen.dart';
@@ -8,6 +9,11 @@ import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../core/storage.dart';
 
+
+
+
+
+
 /// Resident Pending Approval Screen
 ///
 /// Shown when resident tries to login but their signup is still pending approval
@@ -15,12 +21,22 @@ import '../core/storage.dart';
 /// NOTE: Keep constructor param name as `email` for backward compatibility.
 /// In OTP flows, pass phone string here (e.g. "+91xxxx") and UI will render it as Contact.
 class ResidentPendingApprovalScreen extends StatefulWidget {
-  final String email;
+  // Backward compatible "email" param: can hold phone or email or any contact string
+  final String? email;
+
+  // New required identity context (needed for routing + better UX)
+  final String residentId;
+  final String societyId;
+  final String residentName;
 
   const ResidentPendingApprovalScreen({
     super.key,
-    required this.email,
+    this.email,
+    required this.residentId,
+    required this.societyId,
+    required this.residentName,
   });
+  
 
   @override
   State<ResidentPendingApprovalScreen> createState() =>
@@ -45,7 +61,7 @@ class _ResidentPendingApprovalScreenState
     final v = value.trim();
     if (!_looksLikePhone(v)) return v;
 
-    // Mask: +91******1234
+    // Mask: +91******1234 OR 98******1234
     if (v.length <= 6) return v;
     final last4 = v.substring(v.length - 4);
     final prefix = v.startsWith('+') ? v.substring(0, 3) : v.substring(0, 2);
@@ -58,16 +74,19 @@ class _ResidentPendingApprovalScreenState
     try {
       final membership = await _firestore.getCurrentUserMembership();
 
+      // If approved, route to ResidentShell
       if (membership != null && membership['active'] == true) {
         if (!mounted) return;
 
         final societyId = (membership['societyId'] as String?) ?? '';
-        final name = (membership['name'] as String?) ?? 'Resident';
-        final uid = (membership['uid'] as String?) ?? '';
+        final name = (membership['name'] as String?) ?? widget.residentName;
+        final uid = (membership['uid'] as String?) ?? widget.residentId;
         final flatNo = (membership['flatNo'] as String?)?.trim() ?? '';
 
         if (societyId.isNotEmpty && uid.isNotEmpty) {
           await Storage.clearResidentJoinSocietyId();
+          if (!mounted) return;
+
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
@@ -83,6 +102,7 @@ class _ResidentPendingApprovalScreenState
         }
       }
 
+      // If join request exists and is rejected, allow finding society again
       final pendingSocietyId = await Storage.getResidentJoinSocietyId();
       if (pendingSocietyId != null) {
         final jr = await _firestore.getResidentJoinRequest(
@@ -121,8 +141,8 @@ class _ResidentPendingApprovalScreenState
           margin: const EdgeInsets.all(16),
         ),
       );
-    } catch (e) {
-      AppLogger.e("Error checking approval status", error: e);
+    } catch (e, st) {
+      AppLogger.e("Error checking approval status", error: e, stackTrace: st);
     } finally {
       if (mounted) setState(() => _isChecking = false);
     }
@@ -205,9 +225,13 @@ class _ResidentPendingApprovalScreenState
   }
 
   Widget _buildContactCard(ThemeData theme) {
-    final raw = widget.email.trim();
+    final raw = widget.email?.trim() ?? '';
     final isPhone = _looksLikePhone(raw);
     final display = _maskIfPhone(raw);
+
+    final name = widget.residentName.trim().isNotEmpty
+        ? widget.residentName.trim()
+        : 'Resident';
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -236,17 +260,25 @@ class _ResidentPendingApprovalScreenState
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  isPhone ? "Contact" : "Email",
+                  name,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                    color: theme.colorScheme.onSurface.withOpacity(0.65),
+                    fontWeight: FontWeight.w900,
+                    color: theme.colorScheme.onSurface.withOpacity(0.85),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Text(
                   display.isEmpty ? "Phone login" : display,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "Society: ${widget.societyId}",
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
               ],
@@ -386,4 +418,5 @@ class _ResidentPendingApprovalScreenState
       ],
     );
   }
+  
 }

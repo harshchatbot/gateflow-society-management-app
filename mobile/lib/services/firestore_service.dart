@@ -9,10 +9,8 @@ import 'package:flutter/foundation.dart';
 import '../core/app_logger.dart';
 import 'firebase_auth_service.dart';
 
-
-
 /// FirestoreService - Multi-tenant Firestore operations
-/// 
+///
 /// All operations are scoped to societies/{societyId}/...
 /// Ensures data isolation between societies
 class FirestoreService {
@@ -65,10 +63,14 @@ class FirestoreService {
           await _flatsRef(societyId).where('active', isEqualTo: true).get();
       final list = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>? ?? {};
-        final flatNo = (data['flatNo'] ?? data['flat_no'] ?? data['label'] ?? doc.id).toString().trim();
+        final flatNo =
+            (data['flatNo'] ?? data['flat_no'] ?? data['label'] ?? doc.id)
+                .toString()
+                .trim();
         return {'id': doc.id, 'flatNo': flatNo.isEmpty ? doc.id : flatNo};
       }).toList();
-      list.sort((a, b) => (a['flatNo'] as String).compareTo(b['flatNo'] as String));
+      list.sort(
+          (a, b) => (a['flatNo'] as String).compareTo(b['flatNo'] as String));
       return list;
     } catch (e, st) {
       AppLogger.e('Error getting society flats', error: e, stackTrace: st);
@@ -82,10 +84,12 @@ class FirestoreService {
   }
 
   /// Get society codes collection reference
-  CollectionReference get _societyCodesRef => _firestore.collection('societyCodes');
+  CollectionReference get _societyCodesRef =>
+      _firestore.collection('societyCodes');
 
   /// Guard join codes (6-digit, 24h). Document ID = code.
-  CollectionReference get _guardJoinCodesRef => _firestore.collection('guard_join_codes');
+  CollectionReference get _guardJoinCodesRef =>
+      _firestore.collection('guard_join_codes');
 
   /// unique_phones/{phoneHash} - enforces one active account per phone.
   /// Doc: { uid, updatedAt }. Do not store plaintext phone.
@@ -105,20 +109,23 @@ class FirestoreService {
   }) async {
     final hash = _phoneHash(normalizedE164);
     try {
-      final doc = await _firestore.collection(_uniquePhonesCollection).doc(hash).get();
+      final doc =
+          await _firestore.collection(_uniquePhonesCollection).doc(hash).get();
       if (!doc.exists) return true;
       final data = doc.data() ?? {};
       final existingUid = data['uid']?.toString();
       if (existingUid == null || existingUid == forUid) return true;
       // Another uid: check if that member is active
-      final pointer = await _firestore.collection('members').doc(existingUid).get();
+      final pointer =
+          await _firestore.collection('members').doc(existingUid).get();
       if (!pointer.exists) return true;
       final pointerData = pointer.data() ?? {};
       final active = pointerData['active'];
       if (active == true) return false;
       return true;
     } catch (e, st) {
-      AppLogger.e('Error checking phone availability', error: e, stackTrace: st);
+      AppLogger.e('Error checking phone availability',
+          error: e, stackTrace: st);
       rethrow;
     }
   }
@@ -134,13 +141,22 @@ class FirestoreService {
     try {
       final batch = _firestore.batch();
       final memberRef = _memberRef(societyId, uid);
-      batch.set(memberRef, {'phone': normalizedE164, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
+      batch.set(
+          memberRef,
+          {'phone': normalizedE164, 'updatedAt': FieldValue.serverTimestamp()},
+          SetOptions(merge: true));
       final rootRef = _firestore.collection('members').doc(uid);
-      batch.set(rootRef, {'phone': normalizedE164, 'updatedAt': FieldValue.serverTimestamp()}, SetOptions(merge: true));
-      final uniqueRef = _firestore.collection(_uniquePhonesCollection).doc(hash);
-      batch.set(uniqueRef, {'uid': uid, 'updatedAt': FieldValue.serverTimestamp()});
+      batch.set(
+          rootRef,
+          {'phone': normalizedE164, 'updatedAt': FieldValue.serverTimestamp()},
+          SetOptions(merge: true));
+      final uniqueRef =
+          _firestore.collection(_uniquePhonesCollection).doc(hash);
+      batch.set(
+          uniqueRef, {'uid': uid, 'updatedAt': FieldValue.serverTimestamp()});
       await batch.commit();
-      AppLogger.i('Member phone set', data: {'uid': uid, 'societyId': societyId});
+      AppLogger.i('Member phone set',
+          data: {'uid': uid, 'societyId': societyId});
     } catch (e, st) {
       AppLogger.e('Error setting member phone', error: e, stackTrace: st);
       rethrow;
@@ -163,10 +179,12 @@ class FirestoreService {
         'exp': Timestamp.fromDate(expiry),
         'createdAt': FieldValue.serverTimestamp(),
       });
-      AppLogger.i('Guard join code created', data: {'code': code, 'societyId': societyId});
+      AppLogger.i('Guard join code created',
+          data: {'code': code, 'societyId': societyId});
       return code;
     } catch (e, stackTrace) {
-      AppLogger.e('Error creating guard join code', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error creating guard join code',
+          error: e, stackTrace: stackTrace);
       return null;
     }
   }
@@ -184,7 +202,8 @@ class FirestoreService {
       if (exp is Timestamp && DateTime.now().isAfter(exp.toDate())) return null;
       return data['societyId'] as String?;
     } catch (e, stackTrace) {
-      AppLogger.e('Error getting guard join code', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error getting guard join code',
+          error: e, stackTrace: stackTrace);
       return null;
     }
   }
@@ -235,7 +254,8 @@ class FirestoreService {
         'createdByUid': createdByUid,
       });
 
-      AppLogger.i('Society created', data: {'societyId': societyId, 'code': code});
+      AppLogger.i('Society created',
+          data: {'societyId': societyId, 'code': code});
       return societyData;
     } catch (e, stackTrace) {
       AppLogger.e('Error creating society', error: e, stackTrace: stackTrace);
@@ -432,7 +452,7 @@ class FirestoreService {
           .doc(uid)
           .get();
       if (!doc.exists) return null;
-      final data = doc.data() as Map<String, dynamic>? ?? {};
+      final data = doc.data() ?? {};
       data['id'] = doc.id;
       return data;
     } catch (e, st) {
@@ -519,8 +539,7 @@ class FirestoreService {
     try {
       final batch = _firestore.batch();
 
-      final memberRef =
-          _societyRef(societyId).collection('members').doc(uid);
+      final memberRef = _societyRef(societyId).collection('members').doc(uid);
       final pointerRef = _firestore.collection('members').doc(uid);
       final joinRef = _publicSocietiesRef
           .doc(societyId)
@@ -529,35 +548,44 @@ class FirestoreService {
 
       final now = FieldValue.serverTimestamp();
 
-      batch.set(memberRef, {
-        'uid': uid,
-        'societyId': societyId,
-        'systemRole': 'resident',
-        'active': true,
-        'name': name,
-        'phone': normalizedPhone,
-        'flatNo': unitLabel,
-        'updatedAt': now,
-        'createdAt': now,
-      }, SetOptions(merge: true));
+      batch.set(
+          memberRef,
+          {
+            'uid': uid,
+            'societyId': societyId,
+            'systemRole': 'resident',
+            'active': true,
+            'name': name,
+            'phone': normalizedPhone,
+            'flatNo': unitLabel,
+            'updatedAt': now,
+            'createdAt': now,
+          },
+          SetOptions(merge: true));
 
-      batch.set(pointerRef, {
-        'uid': uid,
-        'societyId': societyId,
-        'systemRole': 'resident',
-        'active': true,
-        'name': name,
-        'phone': normalizedPhone,
-        'flatNo': unitLabel,
-        'updatedAt': now,
-        'createdAt': now,
-      }, SetOptions(merge: true));
+      batch.set(
+          pointerRef,
+          {
+            'uid': uid,
+            'societyId': societyId,
+            'systemRole': 'resident',
+            'active': true,
+            'name': name,
+            'phone': normalizedPhone,
+            'flatNo': unitLabel,
+            'updatedAt': now,
+            'createdAt': now,
+          },
+          SetOptions(merge: true));
 
-      batch.set(joinRef, {
-        'status': 'APPROVED',
-        'handledBy': handledByUid,
-        'handledAt': now,
-      }, SetOptions(merge: true));
+      batch.set(
+          joinRef,
+          {
+            'status': 'APPROVED',
+            'handledBy': handledByUid,
+            'handledAt': now,
+          },
+          SetOptions(merge: true));
 
       await batch.commit();
 
@@ -611,12 +639,13 @@ class FirestoreService {
     try {
       // Normalize code: strip SOC_ prefix if present, then uppercase
       String normalizedCode = code.trim().toUpperCase();
-      
+
       // Remove SOC_ prefix if present (case-insensitive)
       if (normalizedCode.startsWith('SOC_')) {
-        normalizedCode = normalizedCode.substring(4); // Remove "SOC_" (4 characters)
+        normalizedCode =
+            normalizedCode.substring(4); // Remove "SOC_" (4 characters)
       }
-      
+
       final doc = await _societyCodesRef.doc(normalizedCode).get();
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>?;
@@ -626,7 +655,8 @@ class FirestoreService {
       }
       return null;
     } catch (e, stackTrace) {
-      AppLogger.e('Error getting society by code', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error getting society by code',
+          error: e, stackTrace: stackTrace);
       return null;
     }
   }
@@ -654,8 +684,10 @@ class FirestoreService {
   Future<void> setMember({
     required String societyId,
     required String uid,
-    required String systemRole, // "admin" | "guard" | "resident" | "super_admin"
-    String? societyRole, // "president" | "secretary" | "treasurer" | "committee" | null
+    required String
+        systemRole, // "admin" | "guard" | "resident" | "super_admin"
+    String?
+        societyRole, // "president" | "secretary" | "treasurer" | "committee" | null
     required String name,
     String? phone,
     String? email,
@@ -664,83 +696,80 @@ class FirestoreService {
     String? shiftTimings,
     bool active = true,
   }) async {
-  try {
-    // --------------------------------------------
-    // 1) SOCIETY MEMBER DOC (source of truth)
-    // societies/{societyId}/members/{uid}
-    // Rules require request.resource.data.societyId == societyId for create.
-    // --------------------------------------------
-    await _memberRef(societyId, uid).set({
-      'uid': uid,
-      'societyId': societyId,
-      'systemRole': systemRole,
-      'societyRole': societyRole,
-      'name': name,
-      'phone': phone,
-      'email': email,
-      'flatNo': flatNo,
-      'photoUrl': photoUrl,
-      'shiftTimings': shiftTimings,
-      'active': active,
-
-      // ✅ createdAt should not be overwritten repeatedly
-      'updatedAt': FieldValue.serverTimestamp(),
-      'createdAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-
-    // --------------------------------------------
-    // 2) ROOT POINTER (members/{uid})
-    // Used for login resolution in your old flow.
-    //
-    // IMPORTANT:
-    // Your current rules ONLY allow the user to write their own pointer doc.
-    // During bulk upload (admin writing new user's pointer) it will be denied.
-    //
-    // So we try it, and if permission denied -> skip without failing whole upload.
-    // --------------------------------------------
     try {
-      await _firestore.collection('members').doc(uid).set({
+      // --------------------------------------------
+      // 1) SOCIETY MEMBER DOC (source of truth)
+      // societies/{societyId}/members/{uid}
+      // Rules require request.resource.data.societyId == societyId for create.
+      // --------------------------------------------
+      await _memberRef(societyId, uid).set({
         'uid': uid,
         'societyId': societyId,
         'systemRole': systemRole,
         'societyRole': societyRole,
+        'name': name,
+        'phone': phone,
+        'email': email,
+        'flatNo': flatNo,
+        'photoUrl': photoUrl,
+        'shiftTimings': shiftTimings,
         'active': active,
-        if (phone != null) 'phone': phone,
-        if (email != null) 'email': email,
+
+        // ✅ createdAt should not be overwritten repeatedly
         'updatedAt': FieldValue.serverTimestamp(),
         'createdAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-    } catch (e) {
-      // ✅ Don't block society member creation if root pointer is forbidden
-      // This will happen for bulk upload unless you update rules.
-      final msg = e.toString();
-      final isPermissionDenied =
-          msg.contains('permission-denied') || msg.contains('PERMISSION_DENIED');
 
-      if (isPermissionDenied) {
-        AppLogger.i('Root pointer write skipped (permission-denied)', data: {
+      // --------------------------------------------
+      // 2) ROOT POINTER (members/{uid})
+      // Used for login resolution in your old flow.
+      //
+      // IMPORTANT:
+      // Your current rules ONLY allow the user to write their own pointer doc.
+      // During bulk upload (admin writing new user's pointer) it will be denied.
+      //
+      // So we try it, and if permission denied -> skip without failing whole upload.
+      // --------------------------------------------
+      try {
+        await _firestore.collection('members').doc(uid).set({
           'uid': uid,
           'societyId': societyId,
-        });
-      } else {
-        // if it's some other error, rethrow
-        rethrow;
+          'systemRole': systemRole,
+          'societyRole': societyRole,
+          'active': active,
+          if (phone != null) 'phone': phone,
+          if (email != null) 'email': email,
+          'updatedAt': FieldValue.serverTimestamp(),
+          'createdAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+      } catch (e) {
+        // ✅ Don't block society member creation if root pointer is forbidden
+        // This will happen for bulk upload unless you update rules.
+        final msg = e.toString();
+        final isPermissionDenied = msg.contains('permission-denied') ||
+            msg.contains('PERMISSION_DENIED');
+
+        if (isPermissionDenied) {
+          AppLogger.i('Root pointer write skipped (permission-denied)', data: {
+            'uid': uid,
+            'societyId': societyId,
+          });
+        } else {
+          // if it's some other error, rethrow
+          rethrow;
+        }
       }
+
+      AppLogger.i('Member set', data: {
+        'societyId': societyId,
+        'uid': uid,
+        'systemRole': systemRole,
+      });
+    } catch (e, stackTrace) {
+      AppLogger.e('Error setting member', error: e, stackTrace: stackTrace);
+      rethrow;
     }
-
-    AppLogger.i('Member set', data: {
-      'societyId': societyId,
-      'uid': uid,
-      'systemRole': systemRole,
-    });
-  } catch (e, stackTrace) {
-    AppLogger.e('Error setting member', error: e, stackTrace: stackTrace);
-    rethrow;
   }
-}
-
-
-  
 
   // ============================================
   // LOCATION METADATA (States & Cities)
@@ -753,67 +782,65 @@ class FirestoreService {
   ///   - fields: { name: \"Rajasthan\" }
   // Get current user's membership using ROOT POINTER doc: members/{uid}
 // ثم (optional) validate against societies/{societyId}/members/{uid}
-Future<Map<String, dynamic>?> getCurrentUserMembership() async {
-  final uid = currentUid;
-  if (uid == null) return null;
+  Future<Map<String, dynamic>?> getCurrentUserMembership() async {
+    final uid = currentUid;
+    if (uid == null) return null;
 
-  try {
-    // 1) Read root pointer: members/{uid}
-    final pointerDoc =
-        await _firestore.collection('members').doc(uid).get();
+    try {
+      // 1) Read root pointer: members/{uid}
+      final pointerDoc = await _firestore.collection('members').doc(uid).get();
 
-    if (!pointerDoc.exists) {
-      AppLogger.w('Membership pointer not found', data: {'uid': uid});
-      return null;
-    }
+      if (!pointerDoc.exists) {
+        AppLogger.w('Membership pointer not found', data: {'uid': uid});
+        return null;
+      }
 
-    final pointer = pointerDoc.data() as Map<String, dynamic>? ?? {};
+      final pointer = pointerDoc.data() ?? {};
 
-    final societyId = pointer['societyId']?.toString();
-    if (societyId == null || societyId.isEmpty) {
-      AppLogger.e('Membership pointer missing societyId', error: pointer);
-      return null;
-    }
+      final societyId = pointer['societyId']?.toString();
+      if (societyId == null || societyId.isEmpty) {
+        AppLogger.e('Membership pointer missing societyId', error: pointer);
+        return null;
+      }
 
-    // 2) Get actual society membership doc (even if inactive - needed for pending approval check)
-    final societyMemberDoc = await _firestore
-        .collection('societies')
-        .doc(societyId)
-        .collection('members')
-        .doc(uid)
-        .get();
+      // 2) Get actual society membership doc (even if inactive - needed for pending approval check)
+      final societyMemberDoc = await _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('members')
+          .doc(uid)
+          .get();
 
-    if (!societyMemberDoc.exists) {
-      AppLogger.w(
-        'Society member doc missing though pointer exists',
-        data: {'uid': uid, 'societyId': societyId},
+      if (!societyMemberDoc.exists) {
+        AppLogger.w(
+          'Society member doc missing though pointer exists',
+          data: {'uid': uid, 'societyId': societyId},
+        );
+        return null;
+      }
+
+      final societyMember = societyMemberDoc.data() ?? {};
+
+      // Return membership even if inactive (caller can check active status)
+      final result = {
+        'uid': uid,
+        'societyId': societyId,
+        ...societyMember, // prefer society member fields as source of truth
+        // Keep pointer fields too if you want:
+        // '_pointer': pointer,
+      };
+
+      AppLogger.i('Current user membership resolved (pointer)', data: result);
+      return result;
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Error getting current user membership (pointer)',
+        error: e,
+        stackTrace: stackTrace,
       );
       return null;
     }
-
-    final societyMember = societyMemberDoc.data() as Map<String, dynamic>? ?? {};
-
-    // Return membership even if inactive (caller can check active status)
-    final result = {
-      'uid': uid,
-      'societyId': societyId,
-      ...societyMember, // prefer society member fields as source of truth
-      // Keep pointer fields too if you want:
-      // '_pointer': pointer,
-    };
-
-    AppLogger.i('Current user membership resolved (pointer)', data: result);
-    return result;
-  } catch (e, stackTrace) {
-    AppLogger.e(
-      'Error getting current user membership (pointer)',
-      error: e,
-      stackTrace: stackTrace,
-    );
-    return null;
   }
-}
-
 
   /// Get cities for a given state from Firestore (dynamic).
   /// Expected structure:
@@ -851,7 +878,8 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
       });
       return cities;
     } catch (e, stackTrace) {
-      AppLogger.e('Error getting cities for state', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error getting cities for state',
+          error: e, stackTrace: stackTrace);
       // On error, still return fallback so UI is usable
       final fallback = [
         {'id': 'CITY1', 'name': 'Jaipur'},
@@ -863,44 +891,44 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
   }
 
   Future<List<Map<String, String>>> getStatesList() async {
-  try {
-    final snapshot = await _firestore
-        .collection('states')
-        .orderBy('name')
-        .get();
+    try {
+      final snapshot =
+          await _firestore.collection('states').orderBy('name').get();
 
-    if (snapshot.docs.isEmpty) {
-      final fallback = [
+      if (snapshot.docs.isEmpty) {
+        final fallback = [
+          {'id': 'RJ', 'name': 'Rajasthan'},
+          {'id': 'MH', 'name': 'Maharashtra'},
+          {'id': 'KA', 'name': 'Karnataka'},
+          {'id': 'DL', 'name': 'Delhi'},
+        ];
+        AppLogger.w('No states found, using fallback',
+            data: {'count': fallback.length});
+        return fallback;
+      }
+
+      final states = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        final name = (data['name'] as String?) ?? doc.id;
+        return {'id': doc.id, 'name': name};
+      }).toList();
+
+      AppLogger.i('States fetched from Firestore',
+          data: {'count': states.length});
+      return states;
+    } catch (e, stackTrace) {
+      AppLogger.e('Error getting states list',
+          error: e, stackTrace: stackTrace);
+
+      // fallback on error
+      return [
         {'id': 'RJ', 'name': 'Rajasthan'},
         {'id': 'MH', 'name': 'Maharashtra'},
         {'id': 'KA', 'name': 'Karnataka'},
         {'id': 'DL', 'name': 'Delhi'},
       ];
-      AppLogger.w('No states found, using fallback', data: {'count': fallback.length});
-      return fallback;
     }
-
-    final states = snapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>? ?? {};
-      final name = (data['name'] as String?) ?? doc.id;
-      return {'id': doc.id, 'name': name};
-    }).toList();
-
-    AppLogger.i('States fetched from Firestore', data: {'count': states.length});
-    return states;
-  } catch (e, stackTrace) {
-    AppLogger.e('Error getting states list', error: e, stackTrace: stackTrace);
-
-    // fallback on error
-    return [
-      {'id': 'RJ', 'name': 'Rajasthan'},
-      {'id': 'MH', 'name': 'Maharashtra'},
-      {'id': 'KA', 'name': 'Karnataka'},
-      {'id': 'DL', 'name': 'Delhi'},
-    ];
   }
-}
-
 
   // ============================================
   // NOTICE OPERATIONS
@@ -936,7 +964,8 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      AppLogger.i('Notice created', data: {'noticeId': noticeRef.id, 'societyId': societyId});
+      AppLogger.i('Notice created',
+          data: {'noticeId': noticeRef.id, 'societyId': societyId});
       return noticeRef.id;
     } catch (e, stackTrace) {
       AppLogger.e('Error creating notice', error: e, stackTrace: stackTrace);
@@ -955,7 +984,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
 
       if (activeOnly) {
         query = query.where('status', isEqualTo: 'active');
-        
+
         // Filter by expiry date if activeOnly
         final now = Timestamp.now();
         query = query.where('expiryAt', isGreaterThan: now);
@@ -965,22 +994,26 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         query = query.where('targetRole', whereIn: ['all', targetRole]);
       }
 
-      query = query.orderBy('pinned', descending: true)
+      query = query
+          .orderBy('pinned', descending: true)
           .orderBy('createdAt', descending: true);
 
       final snapshot = await query.get();
-      
+
       final notices = snapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>;
         return {
           'notice_id': doc.id,
           ...data,
-          'created_at': (data['createdAt'] as Timestamp?)?.toDate().toIso8601String(),
-          'expiry_date': (data['expiryAt'] as Timestamp?)?.toDate().toIso8601String(),
+          'created_at':
+              (data['createdAt'] as Timestamp?)?.toDate().toIso8601String(),
+          'expiry_date':
+              (data['expiryAt'] as Timestamp?)?.toDate().toIso8601String(),
         };
       }).toList();
 
-      AppLogger.i('Notices fetched', data: {'count': notices.length, 'societyId': societyId});
+      AppLogger.i('Notices fetched',
+          data: {'count': notices.length, 'societyId': societyId});
       return notices;
     } catch (e, stackTrace) {
       AppLogger.e('Error getting notices', error: e, stackTrace: stackTrace);
@@ -999,9 +1032,11 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         'status': isActive ? 'active' : 'inactive',
         'updatedAt': FieldValue.serverTimestamp(),
       });
-      AppLogger.i('Notice status updated', data: {'noticeId': noticeId, 'isActive': isActive});
+      AppLogger.i('Notice status updated',
+          data: {'noticeId': noticeId, 'isActive': isActive});
     } catch (e, stackTrace) {
-      AppLogger.e('Error updating notice status', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error updating notice status',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -1046,7 +1081,9 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
 
       final normalizedFlat = flatNo.trim().toUpperCase();
       final now = FieldValue.serverTimestamp();
-      final vis = visibility.trim().toLowerCase() == 'personal' ? 'personal' : 'general';
+      final vis = visibility.trim().toLowerCase() == 'personal'
+          ? 'personal'
+          : 'general';
 
       final data = <String, dynamic>{
         // ✅ canonical (camelCase)
@@ -1129,8 +1166,12 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
       for (final doc in snapshot.docs) {
         final data = (doc.data() as Map<String, dynamic>);
 
-        final docFlat = (data['flatNo'] ?? data['flat_no'])?.toString().trim().toUpperCase();
-        final docResident = (data['residentUid'] ?? data['resident_uid'])?.toString();
+        final docFlat = (data['flatNo'] ?? data['flat_no'])
+            ?.toString()
+            .trim()
+            .toUpperCase();
+        final docResident =
+            (data['residentUid'] ?? data['resident_uid'])?.toString();
 
         if (docFlat != normalizedFlat) continue;
         if (residentUid != null && docResident != residentUid) continue;
@@ -1146,7 +1187,8 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
           'society_id': societyId,
           'flat_no': docFlat,
           'resident_uid': docResident,
-          'resident_name': (data['residentName'] ?? data['resident_name'])?.toString(),
+          'resident_name':
+              (data['residentName'] ?? data['resident_name'])?.toString(),
           'category': data['category']?.toString(),
           'title': data['title']?.toString(),
           'description': data['description']?.toString(),
@@ -1156,23 +1198,35 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
           // keep originals too (optional, harmless)
           ...data,
 
-          'created_at': (createdTs is Timestamp) ? createdTs.toDate().toIso8601String() : null,
-          'updated_at': (updatedTs is Timestamp) ? updatedTs.toDate().toIso8601String() : null,
-          'resolved_at': (resolvedTs is Timestamp) ? resolvedTs.toDate().toIso8601String() : null,
+          'created_at': (createdTs is Timestamp)
+              ? createdTs.toDate().toIso8601String()
+              : null,
+          'updated_at': (updatedTs is Timestamp)
+              ? updatedTs.toDate().toIso8601String()
+              : null,
+          'resolved_at': (resolvedTs is Timestamp)
+              ? resolvedTs.toDate().toIso8601String()
+              : null,
         });
       }
 
       // ✅ Client-side sort fallback
       results.sort((a, b) {
-        final aDate = DateTime.tryParse((a['created_at'] ?? '') as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final bDate = DateTime.tryParse((b['created_at'] ?? '') as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final aDate =
+            DateTime.tryParse((a['created_at'] ?? '') as String? ?? '') ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate =
+            DateTime.tryParse((b['created_at'] ?? '') as String? ?? '') ??
+                DateTime.fromMillisecondsSinceEpoch(0);
         return bDate.compareTo(aDate);
       });
 
-      AppLogger.i('Resident complaints fetched', data: {'count': results.length});
+      AppLogger.i('Resident complaints fetched',
+          data: {'count': results.length});
       return results;
     } catch (e, stackTrace) {
-      AppLogger.e('Error getting resident complaints', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error getting resident complaints',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -1200,7 +1254,9 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         final data = (doc.data() as Map<String, dynamic>);
         final st = (data['status'] ?? 'pending')?.toString().toLowerCase();
 
-        if (normalizedStatus != null && normalizedStatus.isNotEmpty && st != normalizedStatus) {
+        if (normalizedStatus != null &&
+            normalizedStatus.isNotEmpty &&
+            st != normalizedStatus) {
           continue;
         }
 
@@ -1213,9 +1269,14 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
 
           // ✅ normalized output keys (snake_case)
           'society_id': societyId,
-          'flat_no': (data['flatNo'] ?? data['flat_no'])?.toString().trim().toUpperCase(),
-          'resident_uid': (data['residentUid'] ?? data['resident_uid'])?.toString(),
-          'resident_name': (data['residentName'] ?? data['resident_name'])?.toString(),
+          'flat_no': (data['flatNo'] ?? data['flat_no'])
+              ?.toString()
+              .trim()
+              .toUpperCase(),
+          'resident_uid':
+              (data['residentUid'] ?? data['resident_uid'])?.toString(),
+          'resident_name':
+              (data['residentName'] ?? data['resident_name'])?.toString(),
           'category': data['category']?.toString(),
           'title': data['title']?.toString(),
           'description': data['description']?.toString(),
@@ -1224,22 +1285,33 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
 
           ...data,
 
-          'created_at': (createdTs is Timestamp) ? createdTs.toDate().toIso8601String() : null,
-          'updated_at': (updatedTs is Timestamp) ? updatedTs.toDate().toIso8601String() : null,
-          'resolved_at': (resolvedTs is Timestamp) ? resolvedTs.toDate().toIso8601String() : null,
+          'created_at': (createdTs is Timestamp)
+              ? createdTs.toDate().toIso8601String()
+              : null,
+          'updated_at': (updatedTs is Timestamp)
+              ? updatedTs.toDate().toIso8601String()
+              : null,
+          'resolved_at': (resolvedTs is Timestamp)
+              ? resolvedTs.toDate().toIso8601String()
+              : null,
         });
       }
 
       results.sort((a, b) {
-        final aDate = DateTime.tryParse((a['created_at'] ?? '') as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-        final bDate = DateTime.tryParse((b['created_at'] ?? '') as String? ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final aDate =
+            DateTime.tryParse((a['created_at'] ?? '') as String? ?? '') ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+        final bDate =
+            DateTime.tryParse((b['created_at'] ?? '') as String? ?? '') ??
+                DateTime.fromMillisecondsSinceEpoch(0);
         return bDate.compareTo(aDate);
       });
 
       AppLogger.i('All complaints fetched', data: {'count': results.length});
       return results;
     } catch (e, stackTrace) {
-      AppLogger.e('Error getting all complaints', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error getting all complaints',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -1286,9 +1358,11 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
 
       await _complaintsRef(societyId).doc(complaintId).update(updateData);
 
-      AppLogger.i('Complaint status updated', data: {'complaintId': complaintId, 'status': normalizedStatus});
+      AppLogger.i('Complaint status updated',
+          data: {'complaintId': complaintId, 'status': normalizedStatus});
     } catch (e, stackTrace) {
-      AppLogger.e('Error updating complaint status', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error updating complaint status',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -1316,7 +1390,8 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
       final normalizedFlat = flatNo.trim().toUpperCase();
       final now = FieldValue.serverTimestamp();
       final type = violationType.trim().toUpperCase();
-      final validType = type == 'FIRE_LANE' || type == 'PARKING' ? type : 'OTHER';
+      final validType =
+          type == 'FIRE_LANE' || type == 'PARKING' ? type : 'OTHER';
 
       await ref.set({
         'guardUid': guardUid,
@@ -1328,7 +1403,8 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         'createdAt': now,
         'updatedAt': now,
       });
-      AppLogger.i('Violation created', data: {'violationId': ref.id, 'societyId': societyId});
+      AppLogger.i('Violation created',
+          data: {'violationId': ref.id, 'societyId': societyId});
       return ref.id;
     } catch (e, stackTrace) {
       AppLogger.e('Error creating violation', error: e, stackTrace: stackTrace);
@@ -1349,7 +1425,8 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
           .get();
       return _violationDocsToMaps(snapshot.docs, societyId);
     } catch (e, stackTrace) {
-      AppLogger.e('Error getViolationsByGuard', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error getViolationsByGuard',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -1368,7 +1445,8 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
           .get();
       return _violationDocsToMaps(snapshot.docs, societyId);
     } catch (e, stackTrace) {
-      AppLogger.e('Error getViolationsByFlat', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error getViolationsByFlat',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -1388,7 +1466,9 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
       var list = _violationDocsToMaps(snapshot.docs, societyId);
       if (status != null && status.isNotEmpty) {
         final st = status.trim().toUpperCase();
-        list = list.where((m) => (m['status'] ?? '').toString().toUpperCase() == st).toList();
+        list = list
+            .where((m) => (m['status'] ?? '').toString().toUpperCase() == st)
+            .toList();
       }
       if (year != null && month != null) {
         list = list.where((m) {
@@ -1421,8 +1501,12 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         'note': data['note']?.toString(),
         'photo_url': data['photoUrl']?.toString(),
         'status': (data['status'] ?? 'OPEN').toString(),
-        'created_at': createdAt is Timestamp ? (createdAt as Timestamp).toDate().toIso8601String() : createdAt?.toString(),
-        'updated_at': updatedAt is Timestamp ? (updatedAt as Timestamp).toDate().toIso8601String() : updatedAt?.toString(),
+        'created_at': createdAt is Timestamp
+            ? (createdAt).toDate().toIso8601String()
+            : createdAt?.toString(),
+        'updated_at': updatedAt is Timestamp
+            ? (updatedAt).toDate().toIso8601String()
+            : updatedAt?.toString(),
         ...data,
       };
     }).toList();
@@ -1437,7 +1521,8 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
   }) async {
     try {
       final start = DateTime(year, month, 1);
-      final end = month < 12 ? DateTime(year, month + 1, 1) : DateTime(year + 1, 1, 1);
+      final end =
+          month < 12 ? DateTime(year, month + 1, 1) : DateTime(year + 1, 1, 1);
       final startTs = Timestamp.fromDate(start);
       final endTs = Timestamp.fromDate(end);
 
@@ -1446,10 +1531,12 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
           .where('createdAt', isLessThan: endTs)
           .get();
 
-      final prevStart = month > 1 ? DateTime(year, month - 1, 1) : DateTime(year - 1, 12, 1);
+      final prevStart =
+          month > 1 ? DateTime(year, month - 1, 1) : DateTime(year - 1, 12, 1);
       final prevEnd = start;
       final prevSnapshot = await _violationsRef(societyId)
-          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(prevStart))
+          .where('createdAt',
+              isGreaterThanOrEqualTo: Timestamp.fromDate(prevStart))
           .where('createdAt', isLessThan: Timestamp.fromDate(prevEnd))
           .get();
 
@@ -1462,19 +1549,22 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         final t = (d['violationType'] ?? 'OTHER').toString().toUpperCase();
         byType[t] = (byType[t] ?? 0) + 1;
         final flat = (d['flatNo'] ?? '').toString();
-        if (flat.isNotEmpty) flatCountThisMonth[flat] = (flatCountThisMonth[flat] ?? 0) + 1;
+        if (flat.isNotEmpty)
+          flatCountThisMonth[flat] = (flatCountThisMonth[flat] ?? 0) + 1;
       }
       for (final doc in prevSnapshot.docs) {
         final d = doc.data() as Map<String, dynamic>? ?? {};
         final flat = (d['flatNo'] ?? '').toString();
-        if (flat.isNotEmpty) flatCountPrevMonth[flat] = (flatCountPrevMonth[flat] ?? 0) + 1;
+        if (flat.isNotEmpty)
+          flatCountPrevMonth[flat] = (flatCountPrevMonth[flat] ?? 0) + 1;
       }
 
       final repeatedThis = flatCountThisMonth.values.where((c) => c > 1).length;
       final repeatedPrev = flatCountPrevMonth.values.where((c) => c > 1).length;
       num reducedPercent = 0;
       if (repeatedPrev > 0) {
-        reducedPercent = ((repeatedPrev - repeatedThis) / repeatedPrev * 100).round();
+        reducedPercent =
+            ((repeatedPrev - repeatedThis) / repeatedPrev * 100).round();
         if (reducedPercent < 0) reducedPercent = 0;
       }
 
@@ -1489,7 +1579,8 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         'repeatedViolationsReducedPercent': reducedPercent,
       };
     } catch (e, stackTrace) {
-      AppLogger.e('Error getViolationStatsForMonth', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error getViolationStatsForMonth',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -1506,7 +1597,8 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         'updatedAt': FieldValue.serverTimestamp(),
       });
     } catch (e, stackTrace) {
-      AppLogger.e('Error updateViolationStatus', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error updateViolationStatus',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -1521,9 +1613,11 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
   }) async {
     try {
       // Get counts from subcollections
-      final membersSnapshot = await _membersRef(societyId).where('active', isEqualTo: true).get();
-      final flatsSnapshot = await _flatsRef(societyId).where('active', isEqualTo: true).get();
-      
+      final membersSnapshot =
+          await _membersRef(societyId).where('active', isEqualTo: true).get();
+      final flatsSnapshot =
+          await _flatsRef(societyId).where('active', isEqualTo: true).get();
+
       // Count by systemRole
       int totalResidents = 0;
       int totalGuards = 0;
@@ -1537,11 +1631,12 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
 
       // Get today's visitors count
       final now = Timestamp.now();
-      final startOfDay = Timestamp.fromDate(DateTime(now.toDate().year, now.toDate().month, now.toDate().day));
+      final startOfDay = Timestamp.fromDate(
+          DateTime(now.toDate().year, now.toDate().month, now.toDate().day));
       final visitorsSnapshot = await _visitorsRef(societyId)
           .where('createdAt', isGreaterThanOrEqualTo: startOfDay)
           .get();
-      
+
       int visitorsToday = visitorsSnapshot.docs.length;
       int pendingApprovals = visitorsSnapshot.docs.where((doc) {
         final data = doc.data() as Map<String, dynamic>?;
@@ -1564,7 +1659,8 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
       AppLogger.i('Admin stats fetched', data: stats);
       return stats;
     } catch (e, stackTrace) {
-      AppLogger.e('Error getting admin stats', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error getting admin stats',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -1598,7 +1694,10 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         if (data == null) continue;
         final map = data as Map<String, dynamic>;
         if (flatNorm.isNotEmpty) {
-          final docFlat = (map['flatNo'] ?? map['flat_no'] ?? '').toString().trim().toUpperCase();
+          final docFlat = (map['flatNo'] ?? map['flat_no'] ?? '')
+              .toString()
+              .trim()
+              .toUpperCase();
           if (docFlat != flatNorm) continue;
         }
         final createdAt = map['createdAt'];
@@ -1612,17 +1711,20 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
           continue;
         }
         final dayStart = DateTime(date.year, date.month, date.day);
-        if (dayStart.isBefore(sevenDaysAgoStart) || dayStart.isAfter(todayStart)) continue;
+        if (dayStart.isBefore(sevenDaysAgoStart) ||
+            dayStart.isAfter(todayStart)) continue;
         final index = dayStart.difference(sevenDaysAgoStart).inDays;
         if (index >= 0 && index < 7) {
           counts[index]++;
         }
       }
 
-      AppLogger.i('Visitor counts by day (last 7)', data: {'counts': counts, 'guardId': guardId, 'flatNo': flatNo});
+      AppLogger.i('Visitor counts by day (last 7)',
+          data: {'counts': counts, 'guardId': guardId, 'flatNo': flatNo});
       return counts;
     } catch (e, stackTrace) {
-      AppLogger.e('Error getVisitorCountsByDayLast7Days', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error getVisitorCountsByDayLast7Days',
+          error: e, stackTrace: stackTrace);
       return List<int>.filled(7, 0);
     }
   }
@@ -1805,40 +1907,35 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
   }
 
   Future<void> createInvite({
-  required String societyId,
-  required String email,
-  required String systemRole, // admin|guard|resident
-  String? societyRole,
-  String? flatNo,
-}) async {
-  final cleanedEmail = email.trim().toLowerCase();
-  final ref = _firestore
-      .collection('societies')
-      .doc(societyId)
-      .collection('invites')
-      .doc();
+    required String societyId,
+    required String email,
+    required String systemRole, // admin|guard|resident
+    String? societyRole,
+    String? flatNo,
+  }) async {
+    final cleanedEmail = email.trim().toLowerCase();
+    final ref = _firestore
+        .collection('societies')
+        .doc(societyId)
+        .collection('invites')
+        .doc();
 
-  await ref.set({
-    'email': cleanedEmail,
-    'systemRole': systemRole.toLowerCase(),
-    'societyRole': societyRole,
-    'flatNo': flatNo,
-    'status': 'pending',
-    'active': true,
-    'createdAt': FieldValue.serverTimestamp(),
-  });
+    await ref.set({
+      'email': cleanedEmail,
+      'systemRole': systemRole.toLowerCase(),
+      'societyRole': societyRole,
+      'flatNo': flatNo,
+      'status': 'pending',
+      'active': true,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
 
-  AppLogger.i('Invite created', data: {
-    'societyId': societyId,
-    'email': cleanedEmail,
-    'systemRole': systemRole,
-  });
-}
-
-
-
-
-
+    AppLogger.i('Invite created', data: {
+      'societyId': societyId,
+      'email': cleanedEmail,
+      'systemRole': systemRole,
+    });
+  }
 
   /// Resolve societyId from a society code (case-insensitive)
   /// Handles codes with or without SOC_ prefix (e.g., "AMARA" or "SOC_AMARA" both work)
@@ -1846,18 +1943,20 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     try {
       // Normalize code: strip SOC_ prefix if present, then uppercase
       String normalized = societyCode.trim().toUpperCase();
-      
+
       // Remove SOC_ prefix if present (case-insensitive)
       if (normalized.startsWith('SOC_')) {
         normalized = normalized.substring(4); // Remove "SOC_" (4 characters)
       }
-      
+
       if (normalized.isEmpty) return null;
 
-      debugPrint("getSocietyByCode | normalized=$normalized (original=$societyCode)");
+      debugPrint(
+          "getSocietyByCode | normalized=$normalized (original=$societyCode)");
 
       // ✅ Use societyCodes mapping doc: /societyCodes/AMARA -> { societyId: "soc_amara", active: true }
-      final doc = await _firestore.collection('societyCodes').doc(normalized).get();
+      final doc =
+          await _firestore.collection('societyCodes').doc(normalized).get();
 
       if (!doc.exists) {
         debugPrint("getSocietyByCode | not found: $normalized");
@@ -1885,19 +1984,12 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
     }
   }
 
-
-
-
-
-
   Future<List<Map<String, dynamic>>> getMembers({
     required String societyId,
     String? systemRole,
   }) async {
-    Query query = _firestore
-        .collection('societies')
-        .doc(societyId)
-        .collection('members');
+    Query query =
+        _firestore.collection('societies').doc(societyId).collection('members');
 
     if (systemRole != null && systemRole.isNotEmpty) {
       query = query.where('systemRole', isEqualTo: systemRole);
@@ -1930,7 +2022,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
         ? await baseQuery.get()
         : await baseQuery.startAfterDocument(startAfter).get();
     final list = snap.docs.map((d) {
-      final data = d.data() as Map<String, dynamic>;
+      final data = d.data();
       return _mapMemberDoc(d.id, data);
     }).toList();
 
@@ -1997,7 +2089,7 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
   }) async {
     try {
       if (phone.trim().isEmpty) return null;
-      
+
       final normalizedPhone = phone.trim().replaceAll(RegExp(r'[^\d+]'), '');
       if (normalizedPhone.isEmpty) return null;
 
@@ -2130,4 +2222,59 @@ Future<Map<String, dynamic>?> getCurrentUserMembership() async {
       rethrow;
     }
   }
+
+  Future<void> setRootMemberPointer({
+    required String uid,
+    required String societyId,
+    required String systemRole,
+    bool active = true,
+  }) async {
+    await FirebaseFirestore.instance.collection('members').doc(uid).set({
+      'uid': uid,
+      'societyId': societyId,
+      'systemRole': systemRole,
+      'active': active,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+// =========================
+// Phone index helpers
+// =========================
+
+  Future<Map<String, dynamic>?> getPhoneIndex(String normalizedPhone) async {
+    final doc = await FirebaseFirestore.instance
+        .collection('phone_index')
+        .doc(normalizedPhone)
+        .get();
+
+    if (!doc.exists) return null;
+    return doc.data();
+  }
+
+// =========================
+// Root pointer repair: members/{uid}
+// =========================
+
+  Future<void> ensureRootMemberPointer({
+    required String uid,
+    required String societyId,
+    required String systemRole,
+    required bool active,
+  }) async {
+    final ref = FirebaseFirestore.instance.collection('members').doc(uid);
+
+    await ref.set({
+      "uid": uid,
+      "societyId": societyId,
+      "systemRole": systemRole,
+      "active": active,
+      "updatedAt": FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+
+
+
+
 }

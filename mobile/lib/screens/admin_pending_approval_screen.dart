@@ -9,11 +9,14 @@ import 'admin_login_screen.dart';
 /// NOTE: Keep constructor param name as `email` for backward compatibility.
 /// In OTP flows, pass phone string here (e.g. "+91xxxx") and UI will render it as Contact.
 class AdminPendingApprovalScreen extends StatelessWidget {
-  final String email;
+  final String? email;
 
   const AdminPendingApprovalScreen({
     super.key,
-    required this.email,
+    this.email,
+    required String societyId,
+    required String adminId,
+    required String adminName,
   });
 
   bool _looksLikePhone(String value) {
@@ -38,8 +41,10 @@ class AdminPendingApprovalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isPhone = _looksLikePhone(email);
-    final displayValue = _maskIfPhone(email);
+    final value = email ?? '';
+
+    final isPhone = _looksLikePhone(value);
+    final displayValue = _maskIfPhone(value);
 
     return Scaffold(
       backgroundColor: AppColors.bg,
@@ -128,16 +133,19 @@ class AdminPendingApprovalScreen extends StatelessWidget {
 
                     // Status banner
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
                         color: AppColors.admin.withOpacity(0.10),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: AppColors.admin.withOpacity(0.18)),
+                        border: Border.all(
+                            color: AppColors.admin.withOpacity(0.18)),
                       ),
                       child: const Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.shield_rounded, color: AppColors.admin, size: 18),
+                          Icon(Icons.shield_rounded,
+                              color: AppColors.admin, size: 18),
                           SizedBox(width: 8),
                           Text(
                             "Waiting for Super Admin approval",
@@ -184,7 +192,9 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                           Row(
                             children: [
                               Icon(
-                                isPhone ? Icons.phone_rounded : Icons.email_rounded,
+                                isPhone
+                                    ? Icons.phone_rounded
+                                    : Icons.email_rounded,
                                 color: AppColors.admin,
                                 size: 20,
                               ),
@@ -232,7 +242,8 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                       child: ElevatedButton.icon(
                         onPressed: () {
                           Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
+                            MaterialPageRoute(
+                                builder: (_) => const AdminLoginScreen()),
                           );
                         },
                         icon: const Icon(Icons.arrow_back_rounded, size: 20),
@@ -291,10 +302,14 @@ class _TimelineCard extends StatelessWidget {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: done ? AppColors.success.withOpacity(0.18) : AppColors.admin.withOpacity(0.12),
+            color: done
+                ? AppColors.success.withOpacity(0.18)
+                : AppColors.admin.withOpacity(0.12),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: done ? AppColors.success.withOpacity(0.28) : AppColors.admin.withOpacity(0.18),
+              color: done
+                  ? AppColors.success.withOpacity(0.28)
+                  : AppColors.admin.withOpacity(0.18),
             ),
           ),
           child: Icon(

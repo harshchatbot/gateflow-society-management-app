@@ -92,7 +92,7 @@ class _AuthRouterState extends State<AuthRouter> {
             adminId: user.uid,
             adminName: name.isNotEmpty ? name : 'Admin',
             societyId: societyId,
-            role: (societyRole ?? 'ADMIN').toUpperCase(),
+            role: (societyRole ?? 'ADMIN').toUpperCase(), systemRole: 'admin',
           ),
         ),
       );
