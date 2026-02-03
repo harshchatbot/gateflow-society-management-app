@@ -456,6 +456,46 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                         ),
                       ),
                     ],
+                    if (_visitor.visitorType.toUpperCase() == 'CAB' &&
+                        _visitor.cab != null &&
+                        _visitor.cab!['provider'] != null &&
+                        (_visitor.cab!['provider'] as String).trim().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(AppIcons.cab, size: 16, color: AppColors.text2),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Cab Provider: ${_visitor.cab!['provider']}",
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.text2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (_visitor.visitorType.toUpperCase() == 'DELIVERY' &&
+                        _visitor.delivery != null &&
+                        _visitor.delivery!['provider'] != null &&
+                        (_visitor.delivery!['provider'] as String).trim().isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(AppIcons.delivery, size: 16, color: AppColors.text2),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Delivery Partner: ${_visitor.delivery!['provider']}",
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.text2,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const SizedBox(height: 10),
                     const Divider(height: 1),
                     const SizedBox(height: 12),

@@ -17,6 +17,7 @@ import 'guard_login_screen.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../ui/app_icons.dart';
+import '../ui/sentinel_theme.dart';
 import '../core/society_modules.dart';
 import '../widgets/module_disabled_placeholder.dart';
 
@@ -54,6 +55,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
   String _selectedVisitorType = 'GUEST';
   String? _selectedDeliveryPartner; // Only used when category = DELIVERY
+  String _selectedCabProvider = 'Other'; // Ola / Uber / Other (form-only; not sent to backend yet)
   bool _isLoading = false;
   Visitor? _createdVisitor;
 
@@ -220,6 +222,16 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       _showError('Please select a flat / unit');
       return;
     }
+
+    // Type-specific payload for Firestore (cab.provider, delivery.provider). Extensible.
+    final Map<String, dynamic> extraTypeData = {};
+    if (_selectedVisitorType == 'CAB') {
+      extraTypeData['cab'] = {'provider': _selectedCabProvider};
+    }
+    if (_selectedVisitorType == 'DELIVERY') {
+      extraTypeData['delivery'] = {'provider': _selectedDeliveryPartner ?? 'Other'};
+    }
+
     final result = (_visitorPhoto != null)
         ? await _visitorService.createVisitorWithPhoto(
             societyId: widget.societyId,
@@ -232,6 +244,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             deliveryPartner: deliveryPartner,
             deliveryPartnerOther: deliveryPartnerOther,
             vehicleNumber: vehicleNumber,
+            typePayload: extraTypeData.isNotEmpty ? extraTypeData : null,
           )
         : await _visitorService.createVisitor(
             societyId: widget.societyId,
@@ -243,6 +256,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             deliveryPartner: deliveryPartner,
             deliveryPartnerOther: deliveryPartnerOther,
             vehicleNumber: vehicleNumber,
+            typePayload: extraTypeData.isNotEmpty ? extraTypeData : null,
           );
 
     if (!mounted) return;
@@ -279,7 +293,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       _vehicleNumberController.clear();
       _deliveryPartnerOtherController.clear();
       _selectedVisitorType = 'GUEST';
-      _selectedDeliveryPartner = null;
+      _selectedDeliveryPartner = 'Other';
+      _selectedCabProvider = 'Other';
       _createdVisitor = null;
       _visitorPhoto = null;
       _flatOwnerName = null;
@@ -588,6 +603,24 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               ),
             ],
           ],
+          if (_selectedVisitorType == 'CAB') ...[
+            const SizedBox(height: 18),
+            _buildFieldLabel("Cab Provider"),
+            const SizedBox(height: 12),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildCabProviderChip("Ola"),
+                  const SizedBox(width: 10),
+                  _buildCabProviderChip("Uber"),
+                  const SizedBox(width: 10),
+                  _buildCabProviderChip("Other"),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 25),
           SizedBox(
             width: double.infinity,
@@ -658,6 +691,46 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       selectedColor: theme.colorScheme.primary,
       checkmarkColor: theme.colorScheme.onPrimary,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    );
+  }
+
+  Widget _buildCabProviderChip(String label) {
+    final theme = Theme.of(context);
+    final isSelected = _selectedCabProvider == label;
+    final bgColor = isSelected
+        ? SentinelColors.accentSurface(0.04)
+        : theme.colorScheme.surface;
+    final borderColor = isSelected
+        ? SentinelColors.accentBorder
+        : theme.dividerColor;
+    final fgColor = isSelected
+        ? SentinelColors.accent
+        : theme.colorScheme.onSurface.withOpacity(0.7);
+    return GestureDetector(
+      onTap: () => setState(() => _selectedCabProvider = label),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.directions_car_rounded, size: 16, color: fgColor),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: fgColor,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 

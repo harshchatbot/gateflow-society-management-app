@@ -44,6 +44,7 @@ class FirebaseVisitorService {
     String? deliveryPartner,
     String? deliveryPartnerOther,
     String? vehicleNumber,
+    Map<String, dynamic>? typePayload,
   }) async {
     try {
       final uid = currentUid;
@@ -112,7 +113,7 @@ class FirebaseVisitorService {
       // 5) Create Firestore document
       final now = FieldValue.serverTimestamp();
       final isDelivery = visitorType.toUpperCase() == 'DELIVERY';
-      final visitorData = {
+      final visitorData = <String, dynamic>{
         "visitor_id": visitorId,
         "society_id": societyId,
         "flat_no": flatNo.trim().toUpperCase(),
@@ -129,6 +130,9 @@ class FirebaseVisitorService {
         if (isDelivery && deliveryPartner != null && deliveryPartner.isNotEmpty) "delivery_partner": deliveryPartner.trim(),
         if (isDelivery && deliveryPartnerOther != null && deliveryPartnerOther.isNotEmpty) "delivery_partner_other": deliveryPartnerOther.trim(),
       };
+      if (typePayload != null && typePayload.isNotEmpty) {
+        visitorData.addAll(typePayload);
+      }
 
       final visitorRef = _visitorsRef(societyId).doc(visitorId);
       await visitorRef.set(visitorData);
@@ -160,6 +164,8 @@ class FirebaseVisitorService {
         guardId: uid,
         photoUrl: photoUrl,
         residentPhone: residentPhone?.trim().isNotEmpty == true ? residentPhone!.trim() : null,
+        cab: createdData['cab'] is Map ? Map<String, dynamic>.from(createdData['cab'] as Map) : null,
+        delivery: createdData['delivery'] is Map ? Map<String, dynamic>.from(createdData['delivery'] as Map) : null,
       );
 
       return Result.success(visitor);
@@ -187,6 +193,7 @@ class FirebaseVisitorService {
     String? deliveryPartner,
     String? deliveryPartnerOther,
     String? vehicleNumber,
+    Map<String, dynamic>? typePayload,
   }) async {
     try {
       final uid = currentUid;
@@ -211,7 +218,7 @@ class FirebaseVisitorService {
 
       final now = FieldValue.serverTimestamp();
       final isDelivery = visitorType.toUpperCase() == 'DELIVERY';
-      final visitorData = {
+      final visitorData = <String, dynamic>{
         "visitor_id": visitorId,
         "society_id": societyId,
         "flat_no": flatNo.trim().toUpperCase(),
@@ -228,6 +235,9 @@ class FirebaseVisitorService {
         if (isDelivery && deliveryPartner != null && deliveryPartner.isNotEmpty) "delivery_partner": deliveryPartner.trim(),
         if (isDelivery && deliveryPartnerOther != null && deliveryPartnerOther.isNotEmpty) "delivery_partner_other": deliveryPartnerOther.trim(),
       };
+      if (typePayload != null && typePayload.isNotEmpty) {
+        visitorData.addAll(typePayload);
+      }
 
       final visitorRef = _visitorsRef(societyId).doc(visitorId);
       await visitorRef.set(visitorData);
@@ -258,6 +268,8 @@ class FirebaseVisitorService {
         createdAt: createdAt,
         guardId: uid,
         residentPhone: residentPhone?.trim().isNotEmpty == true ? residentPhone!.trim() : null,
+        cab: createdData['cab'] is Map ? Map<String, dynamic>.from(createdData['cab'] as Map) : null,
+        delivery: createdData['delivery'] is Map ? Map<String, dynamic>.from(createdData['delivery'] as Map) : null,
       );
 
       return Result.success(visitor);

@@ -349,6 +349,8 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
       photoUrl: data['photo_url']?.toString() ?? data['photoUrl']?.toString(),
       note: data['note']?.toString(),
       residentPhone: data['resident_phone']?.toString(),
+      cab: data['cab'] is Map ? Map<String, dynamic>.from(data['cab'] as Map) : null,
+      delivery: data['delivery'] is Map ? Map<String, dynamic>.from(data['delivery'] as Map) : null,
     );
   }
 

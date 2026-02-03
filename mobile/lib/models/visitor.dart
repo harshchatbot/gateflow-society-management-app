@@ -31,6 +31,10 @@ class Visitor {
   final String? vehicleNumber;
   final String? entryMode;
 
+  /// Type-specific payload (e.g. cab.provider, delivery.provider). Extensible.
+  final Map<String, dynamic>? cab;
+  final Map<String, dynamic>? delivery;
+
   Visitor({
     required this.visitorId,
     required this.societyId,
@@ -52,6 +56,8 @@ class Visitor {
     this.deliveryPartnerOther,
     this.vehicleNumber,
     this.entryMode,
+    this.cab,
+    this.delivery,
   });
 
   factory Visitor.fromJson(Map<String, dynamic> json) {
@@ -89,6 +95,8 @@ class Visitor {
       deliveryPartnerOther: (json['delivery_partner_other'] ?? json['deliveryPartnerOther']) as String?,
       vehicleNumber: (json['vehicle_number'] ?? json['vehicleNumber']) as String?,
       entryMode: (json['entry_mode'] ?? json['entryMode']) as String?,
+      cab: json['cab'] is Map ? Map<String, dynamic>.from(json['cab'] as Map) : null,
+      delivery: json['delivery'] is Map ? Map<String, dynamic>.from(json['delivery'] as Map) : null,
     );
   }
 
@@ -117,6 +125,8 @@ class Visitor {
       'delivery_partner_other': deliveryPartnerOther,
       'vehicle_number': vehicleNumber,
       'entry_mode': entryMode,
+      if (cab != null) 'cab': cab!,
+      if (delivery != null) 'delivery': delivery!,
     };
   }
 }
