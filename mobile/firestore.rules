@@ -310,7 +310,7 @@ service cloud.firestore {
       }
 
       // ------------------------
-      // Visitors
+      // Visitors (optional cab/delivery maps with provider; backward compatible)
       // ------------------------
       match /visitors/{id} {
         allow read: if activeMember(societyId);

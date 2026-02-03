@@ -71,12 +71,14 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
       if (date != null) {
         DateTime? createdDt;
         dynamic createdAt = v['createdAt'];
-        if (createdAt is Timestamp) createdDt = createdAt.toDate();
-        else if (createdAt is DateTime) createdDt = createdAt;
+        if (createdAt is Timestamp) {
+          createdDt = createdAt.toDate();
+        } else if (createdAt is DateTime) createdDt = createdAt;
         DateTime? approvedDt;
         final approvedAt = v['approvedAt'] ?? v['approved_at'];
-        if (approvedAt is Timestamp) approvedDt = approvedAt.toDate();
-        else if (approvedAt is DateTime) approvedDt = approvedAt;
+        if (approvedAt is Timestamp) {
+          approvedDt = approvedAt.toDate();
+        } else if (approvedAt is DateTime) approvedDt = approvedAt;
         bool matchDate(DateTime d) => d.year == date.year && d.month == date.month && d.day == date.day;
         final onDate = (createdDt != null && matchDate(createdDt)) || (approvedDt != null && matchDate(approvedDt));
         if (!onDate) return false;
@@ -356,7 +358,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(
+                  const Text(
                     "Completed visitor entries will appear here",
                     style: TextStyle(
                       fontSize: 14,
@@ -379,7 +381,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.filter_list_off_rounded, size: 56, color: AppColors.text2),
+                              const Icon(Icons.filter_list_off_rounded, size: 56, color: AppColors.text2),
                               const SizedBox(height: 16),
                               const Text(
                                 "No entries match your filter",
@@ -387,7 +389,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 8),
-                              Text(
+                              const Text(
                                 "Try a different search or date",
                                 style: TextStyle(fontSize: 14, color: AppColors.textMuted),
                               ),
@@ -438,8 +440,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
             controller: _searchController,
             decoration: InputDecoration(
               hintText: "Search by flat, phone, category, delivery…",
-              hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
-              prefixIcon: Icon(Icons.search_rounded, color: AppColors.primary, size: 22),
+              hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
+              prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary, size: 22),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear_rounded, size: 20),
@@ -460,7 +462,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Text("Date: ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.text2)),
+              const Text("Date: ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.text2)),
               GestureDetector(
                 onTap: () => setState(() => _filterDate = null),
                 child: Container(
@@ -529,7 +531,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: () => setState(() => _filterDate = null),
-                  child: Icon(Icons.close_rounded, size: 20, color: AppColors.text2),
+                  child: const Icon(Icons.close_rounded, size: 20, color: AppColors.text2),
                 ),
               ],
             ],
@@ -538,7 +540,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
             const SizedBox(height: 6),
             Text(
               "Showing ${_filteredVisitors.length} of ${_visitors.length} entries",
-              style: TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500),
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500),
             ),
           ],
         ],
@@ -612,6 +614,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
       photoUrl: data['photo_url']?.toString() ?? data['photoUrl']?.toString(),
       note: data['note']?.toString(),
       residentPhone: data['resident_phone']?.toString(),
+      cab: data['cab'] is Map ? Map<String, dynamic>.from(data['cab'] as Map) : null,
+      delivery: data['delivery'] is Map ? Map<String, dynamic>.from(data['delivery'] as Map) : null,
     );
   }
 
@@ -629,13 +633,15 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
 
     DateTime? createdDateTime;
     if (createdAt != null) {
-      if (createdAt is Timestamp) createdDateTime = createdAt.toDate();
-      else if (createdAt is DateTime) createdDateTime = createdAt;
+      if (createdAt is Timestamp) {
+        createdDateTime = createdAt.toDate();
+      } else if (createdAt is DateTime) createdDateTime = createdAt;
     }
     DateTime? approvedDateTime;
     if (approvedAtRaw != null) {
-      if (approvedAtRaw is Timestamp) approvedDateTime = approvedAtRaw.toDate();
-      else if (approvedAtRaw is DateTime) approvedDateTime = approvedAtRaw;
+      if (approvedAtRaw is Timestamp) {
+        approvedDateTime = approvedAtRaw.toDate();
+      } else if (approvedAtRaw is DateTime) approvedDateTime = approvedAtRaw;
     }
 
     final hasDeliveryPartner = visitorType == 'DELIVERY' &&
@@ -828,7 +834,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                               const SizedBox(width: 6),
                               Text(
                                 phone,
-                                style: TextStyle(
+                                style: const TextStyle(
                                   fontSize: 14,
                                   color: AppColors.text2,
                                   fontWeight: FontWeight.w600,
@@ -905,7 +911,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                         children: [
                           Text(
                             "Raised: ${createdDateTime != null ? _formatDateTime(createdDateTime) : '—'}",
-                            style: TextStyle(
+                            style: const TextStyle(
                               fontSize: 13,
                               color: AppColors.text2,
                               fontWeight: FontWeight.w600,
@@ -915,7 +921,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                             const SizedBox(height: 4),
                             Text(
                               "Approved: ${_formatDateTime(approvedDateTime)}",
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 12,
                                 color: AppColors.success,
                                 fontWeight: FontWeight.w600,
