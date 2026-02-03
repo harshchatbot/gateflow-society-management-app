@@ -12,12 +12,12 @@ import '../widgets/module_disabled_placeholder.dart';
 import '../widgets/error_retry_widget.dart';
 
 /// Resident Approvals Screen
-/// 
+///
 /// Purpose: List of pending visitor requests for resident's flat
 /// - Shows pending visitors with details
 /// - Approve/Reject buttons for each request
 /// - Calls backend decision API on action
-/// 
+///
 /// Theme: Green/Success theme (matching resident login)
 class ResidentApprovalsScreen extends StatefulWidget {
   final String residentId;
@@ -34,7 +34,8 @@ class ResidentApprovalsScreen extends StatefulWidget {
   });
 
   @override
-  State<ResidentApprovalsScreen> createState() => _ResidentApprovalsScreenState();
+  State<ResidentApprovalsScreen> createState() =>
+      _ResidentApprovalsScreenState();
 }
 
 class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
@@ -77,7 +78,8 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
       } else {
         setState(() {
           _isLoading = false;
-          _error = userFriendlyMessageFromError(result.error ?? "Failed to load approvals");
+          _error = userFriendlyMessageFromError(
+              result.error ?? "Failed to load approvals");
         });
         AppLogger.w("Failed to load approvals: ${result.error}");
       }
@@ -112,7 +114,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
 
       if (result.isSuccess) {
         AppLogger.i("Decision successful: $decision for visitor $visitorId");
-        
+
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -125,14 +127,18 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  decision == "APPROVED" ? "Visitor approved successfully" : "Visitor rejected",
+                  decision == "APPROVED"
+                      ? "Visitor approved successfully"
+                      : "Visitor rejected",
                   style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
               ],
             ),
-            backgroundColor: decision == "APPROVED" ? AppColors.success : AppColors.error,
+            backgroundColor:
+                decision == "APPROVED" ? AppColors.success : AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -144,7 +150,8 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
           _isLoading = false;
           _processingVisitorId = null;
         });
-        _showError(userFriendlyMessageFromError(result.error ?? "Failed to process decision"));
+        _showError(userFriendlyMessageFromError(
+            result.error ?? "Failed to process decision"));
         AppLogger.e("Decision failed: ${result.error}");
       }
     } catch (e) {
@@ -195,7 +202,8 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
           elevation: 0,
           automaticallyImplyLeading: true,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
+            icon: Icon(Icons.arrow_back_rounded,
+                color: Theme.of(context).colorScheme.onSurface),
             onPressed: () {
               // If we're in a tab navigation, switch to dashboard
               if (widget.onBackPressed != null) {
@@ -205,127 +213,140 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
               }
             },
           ),
-        title: Text(
-          "Pending Approvals",
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w900,
-            fontSize: 20,
-          ),
-        ),
-        centerTitle: true,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Container(
-            height: 1,
-            color: Theme.of(context).dividerColor,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Icon(Icons.refresh_rounded, color: AppColors.success, size: 20),
+          title: Text(
+            "Pending Approvals",
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w900,
+              fontSize: 20,
             ),
-            onPressed: _loadApprovals,
           ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          if (_error != null)
-            Center(
-              child: SingleChildScrollView(
-                child: ErrorRetryWidget(
-                  errorMessage: _error!,
-                  onRetry: _loadApprovals,
-                  retryLabel: 'Retry',
+          centerTitle: true,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(1),
+            child: Container(
+              height: 1,
+              color: Theme.of(context).dividerColor,
+            ),
+          ),
+          actions: [
+            IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
                 ),
+                child: const Icon(Icons.refresh_rounded,
+                    color: AppColors.success, size: 20),
               ),
-            )
-          else if (_pendingVisitors.isEmpty && !_isLoading)
-            Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.04),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
+              onPressed: _loadApprovals,
+            ),
+          ],
+        ),
+        body: Stack(
+          children: [
+            if (_error != null)
+              Center(
+                child: SingleChildScrollView(
+                  child: ErrorRetryWidget(
+                    errorMessage: _error!,
+                    onRetry: _loadApprovals,
+                    retryLabel: 'Retry',
+                  ),
+                ),
+              )
+            else if (_pendingVisitors.isEmpty && !_isLoading)
+              Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withOpacity(0.04),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withOpacity(0.05),
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: AppColors.success.withOpacity(0.1),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.check_circle_outline,
+                            size: 64,
+                            color: AppColors.success,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          "All caught up!",
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          "No pending approvals",
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.7),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          "All visitor requests are processed",
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withOpacity(0.7),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppColors.success.withOpacity(0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.check_circle_outline,
-                          size: 64,
-                          color: AppColors.success,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Text(
-                        "All caught up!",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        "No pending approvals",
-                        style: TextStyle(
-                          fontSize: 15,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "All visitor requests are processed",
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                        ),
-                      ),
-                    ],
-                  ),
+                ),
+              )
+            else
+              RefreshIndicator(
+                onRefresh: _loadApprovals,
+                color: AppColors.success,
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _pendingVisitors.length,
+                  itemBuilder: (context, index) {
+                    final visitor = _pendingVisitors[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildVisitorCard(visitor),
+                    );
+                  },
                 ),
               ),
-            )
-          else
-            RefreshIndicator(
-              onRefresh: _loadApprovals,
-              color: AppColors.success,
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: _pendingVisitors.length,
-                itemBuilder: (context, index) {
-                  final visitor = _pendingVisitors[index];
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _buildVisitorCard(visitor),
-                  );
-                },
-              ),
-            ),
-          AppLoader.overlay(show: _isLoading, message: "Processing…"),
-        ],
-      ),
+            AppLoader.overlay(show: _isLoading, message: "Processing…"),
+          ],
+        ),
       ),
     );
   }
@@ -336,17 +357,44 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
     final visitorPhone = visitor['visitor_phone']?.toString() ?? '';
     final visitorName = visitor['visitor_name']?.toString().trim();
     final deliveryPartner = visitor['delivery_partner']?.toString().trim();
-    final deliveryPartnerOther = visitor['delivery_partner_other']?.toString().trim();
+    final deliveryPartnerOther =
+        visitor['delivery_partner_other']?.toString().trim();
     final status = visitor['status']?.toString() ?? 'PENDING';
     final createdAt = visitor['created_at']?.toString() ?? '';
-    final photoUrl = visitor['photo_url']?.toString() ?? visitor['photoUrl']?.toString();
+    final photoUrl =
+        visitor['photo_url']?.toString() ?? visitor['photoUrl']?.toString();
     final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
     final isProcessing = _processingVisitorId == visitorId;
     final hasDeliveryPartner = visitorType == 'DELIVERY' &&
         ((deliveryPartner != null && deliveryPartner.isNotEmpty) ||
             (deliveryPartnerOther != null && deliveryPartnerOther.isNotEmpty));
     final deliveryDisplay = hasDeliveryPartner
-        ? (deliveryPartner == 'Other' ? (deliveryPartnerOther?.isNotEmpty == true ? deliveryPartnerOther! : 'Other') : (deliveryPartner ?? ''))
+        ? (deliveryPartner == 'Other'
+            ? (deliveryPartnerOther?.isNotEmpty == true
+                ? deliveryPartnerOther!
+                : 'Other')
+            : (deliveryPartner ?? ''))
+        : null;
+
+    final cabMap = visitor['cab'] is Map
+        ? Map<String, dynamic>.from(visitor['cab'])
+        : null;
+
+    final cabProvider = cabMap?['provider']?.toString().trim();
+    final cabProviderOther = cabMap?['provider_other']
+        ?.toString()
+        .trim(); // optional if you support "Other"
+
+    final hasCabProvider = visitorType == 'CAB' &&
+        ((cabProvider != null && cabProvider.isNotEmpty) ||
+            (cabProviderOther != null && cabProviderOther.isNotEmpty));
+
+    final cabDisplay = hasCabProvider
+        ? (cabProvider == 'Other'
+            ? (cabProviderOther?.isNotEmpty == true
+                ? cabProviderOther!
+                : 'Other')
+            : (cabProvider ?? ''))
         : null;
 
     return Container(
@@ -373,7 +421,8 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppColors.success.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
@@ -401,7 +450,8 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
               if (deliveryDisplay != null && deliveryDisplay.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.orange.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(10),
@@ -410,7 +460,8 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.local_shipping_outlined, size: 14, color: Colors.orange.shade700),
+                      Icon(Icons.local_shipping_outlined,
+                          size: 14, color: Colors.orange.shade700),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
@@ -432,8 +483,43 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
               StatusChip(status: status, compact: true),
             ],
           ),
+          if (cabDisplay != null && cabDisplay.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color:
+                      Theme.of(context).colorScheme.primary.withOpacity(0.25),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.local_taxi_rounded,
+                      size: 14, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 6),
+                  Flexible(
+                    child: Text(
+                      cabDisplay,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           const SizedBox(height: 12),
-          
+
           // Visitor Details (with optional photo)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -457,11 +543,14 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                       height: 50,
                       placeholder: (context, url) => Container(
                         color: Colors.grey.shade300,
-                        child: const Center(child: Icon(Icons.person_rounded, color: AppColors.success, size: 24)),
+                        child: const Center(
+                            child: Icon(Icons.person_rounded,
+                                color: AppColors.success, size: 24)),
                       ),
                       errorWidget: (context, url, error) => Container(
                         color: AppColors.success.withOpacity(0.1),
-                        child: const Icon(Icons.person_rounded, color: AppColors.success, size: 24),
+                        child: const Icon(Icons.person_rounded,
+                            color: AppColors.success, size: 24),
                       ),
                     ),
                   ),
@@ -473,22 +562,32 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (visitorName != null && visitorName.isNotEmpty)
-                      _buildCompactDetailRow(Icons.person_outline_rounded, visitorName),
-                    if (visitorName != null && visitorName.isNotEmpty) const SizedBox(height: 6),
+                      _buildCompactDetailRow(
+                          Icons.person_outline_rounded, visitorName),
+                    if (visitorName != null && visitorName.isNotEmpty)
+                      const SizedBox(height: 6),
                     if (deliveryDisplay != null && deliveryDisplay.isNotEmpty)
-                      _buildCompactDetailRow(Icons.local_shipping_outlined, 'Delivery: $deliveryDisplay'),
-                    if (deliveryDisplay != null && deliveryDisplay.isNotEmpty) const SizedBox(height: 6),
+                      _buildCompactDetailRow(Icons.local_shipping_outlined,
+                          'Delivery: $deliveryDisplay'),
+                    if (deliveryDisplay != null && deliveryDisplay.isNotEmpty)
+                      const SizedBox(height: 6),
+                    if (cabDisplay != null && cabDisplay.isNotEmpty)
+                      _buildCompactDetailRow(
+                          Icons.local_taxi_rounded, 'Cab: $cabDisplay'),
+                    if (cabDisplay != null && cabDisplay.isNotEmpty)
+                      const SizedBox(height: 6),
                     _buildCompactDetailRow(Icons.phone_rounded, visitorPhone),
                     const SizedBox(height: 6),
-                    _buildCompactDetailRow(Icons.access_time_rounded, _formatDateTime(createdAt)),
+                    _buildCompactDetailRow(
+                        Icons.access_time_rounded, _formatDateTime(createdAt)),
                   ],
                 ),
               ),
             ],
           ),
-          
+
           const SizedBox(height: 14),
-          
+
           // Action Buttons (Compact)
           Row(
             children: [
@@ -507,7 +606,8 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                   ),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 10),
-                    side: BorderSide(color: Theme.of(context).colorScheme.error, width: 1.5),
+                    side: BorderSide(
+                        color: Theme.of(context).colorScheme.error, width: 1.5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -563,7 +663,9 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
             color: Theme.of(context).scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(6),
           ),
-          child: Icon(icon, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+          child: Icon(icon,
+              size: 14,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
         ),
         const SizedBox(width: 8),
         Expanded(
@@ -589,7 +691,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final dateDay = DateTime(dt.year, dt.month, dt.day);
-      
+
       String dateStr;
       if (dateDay == today) {
         dateStr = "Today";
@@ -598,7 +700,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
       } else {
         dateStr = "${dt.day}/${dt.month}/${dt.year}";
       }
-      
+
       return "$dateStr • ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
     } catch (e) {
       return dateTimeStr;

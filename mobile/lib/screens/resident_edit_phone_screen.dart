@@ -107,11 +107,11 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
         AppLogger.i("Phone number updated successfully");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
+            content: const Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text(
                   "Phone number updated successfully",
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
@@ -217,11 +217,11 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(
+                      const Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               "Phone Number",
                               style: TextStyle(
                                 fontSize: 22,
@@ -229,7 +229,7 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
                                 color: AppColors.text,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             Text(
                               "Update your phone number for notifications",
                               style: TextStyle(

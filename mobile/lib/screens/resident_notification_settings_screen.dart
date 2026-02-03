@@ -4,9 +4,10 @@ import '../core/app_logger.dart';
 import '../services/resident_service.dart';
 import '../core/env.dart';
 import '../ui/app_loader.dart';
+import '../services/favorite_visitors_service.dart';
 
 /// Notification Settings Screen
-/// 
+///
 /// Allows residents to manage their notification preferences.
 /// Theme: Green/Success theme (matching resident login and dashboard)
 class ResidentNotificationSettingsScreen extends StatefulWidget {
@@ -22,15 +23,36 @@ class ResidentNotificationSettingsScreen extends StatefulWidget {
   });
 
   @override
-  State<ResidentNotificationSettingsScreen> createState() => _ResidentNotificationSettingsScreenState();
+  State<ResidentNotificationSettingsScreen> createState() =>
+      _ResidentNotificationSettingsScreenState();
 }
 
-class _ResidentNotificationSettingsScreenState extends State<ResidentNotificationSettingsScreen> {
+class _ResidentNotificationSettingsScreenState
+    extends State<ResidentNotificationSettingsScreen> {
   final _residentService = ResidentService(baseUrl: Env.apiBaseUrl);
   bool _pushNotifications = true;
   bool _emailNotifications = false;
   bool _smsNotifications = true;
   bool _isLoading = false;
+
+  final FavoriteVisitorsService _favoritesService =
+      FavoriteVisitorsService.instance;
+  bool _autoApproveFavorites = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAutoApproveFlag();
+  }
+
+  Future<void> _loadAutoApproveFlag() async {
+    final enabled = await _favoritesService.getAutoApproveEnabled(
+      widget.societyId,
+      widget.residentId,
+    );
+    if (!mounted) return;
+    setState(() => _autoApproveFavorites = enabled);
+  }
 
   Future<void> _handleSave() async {
     setState(() => _isLoading = true);
@@ -44,17 +66,18 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
         AppLogger.i("Notification preferences saved (MVP placeholder)");
       }
 
-      await Future.delayed(const Duration(milliseconds: 500)); // Simulate API call
+      await Future.delayed(
+          const Duration(milliseconds: 500)); // Simulate API call
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
+          content: const Row(
             children: [
-              const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-              const SizedBox(width: 8),
-              const Text(
+              Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+              SizedBox(width: 8),
+              Text(
                 "Notification preferences saved",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
@@ -62,7 +85,8 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
           ),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -77,7 +101,8 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -142,11 +167,11 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
                       ),
                     ),
                     const SizedBox(width: 12),
-                    Expanded(
+                    const Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
+                          Text(
                             "Notification Preferences",
                             style: TextStyle(
                               fontSize: 22,
@@ -154,7 +179,7 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
                               color: AppColors.text,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          SizedBox(height: 4),
                           Text(
                             "Choose how you want to receive notifications",
                             style: TextStyle(
@@ -169,7 +194,7 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
                   ],
                 ),
                 const SizedBox(height: 28),
-                
+
                 // Push Notifications Card
                 _buildNotificationCard(
                   icon: Icons.notifications_rounded,
@@ -182,7 +207,7 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
                   iconColor: AppColors.success,
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Email Notifications Card
                 _buildNotificationCard(
                   icon: Icons.email_rounded,
@@ -195,7 +220,7 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
                   iconColor: AppColors.primary,
                 ),
                 const SizedBox(height: 12),
-                
+
                 // SMS Notifications Card
                 _buildNotificationCard(
                   icon: Icons.sms_rounded,
@@ -207,9 +232,9 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
                   },
                   iconColor: AppColors.warning,
                 ),
-                
+
                 const SizedBox(height: 32),
-                
+
                 // Save Button
                 SizedBox(
                   width: double.infinity,
@@ -289,7 +314,7 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
             child: Icon(icon, color: iconColor, size: 24),
           ),
           const SizedBox(width: 16),
-          
+
           // Text Content
           Expanded(
             child: Column(
@@ -306,7 +331,7 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.text2,
                     fontWeight: FontWeight.w500,
@@ -315,7 +340,7 @@ class _ResidentNotificationSettingsScreenState extends State<ResidentNotificatio
               ],
             ),
           ),
-          
+
           // Switch
           Transform.scale(
             scale: 1.1,

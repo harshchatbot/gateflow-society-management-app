@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../core/storage.dart';
 import '../core/app_logger.dart';
+import '../core/session_gate_service.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import '../ui/app_colors.dart';
@@ -8,11 +13,9 @@ import '../ui/app_loader.dart';
 import 'admin_shell_screen.dart';
 import 'onboarding_choose_role_screen.dart';
 import 'admin_onboarding_screen.dart';
-import 'admin_signup_screen.dart';
 import 'admin_pending_approval_screen.dart';
-import '../services/admin_signup_service.dart';
-import '../core/session_gate_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+
+enum _OtpStep { phone, otp }
 
 class AdminLoginScreen extends StatefulWidget {
   const AdminLoginScreen({super.key});
@@ -22,68 +25,206 @@ class AdminLoginScreen extends StatefulWidget {
 }
 
 class _AdminLoginScreenState extends State<AdminLoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _formKeyPhone = GlobalKey<FormState>();
+  final _formKeyOtp = GlobalKey<FormState>();
+
+  final _phoneController = TextEditingController();
+  final _otpController = TextEditingController();
+
+  final _phoneFocus = FocusNode();
+  final _otpFocus = FocusNode();
+
   final FirebaseAuthService _authService = FirebaseAuthService();
   final FirestoreService _firestore = FirestoreService();
-  final AdminSignupService _signupService = AdminSignupService();
+
   bool _isLoading = false;
-  bool _obscurePassword = true;
+
+  _OtpStep _step = _OtpStep.phone;
+
+  String? _verificationId;
+  int? _resendToken;
+
+  int _resendSeconds = 0;
+  Timer? _resendTimer;
+
+  bool get _canResend => _resendSeconds <= 0 && !_isLoading;
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _resendTimer?.cancel();
+    _phoneController.dispose();
+    _otpController.dispose();
+    _phoneFocus.dispose();
+    _otpFocus.dispose();
     super.dispose();
   }
 
-  void _handleLogin() async {
-  if (!_formKey.currentState!.validate()) {
-    return;
+  void _startResendTimer({int seconds = 30}) {
+    _resendTimer?.cancel();
+    setState(() => _resendSeconds = seconds);
+
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
+      if (_resendSeconds <= 1) {
+        t.cancel();
+        setState(() => _resendSeconds = 0);
+      } else {
+        setState(() => _resendSeconds -= 1);
+      }
+    });
   }
 
-  final email = _emailController.text.trim();
-  final password = _passwordController.text.trim();
+  String _maskPhone(String phoneE164) {
+    // +91xxxxxxxxxx -> +91******xxxx
+    if (phoneE164.length <= 6) return phoneE164;
+    final last4 = phoneE164.substring(phoneE164.length - 4);
+    return '${phoneE164.substring(0, 3)}******$last4';
+  }
 
-  setState(() => _isLoading = true);
-  AppLogger.i("Admin login attempt");
+  Future<void> _sendOtp({bool forceResend = false}) async {
+    if (_isLoading) return;
+    if (!_formKeyPhone.currentState!.validate()) return;
 
-  try {
-    // Step 1: Sign in with Firebase Auth
-    final userCredential = await _authService.signInAdmin(
-      email: email,
-      password: password,
-    );
+    final raw = _phoneController.text.trim();
+    final normalized = FirebaseAuthService.normalizePhoneForIndia(raw);
 
-    final uid = userCredential.user?.uid;
-    final userEmail = userCredential.user?.email ?? email;
-    if (uid == null) {
-      throw Exception("Failed to sign in");
-    }
+    setState(() => _isLoading = true);
 
-    // Step 2: Get membership from Firestore (pointer -> society member)
-    final membership = await _firestore.getCurrentUserMembership();
-    
-    // Step 2a: If no membership, check for pending admin signup
-    if (membership == null) {
-      // User has no membership - redirect to pending approval screen
-      setState(() => _isLoading = false);
+    try {
+      AppLogger.i("Admin OTP: sending code", data: {
+        "phone": "masked",
+        "forceResend": forceResend,
+      });
+
+      final res = await _authService.verifyPhoneNumber(
+        phoneNumber: normalized,
+        resendToken: forceResend ? _resendToken : null,
+      );
+
       if (!mounted) return;
-      
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => AdminPendingApprovalScreen(email: userEmail),
+      setState(() {
+        _verificationId = res.verificationId;
+        _resendToken = res.resendToken;
+        _step = _OtpStep.otp;
+      });
+
+      _startResendTimer(seconds: 30);
+
+      // Focus OTP field
+      await Future<void>.delayed(const Duration(milliseconds: 150));
+      if (mounted) FocusScope.of(context).requestFocus(_otpFocus);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("OTP sent to ${_maskPhone(normalized)}"),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       );
+    } on FirebaseAuthException catch (e, st) {
+      AppLogger.e("Admin OTP send failed", error: e, stackTrace: st);
+
+      String msg = "Failed to send OTP. Please try again.";
+      final code = e.code.toLowerCase();
+      if (code.contains('invalid-phone-number')) {
+        msg = "Invalid phone number. Please check and try again.";
+      } else if (code.contains('too-many-requests')) {
+        msg = "Too many attempts. Please wait and try again.";
+      } else if (code.contains('network-request-failed')) {
+        msg = "Network error. Please check your connection.";
+      }
+      _showError(msg);
+    } catch (e, st) {
+      AppLogger.e("Admin OTP send unknown error", error: e, stackTrace: st);
+      _showError("Failed to send OTP. Please try again.");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _verifyOtpAndLogin() async {
+    if (_isLoading) return;
+    if (!_formKeyOtp.currentState!.validate()) return;
+
+    final verificationId = _verificationId;
+    if (verificationId == null || verificationId.isEmpty) {
+      _showError("Session expired. Please request OTP again.");
+      setState(() => _step = _OtpStep.phone);
       return;
-          
-      throw Exception("User membership not found and no email available");
+    }
+
+    final smsCode = _otpController.text.trim();
+
+    setState(() => _isLoading = true);
+
+    try {
+      AppLogger.i("Admin OTP: verifying code");
+
+      final cred = await _authService.signInWithPhoneCredential(
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
+
+      final uid = cred.user?.uid;
+      if (uid == null) throw Exception("Failed to authenticate");
+
+      await _postLogin(uid: uid);
+    } on FirebaseAuthException catch (e, st) {
+      AppLogger.e("Admin OTP verify failed", error: e, stackTrace: st);
+
+      String msg = "Invalid OTP. Please try again.";
+      final code = e.code.toLowerCase();
+      if (code.contains('invalid-verification-code')) {
+        msg = "Invalid OTP. Please check and try again.";
+      } else if (code.contains('session-expired')) {
+        msg = "OTP expired. Please request a new OTP.";
+      } else if (code.contains('network-request-failed')) {
+        msg = "Network error. Please check your connection.";
+      }
+
+      _showError(msg);
+
+      // For expired sessions, move back to phone step
+      if (code.contains('session-expired')) {
+        setState(() {
+          _step = _OtpStep.phone;
+          _verificationId = null;
+          _otpController.clear();
+        });
+      }
+    } catch (e, st) {
+      AppLogger.e("Admin OTP verify unknown error", error: e, stackTrace: st);
+      _showError("Login failed. Please try again.");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  /// Keeps your existing behavior:
+  /// membership -> pending approval -> gate -> save session -> shell
+  Future<void> _postLogin({required String uid}) async {
+    // Step 2: Resolve membership
+    final membership = await _firestore.getCurrentUserMembership();
+
+    final user = FirebaseAuth.instance.currentUser;
+    final phoneLabel = user?.phoneNumber ?? 'Phone login';
+
+    // Step 2a: If no membership -> pending approval screen (same behavior)
+    if (!mounted) return;
+
+    if (membership == null) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AdminOnboardingScreen()),
+      );
+      return;
     }
 
     final societyId = (membership['societyId'] as String?) ?? '';
-    final String systemRole = (membership['systemRole'] as String?)?.toLowerCase() ?? 'admin';
+    final systemRole =
+        (membership['systemRole'] as String?)?.toLowerCase() ?? 'admin';
     final societyRole = membership['societyRole'] as String?;
     final name = membership['name'] as String? ?? 'Admin';
     final bool isActive = membership['active'] == true;
@@ -96,63 +237,66 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     if (systemRole != 'admin' && systemRole != 'super_admin') {
       throw Exception("User is not an admin");
     }
-    
-    // Step 2b: Check if admin is pending approval (active == false)
+
+    // Step 2b: pending approval if active == false for admin
     if (!isActive && systemRole == 'admin') {
-      // User has pending approval, redirect to pending approval screen
-      setState(() => _isLoading = false);
       if (!mounted) return;
-      
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (_) => AdminPendingApprovalScreen(email: userEmail ?? email),
+          builder: (_) => AdminPendingApprovalScreen(email: phoneLabel),
         ),
       );
       return;
     }
 
-    // Step 2c: Post-login gate: block if society inactive
+    // Step 2c: Gate (block inactive society)
     final gate = SessionGateService();
     final gateResult = await gate.validateSessionAfterLogin(uid);
+
     if (!gateResult.allowed) {
       await FirebaseAuth.instance.signOut();
       await Storage.clearAllSessions();
       await Storage.clearFirebaseSession();
-      GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
+
+      GateBlockMessage.set(
+        gateResult.userMessage ??
+            'This society is currently inactive. Please contact the society admin.',
+      );
+
       if (!mounted) return;
-      setState(() => _isLoading = false);
+
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
       );
       return;
     }
 
-    // Step 3: Save Firebase session
+    // Step 3: Save session
     await Storage.saveFirebaseSession(
       uid: uid,
       societyId: societyId,
-      systemRole: systemRole, // ✅ now defined
+      systemRole: systemRole,
       societyRole: societyRole,
       name: name,
     );
 
-    AppLogger.i("Admin login successful", data: {
+    AppLogger.i("Admin login successful (OTP)", data: {
       'uid': uid,
       'societyId': societyId,
       'systemRole': systemRole,
       'name': name,
     });
 
-    setState(() => _isLoading = false);
     if (!mounted) return;
 
-    // Non-blocking: suggest adding phone for easier login next time (email-only users).
+    // Non-blocking hint
     final memberPhone = (membership['phone'] ?? '').toString().trim();
     if (memberPhone.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Add your phone in Profile for easier login next time.'),
+          content:
+              Text('Add your phone in Profile for easier login next time.'),
           duration: Duration(seconds: 5),
           behavior: SnackBarBehavior.floating,
         ),
@@ -167,29 +311,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           adminName: name,
           societyId: societyId,
           role: (societyRole ?? 'ADMIN').toUpperCase(),
-          systemRole: systemRole, // Pass systemRole to shell
+          systemRole: systemRole,
         ),
       ),
     );
-  } catch (e, stackTrace) {
-    AppLogger.e("Admin login exception", error: e, stackTrace: stackTrace);
-    if (mounted) {
-      setState(() => _isLoading = false);
-
-      String errorMsg = "Login failed. Please check your credentials.";
-      if (e.toString().contains('user-not-found') || e.toString().contains('wrong-password')) {
-        errorMsg = "Invalid email or password.";
-      } else if (e.toString().contains('network')) {
-        errorMsg = "Network error. Please check your connection.";
-      } else if (e.toString().toLowerCase().contains('membership')) {
-        errorMsg = "Your account is not linked to any society. Contact support.";
-      }
-
-      _showError(errorMsg);
-    }
   }
-}
-
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -205,8 +331,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -214,11 +343,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
+              color: cs.surface.withOpacity(0.9),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withOpacity(0.08),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -226,7 +355,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             ),
             child: Icon(
               Icons.arrow_back_rounded,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: cs.onSurface,
               size: 20,
             ),
           ),
@@ -235,7 +364,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               Navigator.of(context).pop();
             } else {
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
+                MaterialPageRoute(
+                    builder: (_) => const OnboardingChooseRoleScreen()),
               );
             }
           },
@@ -243,7 +373,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       ),
       body: Stack(
         children: [
-          // Gradient Background (single onboarding theme)
+          // Calm background wash
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -251,9 +381,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Theme.of(context).colorScheme.primary.withOpacity(0.15),
-                    AppColors.bg,
-                    AppColors.bg,
+                    cs.primary.withOpacity(0.12),
+                    theme.scaffoldBackgroundColor,
+                    theme.scaffoldBackgroundColor,
                   ],
                 ),
               ),
@@ -261,13 +391,15 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           ),
           SafeArea(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
                 children: [
-                  const SizedBox(height: 20),
-                  _buildBrandHeader(),
-                  const SizedBox(height: 40),
-                  _buildLoginForm(),
+                  const SizedBox(height: 14),
+                  _buildHeader(context),
+                  const SizedBox(height: 22),
+                  _buildCard(context),
+                  const SizedBox(height: 16),
+                  _buildCreateSocietyCta(context),
                   const SizedBox(height: 24),
                 ],
               ),
@@ -279,12 +411,14 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     );
   }
 
-  Widget _buildBrandHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Column(
       children: [
         SizedBox(
-          width: 200,
-          height: 160,
+          width: 190,
+          height: 140,
           child: Image.asset(
             'assets/illustrations/illustration_login_admin.png',
             fit: BoxFit.contain,
@@ -301,220 +435,321 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 14),
         Text(
-          "Admin Login",
+          "Admin Portal",
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w900,
-            color: Theme.of(context).colorScheme.onSurface,
+            color: cs.onSurface,
             letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 8),
         Text(
-          "Society Management Portal",
+          _step == _OtpStep.phone
+              ? "Login using your phone number"
+              : "Enter the OTP sent to your phone",
+          textAlign: TextAlign.center,
           style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color: cs.onSurface.withOpacity(0.7),
             fontWeight: FontWeight.w600,
-            fontSize: 15,
+            fontSize: 14,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: cs.primary.withOpacity(0.10),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: cs.primary.withOpacity(0.18)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.lock_outline_rounded, size: 16, color: cs.primary),
+              const SizedBox(width: 8),
+              Text(
+                "OTP secure login",
+                style: TextStyle(
+                  color: cs.primary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                ),
+              ),
+            ],
           ),
         ),
       ],
     );
   }
 
-  Widget _buildLoginForm() {
-    return Container(
-      padding: const EdgeInsets.all(28),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 30,
-            offset: const Offset(0, 15),
-          ),
-        ],
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              "Enter your credentials",
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-              ),
-              textAlign: TextAlign.center,
+  Widget _buildCard(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 250),
+      child: Container(
+        key: ValueKey(_step),
+        padding: const EdgeInsets.all(26),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: AppColors.border.withOpacity(0.55)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 28,
+              offset: const Offset(0, 14),
             ),
-            const SizedBox(height: 28),
-            _PremiumField(
-              controller: _emailController,
-              label: "Email address",
-              hint: "e.g. admin@example.com",
-              icon: Icons.email_rounded,
-              textInputAction: TextInputAction.next,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return "Please enter your email";
-                }
-                if (!value.contains('@')) {
-                  return "Please enter a valid email";
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            _PremiumField(
-              controller: _passwordController,
-              label: "Password",
-              hint: "Enter your password",
-              icon: Icons.lock_rounded,
-              obscureText: _obscurePassword,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _handleLogin(),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                  size: 20,
-                ),
-                onPressed: () {
-                  setState(() => _obscurePassword = !_obscurePassword);
-                },
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return "Please enter your password";
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _isLoading
-                    ? null
-                    : () async {
-                        final email = _emailController.text.trim();
-                        if (email.isEmpty || !email.contains('@')) {
-                          _showError("Enter a valid email above, then tap Forgot Password.");
-                          return;
-                        }
-                        try {
-                          await _authService.sendPasswordResetEmail(email: email);
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: const Text(
-                                "Password reset link sent to your email.",
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
-                              backgroundColor: AppColors.success,
-                              behavior: SnackBarBehavior.floating,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              margin: const EdgeInsets.all(16),
-                            ),
-                          );
-                        } catch (e) {
-                          if (!mounted) return;
-                          _showError("Could not send reset email. Please check the email or try again.");
-                        }
-                      },
-                child: Text(
-                  "Forgot password?",
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _isLoading ? null : _handleLogin,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shadowColor: Colors.transparent,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
-                child: const Text(
-                  "LOGIN",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+          ],
+        ),
+        child: _step == _OtpStep.phone
+            ? Form(
+                key: _formKeyPhone,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      "New admin? ",
+                      "Phone number",
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: cs.onSurface.withOpacity(0.72),
                       ),
                     ),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const AdminSignupScreen()),
-                        );
+                    const SizedBox(height: 8),
+                    _PremiumField(
+                      controller: _phoneController,
+                      focusNode: _phoneFocus,
+                      label: "Enter mobile number",
+                      hint: "e.g. 9876543210",
+                      icon: Icons.phone_rounded,
+                      keyboardType: TextInputType.phone,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _sendOtp(),
+                      validator: (v) {
+                        final value = (v ?? '').trim();
+                        if (value.isEmpty)
+                          return "Please enter your phone number";
+                        final digits = value.replaceAll(RegExp(r'[^\d]'), '');
+                        if (digits.length < 10)
+                          return "Enter a valid phone number";
+                        return null;
                       },
-                      child: Text(
-                        "Sign Up",
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 14,
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _sendOtp,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: cs.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                         ),
+                        child: const Text(
+                          "SEND OTP",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.1,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      "We’ll send a one-time password to verify your identity.",
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: cs.onSurface.withOpacity(0.65),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 12,
                       ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AdminOnboardingScreen()),
-                    );
-                  },
-                  child: Text(
-                    "Create New Society (Super Admin)",
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                      fontWeight: FontWeight.w700,
-                      fontSize: 12,
+              )
+            : Form(
+                key: _formKeyOtp,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      "OTP",
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                        color: cs.onSurface.withOpacity(0.72),
+                      ),
                     ),
+                    const SizedBox(height: 8),
+                    _PremiumField(
+                      controller: _otpController,
+                      focusNode: _otpFocus,
+                      label: "Enter 6-digit OTP",
+                      hint: "••••••",
+                      icon: Icons.password_rounded,
+                      keyboardType: TextInputType.number,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _verifyOtpAndLogin(),
+                      validator: (v) {
+                        final value = (v ?? '').trim();
+                        if (value.isEmpty) return "Please enter OTP";
+                        final digits = value.replaceAll(RegExp(r'[^\d]'), '');
+                        if (digits.length < 6)
+                          return "Enter a valid 6-digit OTP";
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: _isLoading ? null : _verifyOtpAndLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: cs.primary,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shadowColor: Colors.transparent,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          "VERIFY & LOGIN",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.1,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        TextButton.icon(
+                          onPressed: _isLoading
+                              ? null
+                              : () {
+                                  setState(() {
+                                    _step = _OtpStep.phone;
+                                    _otpController.clear();
+                                    _verificationId = null;
+                                  });
+                                  FocusScope.of(context)
+                                      .requestFocus(_phoneFocus);
+                                },
+                          icon: Icon(Icons.edit_rounded,
+                              size: 16, color: cs.primary),
+                          label: Text(
+                            "Change phone",
+                            style: TextStyle(
+                              color: cs.primary,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        const Spacer(),
+                        TextButton(
+                          onPressed: _canResend
+                              ? () => _sendOtp(forceResend: true)
+                              : null,
+                          child: Text(
+                            _canResend
+                                ? "Resend OTP"
+                                : "Resend in $_resendSeconds s",
+                            style: TextStyle(
+                              color: _canResend
+                                  ? cs.primary
+                                  : cs.onSurface.withOpacity(0.45),
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildCreateSocietyCta(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: cs.primary.withOpacity(0.06),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: cs.primary.withOpacity(0.14)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: cs.primary.withOpacity(0.14),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(Icons.add_business_rounded, color: cs.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Create a new society",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    color: cs.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "Bootstrap as Super Admin (email optional)",
+                  style: TextStyle(
+                    color: cs.onSurface.withOpacity(0.7),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+          TextButton(
+            onPressed: _isLoading
+                ? null
+                : () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const AdminOnboardingScreen()),
+                    );
+                  },
+            child: Text(
+              "START",
+              style: TextStyle(
+                color: cs.primary,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.6,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -525,10 +760,11 @@ class _PremiumField extends StatelessWidget {
   final String label;
   final String hint;
   final IconData icon;
-  final bool obscureText;
+
+  final FocusNode? focusNode;
+  final TextInputType? keyboardType;
   final TextInputAction textInputAction;
   final ValueChanged<String>? onSubmitted;
-  final Widget? suffixIcon;
   final String? Function(String?)? validator;
 
   const _PremiumField({
@@ -536,78 +772,65 @@ class _PremiumField extends StatelessWidget {
     required this.label,
     required this.hint,
     required this.icon,
-    this.obscureText = false,
     required this.textInputAction,
+    this.focusNode,
+    this.keyboardType,
     this.onSubmitted,
-    this.suffixIcon,
     this.validator,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w800,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-            letterSpacing: 0.2,
+    final cs = Theme.of(context).colorScheme;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Theme.of(context).dividerColor),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        focusNode: focusNode,
+        keyboardType: keyboardType,
+        textInputAction: textInputAction,
+        onFieldSubmitted: onSubmitted,
+        validator: validator,
+        style: TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w700,
+          color: cs.onSurface,
+        ),
+        decoration: InputDecoration(
+          prefixIcon: Container(
+            margin: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: cs.primary.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(icon, color: cs.primary, size: 20),
+          ),
+          hintText: hint,
+          hintStyle: const TextStyle(
+            color: AppColors.textMuted,
+            fontSize: 15,
+            fontWeight: FontWeight.w500,
+          ),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 18,
           ),
         ),
-        const SizedBox(height: 8),
-        Container(
-          decoration: BoxDecoration(
-            color: Theme.of(context).scaffoldBackgroundColor,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Theme.of(context).dividerColor),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.02),
-                blurRadius: 10,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          child: TextFormField(
-            controller: controller,
-            obscureText: obscureText,
-            textInputAction: textInputAction,
-            onFieldSubmitted: onSubmitted,
-            validator: validator,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
-            decoration: InputDecoration(
-              prefixIcon: Container(
-                margin: const EdgeInsets.all(12),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
-              ),
-              suffixIcon: suffixIcon,
-              hintText: hint,
-              hintStyle: const TextStyle(
-                color: AppColors.textMuted,
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 18,
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

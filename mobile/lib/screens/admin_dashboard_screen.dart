@@ -31,7 +31,7 @@ import '../widgets/dashboard_insights_card.dart';
 import '../widgets/error_retry_widget.dart';
 
 /// Admin Dashboard Screen
-/// 
+///
 /// Overview screen for admins showing key metrics and quick actions
 /// Theme: Unified primary (blue/indigo); no role-specific colors.
 class AdminDashboardScreen extends StatefulWidget {
@@ -60,15 +60,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     baseUrl: Env.apiBaseUrl,
   );
 
-  final GlobalKey<State<StatefulWidget>> _keyResidents = GlobalKey<State<StatefulWidget>>();
-  final GlobalKey<State<StatefulWidget>> _keyGuards = GlobalKey<State<StatefulWidget>>();
-  final GlobalKey<State<StatefulWidget>> _keyComplaints = GlobalKey<State<StatefulWidget>>();
-  final GlobalKey<State<StatefulWidget>> _keyNotices = GlobalKey<State<StatefulWidget>>();
-  final GlobalKey<State<StatefulWidget>> _keySos = GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keyResidents =
+      GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keyGuards =
+      GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keyComplaints =
+      GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keyNotices =
+      GlobalKey<State<StatefulWidget>>();
+  final GlobalKey<State<StatefulWidget>> _keySos =
+      GlobalKey<State<StatefulWidget>>();
 
   Map<String, dynamic>? _stats;
   bool _isLoading = false;
   String? _error;
+
   /// Society-wide visitor counts last 7 days (for chart). null until loaded.
   List<int>? _visitorsByDayLast7;
 
@@ -166,7 +172,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _maybeAutoRunTour() async {
-    final seen = await TourStorage.hasSeenTourForRole(widget.systemRole ?? 'admin');
+    final seen =
+        await TourStorage.hasSeenTourForRole(widget.systemRole ?? 'admin');
     if (mounted && !seen) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 500), () {
@@ -182,14 +189,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void startTour() {
     if (_showCaseContext == null || !mounted) return;
     try {
-      final keys = <GlobalKey<State<StatefulWidget>>>[_keyResidents, _keyGuards];
-      if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) keys.add(_keyComplaints);
-      if (SocietyModules.isEnabled(SocietyModuleIds.notices)) keys.add(_keyNotices);
+      final keys = <GlobalKey<State<StatefulWidget>>>[
+        _keyResidents,
+        _keyGuards
+      ];
+      if (SocietyModules.isEnabled(SocietyModuleIds.complaints))
+        keys.add(_keyComplaints);
+      if (SocietyModules.isEnabled(SocietyModuleIds.notices))
+        keys.add(_keyNotices);
       if (SocietyModules.isEnabled(SocietyModuleIds.sos)) keys.add(_keySos);
       if (keys.isEmpty) return;
       ShowCaseWidget.of(_showCaseContext!).startShowCase(keys);
     } catch (_) {
-      if (mounted) TourStorage.setHasSeenTourForRole(widget.systemRole ?? 'admin');
+      if (mounted)
+        TourStorage.setHasSeenTourForRole(widget.systemRole ?? 'admin');
     }
   }
 
@@ -202,7 +215,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _photoUrl = membership['photoUrl'] as String?;
       });
     } catch (e, st) {
-      AppLogger.e("Error loading admin profile photo", error: e, stackTrace: st);
+      AppLogger.e("Error loading admin profile photo",
+          error: e, stackTrace: st);
     }
   }
 
@@ -222,7 +236,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             _notificationCount += 1;
           });
         }
-      } else if (type == 'sos' && SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+      } else if (type == 'sos' &&
+          SocietyModules.isEnabled(SocietyModuleIds.sos)) {
         // Simple SOS badge to highlight attention (only when module enabled)
         if (mounted) {
           setState(() {
@@ -233,9 +248,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     });
     notificationService.setOnNotificationTap((data) {
       final type = (data['type'] ?? '').toString();
-      if (type == 'complaint' && SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
+      if (type == 'complaint' &&
+          SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
         _navigateToTab(3);
-      } else if (type == 'notice' && SocietyModules.isEnabled(SocietyModuleIds.notices)) {
+      } else if (type == 'notice' &&
+          SocietyModules.isEnabled(SocietyModuleIds.notices)) {
         // Mark notices as read for this session and navigate to notices tab (index 4)
         if (mounted) {
           setState(() {
@@ -243,7 +260,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           });
         }
         _navigateToTab(4);
-      } else if (type == 'sos' && SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+      } else if (type == 'sos' &&
+          SocietyModules.isEnabled(SocietyModuleIds.sos)) {
         final societyId = (data['society_id'] ?? widget.societyId).toString();
         final flatNo = (data['flat_no'] ?? '').toString();
         final residentName = (data['resident_name'] ?? 'Resident').toString();
@@ -276,10 +294,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _loadNotificationCount() async {
     try {
       int totalCount = 0;
-      
+
       // Count pending complaints (only if module enabled)
       if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
-        final complaintsResult = await _complaintService.getAllComplaints(societyId: widget.societyId);
+        final complaintsResult = await _complaintService.getAllComplaints(
+            societyId: widget.societyId);
         if (complaintsResult.isSuccess && complaintsResult.data != null) {
           final pendingComplaints = complaintsResult.data!.where((c) {
             final status = (c['status'] ?? '').toString().toUpperCase();
@@ -288,20 +307,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           totalCount += pendingComplaints;
         }
       }
-      
+
       // Count recent notices (only if module enabled)
       if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
         final noticesResult = await _noticeService.getNotices(
           societyId: widget.societyId,
           activeOnly: true,
         );
-        if (!_initializedUnreadNotices && noticesResult.isSuccess && noticesResult.data != null) {
+        if (!_initializedUnreadNotices &&
+            noticesResult.isSuccess &&
+            noticesResult.data != null) {
           final now = DateTime.now();
           final recentNotices = noticesResult.data!.where((n) {
             try {
               final createdAt = n['created_at']?.toString() ?? '';
               if (createdAt.isEmpty) return false;
-              final created = DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
+              final created =
+                  DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
               final hoursDiff = now.difference(created).inHours;
               return hoursDiff <= 24; // Notices from last 24 hours
             } catch (e) {
@@ -380,7 +402,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           content: Text("Navigate to tab $index"),
           backgroundColor: Theme.of(context).colorScheme.primary,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -419,7 +442,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       } else {
         setState(() {
           _isLoading = false;
-          _error = userFriendlyMessageFromError(result.error ?? "Failed to load stats");
+          _error = userFriendlyMessageFromError(
+              result.error ?? "Failed to load stats");
         });
         AppLogger.w("Failed to load admin stats: ${result.error}");
       }
@@ -441,16 +465,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Society search name synced. Residents can now find this society by name.'),
+          content: const Text(
+              'Society search name synced. Residents can now find this society by name.'),
           backgroundColor: Theme.of(context).colorScheme.primary,
         ),
       );
     } catch (e, st) {
-      AppLogger.e('Sync public society nameLower failed', error: e, stackTrace: st);
+      AppLogger.e('Sync public society nameLower failed',
+          error: e, stackTrace: st);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(e is Exception ? e.toString().replaceFirst('Exception: ', '') : 'Sync failed'),
+          content: Text(e is Exception
+              ? e.toString().replaceFirst('Exception: ', '')
+              : 'Sync failed'),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
@@ -506,160 +534,177 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           child: Scaffold(
             backgroundColor: theme.scaffoldBackgroundColor,
             body: Stack(
-        children: [
-          // 1) Gradient header (top only)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            height: 260,
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    theme.colorScheme.primary,
-                    theme.colorScheme.primary.withOpacity(0.85),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          // 2) White content area behind list so nothing scrolls “under” it
-          Positioned(
-            left: 0,
-            right: 0,
-            top: 260,
-            bottom: 0,
-            child: Container(color: theme.scaffoldBackgroundColor),
-          ),
-          // 3) Scrollable content on top (society card stays above white)
-          RefreshIndicator(
-            onRefresh: () async {
-              await _loadStats();
-              await _loadInsightsCounts();
-              await _loadAdminProfile();
-            },
-            color: theme.colorScheme.primary,
-            child: SafeArea(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 134),
-                children: [
-                  DashboardHero(
-                    userName: widget.adminName,
-                    statusMessage: (_notificationCount + _sosBadgeCount) > 0
-                        ? '${_notificationCount + _sosBadgeCount} item(s) need attention'
-                        : 'Society overview',
-                    mascotMood: _sosBadgeCount > 0
-                        ? SentiMood.warning
-                        : ((_notificationCount + _sosBadgeCount) > 0 ? SentiMood.alert : SentiMood.idle),
-                    avatar: CircleAvatar(
-                      backgroundColor: Colors.white24,
-                      backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                          ? CachedNetworkImageProvider(_photoUrl!)
-                          : null,
-                      child: (_photoUrl == null || _photoUrl!.isEmpty)
-                          ? const Icon(Icons.person_rounded, color: Colors.white)
-                          : null,
+              children: [
+                // 1) Gradient header (top only)
+                Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: 260,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          theme.colorScheme.primary,
+                          theme.colorScheme.primary.withOpacity(0.85),
+                        ],
+                      ),
                     ),
-                    trailingActions: Stack(
+                  ),
+                ),
+                // 2) White content area behind list so nothing scrolls “under” it
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  top: 260,
+                  bottom: 0,
+                  child: Container(color: theme.scaffoldBackgroundColor),
+                ),
+                // 3) Scrollable content on top (society card stays above white)
+                RefreshIndicator(
+                  onRefresh: () async {
+                    await _loadStats();
+                    await _loadInsightsCounts();
+                    await _loadAdminProfile();
+                  },
+                  color: theme.colorScheme.primary,
+                  child: SafeArea(
+                    child: ListView(
+                      padding: const EdgeInsets.fromLTRB(16, 14, 16, 134),
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.notifications_rounded, color: Colors.white),
-                          onPressed: _showNotificationDrawer,
-                        ),
-                        Builder(
-                          builder: (context) {
-                            final totalBadgeCount = _notificationCount + _sosBadgeCount;
-                            if (totalBadgeCount <= 0) return const SizedBox.shrink();
-                            return Positioned(
-                              right: 8,
-                              top: 8,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.error,
-                                  shape: BoxShape.circle,
-                                ),
-                                constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
-                                child: Text(
-                                  totalBadgeCount > 9 ? '9+' : totalBadgeCount.toString(),
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
+                        DashboardHero(
+                          userName: widget.adminName,
+                          statusMessage: (_notificationCount + _sosBadgeCount) >
+                                  0
+                              ? '${_notificationCount + _sosBadgeCount} item(s) need attention'
+                              : 'Society overview',
+                          mascotMood: _sosBadgeCount > 0
+                              ? SentiMood.warning
+                              : ((_notificationCount + _sosBadgeCount) > 0
+                                  ? SentiMood.alert
+                                  : SentiMood.idle),
+                          avatar: CircleAvatar(
+                            backgroundColor: Colors.white24,
+                            backgroundImage:
+                                (_photoUrl != null && _photoUrl!.isNotEmpty)
+                                    ? CachedNetworkImageProvider(_photoUrl!)
+                                    : null,
+                            child: (_photoUrl == null || _photoUrl!.isEmpty)
+                                ? const Icon(Icons.person_rounded,
+                                    color: Colors.white)
+                                : null,
+                          ),
+                          trailingActions: Stack(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.notifications_rounded,
+                                    color: Colors.white),
+                                onPressed: _showNotificationDrawer,
                               ),
-                            );
-                          },
+                              Builder(
+                                builder: (context) {
+                                  final totalBadgeCount =
+                                      _notificationCount + _sosBadgeCount;
+                                  if (totalBadgeCount <= 0)
+                                    return const SizedBox.shrink();
+                                  return Positioned(
+                                    right: 8,
+                                    top: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: BoxDecoration(
+                                        color: theme.colorScheme.error,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      constraints: const BoxConstraints(
+                                          minWidth: 18, minHeight: 18),
+                                      child: Text(
+                                        totalBadgeCount > 9
+                                            ? '9+'
+                                            : totalBadgeCount.toString(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w900,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
+                        const SizedBox(height: 20),
+                        _buildPremiumSocietyCard(),
+                        const SizedBox(height: 24),
+                        if (SocietyModules.isEnabled(
+                            SocietyModuleIds.visitorManagement))
+                          _buildInsightsStrip(),
+                        if (SocietyModules.isEnabled(
+                            SocietyModuleIds.visitorManagement))
+                          const SizedBox(height: 24),
+                        if (_error != null) ...[
+                          Center(
+                            child: SingleChildScrollView(
+                              child: ErrorRetryWidget(
+                                errorMessage: _error!,
+                                onRetry: _loadStats,
+                                retryLabel: errorActionLabelFromError(_error),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 28),
+                        ] else if (_stats != null) ...[
+                          Text(
+                            "Today at a glance",
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          _buildStatsSection(),
+                          if (SocietyModules.isEnabled(
+                              SocietyModuleIds.visitorManagement)) ...[
+                            const SizedBox(height: 20),
+                            if (_visitorsByDayLast7 != null)
+                              VisitorsChart(
+                                countsByDay: _visitorsByDayLast7!,
+                                barColor: Theme.of(context).colorScheme.primary,
+                              )
+                            else
+                              const DashboardInsightsCard(),
+                          ],
+                          const SizedBox(height: 28),
+                        ],
+                        const SizedBox(height: 28),
+                        Text(
+                          "Your actions",
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 14),
+                        _buildActionGrid(),
+                        const SizedBox(height: 46),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  _buildPremiumSocietyCard(),
-                  const SizedBox(height: 24),
-                  if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) _buildInsightsStrip(),
-                  if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) const SizedBox(height: 24),
-                  if (_error != null) ...[
-                    Center(
-                      child: SingleChildScrollView(
-                        child: ErrorRetryWidget(
-                          errorMessage: _error!,
-                          onRetry: _loadStats,
-                          retryLabel: errorActionLabelFromError(_error),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 28),
-                  ] else if (_stats != null) ...[
-                    Text(
-                      "Today at a glance",
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 14),
-                    _buildStatsSection(),
-                    if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) ...[
-                      const SizedBox(height: 20),
-                      if (_visitorsByDayLast7 != null)
-                        VisitorsChart(
-                          countsByDay: _visitorsByDayLast7!,
-                          barColor: Theme.of(context).colorScheme.primary,
-                        )
-                      else
-                        const DashboardInsightsCard(),
-                    ],
-                    const SizedBox(height: 28),
-                  ],
-                  const SizedBox(height: 28),
-                  Text(
-                    "Your actions",
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  _buildActionGrid(),
-                  const SizedBox(height: 46),
-                ],
-              ),
+                ),
+
+                if (_isLoading)
+                  AppLoader.overlay(show: true, message: "Loading Stats..."),
+              ],
             ),
           ),
-
-          if (_isLoading) AppLoader.overlay(show: true, message: "Loading Stats..."),
-        ],
-      ),
-      ),
-    );
+        );
       },
     );
   }
@@ -716,7 +761,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   Text(
                     "Society Management Active",
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.7),
                       fontSize: 12,
                     ),
                   ),
@@ -864,22 +912,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           onTap: () => _navigateToTab(2),
         ),
       ),
-      DashboardQuickAction(
-        label: "Manage Flats",
-        icon: Icons.home_rounded,
-        tint: Theme.of(context).colorScheme.primary,
-        onTap: () {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text("Flats management coming soon!"),
-              backgroundColor: Theme.of(context).colorScheme.primary,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              margin: const EdgeInsets.all(16),
-            ),
-          );
-        },
-      ),
     ];
     if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
       children.add(
@@ -987,7 +1019,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ),
       );
     }
-    if (widget.systemRole?.toLowerCase() == 'super_admin') {
+
+    if ((widget.systemRole ?? '').toLowerCase() == 'super_admin') {
       // Super_admin can approve join requests and sync search name for their society
       children.add(
         DashboardQuickAction(
@@ -1044,5 +1077,4 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       children: children,
     );
   }
-
 }

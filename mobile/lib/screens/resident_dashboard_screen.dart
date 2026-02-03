@@ -26,6 +26,7 @@ import '../services/firestore_service.dart';
 import '../ui/sentinel_theme.dart';
 import '../utils/error_messages.dart';
 import '../widgets/error_retry_widget.dart';
+import '../services/favorite_visitors_service.dart';
 
 /// Resident Dashboard Screen
 ///
@@ -81,6 +82,11 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   final GlobalKey<State<StatefulWidget>> _keySos =
       GlobalKey<State<StatefulWidget>>();
 
+  final FavoriteVisitorsService _favoritesService =
+      FavoriteVisitorsService.instance;
+  Set<String> _favoriteNamesNormalized = {};
+  bool _autoApprovePausedOfflineShown = false;
+
   int _pendingCount = 0;
   int _approvedCount = 0;
   int _rejectedCount = 0;
@@ -108,6 +114,14 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     _loadResidentProfilePhoto();
     _setupNotificationListener();
     _maybeAutoRunTour();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    final favs = await _favoritesService.getFavorites(
+        widget.societyId, widget.residentId);
+    if (!mounted) return;
+    setState(() => _favoriteNamesNormalized = favs);
   }
 
   void _maybeAutoRunTour() async {
@@ -165,6 +179,33 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       if (type == 'visitor') {
         // Visitor approvals are action-based; reload stats/pending count
         _loadDashboardData();
+        if (mounted) {
+          final theme = Theme.of(context);
+          final messenger = ScaffoldMessenger.of(context);
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                "New visitor approval request",
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              backgroundColor: theme.colorScheme.primary,
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              action: widget.onNavigateToApprovals != null
+                  ? SnackBarAction(
+                      label: "View",
+                      textColor: theme.colorScheme.onPrimary,
+                      onPressed: widget.onNavigateToApprovals!,
+                    )
+                  : null,
+            ),
+          );
+        }
       } else if (type == 'notice') {
         // Informational notice: increment unread counter only
         if (!mounted) return;
@@ -172,6 +213,31 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           _unreadNoticesCount += 1;
           _notificationCount = _pendingCount + _unreadNoticesCount;
         });
+        final theme = Theme.of(context);
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text(
+              "New society notice posted",
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: theme.colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            action: widget.onNavigateToNotices != null
+                ? SnackBarAction(
+                    label: "View",
+                    textColor: theme.colorScheme.onPrimary,
+                    onPressed: widget.onNavigateToNotices!,
+                  )
+                : null,
+          ),
+        );
       }
     });
     notificationService.setOnNotificationTap((data) {
@@ -292,6 +358,136 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         final approvals = approvalsResult.data!;
         _pendingCount = approvals.length;
 
+        // -------- Auto-approve favorites (local-only, opt-in, safe) --------
+        try {
+          final autoApproveEnabled = await _favoritesService
+              .getAutoApproveEnabled(widget.societyId, widget.residentId);
+
+          if (autoApproveEnabled && approvals.isNotEmpty) {
+            final favorites = await _favoritesService.getFavorites(
+                widget.societyId, widget.residentId);
+
+            int autoApprovedCount = 0;
+
+            for (final v in approvals) {
+              final m = v as Map<String, dynamic>;
+
+              // IMPORTANT: use the same unique id your decide() expects.
+              // Cursor used visitor_id; in your DB it might be id or visitorId.
+              final visitorId =
+                  m['visitor_id']?.toString() ?? m['id']?.toString() ?? '';
+              if (visitorId.isEmpty) continue;
+
+              final already = await _favoritesService.wasAutoApproved(
+                societyId: widget.societyId,
+                residentId: widget.residentId,
+                pendingId: visitorId,
+              );
+              if (already) continue;
+
+              final rawVisitorName = m['visitor_name']?.toString().trim();
+              final rawName = m['name']?.toString().trim();
+              final rawPhone = m['visitor_phone']?.toString().trim();
+
+              final displayName =
+                  (rawVisitorName != null && rawVisitorName.isNotEmpty)
+                      ? rawVisitorName
+                      : (rawName != null && rawName.isNotEmpty)
+                          ? rawName
+                          : (rawPhone != null && rawPhone.isNotEmpty)
+                              ? rawPhone
+                              : 'Visitor';
+
+              if (!_favoritesService.isFavorite(displayName, favorites))
+                continue;
+
+              try {
+                final result = await _service.decide(
+                  societyId: widget.societyId,
+                  flatNo: widget.flatNo,
+                  residentId: widget.residentId,
+                  visitorId: visitorId,
+                  decision: "APPROVED",
+                );
+
+                if (result.isSuccess) {
+                  autoApprovedCount++;
+                  await _favoritesService.markAutoApprovedOnce(
+                    societyId: widget.societyId,
+                    residentId: widget.residentId,
+                    pendingId: visitorId,
+                  );
+                } else {
+                  if (!_autoApprovePausedOfflineShown && mounted) {
+                    _autoApprovePausedOfflineShown = true;
+                    final theme = Theme.of(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          "Auto-approve paused (offline)",
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        backgroundColor: theme.colorScheme.primary,
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    );
+                  }
+                }
+              } catch (_) {
+                if (!_autoApprovePausedOfflineShown && mounted) {
+                  _autoApprovePausedOfflineShown = true;
+                  final theme = Theme.of(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        "Auto-approve paused (offline)",
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onPrimary,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      backgroundColor: theme.colorScheme.primary,
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                  );
+                }
+              }
+            }
+
+            if (autoApprovedCount > 0 && mounted) {
+              final theme = Theme.of(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    "Auto-approved $autoApprovedCount favorite visitor${autoApprovedCount == 1 ? '' : 's'}",
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onPrimary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  backgroundColor: theme.colorScheme.primary,
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              );
+            }
+          }
+        } catch (_) {
+          // Must not break dashboard
+        }
+// ---------------------------------------------------------------
+
         for (final v in approvals) {
           final m = v as Map<String, dynamic>;
           final createdStr = m['created_at']?.toString() ?? '';
@@ -308,8 +504,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           if (type == 'DELIVERY') todayDeliveries++;
         }
       } else {
-        overviewError ??=
-            ErrorMessages.userFriendlyMessage(approvalsResult.error ?? "Failed to load approvals");
+        overviewError ??= ErrorMessages.userFriendlyMessage(
+            approvalsResult.error ?? "Failed to load approvals");
       }
 
       // For frequent visitors (from history only)
@@ -360,8 +556,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             .map((e) => _FrequentVisitor(e.key, e.value))
             .toList();
       } else {
-        overviewError ??=
-            ErrorMessages.userFriendlyMessage(historyResult.error ?? "Failed to load history");
+        overviewError ??= ErrorMessages.userFriendlyMessage(
+            historyResult.error ?? "Failed to load history");
       }
 
       // ✅ Count recent notices (created in last 24 hours) only once to seed unread count
@@ -577,7 +773,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                                   child: Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.error,
+                                      color:
+                                          Theme.of(context).colorScheme.error,
                                       shape: BoxShape.circle,
                                     ),
                                     constraints: const BoxConstraints(
@@ -714,7 +911,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                   Text(
                     "Society Management Active",
                     style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withOpacity(0.7),
                       fontSize: 12,
                     ),
                   ),
@@ -749,48 +949,82 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: _frequentVisitors.map((fv) {
-          final initial =
-              fv.name.isNotEmpty ? fv.name[0].toUpperCase() : '?';
+          final initial = fv.name.isNotEmpty ? fv.name[0].toUpperCase() : '?';
           return Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircleAvatar(
-                  radius: 20,
-                  backgroundColor:
-                      theme.colorScheme.primary.withOpacity(0.1),
-                  child: Text(
-                    initial,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w700,
+              padding: const EdgeInsets.only(right: 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      IconButton(
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(),
+                        icon: Icon(
+                          _favoritesService.isFavorite(
+                            fv.name,
+                            _favoriteNamesNormalized,
+                          )
+                              ? Icons.star_rounded
+                              : Icons.star_border_rounded,
+                          size: 20,
+                          color: _favoritesService.isFavorite(
+                            fv.name,
+                            _favoriteNamesNormalized,
+                          )
+                              ? theme.colorScheme.primary
+                              : theme.colorScheme.onSurface.withOpacity(0.3),
+                        ),
+                        onPressed: () async {
+                          final updated =
+                              await _favoritesService.toggleFavorite(
+                            societyId: widget.societyId,
+                            residentId: widget.residentId,
+                            visitorName: fv.name,
+                          );
+                          if (!mounted) return;
+                          setState(() {
+                            _favoriteNamesNormalized = updated;
+                          });
+                        },
+                      ),
+                      const SizedBox(width: 8),
+                      CircleAvatar(
+                        radius: 20,
+                        backgroundColor:
+                            theme.colorScheme.primary.withOpacity(0.1),
+                        child: Text(
+                          fv.name.isNotEmpty ? fv.name[0].toUpperCase() : '?',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  SizedBox(
+                    width: 80,
+                    child: Text(
+                      fv.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      textAlign: TextAlign.center,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.colorScheme.onSurface,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                SizedBox(
-                  width: 80,
-                  child: Text(
-                    fv.name,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurface,
+                  Text(
+                    "${fv.count} visit${fv.count == 1 ? '' : 's'}",
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
                   ),
-                ),
-                Text(
-                  "${fv.count} visit${fv.count == 1 ? '' : 's'}",
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color:
-                        theme.colorScheme.onSurface.withOpacity(0.7),
-                  ),
-                ),
-              ],
-            ),
-          );
+                ],
+              ));
         }).toList(),
       ),
     );

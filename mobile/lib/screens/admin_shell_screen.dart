@@ -6,7 +6,6 @@ import 'admin_manage_guards_screen.dart';
 import 'admin_manage_complaints_screen.dart';
 import 'admin_profile_screen.dart';
 import 'notice_board_screen.dart';
-import '../ui/app_colors.dart';
 import '../ui/floating_bottom_nav.dart';
 import '../services/notification_service.dart';
 import '../core/society_modules.dart';

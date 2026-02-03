@@ -108,8 +108,8 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
       AppLogger.i("Profile image uploaded successfully", data: {"photoUrl": url});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Row(
-            children: const [
+          content: const Row(
+            children: [
               Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
               SizedBox(width: 8),
               Text(
@@ -205,7 +205,7 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text(
+                const Text(
                   "Upload or change your profile image",
                   style: TextStyle(
                     fontSize: 14,
@@ -281,7 +281,7 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                   ),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    side: BorderSide(color: AppColors.admin, width: 1.5),
+                    side: const BorderSide(color: AppColors.admin, width: 1.5),
                     foregroundColor: AppColors.admin,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -395,7 +395,7 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                 "Take Photo",
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
               ),
-              subtitle: Text(
+              subtitle: const Text(
                 "Capture a new photo",
                 style: TextStyle(fontSize: 13, color: AppColors.text2),
               ),
@@ -417,7 +417,7 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                 "Choose from Gallery",
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
               ),
-              subtitle: Text(
+              subtitle: const Text(
                 "Select from your photos",
                 style: TextStyle(fontSize: 13, color: AppColors.text2),
               ),
@@ -445,7 +445,7 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                     color: AppColors.error,
                   ),
                 ),
-                subtitle: Text(
+                subtitle: const Text(
                   "Clear selected image",
                   style: TextStyle(fontSize: 13, color: AppColors.text2),
                 ),

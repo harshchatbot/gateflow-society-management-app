@@ -9,8 +9,11 @@ import '../core/app_logger.dart';
 import '../core/storage.dart';
 
 /// Resident Pending Approval Screen
-/// 
+///
 /// Shown when resident tries to login but their signup is still pending approval
+///
+/// NOTE: Keep constructor param name as `email` for backward compatibility.
+/// In OTP flows, pass phone string here (e.g. "+91xxxx") and UI will render it as Contact.
 class ResidentPendingApprovalScreen extends StatefulWidget {
   final String email;
 
@@ -20,109 +23,82 @@ class ResidentPendingApprovalScreen extends StatefulWidget {
   });
 
   @override
-  State<ResidentPendingApprovalScreen> createState() => _ResidentPendingApprovalScreenState();
+  State<ResidentPendingApprovalScreen> createState() =>
+      _ResidentPendingApprovalScreenState();
 }
 
-class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalScreen> {
+class _ResidentPendingApprovalScreenState
+    extends State<ResidentPendingApprovalScreen> {
   final FirestoreService _firestore = FirestoreService();
   bool _isChecking = false;
   bool _canFindSocietyAgain = false;
+
+  bool _looksLikePhone(String value) {
+    final v = value.trim();
+    if (v.isEmpty) return false;
+    if (v.startsWith('+')) return true;
+    final digits = v.replaceAll(RegExp(r'[^\d]'), '');
+    return digits.length >= 10 && digits.length >= (v.length * 0.6);
+  }
+
+  String _maskIfPhone(String value) {
+    final v = value.trim();
+    if (!_looksLikePhone(v)) return v;
+
+    // Mask: +91******1234
+    if (v.length <= 6) return v;
+    final last4 = v.substring(v.length - 4);
+    final prefix = v.startsWith('+') ? v.substring(0, 3) : v.substring(0, 2);
+    return '$prefix******$last4';
+  }
 
   Future<void> _checkApprovalStatus() async {
     setState(() => _isChecking = true);
 
     try {
       final membership = await _firestore.getCurrentUserMembership();
-      
-      if (membership != null) {
-        final bool isActive = membership['active'] == true;
-        
-        if (isActive) {
-          // Approved! Navigate to resident shell
-          if (!mounted) return;
-          
-          final societyId = (membership['societyId'] as String?) ?? '';
-          final name = (membership['name'] as String?) ?? 'Resident';
-          final uid = (membership['uid'] as String?) ?? '';
-          final flatNo = (membership['flatNo'] as String?)?.trim() ?? '';
-          
-          if (societyId.isNotEmpty && uid.isNotEmpty) {
-            // Clear any stored pending join society since we're active now.
-            await Storage.clearResidentJoinSocietyId();
 
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ResidentShellScreen(
-                  residentId: uid,
-                  residentName: name,
-                  societyId: societyId,
-                  flatNo: flatNo,
-                ),
+      if (membership != null && membership['active'] == true) {
+        if (!mounted) return;
+
+        final societyId = (membership['societyId'] as String?) ?? '';
+        final name = (membership['name'] as String?) ?? 'Resident';
+        final uid = (membership['uid'] as String?) ?? '';
+        final flatNo = (membership['flatNo'] as String?)?.trim() ?? '';
+
+        if (societyId.isNotEmpty && uid.isNotEmpty) {
+          await Storage.clearResidentJoinSocietyId();
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => ResidentShellScreen(
+                residentId: uid,
+                residentName: name,
+                societyId: societyId,
+                flatNo: flatNo,
               ),
-            );
-            return;
-          }
+            ),
+          );
+          return;
         }
       }
 
-      // No active membership yet: check join request status if we know the societyId.
       final pendingSocietyId = await Storage.getResidentJoinSocietyId();
       if (pendingSocietyId != null) {
         final jr = await _firestore.getResidentJoinRequest(
           societyId: pendingSocietyId,
         );
+
         if (jr != null) {
           final status = (jr['status'] as String?) ?? 'PENDING';
-          if (status == 'APPROVED') {
-            // Try once more to see if membership is active now.
-            final refreshed = await _firestore.getCurrentUserMembership();
-            if (refreshed != null && refreshed['active'] == true) {
-              if (!mounted) return;
-              final societyId = (refreshed['societyId'] as String?) ?? '';
-              final name = (refreshed['name'] as String?) ?? 'Resident';
-              final uid = (refreshed['uid'] as String?) ?? '';
-              final flatNo =
-                  (refreshed['flatNo'] as String?)?.trim() ?? '';
 
-              if (societyId.isNotEmpty && uid.isNotEmpty) {
-                await Storage.clearResidentJoinSocietyId();
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ResidentShellScreen(
-                      residentId: uid,
-                      residentName: name,
-                      societyId: societyId,
-                      flatNo: flatNo,
-                    ),
-                  ),
-                );
-                return;
-              }
-            }
-
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text(
-                  "Your request is approved. Finalizing access… please try again in a few seconds.",
-                ),
-                backgroundColor: AppColors.success,
-                behavior: SnackBarBehavior.floating,
-              ),
-            );
-            return;
-          }
           if (status == 'REJECTED') {
             if (!mounted) return;
-            setState(() {
-              _canFindSocietyAgain = true;
-            });
+            setState(() => _canFindSocietyAgain = true);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text(
-                  "Your join request was rejected. You can try finding your society again.",
+                  "Your join request was rejected. You can try again.",
                 ),
                 backgroundColor: AppColors.error,
                 behavior: SnackBarBehavior.floating,
@@ -130,74 +106,43 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
             );
             return;
           }
-          // PENDING
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                "Your join request is pending approval from the admin.",
-              ),
-              backgroundColor: AppColors.warning,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-          return;
         }
       }
-      
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text("Your approval is still pending. Please wait for admin approval."),
+          content: const Text("Your request is still pending approval."),
           backgroundColor: AppColors.warning,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           margin: const EdgeInsets.all(16),
         ),
       );
     } catch (e) {
       AppLogger.e("Error checking approval status", error: e);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text("Failed to check approval status. Please try again."),
-          backgroundColor: AppColors.error,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(16),
-        ),
-      );
     } finally {
-      if (mounted) {
-        setState(() => _isChecking = false);
-      }
+      if (mounted) setState(() => _isChecking = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: theme.dividerColor),
-            ),
-            child: Icon(
-              Icons.arrow_back_rounded,
-              color: theme.colorScheme.onSurface,
-              size: 20,
-            ),
-          ),
+          icon: Icon(Icons.arrow_back_rounded,
+              color: theme.colorScheme.onSurface),
           onPressed: () {
-            Navigator.of(context).pushReplacement(
+            Navigator.pushReplacement(
+              context,
               MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
             );
           },
@@ -205,186 +150,240 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
           children: [
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.04),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(
-                  color: theme.colorScheme.primary.withOpacity(0.06),
-                ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SentinelIllustration(kind: 'pending'),
-                  const SizedBox(height: 28),
-                  Text(
-                    "You're almost in",
-                    style: (theme.textTheme.titleLarge ?? const TextStyle()).copyWith(
-                      color: theme.colorScheme.onSurface,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "Your access request has been sent to the society admin.\nYou'll be notified once it's approved.",
-                    style: (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  Center(
-                    child: SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: theme.colorScheme.primary.withOpacity(0.4),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: theme.dividerColor),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.email_rounded,
-                              color: theme.colorScheme.primary,
-                              size: 20,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              "Email",
-                              style: theme.textTheme.bodyMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                color: theme.colorScheme.onSurface.withOpacity(0.7),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          widget.email,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: theme.colorScheme.onSurface,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: FilledButton.icon(
-                      onPressed: _isChecking ? null : _checkApprovalStatus,
-                      icon: _isChecking
-                          ? SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: theme.colorScheme.onPrimary.withOpacity(0.8),
-                              ),
-                            )
-                          : const Icon(Icons.refresh_rounded, size: 20),
-                      label: Text(
-                        _isChecking ? "CHECKING..." : "CHECK STATUS",
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  if (_canFindSocietyAgain)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: OutlinedButton(
-                        onPressed: () async {
-                          await Storage.clearResidentJoinSocietyId();
-                          if (!context.mounted) return;
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (_) => const FindSocietyScreen(),
-                            ),
-                          );
-                        },
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: theme.colorScheme.primary,
-                          side: BorderSide(
-                            color: theme.colorScheme.primary,
-                            width: 1.6,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                        ),
-                        child: const Text(
-                          "FIND SOCIETY AGAIN",
-                          style: TextStyle(
-                            fontWeight: FontWeight.w800,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-                  if (_canFindSocietyAgain) const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.of(context).pushReplacement(
-                          MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
-                        );
-                      },
-                      icon: const Icon(Icons.arrow_back_rounded, size: 20),
-                      label: const Text(
-                        "BACK TO LOGIN",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1.2,
-                          fontSize: 16,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: theme.colorScheme.primary,
-                        side: BorderSide(
-                          color: theme.colorScheme.primary,
-                          width: 2,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+            _buildPendingBanner(theme),
+            const SizedBox(height: 14),
+
+            // ✅ Identity / Contact Card (OTP-first friendly)
+            _buildContactCard(theme),
+            const SizedBox(height: 22),
+
+            /// Illustration (dimmed like MyGate)
+            const Opacity(
+              opacity: 0.42,
+              child: SentinelIllustration(kind: 'pending'),
             ),
+
+            const SizedBox(height: 28),
+            _buildTimeline(theme),
+
+            const SizedBox(height: 32),
+            _buildPrimaryActions(theme),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPendingBanner(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.tertiary.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        children: [
+          Text(
+            "Approval Pending",
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Your account needs approval from your society admin to ensure only verified residents get access.",
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContactCard(ThemeData theme) {
+    final raw = widget.email.trim();
+    final isPhone = _looksLikePhone(raw);
+    final display = _maskIfPhone(raw);
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.8)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(
+              isPhone ? Icons.phone_rounded : Icons.email_rounded,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  isPhone ? "Contact" : "Email",
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.onSurface.withOpacity(0.65),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  display.isEmpty ? "Phone login" : display,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeline(ThemeData theme) {
+    Widget step(
+      bool done,
+      String title,
+      String subtitle,
+    ) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            done ? Icons.check_circle : Icons.radio_button_unchecked,
+            color: done
+                ? theme.colorScheme.primary
+                : theme.colorScheme.onSurface.withOpacity(0.3),
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: theme.textTheme.bodyMedium
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Column(
+      children: [
+        step(
+          true,
+          "Application submitted",
+          "Your request has been sent to the society admin.",
+        ),
+        const SizedBox(height: 16),
+        step(
+          true,
+          "We’re reminding",
+          "Admins receive reminders every 24 hours.",
+        ),
+        const SizedBox(height: 16),
+        step(
+          false,
+          "Verification by admin",
+          "Most approvals happen within 72 hours.",
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPrimaryActions(ThemeData theme) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 52,
+          width: double.infinity,
+          child: FilledButton(
+            onPressed: _isChecking ? null : _checkApprovalStatus,
+            child: _isChecking
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text(
+                    "CHECK STATUS",
+                    style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 52,
+          width: double.infinity,
+          child: OutlinedButton(
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
+              );
+            },
+            child: const Text(
+              "BACK TO LOGIN",
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ),
+        if (_canFindSocietyAgain) ...[
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 52,
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () async {
+                await Storage.clearResidentJoinSocietyId();
+                if (!context.mounted) return;
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const FindSocietyScreen()),
+                );
+              },
+              child: const Text(
+                "FIND SOCIETY AGAIN",
+                style: TextStyle(fontWeight: FontWeight.w800),
+              ),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }
