@@ -17,8 +17,30 @@ import 'guard_login_screen.dart';
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../ui/app_icons.dart';
+import '../ui/sentinel_theme.dart';
 import '../core/society_modules.dart';
 import '../widgets/module_disabled_placeholder.dart';
+
+/// Config for a chip group (e.g. Cab Provider, Delivery Partner). Add entries to _chipGroups to extend.
+class ChipGroupConfig {
+  final String title;
+  final String visitorType;
+  final String storageKey;
+  final String field;
+  final List<String> options;
+  final String defaultValue;
+  final IconData icon;
+
+  const ChipGroupConfig({
+    required this.title,
+    required this.visitorType,
+    required this.storageKey,
+    required this.field,
+    required this.options,
+    required this.defaultValue,
+    required this.icon,
+  });
+}
 
 class NewVisitorScreen extends StatefulWidget {
   final String guardId;
@@ -41,6 +63,31 @@ class NewVisitorScreen extends StatefulWidget {
 class _NewVisitorScreenState extends State<NewVisitorScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  // Chip groups: add a config entry to support a new type (e.g. cab.provider, delivery.provider).
+  static final List<ChipGroupConfig> _chipGroups = [
+    ChipGroupConfig(
+      title: 'Cab Provider',
+      visitorType: 'CAB',
+      storageKey: 'cab',
+      field: 'provider',
+      options: ['Ola', 'Uber', 'Other'],
+      defaultValue: 'Other',
+      icon: Icons.directions_car_rounded,
+    ),
+    ChipGroupConfig(
+      title: 'Delivery Partner',
+      visitorType: 'DELIVERY',
+      storageKey: 'delivery',
+      field: 'provider',
+      options: ['Zomato', 'Swiggy', 'Blinkit', 'Zepto', 'Amazon', 'Flipkart', 'Dunzo', 'Other'],
+      defaultValue: 'Other',
+      icon: Icons.local_shipping_rounded,
+    ),
+  ];
+
+  /// One map for all chip selections; key = "${storageKey}.${field}".
+  final Map<String, String?> _chipSelections = {};
+
   // Controllers
   final _visitorNameController = TextEditingController();
   final _visitorPhoneController = TextEditingController();
@@ -53,10 +100,26 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   File? _visitorPhoto;
 
   String _selectedVisitorType = 'GUEST';
-  String? _selectedDeliveryPartner; // Only used when category = DELIVERY
-  String? _selectedCabProvider; // Ola / Uber / Other (same pattern as delivery)
   bool _isLoading = false;
   Visitor? _createdVisitor;
+
+  String _getSelection(ChipGroupConfig g) =>
+      _chipSelections[_selectionKey(g)] ?? g.defaultValue;
+
+  void _setSelection(ChipGroupConfig g, String? value) {
+    setState(() {
+      if (value == null) {
+        _chipSelections.remove(_selectionKey(g));
+      } else {
+        _chipSelections[_selectionKey(g)] = value;
+      }
+      if (g.storageKey == 'delivery' && value != 'Other') {
+        _deliveryPartnerOtherController.clear();
+      }
+    });
+  }
+
+  static String _selectionKey(ChipGroupConfig g) => '${g.storageKey}.${g.field}';
 
   // Flats/units for dropdown (loaded from society)
   List<Map<String, dynamic>> _flats = [];
@@ -67,6 +130,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   String? _flatOwnerName;
   String? _flatOwnerPhone;
   bool _flatOwnerLoading = false;
+
+  bool _submitButtonPressed = false;
 
   @override
   void initState() {
@@ -211,8 +276,12 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     final visitorName = _visitorNameController.text.trim().isEmpty ? null : _visitorNameController.text.trim();
     final vehicleNumber = _vehicleNumberController.text.trim().isEmpty ? null : _vehicleNumberController.text.trim();
     final isDelivery = _selectedVisitorType == 'DELIVERY';
-    final deliveryPartner = isDelivery ? (_selectedDeliveryPartner?.trim().isEmpty ?? true ? null : _selectedDeliveryPartner!.trim()) : null;
-    final deliveryPartnerOther = isDelivery && _selectedDeliveryPartner == 'Other'
+    final deliveryConfig = _chipGroups.firstWhere((g) => g.visitorType == 'DELIVERY');
+    final deliveryPartnerValue = _getSelection(deliveryConfig);
+    final deliveryPartner = isDelivery && deliveryPartnerValue.trim().isNotEmpty
+        ? deliveryPartnerValue.trim()
+        : null;
+    final deliveryPartnerOther = isDelivery && deliveryPartnerValue == 'Other'
         ? (_deliveryPartnerOtherController.text.trim().isEmpty ? null : _deliveryPartnerOtherController.text.trim())
         : null;
 
@@ -222,14 +291,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       return;
     }
 
-    // Type-specific payload for Firestore (cab.provider, delivery.provider). Extensible.
-    final Map<String, dynamic> extraTypeData = {};
-    if (_selectedVisitorType == 'CAB') {
-      extraTypeData['cab'] = {'provider': _selectedCabProvider ?? 'Other'};
-    }
-    if (_selectedVisitorType == 'DELIVERY') {
-      extraTypeData['delivery'] = {'provider': _selectedDeliveryPartner ?? 'Other'};
-    }
+    final extraTypeData = _buildTypePayload();
 
     final result = (_visitorPhoto != null)
         ? await _visitorService.createVisitorWithPhoto(
@@ -292,13 +354,24 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       _vehicleNumberController.clear();
       _deliveryPartnerOtherController.clear();
       _selectedVisitorType = 'GUEST';
-      _selectedDeliveryPartner = 'Other';
-      _selectedCabProvider = 'Other';
+      _chipSelections.clear();
       _createdVisitor = null;
       _visitorPhoto = null;
       _flatOwnerName = null;
       _flatOwnerPhone = null;
     });
+  }
+
+  /// Builds typePayload for Firestore from config and current selections (cab.provider, delivery.provider, etc.).
+  Map<String, dynamic> _buildTypePayload() {
+    final payload = <String, dynamic>{};
+    for (final g in _chipGroups) {
+      if (_selectedVisitorType != g.visitorType) continue;
+      final value = _getSelection(g);
+      payload.putIfAbsent(g.storageKey, () => <String, dynamic>{});
+      (payload[g.storageKey] as Map<String, dynamic>)[g.field] = value;
+    }
+    return payload;
   }
 
   Future<void> _takePhoto() async {
@@ -429,9 +502,69 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     );
   }
 
-  static const List<String> _deliveryPartners = [
-    'Zomato', 'Swiggy', 'Blinkit', 'Zepto', 'Amazon', 'Flipkart', 'Dunzo', 'Other',
-  ];
+  Widget _buildChipGroup(BuildContext context, ChipGroupConfig g) {
+    if (_selectedVisitorType != g.visitorType) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 18),
+        _buildFieldLabel(g.title),
+        const SizedBox(height: 12),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: g.options
+                .map((opt) => Padding(
+                      padding: const EdgeInsets.only(right: 10),
+                      child: _buildChoiceChip(
+                        context: context,
+                        label: opt,
+                        icon: g.icon,
+                        selected: _getSelection(g) == opt,
+                        onTap: () => _setSelection(g, _getSelection(g) == opt ? null : opt),
+                      ),
+                    ))
+                .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildChoiceChip({
+    required BuildContext context,
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    final theme = Theme.of(context);
+    final bgColor = selected ? SentinelColors.accentSurface(0.04) : theme.colorScheme.surface;
+    final borderColor = selected ? SentinelColors.accentBorder : theme.dividerColor;
+    final fgColor = selected ? SentinelColors.accent : theme.colorScheme.onSurface.withOpacity(0.7);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: bgColor,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: borderColor),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: fgColor),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: fgColor),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildInputCard() {
     final theme = Theme.of(context);
@@ -584,46 +717,39 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               _buildTypePill("CAB", AppIcons.cab),
             ],
           ),
-          if (_selectedVisitorType == 'DELIVERY') ...[
-            const SizedBox(height: 18),
-            _buildFieldLabel("Delivery Partner"),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: _deliveryPartners.map((p) => _buildDeliveryPartnerChip(p)).toList(),
-            ),
-            if (_selectedDeliveryPartner == 'Other') ...[
-              const SizedBox(height: 12),
-              _buildOptionalTextField(
-                controller: _deliveryPartnerOtherController,
-                hint: "Other Partner Name",
-                icon: Icons.store_outlined,
-              ),
-            ],
-          ],
-          if (_selectedVisitorType == 'CAB') ...[
-            const SizedBox(height: 18),
-            _buildFieldLabel("Cab Provider"),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: ['Ola', 'Uber', 'Other'].map((p) => _buildCabProviderChip(p)).toList(),
+          ..._chipGroups.map((g) => _buildChipGroup(context, g)).toList(),
+          if (_selectedVisitorType == 'DELIVERY' &&
+              _getSelection(_chipGroups.firstWhere((c) => c.visitorType == 'DELIVERY')) == 'Other') ...[
+            const SizedBox(height: 12),
+            _buildOptionalTextField(
+              controller: _deliveryPartnerOtherController,
+              hint: "Other Partner Name",
+              icon: Icons.store_outlined,
             ),
           ],
           const SizedBox(height: 25),
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              onPressed: _isLoading ? null : _handleSubmit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                elevation: 0,
+          Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (_) => setState(() => _submitButtonPressed = true),
+            onPointerUp: (_) => setState(() => _submitButtonPressed = false),
+            onPointerCancel: (_) => setState(() => _submitButtonPressed = false),
+            child: AnimatedScale(
+              scale: _submitButtonPressed ? 0.98 : 1.0,
+              duration: const Duration(milliseconds: 140),
+              curve: Curves.easeInOut,
+              child: SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _handleSubmit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    elevation: 0,
+                  ),
+                  child: Text("NOTIFY RESIDENT", style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                ),
               ),
-              child: Text("NOTIFY RESIDENT", style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
             ),
           ),
         ],
@@ -669,42 +795,6 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     );
   }
 
-  Widget _buildDeliveryPartnerChip(String label) {
-    final theme = Theme.of(context);
-    final isSelected = _selectedDeliveryPartner == label;
-    return FilterChip(
-      label: Text(label, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withOpacity(0.7))),
-      selected: isSelected,
-      onSelected: (selected) => setState(() {
-        _selectedDeliveryPartner = selected ? label : null;
-        if (label != 'Other') _deliveryPartnerOtherController.clear();
-      }),
-      selectedColor: theme.colorScheme.primary,
-      checkmarkColor: theme.colorScheme.onPrimary,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    );
-  }
-
-  Widget _buildCabProviderChip(String label) {
-    final theme = Theme.of(context);
-    final isSelected = _selectedCabProvider == label;
-    return FilterChip(
-      label: Text(
-        label,
-        style: TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withOpacity(0.7),
-        ),
-      ),
-      selected: isSelected,
-      onSelected: (selected) => setState(() => _selectedCabProvider = selected ? label : null),
-      selectedColor: theme.colorScheme.primary,
-      checkmarkColor: theme.colorScheme.onPrimary,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-    );
-  }
-
   Widget _buildFieldLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, left: 4),
@@ -719,11 +809,10 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       child: InkWell(
         onTap: () => setState(() {
           _selectedVisitorType = type;
-          if (type != 'DELIVERY') {
-            _selectedDeliveryPartner = null;
-            _deliveryPartnerOtherController.clear();
+          for (final g in _chipGroups) {
+            if (g.visitorType != type) _chipSelections.remove(_selectionKey(g));
           }
-          if (type != 'CAB') _selectedCabProvider = null;
+          if (type != 'DELIVERY') _deliveryPartnerOtherController.clear();
         }),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),

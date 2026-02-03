@@ -8,6 +8,7 @@ import 'package:gateflow/services/visitor_service.dart';
 // New UI system (no logic changes)
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
+import '../ui/sentinel_theme.dart';
 
 // ✅ Phosphor icon mapping (single source)
 import '../ui/app_icons.dart';
@@ -34,6 +35,9 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
   String? _error;
   late Visitor _visitor;
 
+  /// Last known status; used to detect transition to APPROVED (one-time confetti).
+  String? _previousStatus;
+
   final _noteController = TextEditingController();
   late ConfettiController _confettiController;
 
@@ -41,8 +45,24 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
   void initState() {
     super.initState();
     _visitor = widget.visitor;
+    _previousStatus = widget.visitor.status;
     _noteController.text = _visitor.note ?? "";
-    _confettiController = ConfettiController(duration: const Duration(seconds: 2));
+    _confettiController = ConfettiController(duration: const Duration(milliseconds: 600));
+  }
+
+  @override
+  void didUpdateWidget(covariant VisitorDetailsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    final oldStatus = (oldWidget.visitor.status).toUpperCase();
+    final newStatus = (widget.visitor.status).toUpperCase();
+    if (oldStatus != 'APPROVED' && newStatus == 'APPROVED') {
+      _visitor = widget.visitor;
+      _previousStatus = widget.visitor.status;
+      _confettiController.play();
+    } else {
+      _visitor = widget.visitor;
+      _previousStatus = widget.visitor.status;
+    }
   }
 
   @override
@@ -70,9 +90,13 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
     setState(() {
       _loading = false;
       if (res.isSuccess) {
-        _visitor = res.data!;
-        // Play celebration only when entry is approved
-        if (_visitor.status.toUpperCase().contains('APPROV')) {
+        final newVisitor = res.data!;
+        final prev = (_previousStatus ?? _visitor.status).toUpperCase();
+        final now = newVisitor.status.toUpperCase();
+        _visitor = newVisitor;
+        _previousStatus = newVisitor.status;
+        // One-time confetti only when status transitions to APPROVED
+        if (prev != 'APPROVED' && now == 'APPROVED') {
           _confettiController.play();
         }
       } else {
@@ -241,10 +265,27 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                     ),
                   ),
                   const Spacer(),
-                  _StatusChip(
-                    status: _visitor.status,
-                    color: _statusColor(_visitor.status),
-                    icon: _statusIcon(_visitor.status), // ✅ added icon
+                  AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 200),
+                    switchInCurve: Curves.easeOut,
+                    switchOutCurve: Curves.easeOut,
+                    transitionBuilder: (Widget child, Animation<double> animation) {
+                      return FadeTransition(
+                        opacity: animation,
+                        child: ScaleTransition(
+                          scale: Tween<double>(begin: 0.96, end: 1.0).animate(
+                            CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                          ),
+                          child: child,
+                        ),
+                      );
+                    },
+                    child: _StatusChip(
+                      key: ValueKey<String>(_visitor.status),
+                      status: _visitor.status,
+                      color: _statusColor(_visitor.status),
+                      icon: _statusIcon(_visitor.status),
+                    ),
                   ),
                 ],
               ),
@@ -687,22 +728,24 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
             ],
           ),
 
-          // Confetti when approval succeeds
-          Align(
-            alignment: Alignment.topCenter,
-            child: ConfettiWidget(
-              confettiController: _confettiController,
-              blastDirectionality: BlastDirectionality.explosive,
-              numberOfParticles: 25,
-              maxBlastForce: 18,
-              minBlastForce: 5,
-              gravity: 0.25,
-              colors: [
-                AppColors.success,
-                Theme.of(context).colorScheme.primary,
-                Colors.orangeAccent,
-                Theme.of(context).colorScheme.primary,
-              ],
+          // One-time confetti when status transitions to APPROVED (does not intercept gestures)
+          IgnorePointer(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                emissionFrequency: 0.05,
+                numberOfParticles: 22,
+                maxBlastForce: 14,
+                minBlastForce: 4,
+                gravity: 0.4,
+                colors: [
+                  SentinelColors.accent,
+                  SentinelStatusPalette.success.withOpacity(0.8),
+                  Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                ],
+              ),
             ),
           ),
 
@@ -726,6 +769,7 @@ class _StatusChip extends StatelessWidget {
   final IconData icon; // ✅ added
 
   const _StatusChip({
+    super.key,
     required this.status,
     required this.color,
     required this.icon,
