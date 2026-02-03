@@ -55,6 +55,24 @@ class NoticeCategoryPalette {
   static Color icon(Color c) => c.withOpacity(0.90);
 }
 
+/// Semantic status colors for chips/badges (success, warning, error, info).
+/// Muted, premium tones. Use [bg]/[border]/[fg] for chip rendering.
+class SentinelStatusPalette {
+  SentinelStatusPalette._();
+
+  static const Color success = Color(0xFF2E7D5E);   // green-ish, muted
+  static const Color warning = Color(0xFFB8863C);   // amber, muted
+  static const Color error = Color(0xFFA01C2E);     // red, muted
+  static const Color info = Color(0xFF5A6B7A);        // blue-grey, neutral
+
+  /// Chip background (10% opacity).
+  static Color bg(Color c) => c.withOpacity(0.10);
+  /// Chip border (18% opacity).
+  static Color border(Color c) => c.withOpacity(0.18);
+  /// Chip text/icon (90% opacity).
+  static Color fg(Color c) => c.withOpacity(0.90);
+}
+
 /// Premium light theme for Sentinel (Material 3).
 class SentinelTheme {
   SentinelTheme._();

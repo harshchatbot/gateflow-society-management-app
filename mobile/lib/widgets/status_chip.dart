@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../ui/sentinel_theme.dart';
+
 class StatusChip extends StatelessWidget {
   /// Backward compatible:
   /// - Some screens use StatusChip(label: "APPROVED")
@@ -21,8 +23,8 @@ class StatusChip extends StatelessWidget {
     final raw = (status ?? label ?? "").trim();
     final s = raw.toUpperCase();
 
-    final bg = _bgColor(s);
-    final fg = _textColor(s);
+    final chipBg = _bgColor(context, s);
+    final chipFg = _textColor(context, s);
     final text = _label(s);
 
     return Container(
@@ -31,16 +33,16 @@ class StatusChip extends StatelessWidget {
         vertical: compact ? 4 : 6,
       ),
       decoration: BoxDecoration(
-        color: bg,
+        color: chipBg,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: fg.withOpacity(0.18)),
+        border: Border.all(color: _borderColor(context, s)),
       ),
       child: Text(
         text,
         style: TextStyle(
           fontSize: compact ? 11 : 12,
           fontWeight: FontWeight.w700,
-          color: fg,
+          color: chipFg,
         ),
       ),
     );
@@ -61,33 +63,48 @@ class StatusChip extends StatelessWidget {
     }
   }
 
-  Color _bgColor(String s) {
+  Color _bgColor(BuildContext context, String s) {
     switch (s) {
       case "APPROVED":
-        return Colors.green.withOpacity(0.12);
+        return SentinelStatusPalette.bg(SentinelStatusPalette.success);
       case "REJECTED":
-        return Colors.red.withOpacity(0.12);
+        return SentinelStatusPalette.bg(SentinelStatusPalette.error);
       case "PENDING":
-        return Colors.orange.withOpacity(0.14);
+        return SentinelStatusPalette.bg(SentinelStatusPalette.warning);
       case "LEAVE_AT_GATE":
-        return Colors.blue.withOpacity(0.12);
+        return SentinelStatusPalette.bg(SentinelStatusPalette.info);
       default:
-        return Colors.grey.withOpacity(0.12);
+        return Theme.of(context).colorScheme.onSurface.withOpacity(0.12);
     }
   }
 
-  Color _textColor(String s) {
+  Color _borderColor(BuildContext context, String s) {
     switch (s) {
       case "APPROVED":
-        return Colors.green.shade800;
+        return SentinelStatusPalette.border(SentinelStatusPalette.success);
       case "REJECTED":
-        return Colors.red.shade700;
+        return SentinelStatusPalette.border(SentinelStatusPalette.error);
       case "PENDING":
-        return Colors.orange.shade800;
+        return SentinelStatusPalette.border(SentinelStatusPalette.warning);
       case "LEAVE_AT_GATE":
-        return Colors.blue.shade700;
+        return SentinelStatusPalette.border(SentinelStatusPalette.info);
       default:
-        return Colors.grey.shade700;
+        return Theme.of(context).colorScheme.onSurface.withOpacity(0.18);
+    }
+  }
+
+  Color _textColor(BuildContext context, String s) {
+    switch (s) {
+      case "APPROVED":
+        return SentinelStatusPalette.fg(SentinelStatusPalette.success);
+      case "REJECTED":
+        return SentinelStatusPalette.fg(SentinelStatusPalette.error);
+      case "PENDING":
+        return SentinelStatusPalette.fg(SentinelStatusPalette.warning);
+      case "LEAVE_AT_GATE":
+        return SentinelStatusPalette.fg(SentinelStatusPalette.info);
+      default:
+        return Theme.of(context).colorScheme.onSurface.withOpacity(0.85);
     }
   }
 }
