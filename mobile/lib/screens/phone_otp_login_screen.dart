@@ -1042,7 +1042,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
             hintText: '••••••',
             counterText: '',
             filled: true,
-            fillColor: const Color(0xFFF6F8FF),
+            fillColor: Theme.of(context).colorScheme.surface,
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             border: OutlineInputBorder(

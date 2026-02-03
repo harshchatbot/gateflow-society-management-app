@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
-import '../ui/floating_bottom_nav.dart'; // the file where SocietyBottomNav lives
+import '../ui/floating_bottom_nav.dart';
+import '../ui/sentinel_theme.dart';
 
 import 'resident_dashboard_screen.dart';
 import 'resident_approvals_screen.dart';
@@ -194,6 +195,7 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
         onTap: (i) => setState(() => _index = i),
         showCenterButton: false,
         items: navItems,
+        selectedItemColor: SentinelColors.sentinelAccent,
       ),
     );
   }

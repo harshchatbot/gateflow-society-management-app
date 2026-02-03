@@ -25,12 +25,12 @@ class _OnboardingWelcomeScreenState extends State<OnboardingWelcomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
             const SizedBox(height: 32),
-            _IllustrationPlaceholder(
+            const _IllustrationPlaceholder(
               assetPath: 'assets/illustrations/illustration_welcome.png',
               semanticLabel: 'Person at desk',
             ),

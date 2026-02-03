@@ -657,11 +657,11 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
               maxBlastForce: 18,
               minBlastForce: 5,
               gravity: 0.25,
-              colors: const [
+              colors: [
                 AppColors.success,
-                AppColors.primary,
+                Theme.of(context).colorScheme.primary,
                 Colors.orangeAccent,
-                Colors.blueAccent,
+                Theme.of(context).colorScheme.primary,
               ],
             ),
           ),

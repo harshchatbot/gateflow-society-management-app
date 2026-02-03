@@ -22,6 +22,10 @@ class SocietyBottomNav extends StatelessWidget {
   final IconData centerIcon;
   final double centerGapWidth;
 
+  /// When set (e.g. Resident shell), selected tab icon/label use this color instead of default.
+  /// Used for Phase-3 accent (pastel teal) in one place only. Admin/Guard leave null.
+  final Color? selectedItemColor;
+
   const SocietyBottomNav({
     super.key,
     required this.currentIndex,
@@ -33,6 +37,7 @@ class SocietyBottomNav extends StatelessWidget {
     this.centerIndex = 2,
     this.centerIcon = Icons.qr_code_scanner,
     this.centerGapWidth = 70,
+    this.selectedItemColor,
   });
 
   @override
@@ -64,13 +69,13 @@ class SocietyBottomNav extends StatelessWidget {
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: _buildRowTabs(),
+                  children: _buildRowTabs(context),
                 ),
               ),
             ),
           ),
 
-          // 2) Center FAB (optional)
+          // 2) Center FAB (optional) — uses theme primary, no blue
           if (showCenterButton)
             Positioned(
               bottom: 25,
@@ -81,20 +86,16 @@ class SocietyBottomNav extends StatelessWidget {
                   height: 65,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF2F6BFF), Color(0xFF0047FF)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
+                    color: Theme.of(context).colorScheme.primary,
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF2F6BFF).withOpacity(0.4),
+                        color: Theme.of(context).colorScheme.primary.withOpacity(0.35),
                         blurRadius: 15,
                         offset: const Offset(0, 8),
                       ),
                     ],
                   ),
-                  child: Icon(centerIcon, color: Colors.white, size: 30),
+                  child: Icon(centerIcon, color: Theme.of(context).colorScheme.onPrimary, size: 30),
                 ),
               ),
             ),
@@ -103,43 +104,37 @@ class SocietyBottomNav extends StatelessWidget {
     );
   }
 
-  List<Widget> _buildRowTabs() {
+  List<Widget> _buildRowTabs(BuildContext context) {
     // If center button is OFF -> show all items (up to 6 for admin/resident)
     if (!showCenterButton) {
-      // Show all items
-      return List.generate(items.length, (i) => _buildTab(i));
+      return List.generate(items.length, (i) => _buildTab(context, i));
     }
 
     // If center button is ON (guard style)
-    // Layout: 0,1, GAP, 3,4 (showing Home, Visitors, [GAP], History, Profile)
-    // Note: Guard has 5 tabs total (Entry is center button at index 2)
     if (items.length == 5) {
       return [
-        _buildTab(0), // Home
-        _buildTab(1), // Visitors
-        SizedBox(width: centerGapWidth), // Gap for center button
-        _buildTab(3), // History
-        _buildTab(4), // Profile
+        _buildTab(context, 0),
+        _buildTab(context, 1),
+        SizedBox(width: centerGapWidth),
+        _buildTab(context, 3),
+        _buildTab(context, 4),
       ];
     }
-    // Fallback for 6 tabs (if needed in future)
     return [
-      _buildTab(0), // Home
-      _buildTab(1), // Visitors
-      SizedBox(width: centerGapWidth), // Gap for center button
-      _buildTab(3), // History
-      _buildTab(4), // Notices
-      _buildTab(5), // Profile
+      _buildTab(context, 0),
+      _buildTab(context, 1),
+      SizedBox(width: centerGapWidth),
+      _buildTab(context, 3),
+      _buildTab(context, 4),
+      _buildTab(context, 5),
     ];
   }
 
-  Widget _buildTab(int index) {
-    // Safety check to prevent red screen if list is too short during reload
+  Widget _buildTab(BuildContext context, int index) {
     if (index >= items.length) return const SizedBox.shrink();
 
     final isSelected = currentIndex == index;
-    // When center button is ON (guard), we show 5 tabs (0,1, gap, 3,4,5) so need compact layout
-    // When center button is OFF (admin/resident), we show all 6 tabs
+    final selectedColor = selectedItemColor ?? Theme.of(context).colorScheme.primary;
     final needsCompactLayout = showCenterButton && items.length >= 6;
 
     return Expanded(
@@ -154,14 +149,12 @@ class SocietyBottomNav extends StatelessWidget {
               curve: Curves.easeInOut,
               padding: EdgeInsets.all(needsCompactLayout ? 6 : 8),
               decoration: BoxDecoration(
-                color: isSelected
-                    ? const Color(0xFF2F6BFF).withOpacity(0.1)
-                    : Colors.transparent,
+                color: Colors.transparent,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 items[index].icon,
-                color: isSelected ? const Color(0xFF2F6BFF) : Colors.grey.shade500,
+                color: isSelected ? selectedColor : Colors.grey.shade500,
                 size: needsCompactLayout ? 22 : 26,
               ),
             ),
@@ -171,7 +164,7 @@ class SocietyBottomNav extends StatelessWidget {
               style: TextStyle(
                 fontSize: needsCompactLayout ? 8 : 10,
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? const Color(0xFF2F6BFF) : Colors.grey.shade600,
+                color: isSelected ? selectedColor : Colors.grey.shade600,
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

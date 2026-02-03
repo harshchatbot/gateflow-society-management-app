@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+// ---------------------------------------------------------------------------
+// Rule: No hardcoded hex in UI. Use theme + SentinelColors tokens.
+// Semantic status only may use AppColors.success / warning / error.
+// For dividers/borders use theme.dividerColor (neutralBorder).
+// ---------------------------------------------------------------------------
+
 /// Premium light theme constants for Sentinel.
 class SentinelColors {
   SentinelColors._();
@@ -15,11 +21,38 @@ class SentinelColors {
 
   // Brand
   static const Color primary = Color(0xFF111111); // Black CTA
-  static const Color accent = Color(0xFF4CAF50); // Limited usage only
   static const Color error = Color(0xFFB11226);
 
-  // UI
+  // Resident accent: Pastel Teal / Aqua-Grey (canonical tokens)
+  static const Color sentinelAccent = Color(0xFF7A9E9E);
+  static Color get sentinelAccentSurface => sentinelAccent.withOpacity(0.04);
+  static Color get sentinelAccentBorder => sentinelAccent.withOpacity(0.06);
+
+  /// Canonical accent for resident UI. Use theme.colorScheme.primary for admin/guard.
+  static Color get accent => sentinelAccent;
+  /// Optional opacity (default 0.04). For surfaces/tints.
+  static Color accentSurface([double opacity = 0.04]) => sentinelAccent.withOpacity(opacity);
+  /// Border tint for accent areas.
+  static Color get accentBorder => sentinelAccentBorder;
+
+  // UI borders: use theme.dividerColor in widgets (neutralBorder). Fallback:
   static const Color border = Color(0xFFE6E6E6);
+}
+
+/// Notice board category colors (Event / Alert / Maintenance / Policy).
+/// Muted, premium tones. Use [bg] for chip/card backgrounds, [icon] for icon tint.
+class NoticeCategoryPalette {
+  NoticeCategoryPalette._();
+
+  static const Color event = Color(0xFF5A9A7A);       // green/teal muted
+  static const Color alert = Color(0xFFB8863C);       // amber/orange muted
+  static const Color maintenance = Color(0xFF6B8BA4); // blue-grey muted
+  static const Color policy = Color(0xFF8B7A9E);      // purple-grey muted
+
+  /// Soft surface for chip/card background (10% opacity).
+  static Color bg(Color c) => c.withOpacity(0.10);
+  /// Icon tint (90% opacity).
+  static Color icon(Color c) => c.withOpacity(0.90);
 }
 
 /// Premium light theme for Sentinel (Material 3).
@@ -33,7 +66,7 @@ class SentinelTheme {
 
       colorScheme: const ColorScheme.light(
         primary: SentinelColors.primary,
-        secondary: SentinelColors.accent,
+        secondary: SentinelColors.sentinelAccent,
         surface: SentinelColors.card,
         error: SentinelColors.error,
         onPrimary: Colors.white,

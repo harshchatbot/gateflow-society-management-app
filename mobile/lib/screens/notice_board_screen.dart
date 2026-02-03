@@ -516,19 +516,19 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       chipColor = widget.themeColor;
       iconColor = Colors.white;
     } else {
-      // Different colors for different filters
+      // Category tokens from theme (soft surfaces + icon tint)
       if (label == "Event") {
-        chipColor = const Color(0xFFE8F5E9); // Light green
-        iconColor = const Color(0xFF4CAF50); // Green
+        chipColor = NoticeCategoryPalette.bg(NoticeCategoryPalette.event);
+        iconColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.event);
       } else if (label == "Alert") {
-        chipColor = const Color(0xFFFFF3E0); // Light orange
-        iconColor = const Color(0xFFFF9800); // Orange
+        chipColor = NoticeCategoryPalette.bg(NoticeCategoryPalette.alert);
+        iconColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.alert);
       } else if (label == "Maintenance") {
-        chipColor = const Color(0xFFE3F2FD); // Light blue
-        iconColor = const Color(0xFF2196F3); // Blue
+        chipColor = NoticeCategoryPalette.bg(NoticeCategoryPalette.maintenance);
+        iconColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.maintenance);
       } else if (label == "Policy") {
-        chipColor = const Color(0xFFF3E5F5); // Light purple
-        iconColor = const Color(0xFF9C27B0); // Purple
+        chipColor = NoticeCategoryPalette.bg(NoticeCategoryPalette.policy);
+        iconColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.policy);
       } else {
         chipColor = Theme.of(context).colorScheme.surface;
         iconColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
@@ -694,35 +694,36 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     Color categoryColor;
     String categoryLabel;
 
+    final theme = Theme.of(context);
     switch (noticeType) {
       case "EMERGENCY":
         icon = Icons.warning_rounded;
-        iconBgColor = const Color(0xFFFFF3E0); // Light orange
-        categoryColor = const Color(0xFFFF9800); // Orange
+        iconBgColor = NoticeCategoryPalette.bg(NoticeCategoryPalette.alert);
+        categoryColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.alert);
         categoryLabel = "Alert";
         break;
       case "SCHEDULE":
         icon = Icons.celebration_rounded;
-        iconBgColor = const Color(0xFFE8F5E9); // Light green
-        categoryColor = const Color(0xFF4CAF50); // Green
+        iconBgColor = NoticeCategoryPalette.bg(NoticeCategoryPalette.event);
+        categoryColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.event);
         categoryLabel = "Event";
         break;
       case "MAINTENANCE":
         icon = Icons.build_rounded;
-        iconBgColor = const Color(0xFFE3F2FD); // Light blue
-        categoryColor = const Color(0xFF2196F3); // Blue
+        iconBgColor = NoticeCategoryPalette.bg(NoticeCategoryPalette.maintenance);
+        categoryColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.maintenance);
         categoryLabel = "Maintenance";
         break;
       case "POLICY":
         icon = Icons.description_rounded;
-        iconBgColor = const Color(0xFFF3E5F5); // Light purple
-        categoryColor = const Color(0xFF9C27B0); // Purple
+        iconBgColor = NoticeCategoryPalette.bg(NoticeCategoryPalette.policy);
+        categoryColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.policy);
         categoryLabel = "Policy";
         break;
       default: // GENERAL
         icon = Icons.campaign_rounded;
-        iconBgColor = const Color(0xFFF5F5F5); // Light grey
-        categoryColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
+        iconBgColor = theme.colorScheme.surfaceContainerHighest;
+        categoryColor = theme.colorScheme.onSurface.withOpacity(0.7);
         categoryLabel = "Announcement";
     }
 

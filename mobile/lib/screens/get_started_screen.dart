@@ -27,18 +27,10 @@ class GetStartedScreen extends StatelessWidget {
     }
   }
 
-  Color get _themeColor {
-    switch (role.toLowerCase()) {
-      case 'guard':
-        return AppColors.primary;
-      case 'resident':
-        return AppColors.success;
-      case 'admin':
-      case 'super_admin':
-        return AppColors.admin;
-      default:
-        return AppColors.primary;
-    }
+  /// Role accent: Resident keeps success green; Guard/Admin use theme primary (no blue).
+  Color _themeColor(BuildContext context) {
+    if (role.toLowerCase() == 'resident') return AppColors.success;
+    return Theme.of(context).colorScheme.primary;
   }
 
   List<Map<String, String>> _quickStartSteps() {
@@ -70,12 +62,14 @@ class GetStartedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final steps = _quickStartSteps();
+    final roleColor = _themeColor(context);
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: _themeColor,
-        foregroundColor: Colors.white,
+        backgroundColor: roleColor,
+        foregroundColor: theme.colorScheme.onPrimary,
         title: const Text(
           'Get Started',
           style: TextStyle(fontWeight: FontWeight.w800),
@@ -92,7 +86,7 @@ class GetStartedScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: AppColors.text,
+                color: theme.colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 16),
@@ -101,9 +95,9 @@ class GetStartedScreen extends StatelessWidget {
                   child: Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.surface,
+                      color: theme.colorScheme.surface,
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(color: theme.dividerColor),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,7 +107,7 @@ class GetStartedScreen extends StatelessWidget {
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w800,
-                            color: _themeColor,
+                            color: roleColor,
                           ),
                         ),
                         const SizedBox(height: 6),
@@ -121,7 +115,7 @@ class GetStartedScreen extends StatelessWidget {
                           s['body']!,
                           style: TextStyle(
                             fontSize: 13,
-                            color: AppColors.text2,
+                            color: theme.colorScheme.onSurface.withOpacity(0.7),
                             height: 1.4,
                           ),
                         ),
@@ -143,8 +137,8 @@ class GetStartedScreen extends StatelessWidget {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _themeColor,
-                  foregroundColor: Colors.white,
+                  backgroundColor: roleColor,
+                  foregroundColor: theme.colorScheme.onPrimary,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(14),
