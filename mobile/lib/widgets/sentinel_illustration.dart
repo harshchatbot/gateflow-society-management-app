@@ -3,14 +3,16 @@ import 'package:flutter/material.dart';
 import '../ui/sentinel_theme.dart';
 
 /// Mascot illustration (Senti) with optional subtle eye-blink for calm states.
-/// Use [kind] to identify the illustration (e.g. 'otp', 'pending', 'idle', 'warning').
+/// Use [kind] to identify the illustration (e.g. 'otp', 'pending', 'idle', 'cab', 'delivery', 'visitor').
 /// Blink runs only for 'otp', 'pending', 'idle'; not for 'warning', 'alert', or error states.
 class SentinelIllustration extends StatefulWidget {
   final String kind;
+  final double? height;
 
   const SentinelIllustration({
     super.key,
     required this.kind,
+    this.height,
   });
 
   @override
@@ -42,6 +44,11 @@ class _SentinelIllustrationState extends State<SentinelIllustration> {
         return 'assets/mascot/senti_happy.png';
       case 'namaste':
         return 'assets/mascot/senti_namaste.png';
+      case 'cab':
+      case 'delivery':
+      case 'visitor':
+      case 'empty_visitors':
+        return 'assets/mascot/senti_idle.png';
       default:
         return 'assets/mascot/senti_idle.png';
     }
@@ -99,8 +106,9 @@ class _SentinelIllustrationState extends State<SentinelIllustration> {
         ? _openEyesAssetFor(widget.kind)
         : _closedEyesAsset;
 
+    final h = widget.height ?? 140;
     return Container(
-      height: 140,
+      height: h,
       width: double.infinity,
       decoration: BoxDecoration(
         color: SentinelColors.card,
@@ -111,7 +119,7 @@ class _SentinelIllustrationState extends State<SentinelIllustration> {
         child: Image.asset(
           asset,
           fit: BoxFit.contain,
-          height: 120,
+          height: (h * 120 / 140).clamp(40.0, 120.0),
           width: 160,
           errorBuilder: (_, __, ___) => _buildFallback(),
         ),
@@ -131,7 +139,7 @@ class _SentinelIllustrationState extends State<SentinelIllustration> {
         const SizedBox(height: 8),
         Text(
           'Illustration: ${widget.kind}',
-          style: TextStyle(
+          style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
             color: SentinelColors.textSecondary,

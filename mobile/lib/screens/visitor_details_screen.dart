@@ -4,14 +4,20 @@ import 'package:confetti/confetti.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:gateflow/models/visitor.dart';
 import 'package:gateflow/services/visitor_service.dart';
+import 'package:gateflow/services/offline_queue_service.dart';
 
 // New UI system (no logic changes)
 import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../ui/sentinel_theme.dart';
+import '../ui/visitor_chip_config.dart';
 
 // ✅ Phosphor icon mapping (single source)
 import '../ui/app_icons.dart';
+import '../utils/error_messages.dart';
+import '../widgets/sentinel_illustration.dart';
+import '../widgets/error_retry_widget.dart';
+import 'new_visitor_screen.dart';
 
 class VisitorDetailsScreen extends StatefulWidget {
   final Visitor visitor;
@@ -33,6 +39,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
   final _service = VisitorService();
   bool _loading = false;
   String? _error;
+  String? _lastAttemptedStatus;
   late Visitor _visitor;
 
   /// Last known status; used to detect transition to APPROVED (one-time confetti).
@@ -73,36 +80,101 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
   }
 
   Future<void> _setStatus(String status) async {
+    final queue = OfflineQueueService.instance;
+    await queue.ensureInit();
+    if (!queue.isOnline) {
+      await queue.enqueueUpdateStatus(
+        visitorId: _visitor.visitorId,
+        status: status,
+        approvedBy: "GUARD:${widget.guardId}",
+        note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Offline – changes will sync when online'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+        ),
+      );
+      return;
+    }
+
+    _lastAttemptedStatus = status;
     setState(() {
       _loading = true;
       _error = null;
     });
 
-    final res = await _service.updateVisitorStatus(
-      visitorId: _visitor.visitorId,
-      status: status,
-      approvedBy: "GUARD:${widget.guardId}", // later replace with resident
-      note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
-    );
+    try {
+      final res = await _service.updateVisitorStatus(
+        visitorId: _visitor.visitorId,
+        status: status,
+        approvedBy: "GUARD:${widget.guardId}", // later replace with resident
+        note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+      );
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    setState(() {
-      _loading = false;
-      if (res.isSuccess) {
-        final newVisitor = res.data!;
-        final prev = (_previousStatus ?? _visitor.status).toUpperCase();
-        final now = newVisitor.status.toUpperCase();
-        _visitor = newVisitor;
-        _previousStatus = newVisitor.status;
-        // One-time confetti only when status transitions to APPROVED
-        if (prev != 'APPROVED' && now == 'APPROVED') {
-          _confettiController.play();
+      setState(() {
+        _loading = false;
+        if (res.isSuccess) {
+          _lastAttemptedStatus = null;
+          final newVisitor = res.data!;
+          final prev = (_previousStatus ?? _visitor.status).toUpperCase();
+          final now = newVisitor.status.toUpperCase();
+          _visitor = newVisitor;
+          _previousStatus = newVisitor.status;
+          // One-time confetti only when status transitions to APPROVED
+          if (prev != 'APPROVED' && now == 'APPROVED') {
+            _confettiController.play();
+          }
+        } else {
+          final friendly = userFriendlyMessageFromError(res.error ?? "Failed to update status");
+          _error = friendly;
+          _showStatusErrorDialog(friendly, status);
         }
-      } else {
-        _error = res.error?.userMessage ?? "Failed to update status";
-      }
-    });
+      });
+    } catch (err) {
+      if (!mounted) return;
+      final friendly = ErrorMessages.userFriendlyMessage(err is Object ? err : Object());
+      setState(() {
+        _loading = false;
+        _error = friendly;
+      });
+      _showStatusErrorDialog(friendly, status);
+    }
+  }
+
+  Future<void> _showStatusErrorDialog(String message, String status) async {
+    if (!mounted) return;
+    final retryText = ErrorMessages.retryLabel(message);
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Could not update status'),
+          content: Text(
+            message,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('OK'),
+            ),
+            if (retryText.isNotEmpty)
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _setStatus(status);
+                },
+                child: Text(retryText),
+              ),
+          ],
+        );
+      },
+    );
   }
 
   bool _isPending(String status) {
@@ -137,6 +209,38 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
 
     final timeStr = "${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}";
     return "$dateStr at $timeStr";
+  }
+
+  String _formatTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final diff = now.difference(dateTime);
+    if (diff.inSeconds < 60) return "Just now";
+    if (diff.inMinutes < 60) return "${diff.inMinutes} min ago";
+    if (diff.inHours < 24) return "${diff.inHours} hr ago";
+    if (diff.inDays == 1) return "Yesterday";
+    if (diff.inDays < 7) return "${diff.inDays} days ago";
+    return _formatDateTime(dateTime);
+  }
+
+  /// "Approved by Resident • 2 min ago" etc. Null when PENDING or no approvedAt.
+  String? _lastActionLine() {
+    if (_isPending(_visitor.status)) return null;
+    final at = _visitor.approvedAt;
+    if (at == null) return null;
+    final s = _visitor.status.toUpperCase();
+    final by = (_visitor.approvedBy ?? "").toUpperCase();
+    final who = (by.contains("GUARD") ? "Guard" : "Resident");
+    final String action;
+    if (s.contains("APPROV")) {
+      action = "Approved by $who";
+    } else if (s.contains("REJECT")) {
+      action = "Rejected by $who";
+    } else if (s.contains("LEAVE")) {
+      action = "Left at gate";
+    } else {
+      action = "Processed";
+    }
+    return "$action • ${_formatTimeAgo(at)}";
   }
 
   // ✅ Phosphor icons for visitor type
@@ -234,59 +338,98 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
               ),
             ),
 
-            // Status chip + type label overlay
+            // Status chip + type label overlay; when PENDING and guard, show one-tap Allow/Deny
             Positioned(
               left: 14,
               right: 14,
               bottom: 14,
-              child: Row(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.88),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(color: AppColors.border.withOpacity(0.9)),
-                    ),
-                    child: Row(
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.88),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: AppColors.border.withOpacity(0.9)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(_typeIcon(_visitor.visitorType), size: 16, color: AppColors.text),
+                            const SizedBox(width: 6),
+                            Text(
+                              _visitor.visitorType.toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.text,
+                                letterSpacing: 0.25,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Spacer(),
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 200),
+                        switchInCurve: Curves.easeOut,
+                        switchOutCurve: Curves.easeOut,
+                        transitionBuilder: (Widget child, Animation<double> animation) {
+                          return FadeTransition(
+                            opacity: animation,
+                            child: ScaleTransition(
+                              scale: Tween<double>(begin: 0.96, end: 1.0).animate(
+                                CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                              ),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: _StatusChip(
+                          key: ValueKey<String>(_visitor.status),
+                          status: _visitor.status,
+                          color: _statusColor(_visitor.status),
+                          icon: _statusIcon(_visitor.status),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_isPending(_visitor.status) && !widget.showStatusActions) ...[
+                    const SizedBox(height: 10),
+                    Row(
                       children: [
-                        Icon(_typeIcon(_visitor.visitorType), size: 16, color: AppColors.text),
-                        const SizedBox(width: 6),
-                        Text(
-                          _visitor.visitorType.toUpperCase(),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w900,
-                            color: AppColors.text,
-                            letterSpacing: 0.25,
+                        Expanded(
+                          child: FilledButton(
+                            onPressed: _loading ? null : () => _setStatus("APPROVED"),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: SentinelStatusPalette.success,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text("Allow Entry", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: _loading ? null : () => _setStatus("REJECTED"),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: SentinelStatusPalette.error,
+                              side: BorderSide(color: SentinelStatusPalette.error),
+                              padding: const EdgeInsets.symmetric(vertical: 10),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            child: const Text("Deny", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  const Spacer(),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 200),
-                    switchInCurve: Curves.easeOut,
-                    switchOutCurve: Curves.easeOut,
-                    transitionBuilder: (Widget child, Animation<double> animation) {
-                      return FadeTransition(
-                        opacity: animation,
-                        child: ScaleTransition(
-                          scale: Tween<double>(begin: 0.96, end: 1.0).animate(
-                            CurvedAnimation(parent: animation, curve: Curves.easeOut),
-                          ),
-                          child: child,
-                        ),
-                      );
-                    },
-                    child: _StatusChip(
-                      key: ValueKey<String>(_visitor.status),
-                      status: _visitor.status,
-                      color: _statusColor(_visitor.status),
-                      icon: _statusIcon(_visitor.status),
-                    ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -316,33 +459,59 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
   }
 
   Widget _errorBanner() {
+    return ErrorRetryWidget(
+      errorMessage: _error!,
+      retryLabel: 'Retry',
+      onRetry: () {
+        setState(() => _error = null);
+        if (_lastAttemptedStatus != null) _setStatus(_lastAttemptedStatus!);
+      },
+    );
+  }
+
+  String _illustrationKindForType(String visitorType) {
+    switch (visitorType.toUpperCase()) {
+      case 'CAB':
+        return 'cab';
+      case 'DELIVERY':
+        return 'delivery';
+      default:
+        return 'visitor';
+    }
+  }
+
+  Widget? _readOnlyProviderChip(BuildContext context) {
+    final type = _visitor.visitorType.toUpperCase();
+    if (type != 'CAB' && type != 'DELIVERY') return null;
+    ChipGroupConfig? config;
+    try {
+      config = visitorChipGroups.firstWhere((g) => g.visitorType == type);
+    } catch (_) {
+      return null;
+    }
+    final provider = type == 'CAB'
+        ? (_visitor.cab?['provider'] as String?)
+        : (_visitor.delivery?['provider'] as String?);
+    if (provider == null || provider.trim().isEmpty) return null;
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
-        color: AppColors.error.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.error.withOpacity(0.18)),
+        color: SentinelColors.accentSurface(0.04),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: SentinelColors.accentBorder),
       ),
       child: Row(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(AppIcons.reject, color: AppColors.error.withOpacity(0.9)), // ✅
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              _error!,
-              style: const TextStyle(
-                color: AppColors.error,
-                fontSize: 12.8,
-                fontWeight: FontWeight.w700,
-              ),
+          Icon(config.icon, size: 16, color: SentinelColors.accent),
+          const SizedBox(width: 8),
+          Text(
+            provider.trim(),
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: SentinelColors.accent,
             ),
-          ),
-          IconButton(
-            onPressed: () => setState(() => _error = null),
-            icon: const Icon(AppIcons.more), // ✅ (or AppIcons.back if you prefer)
-            color: AppColors.error.withOpacity(0.9),
-            tooltip: "Dismiss",
           ),
         ],
       ),
@@ -353,6 +522,8 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
   Widget build(BuildContext context) {
     final displayFlat = _visitor.flatNo.isNotEmpty ? _visitor.flatNo : _visitor.flatId;
     final statusColor = _statusColor(_visitor.status);
+    final readOnlyProviderChip = _readOnlyProviderChip(context);
+    final lastActionLine = _lastActionLine();
 
     return PopScope(
       canPop: true,
@@ -410,6 +581,16 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                 const SizedBox(height: 12),
               ],
 
+              SentinelIllustration(
+                kind: _illustrationKindForType(_visitor.visitorType),
+                height: 110,
+              ),
+              const SizedBox(height: 14),
+              if (readOnlyProviderChip != null) ...[
+                readOnlyProviderChip,
+                const SizedBox(height: 14),
+              ],
+
               _photoHeader(),
               const SizedBox(height: 14),
 
@@ -429,7 +610,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        Icon(AppIcons.phone, size: 16, color: AppColors.text2), // ✅
+                        const Icon(AppIcons.phone, size: 16, color: AppColors.text2), // ✅
                         const SizedBox(width: 6),
                         Text(
                           _visitor.visitorPhone.isEmpty ? "No phone" : _visitor.visitorPhone,
@@ -466,6 +647,36 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                         ),
                       ],
                     ),
+                    if (lastActionLine != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        lastActionLine,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                    if (!_isPending(_visitor.status)) ...[
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.of(context).push(
+                            MaterialPageRoute<void>(
+                              builder: (_) => NewVisitorScreen(
+                                guardId: widget.guardId,
+                                guardName: '',
+                                societyId: _visitor.societyId,
+                                initialVisitor: _visitor,
+                              ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.replay_rounded, size: 18),
+                        label: const Text('Repeat visitor'),
+                      ),
+                    ],
                     if (_visitor.residentPhone != null && _visitor.residentPhone!.trim().isNotEmpty) ...[
                       const SizedBox(height: 8),
                       InkWell(
@@ -481,7 +692,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                         borderRadius: BorderRadius.circular(8),
                         child: Row(
                           children: [
-                            Icon(AppIcons.phone, size: 16, color: AppColors.success),
+                            const Icon(AppIcons.phone, size: 16, color: AppColors.success),
                             const SizedBox(width: 6),
                             Text(
                               "Resident (flat owner): ${_visitor.residentPhone}",
@@ -504,7 +715,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(AppIcons.cab, size: 16, color: AppColors.text2),
+                          const Icon(AppIcons.cab, size: 16, color: AppColors.text2),
                           const SizedBox(width: 6),
                           Text(
                             "Cab Provider: ${_visitor.cab!['provider']}",
@@ -524,7 +735,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                       const SizedBox(height: 8),
                       Row(
                         children: [
-                          Icon(AppIcons.delivery, size: 16, color: AppColors.text2),
+                          const Icon(AppIcons.delivery, size: 16, color: AppColors.text2),
                           const SizedBox(width: 6),
                           Text(
                             "Delivery Partner: ${_visitor.delivery!['provider']}",
@@ -566,14 +777,14 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                           fontWeight: FontWeight.w700,
                           color: AppColors.text,
                         ),
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           hintText: "Add a note for the resident (optional)…",
-                          hintStyle: const TextStyle(
+                          hintStyle: TextStyle(
                             color: AppColors.textMuted,
                             fontWeight: FontWeight.w600,
                           ),
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                           prefixIcon: Icon(AppIcons.note, color: AppColors.text2), // ✅
                         ),
                       ),
@@ -708,7 +919,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            Icon(Icons.access_time_rounded, size: 16, color: AppColors.text2),
+                            const Icon(Icons.access_time_rounded, size: 16, color: AppColors.text2),
                             const SizedBox(width: 8),
                             Text(
                               "Processed: ${_formatDateTime(_visitor.approvedAt!)}",

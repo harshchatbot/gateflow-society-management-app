@@ -10,7 +10,10 @@ import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../core/app_logger.dart';
 import '../core/society_modules.dart';
+import '../utils/error_messages.dart';
 import '../widgets/module_disabled_placeholder.dart';
+import '../widgets/sentinel_illustration.dart';
+import '../widgets/error_retry_widget.dart';
 
 class VisitorListScreen extends StatefulWidget {
   final String guardId;
@@ -74,7 +77,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = "Failed to load data";
+          _error = userFriendlyMessageFromError(e);
         });
       }
     }
@@ -156,7 +159,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = "Failed to load visitors";
+          _error = userFriendlyMessageFromError(e);
         });
       }
     }
@@ -213,7 +216,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = "Failed to load visitors";
+          _error = userFriendlyMessageFromError(e);
         });
       }
     }
@@ -264,6 +267,32 @@ class _VisitorListScreenState extends State<VisitorListScreen>
   }
 
   // --- COMPACT UI COMPONENTS ---
+
+  IconData _getVisitorTypeIcon(String type) {
+    switch (type.toUpperCase()) {
+      case "DELIVERY":
+        return Icons.inventory_2_outlined;
+      case "CAB":
+        return Icons.directions_car_outlined;
+      case "GUEST":
+        return Icons.person_outline;
+      default:
+        return Icons.person_add_outlined;
+    }
+  }
+
+  String? _getProviderLabel(Visitor v) {
+    final t = v.visitorType.toUpperCase();
+    if (t == 'CAB' && v.cab != null && v.cab!['provider'] != null) {
+      final p = v.cab!['provider'].toString().trim();
+      return p.isEmpty ? null : p;
+    }
+    if (t == 'DELIVERY' && v.delivery != null && v.delivery!['provider'] != null) {
+      final p = v.delivery!['provider'].toString().trim();
+      return p.isEmpty ? null : p;
+    }
+    return null;
+  }
 
   Future<void> _launchCall(String phone) async {
     final cleaned = phone.replaceAll(RegExp(r'[^\d+]'), '');
@@ -326,9 +355,15 @@ class _VisitorListScreenState extends State<VisitorListScreen>
                         fontSize: 14,
                       ),
                     ),
-                    Text(
-                      v.visitorPhone,
-                      style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.7)),
+                    Row(
+                      children: [
+                        Icon(_getVisitorTypeIcon(v.visitorType), size: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                        const SizedBox(width: 4),
+                        Text(
+                          [v.visitorPhone.isEmpty ? "No phone" : v.visitorPhone, _getProviderLabel(v)].whereType<String>().join(" • "),
+                          style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                        ),
+                      ],
                     ),
                     if (hasResidentPhone) ...[
                       const SizedBox(height: 2),
@@ -337,7 +372,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.call_rounded, size: 12, color: AppColors.success),
+                            const Icon(Icons.call_rounded, size: 12, color: AppColors.success),
                             const SizedBox(width: 4),
                             Text(
                               "Resident: ${v.residentPhone}",
@@ -443,8 +478,25 @@ class _VisitorListScreenState extends State<VisitorListScreen>
               RefreshIndicator(
                 onRefresh: _loadToday,
                 color: theme.colorScheme.primary,
-                child: _today.isEmpty 
-                  ? _buildEmptyState() 
+                child: _error != null
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.only(top: 48, bottom: 120),
+                      children: [
+                        Center(
+                          child: ErrorRetryWidget(
+                            errorMessage: _error!,
+                            onRetry: () {
+                              setState(() => _error = null);
+                              _loadToday();
+                            },
+                            retryLabel: errorActionLabelFromError(_error),
+                          ),
+                        ),
+                      ],
+                    )
+                  : _today.isEmpty
+                  ? _buildEmptyState()
                   : ListView.builder(
                       padding: const EdgeInsets.only(top: 12, bottom: 120),
                       itemCount: _today.length,
@@ -456,7 +508,20 @@ class _VisitorListScreenState extends State<VisitorListScreen>
                 children: [
                   _buildCompactSearchBar(),
                   Expanded(
-                    child: _byFlat.isEmpty 
+                    child: _error != null
+                      ? Center(
+                          child: SingleChildScrollView(
+                            child: ErrorRetryWidget(
+                              errorMessage: _error!,
+                              onRetry: () {
+                                setState(() => _error = null);
+                                _loadByFlat();
+                              },
+                              retryLabel: errorActionLabelFromError(_error),
+                            ),
+                          ),
+                        )
+                      : _byFlat.isEmpty
                       ? _buildEmptyState()
                       : ListView.builder(
                           padding: const EdgeInsets.only(bottom: 120),
@@ -502,8 +567,45 @@ class _VisitorListScreenState extends State<VisitorListScreen>
   }
 
   Widget _buildEmptyState() {
+    final theme = Theme.of(context);
     return Center(
-      child: Text("No records found", style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.bold)),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.primary.withOpacity(0.04),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.colorScheme.primary.withOpacity(0.06)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SentinelIllustration(kind: 'empty_visitors', height: 100),
+              const SizedBox(height: 16),
+              Text(
+                "No visitors",
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: theme.colorScheme.onSurface,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                "Visitor entries will appear here when you add them",
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

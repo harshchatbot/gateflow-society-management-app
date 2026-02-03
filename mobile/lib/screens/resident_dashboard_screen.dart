@@ -24,6 +24,8 @@ import '../widgets/dashboard_insights_card.dart';
 import '../widgets/visitors_chart.dart';
 import '../services/firestore_service.dart';
 import '../ui/sentinel_theme.dart';
+import '../utils/error_messages.dart';
+import '../widgets/error_retry_widget.dart';
 
 /// Resident Dashboard Screen
 ///
@@ -60,6 +62,12 @@ class ResidentDashboardScreen extends StatefulWidget {
       _ResidentDashboardScreenState();
 }
 
+class _FrequentVisitor {
+  final String name;
+  final int count;
+  const _FrequentVisitor(this.name, this.count);
+}
+
 class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   final FirestoreService _firestore = FirestoreService();
   late final resident.ResidentService _service = resident.ResidentService(
@@ -83,6 +91,15 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   List<int>? _visitorsByDayLast7;
   String? _photoUrl;
   String? _phone;
+
+  // Resident-centric today's overview
+  int _todayVisitors = 0;
+  int _todayDeliveries = 0;
+  int _todayPendingApprovalsToday = 0;
+  String? _todayOverviewError;
+
+  // Top frequent visitors (by name) across history
+  List<_FrequentVisitor> _frequentVisitors = [];
 
   @override
   void initState() {
@@ -111,10 +128,12 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     if (_showCaseContext == null || !mounted) return;
     try {
       final keys = <GlobalKey<State<StatefulWidget>>>[];
-      if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement))
+      if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
         keys.add(_keyApprovals);
-      if (SocietyModules.isEnabled(SocietyModuleIds.complaints))
+      }
+      if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
         keys.add(_keyComplaints);
+      }
       if (SocietyModules.isEnabled(SocietyModuleIds.sos)) keys.add(_keySos);
       if (keys.isEmpty) return;
       ShowCaseWidget.of(_showCaseContext!).startShowCase(keys);
@@ -215,6 +234,16 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     setState(() => _isLoading = true);
 
     try {
+      // Local accumulators for today's overview
+      int todayVisitors = 0;
+      int todayDeliveries = 0;
+      int todayPendingToday = 0;
+      String? overviewError;
+
+      bool _isSameDay(DateTime a, DateTime b) =>
+          a.year == b.year && a.month == b.month && a.day == b.day;
+      final now = DateTime.now();
+
       // Load pending approvals with timeout
       resident.ApiResult<List<dynamic>>? approvalsResult;
       try {
@@ -260,8 +289,31 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       if (!mounted) return;
 
       if (approvalsResult.isSuccess && approvalsResult.data != null) {
-        _pendingCount = approvalsResult.data!.length;
+        final approvals = approvalsResult.data!;
+        _pendingCount = approvals.length;
+
+        for (final v in approvals) {
+          final m = v as Map<String, dynamic>;
+          final createdStr = m['created_at']?.toString() ?? '';
+          if (createdStr.isEmpty) continue;
+          DateTime? created;
+          try {
+            created = DateTime.parse(createdStr);
+          } catch (_) {}
+          if (created == null || !_isSameDay(created, now)) continue;
+
+          todayPendingToday++;
+          todayVisitors++;
+          final type = (m['visitor_type']?.toString() ?? '').toUpperCase();
+          if (type == 'DELIVERY') todayDeliveries++;
+        }
+      } else {
+        overviewError ??=
+            ErrorMessages.userFriendlyMessage(approvalsResult.error ?? "Failed to load approvals");
       }
+
+      // For frequent visitors (from history only)
+      List<_FrequentVisitor> frequentVisitors = [];
 
       if (historyResult.isSuccess && historyResult.data != null) {
         final history = historyResult.data!;
@@ -273,6 +325,43 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           final status = item['status']?.toString().toUpperCase() ?? '';
           return status == 'REJECTED';
         }).length;
+
+        // Today breakdown (visitors / deliveries for today)
+        for (final item in history) {
+          final m = item as Map<String, dynamic>;
+          final createdStr = m['created_at']?.toString() ?? '';
+          if (createdStr.isEmpty) continue;
+          DateTime? created;
+          try {
+            created = DateTime.parse(createdStr);
+          } catch (_) {}
+          if (created == null || !_isSameDay(created, now)) continue;
+
+          todayVisitors++;
+          final type = (m['visitor_type']?.toString() ?? '').toUpperCase();
+          if (type == 'DELIVERY') todayDeliveries++;
+        }
+
+        // Frequent visitors (all-time across loaded history)
+        final Map<String, int> freq = {};
+        for (final item in history) {
+          final m = item as Map<String, dynamic>;
+          var name = (m['visitor_name']?.toString() ?? '').trim();
+          if (name.isEmpty) {
+            name = (m['visitor_phone']?.toString() ?? '').trim();
+          }
+          if (name.isEmpty) name = 'Unknown';
+          freq[name] = (freq[name] ?? 0) + 1;
+        }
+        final sorted = freq.entries.toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+        frequentVisitors = sorted
+            .take(3)
+            .map((e) => _FrequentVisitor(e.key, e.value))
+            .toList();
+      } else {
+        overviewError ??=
+            ErrorMessages.userFriendlyMessage(historyResult.error ?? "Failed to load history");
       }
 
       // ✅ Count recent notices (created in last 24 hours) only once to seed unread count
@@ -324,6 +413,12 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         setState(() {
           _isLoading = false;
           _visitorsByDayLast7 = visitorsByDayLast7;
+
+          _todayVisitors = todayVisitors;
+          _todayDeliveries = todayDeliveries;
+          _todayPendingApprovalsToday = todayPendingToday;
+          _todayOverviewError = overviewError;
+          _frequentVisitors = frequentVisitors;
         });
       }
 
@@ -509,6 +604,27 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                         if (SocietyModules.isEnabled(
                             SocietyModuleIds.visitorManagement)) ...[
                           Text(
+                            "Today's Overview",
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          _buildTodayOverviewSection(),
+                          const SizedBox(height: 16),
+                          Text(
+                            "Frequent visitors",
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          _buildFrequentVisitorsRow(),
+                          const SizedBox(height: 16),
+                          Text(
+                            "Last 7 days",
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          const SizedBox(height: 8),
+                          _buildWeeklyTrendRow(),
+                          const SizedBox(height: 24),
+                          Text(
                             "Today at a glance",
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
@@ -614,6 +730,184 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildFrequentVisitorsRow() {
+    final theme = Theme.of(context);
+
+    if (_frequentVisitors.isEmpty) {
+      return Text(
+        "No frequent visitors yet",
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.7),
+        ),
+      );
+    }
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: _frequentVisitors.map((fv) {
+          final initial =
+              fv.name.isNotEmpty ? fv.name[0].toUpperCase() : '?';
+          return Padding(
+            padding: const EdgeInsets.only(right: 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircleAvatar(
+                  radius: 20,
+                  backgroundColor:
+                      theme.colorScheme.primary.withOpacity(0.1),
+                  child: Text(
+                    initial,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                SizedBox(
+                  width: 80,
+                  child: Text(
+                    fv.name,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Text(
+                  "${fv.count} visit${fv.count == 1 ? '' : 's'}",
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color:
+                        theme.colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildTodayOverviewSection() {
+    final theme = Theme.of(context);
+
+    if (_todayOverviewError != null) {
+      return ErrorRetryWidget(
+        errorMessage: _todayOverviewError!,
+        onRetry: _loadDashboardData,
+        retryLabel: errorActionLabelFromError(_todayOverviewError),
+      );
+    }
+
+    final hasData = _todayVisitors > 0 ||
+        _todayDeliveries > 0 ||
+        _todayPendingApprovalsToday > 0;
+
+    if (!hasData) {
+      return Text(
+        "No data yet",
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.7),
+        ),
+      );
+    }
+
+    Widget tile(int value, String label) {
+      return Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              value.toString(),
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        tile(_todayVisitors, "Visitors"),
+        const SizedBox(width: 12),
+        tile(_todayDeliveries, "Deliveries"),
+        const SizedBox(width: 12),
+        tile(_todayPendingApprovalsToday, "Pending"),
+      ],
+    );
+  }
+
+  String _weekdayLabelFor(DateTime date) {
+    const labels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    // DateTime.weekday: 1 = Monday ... 7 = Sunday
+    return labels[date.weekday - 1];
+  }
+
+  /// Simple text-only trend for last 7 days of visitors for this flat.
+  Widget _buildWeeklyTrendRow() {
+    final theme = Theme.of(context);
+
+    if (_visitorsByDayLast7 == null || _visitorsByDayLast7!.length != 7) {
+      return Text(
+        "No data yet",
+        style: theme.textTheme.bodyMedium?.copyWith(
+          color: theme.colorScheme.onSurface.withOpacity(0.7),
+        ),
+      );
+    }
+
+    final now = DateTime.now();
+    final items = List.generate(7, (i) {
+      // _visitorsByDayLast7![0] is day-6, last is today
+      final day = now.subtract(Duration(days: 6 - i));
+      final label = _weekdayLabelFor(day);
+      final value = _visitorsByDayLast7![i];
+
+      return Expanded(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              value.toString(),
+              style: theme.textTheme.titleSmall?.copyWith(
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: items,
     );
   }
 

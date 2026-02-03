@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:showcaseview/showcaseview.dart';
 import '../ui/app_colors.dart';
 import '../services/firestore_service.dart';
+import '../services/offline_queue_service.dart';
 import '../ui/app_loader.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
@@ -25,6 +26,7 @@ import '../widgets/dashboard_insights_card.dart';
 import '../widgets/dashboard_hero.dart';
 import '../widgets/dashboard_stat_card.dart';
 import '../widgets/dashboard_quick_action.dart';
+import '../widgets/sentinel_illustration.dart';
 
 class GuardDashboardScreen extends StatefulWidget {
   final String guardId;
@@ -69,9 +71,19 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   void initState() {
     super.initState();
     _dynamicName = widget.guardName;
+    OfflineQueueService.instance.ensureInit().then((_) {
+      if (!mounted) return;
+      OfflineQueueService.instance.onQueueChanged = () => setState(() {});
+    });
     _syncDashboard();
     _setupNotificationListener();
     _maybeAutoRunTour();
+  }
+
+  @override
+  void dispose() {
+    OfflineQueueService.instance.onQueueChanged = null;
+    super.dispose();
   }
 
   void _maybeAutoRunTour() async {
@@ -385,6 +397,19 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     }
   }
 
+  String? _getVisitorProviderLabel(Visitor visitor) {
+    final t = visitor.visitorType.toUpperCase();
+    if (t == 'CAB' && visitor.cab != null && visitor.cab!['provider'] != null) {
+      final p = visitor.cab!['provider'].toString().trim();
+      return p.isEmpty ? null : p;
+    }
+    if (t == 'DELIVERY' && visitor.delivery != null && visitor.delivery!['provider'] != null) {
+      final p = visitor.delivery!['provider'].toString().trim();
+      return p.isEmpty ? null : p;
+    }
+    return null;
+  }
+
   Color _getStatusColor(String status) {
     final s = status.toUpperCase();
     if (s.contains("APPROV")) return AppColors.success;
@@ -475,6 +500,50 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 14, 16, 120),
                 children: [
+                  if (!OfflineQueueService.instance.isOnline) ...[
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Theme.of(context).dividerColor),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.cloud_off_rounded, size: 20, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              OfflineQueueService.instance.pendingCount > 0
+                                  ? 'Offline – ${OfflineQueueService.instance.pendingCount} change(s) will sync when online'
+                                  : 'Offline mode – changes will sync when online',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  if (OfflineQueueService.instance.pendingCount > 0 && OfflineQueueService.instance.isOnline) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+                      margin: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        '${OfflineQueueService.instance.pendingCount} pending sync',
+                        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                        ),
+                      ),
+                    ),
+                  ],
                   DashboardHero(
                     userName: _dynamicName,
                     statusMessage: (pendingCount + _sosBadgeCount) > 0
@@ -839,44 +908,31 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         const SizedBox(height: 10),
         if (_recentVisitors.isEmpty)
           Container(
-            padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
+            padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.6)),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.04),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.06)),
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Image.asset(
-                  'assets/mascot/senti_idle.png',
-                  width: 80,
-                  height: 80,
-                  fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Icon(Icons.person_outline_rounded, size: 56, color: AppColors.text2.withOpacity(0.5)),
-                ),
-                const SizedBox(height: 12),
-                const Text(
+                const SentinelIllustration(kind: 'empty_visitors', height: 100),
+                const SizedBox(height: 16),
+                Text(
                   "No visitors yet today",
                   style: TextStyle(
-                    color: AppColors.text2,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
-                const SizedBox(height: 4),
-                const Text(
+                const SizedBox(height: 6),
+                Text(
                   "Add an entry when someone arrives",
                   style: TextStyle(
-                    color: AppColors.textMuted,
                     fontSize: 13,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -887,7 +943,13 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           ..._recentVisitors.map((visitor) {
             final displayFlat = visitor.flatNo.isNotEmpty ? visitor.flatNo : visitor.flatId;
             final statusColor = _getStatusColor(visitor.status);
-            final subtitle = "${visitor.visitorPhone.isNotEmpty ? visitor.visitorPhone : 'No phone'} • ${_formatTime(visitor.createdAt)}";
+            final provider = _getVisitorProviderLabel(visitor);
+            final subtitleParts = [
+              visitor.visitorPhone.isNotEmpty ? visitor.visitorPhone : 'No phone',
+              _formatTime(visitor.createdAt),
+              if (provider != null) provider,
+            ];
+            final subtitle = subtitleParts.join(" • ");
             final hasResidentPhone = visitor.residentPhone != null && visitor.residentPhone!.trim().isNotEmpty;
             return InkWell(
               onTap: () {
@@ -936,13 +998,23 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                             ),
                           ),
                           const SizedBox(height: 2),
-                          Text(
-                            subtitle,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.text2,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          Row(
+                            children: [
+                              Icon(
+                                _getVisitorTypeIcon(visitor.visitorType),
+                                size: 12,
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                subtitle,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ),
                           if (hasResidentPhone) ...[
                             const SizedBox(height: 4),

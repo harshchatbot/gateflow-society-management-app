@@ -6,8 +6,10 @@ import '../services/resident_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../core/society_modules.dart';
+import '../utils/error_messages.dart';
 import '../widgets/status_chip.dart';
 import '../widgets/module_disabled_placeholder.dart';
+import '../widgets/error_retry_widget.dart';
 
 /// Resident Approvals Screen
 /// 
@@ -75,7 +77,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
       } else {
         setState(() {
           _isLoading = false;
-          _error = result.error ?? "Failed to load approvals";
+          _error = userFriendlyMessageFromError(result.error ?? "Failed to load approvals");
         });
         AppLogger.w("Failed to load approvals: ${result.error}");
       }
@@ -84,7 +86,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = "Connection error. Please try again.";
+          _error = userFriendlyMessageFromError(e);
         });
       }
     }
@@ -142,7 +144,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
           _isLoading = false;
           _processingVisitorId = null;
         });
-        _showError(result.error ?? "Failed to process decision");
+        _showError(userFriendlyMessageFromError(result.error ?? "Failed to process decision"));
         AppLogger.e("Decision failed: ${result.error}");
       }
     } catch (e) {
@@ -152,7 +154,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
           _isLoading = false;
           _processingVisitorId = null;
         });
-        _showError("Connection error. Please try again.");
+        _showError(userFriendlyMessageFromError(e));
       }
     }
   }
@@ -237,44 +239,11 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
         children: [
           if (_error != null)
             Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.error.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.error_outline, size: 48, color: Theme.of(context).colorScheme.error),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      _error!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton.icon(
-                      onPressed: _loadApprovals,
-                      icon: const Icon(Icons.refresh_rounded),
-                      label: const Text("Retry"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.success,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ],
+              child: SingleChildScrollView(
+                child: ErrorRetryWidget(
+                  errorMessage: _error!,
+                  onRetry: _loadApprovals,
+                  retryLabel: 'Retry',
                 ),
               ),
             )

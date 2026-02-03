@@ -9,16 +9,15 @@ import '../services/complaint_service.dart';
 import '../services/notice_service.dart';
 import '../services/notification_service.dart';
 import '../services/firestore_service.dart';
+import '../services/firebase_visitor_service.dart';
 import '../services/resident_signup_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../core/tour_storage.dart';
 import '../core/society_modules.dart';
-import 'notice_board_screen.dart';
 import 'sos_detail_screen.dart';
 import 'sos_alerts_screen.dart';
 import 'admin_join_requests_screen.dart';
-import 'admin_manage_notices_screen.dart';
 import 'admin_manage_admins_screen.dart';
 import 'admin_manage_violations_screen.dart';
 import 'onboarding_choose_role_screen.dart';
@@ -26,8 +25,10 @@ import '../widgets/admin_notification_drawer.dart';
 import '../widgets/dashboard_hero.dart';
 import '../widgets/dashboard_stat_card.dart';
 import '../widgets/dashboard_quick_action.dart';
+import '../utils/error_messages.dart';
 import '../widgets/visitors_chart.dart';
 import '../widgets/dashboard_insights_card.dart';
+import '../widgets/error_retry_widget.dart';
 
 /// Admin Dashboard Screen
 /// 
@@ -86,7 +87,15 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _unreadNoticesCount = 0;
   bool _initializedUnreadNotices = false;
   final FirestoreService _firestore = FirestoreService();
+  final FirebaseVisitorService _visitorService = FirebaseVisitorService();
   String? _photoUrl;
+
+  /// Admin Insights Lite: today's visitor counts. null = loading.
+  bool _insightsLoading = true;
+  int? _countTotalToday;
+  int? _countPendingToday;
+  int? _countCabToday;
+  int? _countDeliveryToday;
 
   StreamSubscription<QuerySnapshot>? _pendingSignupsSubscription;
 
@@ -94,11 +103,47 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void initState() {
     super.initState();
     _loadStats();
+    _loadInsightsCounts();
     _loadNotificationCount();
     _setupNotificationListener();
     _setupPendingSignupsListener();
     _loadAdminProfile();
     _maybeAutoRunTour();
+  }
+
+  Future<void> _loadInsightsCounts() async {
+    if (!SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
+      if (mounted) setState(() => _insightsLoading = false);
+      return;
+    }
+    try {
+      final results = await Future.wait([
+        _visitorService.getVisitorCountToday(widget.societyId),
+        _visitorService.getPendingVisitorCountToday(widget.societyId),
+        _visitorService.getCabVisitorCountToday(widget.societyId),
+        _visitorService.getDeliveryVisitorCountToday(widget.societyId),
+      ]);
+      if (mounted) {
+        setState(() {
+          _countTotalToday = results[0];
+          _countPendingToday = results[1];
+          _countCabToday = results[2];
+          _countDeliveryToday = results[3];
+          _insightsLoading = false;
+        });
+      }
+    } catch (e) {
+      AppLogger.e('Admin insights counts failed', error: e);
+      if (mounted) {
+        setState(() {
+          _insightsLoading = false;
+          _countTotalToday = 0;
+          _countPendingToday = 0;
+          _countCabToday = 0;
+          _countDeliveryToday = 0;
+        });
+      }
+    }
   }
 
   @override
@@ -374,7 +419,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       } else {
         setState(() {
           _isLoading = false;
-          _error = result.error ?? "Failed to load stats";
+          _error = userFriendlyMessageFromError(result.error ?? "Failed to load stats");
         });
         AppLogger.w("Failed to load admin stats: ${result.error}");
       }
@@ -383,7 +428,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = "Connection error. Please try again.";
+          _error = userFriendlyMessageFromError(e);
         });
       }
     }
@@ -493,6 +538,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           RefreshIndicator(
             onRefresh: () async {
               await _loadStats();
+              await _loadInsightsCounts();
               await _loadAdminProfile();
             },
             color: theme.colorScheme.primary,
@@ -556,7 +602,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   const SizedBox(height: 20),
                   _buildPremiumSocietyCard(),
                   const SizedBox(height: 24),
-                  if (_stats != null) ...[
+                  if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) _buildInsightsStrip(),
+                  if (SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) const SizedBox(height: 24),
+                  if (_error != null) ...[
+                    Center(
+                      child: SingleChildScrollView(
+                        child: ErrorRetryWidget(
+                          errorMessage: _error!,
+                          onRetry: _loadStats,
+                          retryLabel: errorActionLabelFromError(_error),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                  ] else if (_stats != null) ...[
                     Text(
                       "Today at a glance",
                       style: TextStyle(
@@ -676,6 +735,35 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
+  /// Admin Insights Lite: consolidated count summary (single aggregate load, fade-in when ready).
+  Widget _buildInsightsStrip() {
+    final theme = Theme.of(context);
+    final total = _countTotalToday ?? 0;
+    final pending = _countPendingToday ?? 0;
+    final cab = _countCabToday ?? 0;
+    final delivery = _countDeliveryToday ?? 0;
+
+    return AnimatedOpacity(
+      opacity: _insightsLoading ? 0 : 1,
+      duration: const Duration(milliseconds: 200),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Today: $total visitors — $pending pending',
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'CAB: $cab   Delivery: $delivery',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Wraps the existing stats grid into a soft card module
   Widget _buildStatsSection() {

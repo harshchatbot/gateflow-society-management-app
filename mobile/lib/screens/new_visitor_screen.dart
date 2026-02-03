@@ -10,6 +10,7 @@ import '../core/storage.dart';
 import '../models/visitor.dart';
 import '../services/firebase_visitor_service.dart';
 import '../services/firestore_service.dart';
+import '../services/offline_queue_service.dart';
 
 import 'guard_login_screen.dart';
 
@@ -18,35 +19,18 @@ import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../ui/app_icons.dart';
 import '../ui/sentinel_theme.dart';
+import '../ui/visitor_chip_config.dart';
+import '../utils/error_messages.dart';
 import '../core/society_modules.dart';
 import '../widgets/module_disabled_placeholder.dart';
-
-/// Config for a chip group (e.g. Cab Provider, Delivery Partner). Add entries to _chipGroups to extend.
-class ChipGroupConfig {
-  final String title;
-  final String visitorType;
-  final String storageKey;
-  final String field;
-  final List<String> options;
-  final String defaultValue;
-  final IconData icon;
-
-  const ChipGroupConfig({
-    required this.title,
-    required this.visitorType,
-    required this.storageKey,
-    required this.field,
-    required this.options,
-    required this.defaultValue,
-    required this.icon,
-  });
-}
 
 class NewVisitorScreen extends StatefulWidget {
   final String guardId;
   final String guardName;
   final String societyId;
   final VoidCallback? onBackPressed;
+  /// When set, form is prefilled from this visitor (Repeat visitor flow). No schema changes.
+  final Visitor? initialVisitor;
 
   const NewVisitorScreen({
     super.key,
@@ -54,6 +38,7 @@ class NewVisitorScreen extends StatefulWidget {
     required this.guardName,
     required this.societyId,
     this.onBackPressed,
+    this.initialVisitor,
   });
 
   @override
@@ -62,28 +47,6 @@ class NewVisitorScreen extends StatefulWidget {
 
 class _NewVisitorScreenState extends State<NewVisitorScreen> {
   final _formKey = GlobalKey<FormState>();
-
-  // Chip groups: add a config entry to support a new type (e.g. cab.provider, delivery.provider).
-  static final List<ChipGroupConfig> _chipGroups = [
-    ChipGroupConfig(
-      title: 'Cab Provider',
-      visitorType: 'CAB',
-      storageKey: 'cab',
-      field: 'provider',
-      options: ['Ola', 'Uber', 'Other'],
-      defaultValue: 'Other',
-      icon: Icons.directions_car_rounded,
-    ),
-    ChipGroupConfig(
-      title: 'Delivery Partner',
-      visitorType: 'DELIVERY',
-      storageKey: 'delivery',
-      field: 'provider',
-      options: ['Zomato', 'Swiggy', 'Blinkit', 'Zepto', 'Amazon', 'Flipkart', 'Dunzo', 'Other'],
-      defaultValue: 'Other',
-      icon: Icons.local_shipping_rounded,
-    ),
-  ];
 
   /// One map for all chip selections; key = "${storageKey}.${field}".
   final Map<String, String?> _chipSelections = {};
@@ -104,22 +67,28 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   Visitor? _createdVisitor;
 
   String _getSelection(ChipGroupConfig g) =>
-      _chipSelections[_selectionKey(g)] ?? g.defaultValue;
+      _chipSelections[visitorChipSelectionKey(g)] ?? g.defaultValue;
+
+  /// Ensures chip prefill only uses values that exist in config options; otherwise fallback to defaultValue (e.g. "Other").
+  String _normalizeChipValue(ChipGroupConfig g, String? raw) {
+    if (raw == null || raw.trim().isEmpty) return g.defaultValue;
+    final trimmed = raw.trim();
+    if (g.options.contains(trimmed)) return trimmed;
+    return g.defaultValue;
+  }
 
   void _setSelection(ChipGroupConfig g, String? value) {
     setState(() {
       if (value == null) {
-        _chipSelections.remove(_selectionKey(g));
+        _chipSelections.remove(visitorChipSelectionKey(g));
       } else {
-        _chipSelections[_selectionKey(g)] = value;
+        _chipSelections[visitorChipSelectionKey(g)] = value;
       }
       if (g.storageKey == 'delivery' && value != 'Other') {
         _deliveryPartnerOtherController.clear();
       }
     });
   }
-
-  static String _selectionKey(ChipGroupConfig g) => '${g.storageKey}.${g.field}';
 
   // Flats/units for dropdown (loaded from society)
   List<Map<String, dynamic>> _flats = [];
@@ -136,7 +105,40 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   @override
   void initState() {
     super.initState();
+    _prefillFromInitialVisitor();
     _loadFlats();
+  }
+
+  void _prefillFromInitialVisitor() {
+    final v = widget.initialVisitor;
+    if (v == null) return;
+    _selectedVisitorType = v.visitorType;
+    _visitorNameController.text = v.visitorName ?? '';
+    _visitorPhoneController.text = v.visitorPhone;
+    _vehicleNumberController.text = v.vehicleNumber ?? '';
+    _selectedFlatNo = v.flatNo.isNotEmpty ? v.flatNo : null;
+    if (v.visitorType.toUpperCase() == 'CAB') {
+      for (final g in visitorChipGroups) {
+        if (g.visitorType == 'CAB') {
+          final raw = (v.cab?['provider'] as String?)?.trim();
+          _chipSelections[visitorChipSelectionKey(g)] = _normalizeChipValue(g, raw);
+          break;
+        }
+      }
+    }
+    if (v.visitorType.toUpperCase() == 'DELIVERY') {
+      final deliveryConfig = visitorChipGroups.firstWhere((c) => c.visitorType == 'DELIVERY');
+      final raw = (v.delivery?['provider'] as String?)?.trim();
+      final normalized = _normalizeChipValue(deliveryConfig, raw);
+      _chipSelections[visitorChipSelectionKey(deliveryConfig)] = normalized;
+      if (normalized == 'Other') {
+        if (raw != null && raw.isNotEmpty && raw != 'Other') {
+          _deliveryPartnerOtherController.text = raw;
+        } else if ((v.deliveryPartnerOther ?? '').trim().isNotEmpty) {
+          _deliveryPartnerOtherController.text = v.deliveryPartnerOther!.trim();
+        }
+      }
+    }
   }
 
   @override
@@ -165,6 +167,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         _flats = list;
         _flatsLoading = false;
       });
+      if (widget.initialVisitor != null && _selectedFlatNo != null && _selectedFlatNo!.trim().isNotEmpty) {
+        _lookupFlatOwner();
+      }
     } catch (e) {
       AppLogger.e('NewVisitor: load flats failed', error: e);
       if (mounted) setState(() => _flatsLoading = false);
@@ -276,7 +281,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     final visitorName = _visitorNameController.text.trim().isEmpty ? null : _visitorNameController.text.trim();
     final vehicleNumber = _vehicleNumberController.text.trim().isEmpty ? null : _vehicleNumberController.text.trim();
     final isDelivery = _selectedVisitorType == 'DELIVERY';
-    final deliveryConfig = _chipGroups.firstWhere((g) => g.visitorType == 'DELIVERY');
+    final deliveryConfig = visitorChipGroups.firstWhere((g) => g.visitorType == 'DELIVERY');
     final deliveryPartnerValue = _getSelection(deliveryConfig);
     final deliveryPartner = isDelivery && deliveryPartnerValue.trim().isNotEmpty
         ? deliveryPartnerValue.trim()
@@ -292,6 +297,33 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     }
 
     final extraTypeData = _buildTypePayload();
+    final queue = OfflineQueueService.instance;
+    await queue.ensureInit();
+    if (!queue.isOnline) {
+      await queue.enqueueCreateVisitor(
+        societyId: widget.societyId,
+        flatNo: flatNo,
+        visitorType: _selectedVisitorType,
+        visitorPhone: _visitorPhoneController.text.trim(),
+        residentPhone: residentPhone,
+        visitorName: visitorName,
+        deliveryPartner: deliveryPartner,
+        deliveryPartnerOther: deliveryPartnerOther,
+        vehicleNumber: vehicleNumber,
+        typePayload: extraTypeData.isNotEmpty ? extraTypeData : null,
+        photoPath: _visitorPhoto?.path,
+      );
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Offline – changes will sync when online'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+        ),
+      );
+      return;
+    }
 
     final result = (_visitorPhoto != null)
         ? await _visitorService.createVisitorWithPhoto(
@@ -331,7 +363,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       setState(() => _isLoading = false);
       final err = result.error ?? AppError(userMessage: 'Failed to create visitor', technicalMessage: 'Unknown');
       AppLogger.e('Visitor creation failed', error: err.technicalMessage);
-      _showError(err.userMessage);
+      _showError(userFriendlyMessageFromError(err));
     }
   }
 
@@ -365,7 +397,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   /// Builds typePayload for Firestore from config and current selections (cab.provider, delivery.provider, etc.).
   Map<String, dynamic> _buildTypePayload() {
     final payload = <String, dynamic>{};
-    for (final g in _chipGroups) {
+    for (final g in visitorChipGroups) {
       if (_selectedVisitorType != g.visitorType) continue;
       final value = _getSelection(g);
       payload.putIfAbsent(g.storageKey, () => <String, dynamic>{});
@@ -717,9 +749,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               _buildTypePill("CAB", AppIcons.cab),
             ],
           ),
-          ..._chipGroups.map((g) => _buildChipGroup(context, g)).toList(),
+          ...visitorChipGroups.map((g) => _buildChipGroup(context, g)),
           if (_selectedVisitorType == 'DELIVERY' &&
-              _getSelection(_chipGroups.firstWhere((c) => c.visitorType == 'DELIVERY')) == 'Other') ...[
+              _getSelection(visitorChipGroups.firstWhere((c) => c.visitorType == 'DELIVERY')) == 'Other') ...[
             const SizedBox(height: 12),
             _buildOptionalTextField(
               controller: _deliveryPartnerOtherController,
@@ -809,8 +841,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       child: InkWell(
         onTap: () => setState(() {
           _selectedVisitorType = type;
-          for (final g in _chipGroups) {
-            if (g.visitorType != type) _chipSelections.remove(_selectionKey(g));
+          for (final g in visitorChipGroups) {
+            if (g.visitorType != type) _chipSelections.remove(visitorChipSelectionKey(g));
           }
           if (type != 'DELIVERY') _deliveryPartnerOtherController.clear();
         }),

@@ -630,4 +630,91 @@ class FirebaseVisitorService {
       ));
     }
   }
+
+  // --- Admin Insights Lite: today's visitor counts (efficient, count aggregate when supported) ---
+
+  /// Start of today (00:00) in local time. [referenceDate] allows tests to fix the "today" boundary.
+  static DateTime _startOfDay([DateTime? referenceDate]) {
+    final now = referenceDate ?? DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  /// Total visitors created today (createdAt >= start of day). Safe for large collections (uses count aggregate).
+  Future<int> getVisitorCountToday(String societyId, {DateTime? referenceDate}) async {
+    try {
+      final start = _startOfDay(referenceDate);
+      final ts = Timestamp.fromDate(start);
+      final snapshot = await _visitorsRef(societyId)
+          .where('createdAt', isGreaterThanOrEqualTo: ts)
+          .count()
+          .get();
+      return snapshot.count ?? 0;
+    } on FirebaseException catch (e) {
+      AppLogger.e('getVisitorCountToday FirebaseException', error: e.message);
+      return 0;
+    } catch (e) {
+      AppLogger.e('getVisitorCountToday', error: e);
+      return 0;
+    }
+  }
+
+  /// Pending visitors today (status == PENDING, createdAt >= start of day).
+  Future<int> getPendingVisitorCountToday(String societyId, {DateTime? referenceDate}) async {
+    try {
+      final start = _startOfDay(referenceDate);
+      final ts = Timestamp.fromDate(start);
+      final snapshot = await _visitorsRef(societyId)
+          .where('createdAt', isGreaterThanOrEqualTo: ts)
+          .where('status', isEqualTo: 'PENDING')
+          .count()
+          .get();
+      return snapshot.count ?? 0;
+    } on FirebaseException catch (e) {
+      AppLogger.e('getPendingVisitorCountToday FirebaseException', error: e.message);
+      return 0;
+    } catch (e) {
+      AppLogger.e('getPendingVisitorCountToday', error: e);
+      return 0;
+    }
+  }
+
+  /// Cab visitors today (visitor_type == CAB, createdAt >= start of day). Uses visitor_type for index-friendly query.
+  Future<int> getCabVisitorCountToday(String societyId, {DateTime? referenceDate}) async {
+    try {
+      final start = _startOfDay(referenceDate);
+      final ts = Timestamp.fromDate(start);
+      final snapshot = await _visitorsRef(societyId)
+          .where('createdAt', isGreaterThanOrEqualTo: ts)
+          .where('visitor_type', isEqualTo: 'CAB')
+          .count()
+          .get();
+      return snapshot.count ?? 0;
+    } on FirebaseException catch (e) {
+      AppLogger.e('getCabVisitorCountToday FirebaseException', error: e.message);
+      return 0;
+    } catch (e) {
+      AppLogger.e('getCabVisitorCountToday', error: e);
+      return 0;
+    }
+  }
+
+  /// Delivery visitors today (visitor_type == DELIVERY, createdAt >= start of day). Uses visitor_type for index-friendly query.
+  Future<int> getDeliveryVisitorCountToday(String societyId, {DateTime? referenceDate}) async {
+    try {
+      final start = _startOfDay(referenceDate);
+      final ts = Timestamp.fromDate(start);
+      final snapshot = await _visitorsRef(societyId)
+          .where('createdAt', isGreaterThanOrEqualTo: ts)
+          .where('visitor_type', isEqualTo: 'DELIVERY')
+          .count()
+          .get();
+      return snapshot.count ?? 0;
+    } on FirebaseException catch (e) {
+      AppLogger.e('getDeliveryVisitorCountToday FirebaseException', error: e.message);
+      return 0;
+    } catch (e) {
+      AppLogger.e('getDeliveryVisitorCountToday', error: e);
+      return 0;
+    }
+  }
 }
