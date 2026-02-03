@@ -282,48 +282,59 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
             Center(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check_circle_outline,
-                        size: 64,
-                        color: AppColors.success,
-                      ),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.04),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
                     ),
-                    const SizedBox(height: 24),
-                    const Text(
-                      "All caught up!",
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.text,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.check_circle_outline,
+                          size: 64,
+                          color: AppColors.success,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      "No pending approvals",
-                      style: TextStyle(
-                        fontSize: 15,
-                        color: AppColors.text2,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(height: 24),
+                      Text(
+                        "All caught up!",
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      "All visitor requests are processed",
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textMuted,
+                      const SizedBox(height: 8),
+                      Text(
+                        "No pending approvals",
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 4),
+                      Text(
+                        "All visitor requests are processed",
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             )

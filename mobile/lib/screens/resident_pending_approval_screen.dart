@@ -208,157 +208,178 @@ class _ResidentPendingApprovalScreenState extends State<ResidentPendingApprovalS
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
           children: [
             const SizedBox(height: 24),
-            const SentinelIllustration(kind: 'pending'),
-            const SizedBox(height: 28),
-            Text(
-              "You're almost in",
-              style: theme.textTheme.titleLarge,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              "Your access request has been sent to the society admin.\nYou'll be notified once it's approved.",
-              style: theme.textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Center(
-              child: SizedBox(
-                width: 28,
-                height: 28,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  color: theme.colorScheme.primary.withOpacity(0.4),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.04),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withOpacity(0.06),
                 ),
               ),
-            ),
-            const SizedBox(height: 32),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: theme.colorScheme.surface,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: theme.dividerColor),
-              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.email_rounded,
-                        color: theme.colorScheme.primary,
-                        size: 20,
+                  const SentinelIllustration(kind: 'pending'),
+                  const SizedBox(height: 28),
+                  Text(
+                    "You're almost in",
+                    style: (theme.textTheme.titleLarge ?? const TextStyle()).copyWith(
+                      color: theme.colorScheme.onSurface,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    "Your access request has been sent to the society admin.\nYou'll be notified once it's approved.",
+                    style: (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  Center(
+                    child: SizedBox(
+                      width: 28,
+                      height: 28,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: theme.colorScheme.primary.withOpacity(0.4),
                       ),
-                      const SizedBox(width: 12),
-                      Text(
-                        "Email",
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: theme.dividerColor),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.email_rounded,
+                              color: theme.colorScheme.primary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              "Email",
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w800,
+                                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          widget.email,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: FilledButton.icon(
+                      onPressed: _isChecking ? null : _checkApprovalStatus,
+                      icon: _isChecking
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: theme.colorScheme.onPrimary.withOpacity(0.8),
+                              ),
+                            )
+                          : const Icon(Icons.refresh_rounded, size: 20),
+                      label: Text(
+                        _isChecking ? "CHECKING..." : "CHECK STATUS",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                          fontSize: 16,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    widget.email,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                  const SizedBox(height: 12),
+                  if (_canFindSocietyAgain)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          await Storage.clearResidentJoinSocietyId();
+                          if (!context.mounted) return;
+                          Navigator.of(context).pushReplacement(
+                            MaterialPageRoute(
+                              builder: (_) => const FindSocietyScreen(),
+                            ),
+                          );
+                        },
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: theme.colorScheme.primary,
+                          side: BorderSide(
+                            color: theme.colorScheme.primary,
+                            width: 1.6,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                        ),
+                        child: const Text(
+                          "FIND SOCIETY AGAIN",
+                          style: TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  if (_canFindSocietyAgain) const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.of(context).pushReplacement(
+                          MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.arrow_back_rounded, size: 20),
+                      label: const Text(
+                        "BACK TO LOGIN",
+                        style: TextStyle(
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                          fontSize: 16,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: theme.colorScheme.primary,
+                        side: BorderSide(
+                          color: theme.colorScheme.primary,
+                          width: 2,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                      ),
                     ),
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: FilledButton.icon(
-                onPressed: _isChecking ? null : _checkApprovalStatus,
-                icon: _isChecking
-                    ? SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: theme.colorScheme.onPrimary.withOpacity(0.8),
-                        ),
-                      )
-                    : const Icon(Icons.refresh_rounded, size: 20),
-                label: Text(
-                  _isChecking ? "CHECKING..." : "CHECK STATUS",
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                    fontSize: 16,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (_canFindSocietyAgain)
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: OutlinedButton(
-                  onPressed: () async {
-                    await Storage.clearResidentJoinSocietyId();
-                    if (!context.mounted) return;
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (_) => const FindSocietyScreen(),
-                      ),
-                    );
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: theme.colorScheme.primary,
-                    side: BorderSide(
-                      color: theme.colorScheme.primary,
-                      width: 1.6,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                  ),
-                  child: const Text(
-                    "FIND SOCIETY AGAIN",
-                    style: TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                    ),
-                  ),
-                ),
-              ),
-            if (_canFindSocietyAgain) const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
-                  );
-                },
-                icon: const Icon(Icons.arrow_back_rounded, size: 20),
-                label: const Text(
-                  "BACK TO LOGIN",
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                    fontSize: 16,
-                  ),
-                ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: theme.colorScheme.primary,
-                  side: BorderSide(
-                    color: theme.colorScheme.primary,
-                    width: 2,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                ),
               ),
             ),
           ],
