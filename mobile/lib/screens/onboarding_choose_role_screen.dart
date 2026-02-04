@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../core/session_gate_service.dart';
 import 'phone_otp_login_screen.dart';
 import 'how_sentinel_works_screen.dart';
+import '../core/storage.dart';
+
 
 /// Choose Role screen: single theme (primary blue), cards with illustrations.
 /// Used after logout and from onboarding. Shows gate block message if set.
@@ -131,7 +133,8 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                       subtitle: 'Manage visitor entries, approvals & logs',
                       illustrationPath: 'assets/illustrations/defense.png',
                       fallbackIcon: Icons.shield_rounded,
-                      onTap: () {
+                      onTap: () async {
+                        await Storage.saveLastRoleHint('guard');
                         // ✅ Unified OTP login for guard
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -150,7 +153,8 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                       subtitle: 'Approve or reject visitor requests',
                       illustrationPath: 'assets/illustrations/resident.png',
                       fallbackIcon: Icons.home_rounded,
-                      onTap: () {
+                      onTap: () async {
+                        await Storage.saveLastRoleHint('resident');
                         // ✅ Unified OTP login for resident
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -169,7 +173,8 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                       subtitle: 'Manage society, residents, guards & flats',
                       illustrationPath: 'assets/illustrations/admin.png',
                       fallbackIcon: Icons.admin_panel_settings_rounded,
-                      onTap: () {
+                      onTap: () async {
+                        await Storage.saveLastRoleHint('admin');
                         // ✅ Unified OTP login for admin
                         Navigator.of(context).push(
                           MaterialPageRoute(

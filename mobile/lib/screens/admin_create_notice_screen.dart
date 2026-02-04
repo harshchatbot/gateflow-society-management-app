@@ -85,11 +85,11 @@ class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
         AppLogger.i("Notice created successfully");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
+            content: const Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text(
                   "Notice created successfully!",
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
@@ -217,8 +217,9 @@ class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
                     children: _priorities.map((priority) {
                       final isSelected = _selectedPriority == priority;
                       Color priorityColor = AppColors.admin;
-                      if (priority == "URGENT") priorityColor = AppColors.error;
-                      else if (priority == "HIGH") priorityColor = AppColors.warning;
+                      if (priority == "URGENT") {
+                        priorityColor = AppColors.error;
+                      } else if (priority == "HIGH") priorityColor = AppColors.warning;
                       else if (priority == "LOW") priorityColor = AppColors.text2;
 
                       return GestureDetector(

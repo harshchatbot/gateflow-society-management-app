@@ -1,28 +1,34 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
-import 'admin_login_screen.dart';
+import 'phone_otp_login_screen.dart';
 
 /// Admin Pending Approval Screen
 ///
-/// Shown when admin tries to login but their signup is still pending approval
+/// Shown when admin tries to login but their request is still pending approval.
 ///
 /// NOTE: Keep constructor param name as `email` for backward compatibility.
 /// In OTP flows, pass phone string here (e.g. "+91xxxx") and UI will render it as Contact.
 class AdminPendingApprovalScreen extends StatelessWidget {
+  final String societyId;
+  final String adminId;
+  final String adminName;
+
+  /// Backward compatible param:
+  /// - legacy: email
+  /// - OTP: phone in this field
   final String? email;
 
   const AdminPendingApprovalScreen({
     super.key,
+    required this.societyId,
+    required this.adminId,
+    required this.adminName,
     this.email,
-    required String societyId,
-    required String adminId,
-    required String adminName,
   });
 
   bool _looksLikePhone(String value) {
     final v = value.trim();
     if (v.isEmpty) return false;
-    // +91..., or a mostly numeric string
     if (v.startsWith('+')) return true;
     final digits = v.replaceAll(RegExp(r'[^\d]'), '');
     return digits.length >= 10 && digits.length >= (v.length * 0.6);
@@ -42,7 +48,6 @@ class AdminPendingApprovalScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final value = email ?? '';
-
     final isPhone = _looksLikePhone(value);
     final displayValue = _maskIfPhone(value);
 
@@ -72,15 +77,17 @@ class AdminPendingApprovalScreen extends StatelessWidget {
             ),
           ),
           onPressed: () {
+            // ✅ OTP-first: go back to OTP login with admin hint
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
+              MaterialPageRoute(
+                builder: (_) => const PhoneOtpLoginScreen(roleHint: 'admin'),
+              ),
             );
           },
         ),
       ),
       body: Stack(
         children: [
-          // Calm background wash
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -103,7 +110,6 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Icon bubble
                     Container(
                       width: 110,
                       height: 110,
@@ -118,7 +124,6 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 22),
-
                     const Text(
                       "Pending Approval",
                       style: TextStyle(
@@ -130,8 +135,6 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 14),
-
-                    // Status banner
                     Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 10),
@@ -158,11 +161,10 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-
                     const SizedBox(height: 18),
-                    const Text(
-                      "Your admin access request has been submitted.\nYou’ll be able to login once it’s approved.",
-                      style: TextStyle(
+                    Text(
+                      "Hi ${adminName.isNotEmpty ? adminName : 'Admin'}, your admin access request has been submitted.\nYou’ll be able to login once it’s approved.",
+                      style: const TextStyle(
                         fontSize: 15,
                         color: AppColors.text2,
                         height: 1.5,
@@ -170,15 +172,9 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                       ),
                       textAlign: TextAlign.center,
                     ),
-
                     const SizedBox(height: 26),
-
-                    // Timeline (calm, MyGate-ish)
-                    _TimelineCard(),
-
+                    const _TimelineCard(),
                     const SizedBox(height: 18),
-
-                    // Contact Card (email or phone)
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
@@ -233,9 +229,32 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                         ],
                       ),
                     ),
-
-                    const SizedBox(height: 28),
-
+                    const SizedBox(height: 14),
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.apartment_rounded,
+                              color: AppColors.admin),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              "Society ID: $societyId",
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.text,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 18),
                     SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -243,7 +262,9 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                         onPressed: () {
                           Navigator.of(context).pushReplacement(
                             MaterialPageRoute(
-                                builder: (_) => const AdminLoginScreen()),
+                              builder: (_) =>
+                                  const PhoneOtpLoginScreen(roleHint: 'admin'),
+                            ),
                           );
                         },
                         icon: const Icon(Icons.arrow_back_rounded, size: 20),

@@ -2273,8 +2273,93 @@ class FirestoreService {
     }, SetOptions(merge: true));
   }
 
+  Future<void> createAdminJoinRequest({
+    required String societyId,
+    required String societyName,
+    required String cityId,
+    required String name,
+    required String phoneE164,
+  }) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      throw StateError('createAdminJoinRequest: user not logged in');
+    }
 
+    final uid = user.uid;
+    final now = FieldValue.serverTimestamp();
 
+    // Normalize phone (keep consistent with your unique phone logic)
+    final normalizedPhone =
+        FirebaseAuthService.normalizePhoneForIndia(phoneE164);
 
+    // Optional: enforce unique phone globally (recommended)
+    final available = await isPhoneAvailableForUser(
+      normalizedE164: normalizedPhone,
+      forUid: uid,
+    );
+    if (!available) {
+      throw StateError(
+          'This mobile number is already linked to another active account.');
+    }
 
+    final joinRef = _publicSocietiesRef
+        .doc(societyId)
+        .collection('admin_join_requests')
+        .doc(uid);
+
+    final rootPtrRef = _firestore.collection('members').doc(uid);
+
+    await _firestore.runTransaction((tx) async {
+      // 1) Create / update admin join request (under public directory)
+      tx.set(
+        joinRef,
+        {
+          'uid': uid,
+          'societyId': societyId,
+          'societyName': societyName,
+          'cityId': cityId,
+          'requestedRole': 'admin',
+          'name': name,
+          'phone': normalizedPhone,
+          'status': 'PENDING',
+          'createdAt': now,
+          'updatedAt': now,
+          'handledBy': null,
+          'handledAt': null,
+        },
+        SetOptions(merge: true),
+      );
+
+      // 2) Create / update root pointer as inactive admin (so AuthRouter can route to pending)
+      tx.set(
+        rootPtrRef,
+        {
+          'uid': uid,
+          'societyId': societyId,
+          'systemRole': 'admin',
+          'active': false,
+          'name': name,
+          'phone': normalizedPhone,
+          'updatedAt': now,
+          'createdAt': now,
+        },
+        SetOptions(merge: true),
+      );
+    });
+
+    // 3) Ensure phone mapping exists (your project uses unique_phones)
+    // This will write to societies/{societyId}/members/{uid} too — if you do NOT want that yet,
+    // comment this out and only call setMemberPhone on approval.
+    //
+    // await setMemberPhone(
+    //   societyId: societyId,
+    //   uid: uid,
+    //   normalizedE164: normalizedPhone,
+    // );
+
+    AppLogger.i('Admin join request created', data: {
+      'uid': uid,
+      'societyId': societyId,
+    });
+  }
 }

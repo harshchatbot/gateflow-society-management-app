@@ -1,26 +1,31 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:confetti/confetti.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/app_logger.dart';
 import '../core/env.dart';
+import '../core/storage.dart';
 import '../services/admin_service.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/invite_claim_service.dart';
+import '../services/invite_bulk_upload_service.dart';
 import '../ui/app_loader.dart';
 import 'admin_shell_screen.dart';
 import 'admin_login_screen.dart';
-import '../core/storage.dart';
-import '../services/invite_bulk_upload_service.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'admin_pending_approval_screen.dart';
+
 
 /// Admin Onboarding Screen
 ///
-/// Allows new admins to register/create their account.
-/// Theme: Sentinel (unified)
+/// CREATE SOCIETY: OTP-first (Send OTP on Submit -> Verify -> Create society+member+phone_index+root pointer)
+/// JOIN SOCIETY: kept as existing email/pin flow (to avoid breaking invite-claim logic)
 class AdminOnboardingScreen extends StatefulWidget {
-  const AdminOnboardingScreen({super.key});
+  final bool defaultJoinMode;
+  const AdminOnboardingScreen({super.key, this.defaultJoinMode = false});
 
   @override
   State<AdminOnboardingScreen> createState() => _AdminOnboardingScreenState();
@@ -32,9 +37,10 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   final _societyNameController = TextEditingController();
   String? _selectedCity;
   String? _selectedState;
-  final _adminIdController = TextEditingController();
+  final _adminIdController = TextEditingController(); // Email (profile/claim)
   final _adminNameController = TextEditingController();
-  final _phoneController = TextEditingController();
+  final _phoneController =
+      TextEditingController(); // REQUIRED for OTP create-society
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
 
@@ -74,6 +80,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
     super.initState();
     _confettiController =
         ConfettiController(duration: const Duration(seconds: 2));
+    _isCreatingSociety = !widget.defaultJoinMode; // ✅ key line
+    _selectedRole = _isCreatingSociety ? "SUPER_ADMIN" : "ADMIN";
     _loadStates();
   }
 
@@ -128,69 +136,97 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
     required String uid,
     required String societyId,
     required String systemRole,
+    required bool active,
   }) async {
     await FirebaseFirestore.instance.collection('members').doc(uid).set({
       'uid': uid,
       'societyId': societyId,
       'systemRole': systemRole,
-      'active': true,
+      'active': active,
       'updatedAt': FieldValue.serverTimestamp(),
     }, SetOptions(merge: true));
+  }
+
+  // ✅ OTP-first on submit for CREATE SOCIETY.
+  Future<_OtpAuthResult?> _verifyPhoneViaOtpAndGetAuth(String rawPhone) async {
+    final digits = rawPhone.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.length != 10) {
+      _showError("Enter a valid 10-digit mobile number.");
+      return null;
+    }
+
+    final phoneE164 = FirebaseAuthService.normalizePhoneForIndia(digits);
+
+    final result = await Navigator.of(context).push<_OtpAuthResult>(
+      MaterialPageRoute(
+        builder: (_) => OtpVerifyScreen(phoneE164: phoneE164),
+      ),
+    );
+
+    return result; // null if cancelled
   }
 
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final user = FirebaseAuth.instance.currentUser;
-    final authPhone = user?.phoneNumber;
-
-    if (user == null || authPhone == null || authPhone.isEmpty) {
-      _showError("Please login with OTP first.");
-      setState(() => _isLoading = false);
-      return;
-    }
-
     final societyCode = _societyCodeController.text.trim().toUpperCase();
     final adminName = _adminNameController.text.trim();
     final email = _adminIdController.text.trim();
     final phone = _phoneController.text.trim();
-    final pin = _pinController.text.trim();
+    final pin = _pinController.text.trim(); // used only for JOIN flow below
 
     setState(() => _isLoading = true);
 
     AppLogger.i("Admin onboarding attempt", data: {
       "society_code": societyCode,
       "email": email,
-      "mode": _isCreatingSociety ? "create" : "join",
+      "mode": _isCreatingSociety ? "create(otp)" : "join(email/pin)",
       "role": _selectedRole,
     });
 
     try {
-      // Step 1: Login-or-signup (production safe)
-      // NOTE: Add this method in FirebaseAuthService (I shared earlier)
-      final userCredential = await _authService.signUpOrSignIn(
-        email: email,
-        password: pin,
-      );
+      // Step A: Authenticate
+      String uid;
+      String authPhoneE164;
 
-      final uid = userCredential.user?.uid;
-      if (uid == null) {
-        throw Exception("Failed to authenticate");
+      if (_isCreatingSociety) {
+        // ✅ OTP FIRST
+        final otp = await _verifyPhoneViaOtpAndGetAuth(phone);
+        if (otp == null) {
+          // user cancelled OTP screen
+          if (mounted) setState(() => _isLoading = false);
+          return;
+        }
+        uid = otp.uid;
+        authPhoneE164 = otp.authPhone;
+      } else {
+        // ⚠️ Join flow kept as-is (email/pin) to preserve InviteClaimService behavior.
+        final userCredential = await _authService.signUpOrSignIn(
+          email: email,
+          password: pin,
+        );
+
+        final u = userCredential.user;
+        if (u == null) throw Exception("Failed to authenticate");
+        uid = u.uid;
+
+        // phone may be empty in this legacy join path
+        authPhoneE164 = u.phoneNumber ?? '';
       }
 
-      // Step 2: Resolve or create society
+      // Step B: Resolve or create society
       String societyId;
 
       if (_isCreatingSociety) {
-        // CREATE SOCIETY = SUPER_ADMIN bootstrap
+        // CREATE SOCIETY = SUPER_ADMIN bootstrap (after OTP verify)
         final societyName = _societyNameController.text.trim();
         final city = _selectedCity;
         final state = _selectedState;
 
-        // Prevent duplicate society code reuse (optional but recommended)
+        // Prevent duplicate society code reuse
         final existing = await _firestore.getSocietyIdByCode(societyCode);
         if (existing != null) {
-          setState(() => _isLoading = false);
+          if (mounted) setState(() => _isLoading = false);
           _showError("Society code already exists. Choose a different code.");
           return;
         }
@@ -206,21 +242,22 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           createdByUid: uid,
         );
 
-        // Create super admin member record with all details
+        // ✅ Create super admin member record with VERIFIED PHONE (authPhoneE164)
         await _firestore.setMember(
           societyId: societyId,
           uid: uid,
           systemRole: 'super_admin',
           societyRole: _selectedRole.toLowerCase(),
           name: adminName,
-          phone: authPhone,
-          email: email, // Include email from form
+          phone: authPhoneE164, // ✅ VERIFIED phone from OTP auth
+          email: email,
           active: true,
         );
 
+        // ✅ phone_index write: DOC ID MUST MATCH AUTH TOKEN PHONE NUMBER
         await FirebaseFirestore.instance
             .collection('phone_index')
-            .doc(authPhone) // ✅ MUST be auth phone
+            .doc(authPhoneE164)
             .set({
           'uid': uid,
           'societyId': societyId,
@@ -229,73 +266,94 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
-        AppLogger.i("Auth state", data: {
-          "uid": FirebaseAuth.instance.currentUser?.uid,
-          "phone": FirebaseAuth.instance.currentUser?.phoneNumber,
-          "isAnonymous": FirebaseAuth.instance.currentUser?.isAnonymous,
-          "providers": FirebaseAuth.instance.currentUser?.providerData
-              .map((e) => e.providerId)
-              .toList(),
-        });
-
         await _setRootPointer(
           uid: uid,
           societyId: societyId,
           systemRole: 'super_admin',
+          active: true,
         );
 
-        // Note: Bulk invite upload can be done later from the dashboard
-        // Removed automatic file picker to avoid disrupting onboarding flow
-
-        // If you want confetti only for new society creation:
         _confettiController.play();
       } else {
-        // JOIN SOCIETY = Invite → Self Signup → Claim Invite
+        // ✅ JOIN SOCIETY (OTP-only): Admin requests access -> Pending approval
         final existingSocietyId =
             await _firestore.getSocietyIdByCode(societyCode);
         if (existingSocietyId == null) {
-          setState(() => _isLoading = false);
+          if (mounted) setState(() => _isLoading = false);
           _showError("Society not found or inactive for this code.");
           return;
         }
         societyId = existingSocietyId;
 
-        final claimResult = await _inviteClaimService.claimInviteForSociety(
-          societyId: societyId,
-        );
-
-        if (!claimResult.claimed) {
-          setState(() => _isLoading = false);
-          _showError("No pending admin invite found for this email.");
+        // ✅ Must be logged in via OTP already
+        final authPhone = FirebaseAuth.instance.currentUser?.phoneNumber;
+        if (authPhone == null || authPhone.isEmpty) {
+          if (mounted) setState(() => _isLoading = false);
+          _showError("Please login with OTP first.");
           return;
         }
 
-        if ((claimResult.systemRole ?? '') != 'admin') {
-          setState(() => _isLoading = false);
-          _showError("This email is not invited as Admin for this society.");
-          return;
-        }
+        final authPhoneE164 =
+            FirebaseAuthService.normalizePhoneForIndia(authPhone);
 
-        // Update profile fields after claim (now allowed)
+        // ✅ Create (or overwrite) admin join request
         await FirebaseFirestore.instance
             .collection('societies')
             .doc(societyId)
-            .collection('members')
-            .doc(uid)
+            .collection('admin_join_requests')
+            .doc(uid) // keep one request per user
             .set({
+          'uid': uid,
+          'societyId': societyId,
           'name': adminName,
-          'phone': phone.isEmpty ? null : phone,
-          'email': email, // Include email
+          'phone': authPhoneE164,
+          'email': email, // optional display
           'societyRole': _selectedRole.toLowerCase(),
+          'status': 'PENDING',
+          'active': false,
+          'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
         }, SetOptions(merge: true));
 
-        // Root pointer is created in claim batch, but safe to ensure:
+        // ✅ Create/ensure root pointer (inactive) so app can resolve society quickly
         await _setRootPointer(
-            uid: uid, societyId: societyId, systemRole: 'admin');
+          uid: uid,
+          societyId: societyId,
+          systemRole: 'admin',
+          active: false,
+        );
+
+        // ✅ OPTIONAL: phone_index pointer (helps recovery / faster mapping)
+        // If your rules allow writing it at this stage.
+        await FirebaseFirestore.instance
+            .collection('phone_index')
+            .doc(authPhoneE164)
+            .set({
+          'uid': uid,
+          'societyId': societyId,
+          'systemRole': 'admin',
+          'active': false,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        if (!mounted) return;
+        if (mounted) setState(() => _isLoading = false);
+
+        // ✅ Go to pending approval (super admin will approve)
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AdminPendingApprovalScreen(
+              adminId: uid,
+              societyId: societyId,
+              adminName: adminName.isNotEmpty ? adminName : 'Admin',
+            ),
+          ),
+        );
+        return; // important: stop further flow
       }
 
-      // Step 3: Save Firebase session
+      // Step C: Save Firebase session
       final systemRoleForSession = _isCreatingSociety ? 'super_admin' : 'admin';
 
       await Storage.saveFirebaseSession(
@@ -312,8 +370,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
         'systemRole': systemRoleForSession,
       });
 
-      setState(() => _isLoading = false);
       if (!mounted) return;
+      setState(() => _isLoading = false);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -356,14 +414,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() => _isLoading = false);
-        String errorMsg = "Registration failed. Please try again.";
-        if (e.toString().contains('wrong-password') ||
-            e.toString().contains('invalid-credential')) {
-          errorMsg = "Invalid password. Try again.";
-        } else if (e.toString().contains('weak-password')) {
-          errorMsg = "Password too weak. Please use at least 6 characters.";
-        }
-        _showError(errorMsg);
+        _showError("Registration failed. Please try again.");
       }
     }
   }
@@ -417,7 +468,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
       ),
       body: Stack(
         children: [
-          // Gradient Background (onboarding theme)
+          // Gradient Background
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -447,14 +498,17 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               ),
             ),
           ),
+
           if (_isLoading || _isLoadingLocations)
             AppLoader.overlay(
               show: true,
-              message:
-                  _isLoading ? "Creating your account…" : "Loading locations…",
+              message: _isLoading
+                  ? (_isCreatingSociety
+                      ? "Verifying OTP & creating society…"
+                      : "Creating your account…")
+                  : "Loading locations…",
             ),
 
-          // Confetti celebration
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
@@ -477,11 +531,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
       ),
     );
   }
-
-  // ---------------------------
-  // UI METHODS (your existing UI)
-  // Copy-paste from your current AdminOnboardingScreen below
-  // ---------------------------
 
   Widget _buildBrandHeader() {
     final theme = Theme.of(context);
@@ -555,7 +604,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
       );
 
       if (result.errors.isNotEmpty) {
-        // optional: log errors
         AppLogger.w("Bulk invite upload errors",
             data: {"errors": result.errors});
       }
@@ -675,181 +723,11 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               Row(
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "State",
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: theme.colorScheme.onSurface.withOpacity(0.7),
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: theme.scaffoldBackgroundColor,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: theme.dividerColor),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: DropdownButtonFormField<String>(
-                            value: _selectedState,
-                            isExpanded: true,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 14),
-                              prefixIcon: Icon(Icons.map_rounded,
-                                  color: theme.colorScheme.primary),
-                            ),
-                            hint: Text(
-                              "Select state",
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.6),
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            items: _stateOptions
-                                .map((st) => DropdownMenuItem<String>(
-                                      value: st['name'],
-                                      child: Text(
-                                        st['name'] ?? '',
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                          color: theme.colorScheme.onSurface,
-                                        ),
-                                      ),
-                                    ))
-                                .toList(),
-                            validator: (value) {
-                              if (_isCreatingSociety &&
-                                  (value == null || value.isEmpty)) {
-                                return "Please select State";
-                              }
-                              return null;
-                            },
-                            onChanged: (value) {
-                              final stateMap = _stateOptions.firstWhere(
-                                (st) => st['name'] == value,
-                                orElse: () => {'id': '', 'name': ''},
-                              );
-
-                              setState(() {
-                                _selectedState = value;
-                                _selectedStateId = stateMap['id'];
-                                _selectedCity = null;
-                              });
-
-                              if (_selectedStateId != null &&
-                                  _selectedStateId!.isNotEmpty) {
-                                _loadCitiesForState(_selectedStateId!);
-                              }
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
+                    child: _buildStateDropdown(theme),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          "City",
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                            color: theme.colorScheme.onSurface.withOpacity(0.7),
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: theme.scaffoldBackgroundColor,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: theme.dividerColor),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.02),
-                                blurRadius: 10,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: DropdownButtonFormField<String>(
-                            value: _selectedCity,
-                            isExpanded: true,
-                            decoration: InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 14),
-                              prefixIcon: Icon(Icons.location_on_rounded,
-                                  color: theme.colorScheme.primary),
-                            ),
-                            hint: Text(
-                              "Select city",
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.6),
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            items: _cityOptions
-                                .map((city) => DropdownMenuItem<String>(
-                                      value: city['name'],
-                                      child: Text(
-                                        city['name'] ?? '',
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w700,
-                                          color: theme.colorScheme.onSurface,
-                                        ),
-                                      ),
-                                    ))
-                                .toList(),
-                            validator: (value) {
-                              if (_isCreatingSociety &&
-                                  (value == null || value.isEmpty)) {
-                                return "Please select City";
-                              }
-                              return null;
-                            },
-                            onChanged: (_selectedStateId == null ||
-                                    _selectedStateId!.isEmpty)
-                                ? null
-                                : (value) {
-                                    setState(() => _selectedCity = value);
-                                  },
-                            disabledHint: Text(
-                              "Select state first",
-                              style: TextStyle(
-                                color: theme.colorScheme.onSurface
-                                    .withOpacity(0.6),
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    child: _buildCityDropdown(theme),
                   ),
                 ],
               ),
@@ -859,7 +737,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             _PremiumField(
               controller: _societyCodeController,
               label: "Society Code",
-              hint: "e.g. SOC001 (unique code for your society)",
+              hint: "e.g. SSRESIDENCY (unique)",
               icon: Icons.apartment_rounded,
               textInputAction: TextInputAction.next,
               validator: (value) {
@@ -874,7 +752,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             _PremiumField(
               controller: _adminIdController,
               label: "Email Address",
-              hint: "Your admin email (e.g. admin@example.com)",
+              hint: "e.g. admin@example.com",
               icon: Icons.email_rounded,
               textInputAction: TextInputAction.next,
               keyboardType: TextInputType.emailAddress,
@@ -905,18 +783,28 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             ),
             const SizedBox(height: 20),
 
+            // ✅ Phone is REQUIRED for Create Society (OTP-first)
             _PremiumField(
               controller: _phoneController,
-              label: "Phone Number (Optional)",
+              label: _isCreatingSociety
+                  ? "Phone Number (Required for OTP)"
+                  : "Phone Number (Optional)",
               hint: "e.g. 9876543210",
               icon: Icons.phone_rounded,
               textInputAction: TextInputAction.next,
               keyboardType: TextInputType.phone,
               validator: (value) {
-                if (value != null &&
-                    value.trim().isNotEmpty &&
-                    value.trim().length < 10) {
-                  return "Please enter a valid phone number";
+                final v = (value ?? '').trim();
+                if (_isCreatingSociety) {
+                  final digits = v.replaceAll(RegExp(r'[^\d]'), '');
+                  if (digits.length != 10)
+                    return "Enter a valid 10-digit phone number";
+                } else {
+                  if (v.isNotEmpty) {
+                    final digits = v.replaceAll(RegExp(r'[^\d]'), '');
+                    if (digits.length != 10)
+                      return "Enter a valid 10-digit phone number";
+                  }
                 }
                 return null;
               },
@@ -995,63 +883,75 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             ),
             const SizedBox(height: 20),
 
-            _PremiumField(
-              controller: _pinController,
-              label: "PIN/Password",
-              hint: "Create a secure PIN (min 4 digits)",
-              icon: Icons.lock_rounded,
-              obscureText: _obscurePin,
-              textInputAction: TextInputAction.next,
-              keyboardType: TextInputType.number,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePin
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
-                  size: 20,
+            // ⚠️ PIN fields kept for Join flow only (to avoid breaking your invite flow today)
+            if (!_isCreatingSociety) ...[
+              _PremiumField(
+                controller: _pinController,
+                label: "PIN/Password",
+                hint: "Create a secure PIN (min 4 digits)",
+                icon: Icons.lock_rounded,
+                obscureText: _obscurePin,
+                textInputAction: TextInputAction.next,
+                keyboardType: TextInputType.number,
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePin
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    size: 20,
+                  ),
+                  onPressed: () => setState(() => _obscurePin = !_obscurePin),
                 ),
-                onPressed: () => setState(() => _obscurePin = !_obscurePin),
+                validator: (value) {
+                  if (!_isCreatingSociety) {
+                    if (value == null || value.trim().isEmpty) {
+                      return "Please enter a PIN";
+                    }
+                    if (value.trim().length < 4) {
+                      return "PIN must be at least 4 characters";
+                    }
+                  }
+                  return null;
+                },
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty)
-                  return "Please enter a PIN";
-                if (value.trim().length < 4)
-                  return "PIN must be at least 4 characters";
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
+              _PremiumField(
+                controller: _confirmPinController,
+                label: "Confirm PIN",
+                hint: "Re-enter your PIN",
+                icon: Icons.lock_outline_rounded,
+                obscureText: _obscureConfirmPin,
+                textInputAction: TextInputAction.done,
+                keyboardType: TextInputType.number,
+                onSubmitted: (_) => _handleRegister(),
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscureConfirmPin
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    size: 20,
+                  ),
+                  onPressed: () =>
+                      setState(() => _obscureConfirmPin = !_obscureConfirmPin),
+                ),
+                validator: (value) {
+                  if (!_isCreatingSociety) {
+                    if (value == null || value.trim().isEmpty) {
+                      return "Please confirm your PIN";
+                    }
+                    if (value.trim() != _pinController.text.trim()) {
+                      return "PINs do not match";
+                    }
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+            ],
 
-            _PremiumField(
-              controller: _confirmPinController,
-              label: "Confirm PIN",
-              hint: "Re-enter your PIN",
-              icon: Icons.lock_outline_rounded,
-              obscureText: _obscureConfirmPin,
-              textInputAction: TextInputAction.done,
-              keyboardType: TextInputType.number,
-              onSubmitted: (_) => _handleRegister(),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureConfirmPin
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
-                  size: 20,
-                ),
-                onPressed: () =>
-                    setState(() => _obscureConfirmPin = !_obscureConfirmPin),
-              ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty)
-                  return "Please confirm your PIN";
-                if (value.trim() != _pinController.text.trim())
-                  return "PINs do not match";
-                return null;
-              },
-            ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 12),
 
             SizedBox(
               height: 56,
@@ -1066,9 +966,9 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                     borderRadius: BorderRadius.circular(16),
                   ),
                 ),
-                child: const Text(
-                  "CREATE ACCOUNT",
-                  style: TextStyle(
+                child: Text(
+                  _isCreatingSociety ? "VERIFY OTP & CREATE" : "CREATE ACCOUNT",
+                  style: const TextStyle(
                     fontWeight: FontWeight.w900,
                     letterSpacing: 1.2,
                     fontSize: 16,
@@ -1110,6 +1010,175 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildStateDropdown(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "State",
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.dividerColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: DropdownButtonFormField<String>(
+            value: _selectedState,
+            isExpanded: true,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              prefixIcon:
+                  Icon(Icons.map_rounded, color: theme.colorScheme.primary),
+            ),
+            hint: Text(
+              "Select state",
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            items: _stateOptions
+                .map((st) => DropdownMenuItem<String>(
+                      value: st['name'],
+                      child: Text(
+                        st['name'] ?? '',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ))
+                .toList(),
+            validator: (value) {
+              if (_isCreatingSociety && (value == null || value.isEmpty)) {
+                return "Please select State";
+              }
+              return null;
+            },
+            onChanged: (value) {
+              final stateMap = _stateOptions.firstWhere(
+                (st) => st['name'] == value,
+                orElse: () => {'id': '', 'name': ''},
+              );
+
+              setState(() {
+                _selectedState = value;
+                _selectedStateId = stateMap['id'];
+                _selectedCity = null;
+              });
+
+              if (_selectedStateId != null && _selectedStateId!.isNotEmpty) {
+                _loadCitiesForState(_selectedStateId!);
+              }
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCityDropdown(ThemeData theme) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "City",
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w800,
+            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            letterSpacing: 0.2,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: theme.dividerColor),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: DropdownButtonFormField<String>(
+            value: _selectedCity,
+            isExpanded: true,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              prefixIcon: Icon(Icons.location_on_rounded,
+                  color: theme.colorScheme.primary),
+            ),
+            hint: Text(
+              "Select city",
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            items: _cityOptions
+                .map((city) => DropdownMenuItem<String>(
+                      value: city['name'],
+                      child: Text(
+                        city['name'] ?? '',
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ))
+                .toList(),
+            validator: (value) {
+              if (_isCreatingSociety && (value == null || value.isEmpty)) {
+                return "Please select City";
+              }
+              return null;
+            },
+            onChanged: (_selectedStateId == null || _selectedStateId!.isEmpty)
+                ? null
+                : (value) => setState(() => _selectedCity = value),
+            disabledHint: Text(
+              "Select state first",
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -1204,6 +1273,402 @@ class _PremiumField extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// Returned after OTP verify
+class _OtpAuthResult {
+  final String uid;
+  final String authPhone; // E.164
+  const _OtpAuthResult({required this.uid, required this.authPhone});
+}
+
+/// Full-screen OTP verify UI (premium admin-like)
+class OtpVerifyScreen extends StatefulWidget {
+  final String phoneE164; // +91xxxxxxxxxx
+  const OtpVerifyScreen({super.key, required this.phoneE164});
+
+  @override
+  State<OtpVerifyScreen> createState() => _OtpVerifyScreenState();
+}
+
+class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
+  final FirebaseAuthService _authService = FirebaseAuthService();
+  final _otpController = TextEditingController();
+
+  bool _isLoading = false;
+
+  String? _verificationId;
+  int? _resendToken;
+
+  int _resendSeconds = 0;
+  Timer? _timer;
+
+  bool get _canResend => _resendSeconds <= 0 && !_isLoading;
+
+  @override
+  void initState() {
+    super.initState();
+    _sendOtp(first: true);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _otpController.dispose();
+    super.dispose();
+  }
+
+  void _startResendTimer([int seconds = 30]) {
+    _timer?.cancel();
+    setState(() => _resendSeconds = seconds);
+    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (!mounted) return;
+      if (_resendSeconds <= 1) {
+        t.cancel();
+        setState(() => _resendSeconds = 0);
+      } else {
+        setState(() => _resendSeconds -= 1);
+      }
+    });
+  }
+
+  String _maskE164(String e164) {
+    if (e164.length < 6) return e164;
+    final last4 = e164.substring(e164.length - 4);
+    return '${e164.substring(0, 3)}******$last4';
+  }
+
+  Future<void> _sendOtp({required bool first}) async {
+    if (_isLoading) return;
+
+    setState(() => _isLoading = true);
+    try {
+      final res = await _authService.verifyPhoneNumber(
+        phoneNumber: widget.phoneE164,
+        resendToken: first ? null : _resendToken,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _verificationId = res.verificationId;
+        _resendToken = res.resendToken;
+      });
+      _startResendTimer(30);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("OTP sent to ${_maskE164(widget.phoneE164)}"),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_friendlyPhoneError(e.code)),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.all(16),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _verifyOtp() async {
+    final code = _otpController.text.trim().replaceAll(RegExp(r'[^\d]'), '');
+    if (code.length != 6) {
+      _snack("Enter the 6-digit OTP");
+      return;
+    }
+
+    final vid = _verificationId;
+    if (vid == null || vid.isEmpty) {
+      _snack("Session expired. Please resend OTP.");
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await _authService.signInWithPhoneCredential(
+        verificationId: vid,
+        smsCode: code,
+      );
+
+      final user = FirebaseAuth.instance.currentUser;
+      final phone = user?.phoneNumber;
+
+      if (user == null || phone == null || phone.isEmpty) {
+        throw Exception("Auth user/phone missing after OTP verify.");
+      }
+
+      if (!mounted) return;
+      Navigator.of(context)
+          .pop(_OtpAuthResult(uid: user.uid, authPhone: phone));
+    } on FirebaseAuthException catch (e) {
+      _snack(_friendlyOtpError(e.code));
+    } catch (_) {
+      _snack("Verification failed. Try again.");
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _snack(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w700)),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
+  }
+
+  static String _friendlyPhoneError(String code) {
+    switch (code) {
+      case 'invalid-phone-number':
+        return 'Invalid phone number.';
+      case 'too-many-requests':
+        return 'Too many attempts. Try later.';
+      case 'quota-exceeded':
+        return 'OTP quota exceeded. Try later.';
+      default:
+        return 'Could not send OTP. Try again.';
+    }
+  }
+
+  static String _friendlyOtpError(String code) {
+    switch (code) {
+      case 'invalid-verification-code':
+        return 'Invalid OTP. Please try again.';
+      case 'session-expired':
+        return 'OTP expired. Please resend.';
+      case 'invalid-verification-id':
+        return 'Session expired. Please resend OTP.';
+      default:
+        return 'Verification failed. Try again.';
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+
+    return Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    cs.primary.withOpacity(0.12),
+                    theme.scaffoldBackgroundColor,
+                    theme.scaffoldBackgroundColor,
+                  ],
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: Column(
+                children: [
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed:
+                            _isLoading ? null : () => Navigator.pop(context),
+                        icon: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: cs.surface.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: Icon(Icons.arrow_back_rounded,
+                              color: cs.onSurface, size: 20),
+                        ),
+                      ),
+                      const Spacer(),
+                    ],
+                  ),
+                  const SizedBox(height: 18),
+                  SizedBox(
+                    width: 190,
+                    height: 140,
+                    child: Image.asset(
+                      'assets/illustrations/illustration_login_admin.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (ctx, __, ___) => Container(
+                        decoration: BoxDecoration(
+                          color: cs.primary.withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(24),
+                        ),
+                        child: Icon(
+                          Icons.verified_rounded,
+                          size: 64,
+                          color: cs.primary,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    "Verify OTP",
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      color: cs.onSurface,
+                      letterSpacing: -0.5,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    "OTP sent to ${_maskE164(widget.phoneE164)}",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: cs.onSurface.withOpacity(0.7),
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 18),
+                  Container(
+                    padding: const EdgeInsets.all(22),
+                    decoration: BoxDecoration(
+                      color: cs.surface,
+                      borderRadius: BorderRadius.circular(26),
+                      border: Border.all(
+                          color: theme.dividerColor.withOpacity(0.8)),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.06),
+                          blurRadius: 28,
+                          offset: const Offset(0, 14),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          "Enter 6-digit OTP",
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: cs.onSurface.withOpacity(0.72),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextField(
+                          controller: _otpController,
+                          keyboardType: TextInputType.number,
+                          maxLength: 6,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            letterSpacing: 10,
+                            fontWeight: FontWeight.w900,
+                          ),
+                          decoration: InputDecoration(
+                            counterText: '',
+                            hintText: "••••••",
+                            filled: true,
+                            fillColor: theme.scaffoldBackgroundColor,
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 16),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: theme.dividerColor),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide: BorderSide(color: theme.dividerColor),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                              borderSide:
+                                  BorderSide(color: cs.primary, width: 1.4),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: 54,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _verifyOtp,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: cs.primary,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    height: 22,
+                                    width: 22,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2, color: Colors.white),
+                                  )
+                                : const Text(
+                                    "VERIFY & CONTINUE",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 1.0,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        TextButton(
+                          onPressed:
+                              _canResend ? () => _sendOtp(first: false) : null,
+                          child: Text(
+                            _canResend
+                                ? "Resend OTP"
+                                : "Resend in $_resendSeconds s",
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              color: _canResend
+                                  ? cs.primary
+                                  : cs.onSurface.withOpacity(0.45),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

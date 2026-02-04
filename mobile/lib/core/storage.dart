@@ -72,7 +72,47 @@ class Storage {
   static const String _kAdminName = "admin_name";
   static const String _kAdminSocietyId = "admin_society_id";
   static const String _kAdminRole = "admin_role";
-  static const String _kAdminSystemRole = "admin_system_role"; // ✅ NEW (backward compatible)
+  static const String _kAdminSystemRole =
+      "admin_system_role"; // ✅ NEW (backward compatible)
+
+  // =========================
+  // Role Hint (Admin / Resident / Guard)
+  // =========================
+
+  static String? lastRoleHint;
+
+  /// Save last selected role (UI intent only)
+  static Future<void> saveLastRoleHint(String role) async {
+    lastRoleHint = role;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('lastRoleHint', role);
+  }
+
+  static Future<void> setAdminJoinSocietyId(String societyId) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('adminJoinSocietyId', societyId);
+  }
+
+  static Future<String?> getAdminJoinSocietyId() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('adminJoinSocietyId');
+  }
+
+  static Future<void> clearAdminJoinSocietyId() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('adminJoinSocietyId');
+  }
+
+  // ✅ Backward compatible aliases (so code can call save/get/clear consistently)
+  static Future<void> saveAdminJoinSocietyId(String societyId) async {
+    await setAdminJoinSocietyId(societyId);
+  }
+
+  /// Load role hint on app startup
+  static Future<void> loadLastRoleHint() async {
+    final prefs = await SharedPreferences.getInstance();
+    lastRoleHint = prefs.getString('lastRoleHint');
+  }
 
   // Resident join-request helper (directory-based onboarding)
   static const String _kResidentJoinSocietyId = "resident_join_society_id";
@@ -267,14 +307,16 @@ class Storage {
   static Future<void> saveFirebaseSession({
     required String uid,
     required String societyId,
-    required String systemRole, // "admin" | "super_admin" | "guard" | "resident"
+    required String
+        systemRole, // "admin" | "super_admin" | "guard" | "resident"
     String? societyRole,
     required String name,
     String? flatNo,
   }) async {
     await _secure.write(key: _kUid, value: uid);
     await _secure.write(key: _kSocietyId, value: societyId);
-    await _secure.write(key: _kSystemRole, value: _normalizeSystemRole(systemRole));
+    await _secure.write(
+        key: _kSystemRole, value: _normalizeSystemRole(systemRole));
     if (societyRole != null) {
       await _secure.write(key: _kSocietyRole, value: societyRole);
     } else {
@@ -328,7 +370,8 @@ class Storage {
     if (r.isEmpty) return '';
 
     // normalize super admin variants
-    if (r == 'super_admin' || r == 'super admin' || r == 'superadmin') return 'super_admin';
+    if (r == 'super_admin' || r == 'super admin' || r == 'superadmin')
+      return 'super_admin';
 
     // keep admin/guard/resident as-is
     if (r == 'admin' || r == 'guard' || r == 'resident') return r;

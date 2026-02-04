@@ -245,6 +245,17 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
 
         final role = widget.roleHint?.toLowerCase();
 
+        if (role == 'admin') {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => const AdminOnboardingScreen(
+                defaultJoinMode: true, // ✅ important
+              ),
+            ),
+          );
+          return;
+        }
+
         if (role == 'guard') {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(builder: (_) => const GuardJoinScreen()),
@@ -252,21 +263,14 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
           return;
         }
 
-        if (role == 'resident') {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const FindSocietyScreen()),
-          );
-          return;
-        }
+        // resident default
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => FindSocietyScreen(
+                mode: (widget.roleHint ?? 'resident').toLowerCase()),
+          ),
+        );
 
-        if (role == 'admin') {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const AdminOnboardingScreen()),
-          );
-          return;
-        }
-
-        _showNoAccountDialog();
         return;
       }
 
@@ -334,6 +338,10 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
       // ✅ Admin pending approval
       if (systemRole == 'admin' && !active) {
         if (!mounted) return;
+        final contact =
+            FirebaseAuth.instance.currentUser?.phoneNumber?.trim() ??
+                FirebaseAuth.instance.currentUser?.email?.trim() ??
+                '';
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => AdminPendingApprovalScreen(

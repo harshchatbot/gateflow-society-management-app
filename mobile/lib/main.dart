@@ -9,6 +9,8 @@ import 'ui/sentinel_theme.dart';
 import 'services/notification_service.dart';
 
 import 'screens/app_bootstrap_screen.dart';
+import 'core/storage.dart';
+
 
 
 // Background message handler (must be top-level)
@@ -46,6 +48,8 @@ Future<void> main() async {
       debugPrint("Firebase initialized successfully.");
     }
 
+    await Storage.loadLastRoleHint();
+
     // Set up background message handler
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
@@ -60,6 +64,9 @@ Future<void> main() async {
       debugPrint("Firebase initialization failed: $e");
       debugPrint("Skipping notification service initialization (Firebase not available)");
     }
+
+    await Storage.loadLastRoleHint();
+
   }
 
 

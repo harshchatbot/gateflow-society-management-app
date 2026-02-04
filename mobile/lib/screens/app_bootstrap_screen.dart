@@ -5,15 +5,16 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../core/storage.dart';
 import '../core/society_modules.dart';
 import '../core/session_gate_service.dart';
-import 'onboarding_welcome_screen.dart';
-import 'onboarding_choose_role_screen.dart';
-import 'guard_shell_screen.dart';
-import 'resident_shell_screen.dart';
-import 'resident_pending_approval_screen.dart';
-import 'admin_shell_screen.dart';
 
-/// App entry: starts with the welcome (namaste) screen and runs session check.
-/// If user is already logged in, replaces with the appropriate shell; otherwise stays on welcome.
+import 'admin_pending_approval_screen.dart';
+import 'admin_shell_screen.dart';
+import 'find_society_screen.dart';
+import 'guard_shell_screen.dart';
+import 'onboarding_choose_role_screen.dart';
+import 'onboarding_welcome_screen.dart';
+import 'resident_pending_approval_screen.dart';
+import 'resident_shell_screen.dart';
+
 class AppBootstrapScreen extends StatefulWidget {
   const AppBootstrapScreen({super.key});
 
@@ -34,7 +35,11 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
     Widget? targetScreen;
 
     try {
+      // ✅ load role hint early (prefs)
+      await Storage.loadLastRoleHint();
+
       final firebaseUser = FirebaseAuth.instance.currentUser;
+
       if (firebaseUser != null) {
         try {
           final gate = SessionGateService();
@@ -43,79 +48,115 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
                     const Duration(seconds: 5),
                     onTimeout: () => GateResult.blocked(
                       GateBlockReason.membershipNotFound,
-                      'This society is currently inactive. Please contact the society admin.',
+                      'Unable to verify membership. Please try again.',
                     ),
                   );
 
+          // ✅ If allowed + membership exists → route to correct shell/pending
           if (gateResult.allowed && gateResult.memberInfo != null && mounted) {
             final membership = gateResult.memberInfo!;
             final societyId = membership['societyId'] as String? ?? '';
             if (societyId.isNotEmpty) {
               await SocietyModules.ensureLoaded(societyId);
             }
-            final systemRole = membership['systemRole'] as String? ?? '';
+
+            final systemRole = (membership['systemRole'] as String? ?? '')
+                .trim()
+                .toLowerCase();
             final name = membership['name'] as String? ?? '';
             final flatNo = membership['flatNo'] as String?;
             final societyRole = membership['societyRole'] as String?;
+            final active = membership['active'] == true;
 
-            if (systemRole == 'admin' && societyId.isNotEmpty) {
-              targetScreen = AdminShellScreen(
-                adminId: firebaseUser.uid,
-                adminName: name.isNotEmpty ? name : "Admin",
-                societyId: societyId,
-                role: societyRole ?? 'ADMIN',
-                systemRole: systemRole,
-              );
+            if ((systemRole == 'admin' || systemRole == 'super_admin') &&
+                societyId.isNotEmpty) {
+              if (systemRole == 'admin' && !active) {
+                targetScreen = AdminPendingApprovalScreen(
+                  adminId: firebaseUser.uid,
+                  societyId: societyId,
+                  adminName: name.isNotEmpty ? name : "Admin",
+                );
+              } else {
+                targetScreen = AdminShellScreen(
+                  adminId: firebaseUser.uid,
+                  adminName: name.isNotEmpty ? name : "Admin",
+                  societyId: societyId,
+                  role: (societyRole ?? 'ADMIN').toUpperCase(),
+                  systemRole: systemRole,
+                );
+              }
             } else if (systemRole == 'guard' && societyId.isNotEmpty) {
               targetScreen = GuardShellScreen(
                 guardId: firebaseUser.uid,
                 guardName: name.isNotEmpty ? name : "Guard",
                 societyId: societyId,
               );
-            } else if (systemRole == 'resident' &&
-                flatNo != null &&
-                societyId.isNotEmpty) {
-              targetScreen = ResidentShellScreen(
-                residentId: firebaseUser.uid,
-                residentName: name.isNotEmpty ? name : "Resident",
-                societyId: societyId,
-                flatNo: flatNo,
-              );
+            } else if (systemRole == 'resident' && societyId.isNotEmpty) {
+              if (!active) {
+                targetScreen = ResidentPendingApprovalScreen(
+                  residentId: firebaseUser.uid,
+                  societyId: societyId,
+                  residentName: name.isNotEmpty ? name : "Resident",
+                );
+              } else if (flatNo != null && flatNo.isNotEmpty) {
+                targetScreen = ResidentShellScreen(
+                  residentId: firebaseUser.uid,
+                  residentName: name.isNotEmpty ? name : "Resident",
+                  societyId: societyId,
+                  flatNo: flatNo,
+                );
+              }
             }
           }
 
-          if (!gateResult.allowed && mounted) {
-            bool handled = false;
-
-            // Special case: resident with no membership but a pending join request.
+          // ❌ If NOT allowed (membership missing/inactive/blocked) → handle onboarding routing
+          if (targetScreen == null && !gateResult.allowed && mounted) {
+            // If membership is missing, route by role hint ONLY.
             if (gateResult.blockReason == GateBlockReason.membershipNotFound) {
-              final pendingSocietyId = await Storage.getResidentJoinSocietyId();
-              if (pendingSocietyId != null) {
-                final uid = firebaseUser.uid;
+              final roleHint = (Storage.lastRoleHint ?? '').trim().toLowerCase();
 
-                final contact = firebaseUser.phoneNumber?.trim() ??
-                    firebaseUser.email?.trim() ??
-                    'Phone login';
-
-                targetScreen = ResidentPendingApprovalScreen(
-                  residentId: uid,
-                  societyId: pendingSocietyId,
-                  residentName: 'Resident', // you don’t know name yet
-                  email: contact, // optional
-                );
-
-                handled = true;
+              // ✅ If no role hint, always go to Choose Role (this fixes your issue)
+              if (roleHint.isEmpty) {
+                targetScreen = const OnboardingChooseRoleScreen();
+              } else if (roleHint == 'admin') {
+                final pendingSocietyId = await Storage.getAdminJoinSocietyId();
+                if (pendingSocietyId != null) {
+                  targetScreen = AdminPendingApprovalScreen(
+                    adminId: firebaseUser.uid,
+                    societyId: pendingSocietyId,
+                    adminName: 'Admin',
+                  );
+                } else {
+                  targetScreen = const FindSocietyScreen(mode: 'admin');
+                }
+              } else if (roleHint == 'resident') {
+                final pendingSocietyId = await Storage.getResidentJoinSocietyId();
+                if (pendingSocietyId != null) {
+                  targetScreen = ResidentPendingApprovalScreen(
+                    residentId: firebaseUser.uid,
+                    societyId: pendingSocietyId,
+                    residentName: 'Resident',
+                  );
+                } else {
+                  targetScreen = const FindSocietyScreen(mode: 'resident');
+                }
+              } else if (roleHint == 'guard') {
+                // For guard, never show FindSociety
+                targetScreen = const OnboardingChooseRoleScreen();
+              } else {
+                targetScreen = const OnboardingChooseRoleScreen();
               }
-            }
-
-            if (!handled) {
+            } else {
+              // Other blocks (inactive society, etc.)
               try {
                 await FirebaseAuth.instance.signOut();
                 await Storage.clearAllSessions();
                 await Storage.clearFirebaseSession();
                 SocietyModules.clear();
-                GateBlockMessage.set(gateResult.userMessage ??
-                    'This society is currently inactive. Please contact the society admin.');
+                GateBlockMessage.set(
+                  gateResult.userMessage ??
+                      'Access blocked. Please contact your society admin.',
+                );
               } catch (_) {}
               targetScreen = const OnboardingChooseRoleScreen();
             }
@@ -131,53 +172,7 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
             await Storage.clearFirebaseSession();
             SocietyModules.clear();
           } catch (_) {}
-        }
-      }
-
-      if (targetScreen == null && mounted) {
-        try {
-          final residentSession = await Storage.getResidentSession();
-          final guardSession = await Storage.getGuardSession();
-          final adminSession = await Storage.getAdminSession();
-          final session = await Storage.getFirebaseSession();
-          final systemRole = (session?['systemRole'] ?? 'admin')
-              .toString()
-              .trim()
-              .toLowerCase();
-          final societyRole = (session?['societyRole'] ?? 'ADMIN').toString();
-          if (residentSession != null) {
-            await SocietyModules.ensureLoaded(residentSession.societyId);
-            targetScreen = ResidentShellScreen(
-              residentId: residentSession.residentId,
-              residentName: residentSession.residentName,
-              societyId: residentSession.societyId,
-              flatNo: residentSession.flatNo,
-            );
-          } else if (guardSession != null) {
-            await SocietyModules.ensureLoaded(guardSession.societyId);
-            targetScreen = GuardShellScreen(
-              guardId: guardSession.guardId,
-              guardName: guardSession.guardName.isNotEmpty
-                  ? guardSession.guardName
-                  : "Guard",
-              societyId: guardSession.societyId.isNotEmpty
-                  ? guardSession.societyId
-                  : "Society",
-            );
-          } else if (adminSession != null) {
-            await SocietyModules.ensureLoaded(adminSession.societyId);
-            targetScreen = AdminShellScreen(
-              adminId: adminSession.adminId,
-              adminName: adminSession.adminName,
-              societyId: adminSession.societyId,
-              role: adminSession.role,
-              systemRole: systemRole,
-            );
-          }
-        } catch (e) {
-          if (kDebugMode) {
-            debugPrint("Error loading session: $e");
-          }
+          targetScreen = const OnboardingChooseRoleScreen();
         }
       }
 
