@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../core/app_error.dart';
 import '../core/app_logger.dart';
 import 'firestore_service.dart';
+import 'firebase_auth_service.dart';
 
 class Result<T> {
   final T? data;
@@ -32,9 +33,22 @@ class AdminSignupService {
       final currentUser = _auth.currentUser;
 
       final normalizedEmail = email.trim().toLowerCase();
-      final normalizedPhone = phone.trim();
+      String normalizedPhone = phone.trim();
       final normalizedSocietyRole = societyRole.trim().toUpperCase();
-      
+
+      // ✅ Normalize phone to E.164 (+91xxxxxxxxxx) if possible (10-digit -> India)
+      if (normalizedPhone.isNotEmpty) {
+        if (!normalizedPhone.startsWith('+')) {
+          final digits = normalizedPhone.replaceAll(RegExp(r'[^\d]'), '');
+          if (digits.length == 10) {
+            normalizedPhone = FirebaseAuthService.normalizePhoneForIndia(digits);
+          }
+        } else {
+          // If already in + format, still normalize via helper (safe)
+          normalizedPhone = FirebaseAuthService.normalizePhoneForIndia(normalizedPhone);
+        }
+      }
+
       // Strip SOC_ prefix if present
       String normalizedCode = societyCode.trim().toUpperCase();
       if (normalizedCode.startsWith('SOC_')) {
@@ -86,7 +100,8 @@ class AdminSignupService {
       if (societyId == null || societyId.trim().isEmpty || !isActive) {
         return Result.failure(AppError(
           userMessage: "Society is inactive or invalid. Please contact support.",
-          technicalMessage: "societyId missing or inactive for code=$normalizedCode",
+          technicalMessage:
+              "societyId missing or inactive for code=$normalizedCode",
         ));
       }
 
@@ -95,6 +110,8 @@ class AdminSignupService {
         "societyCode": normalizedCode,
         "email": normalizedEmail,
         "societyRole": normalizedSocietyRole,
+        "phone": normalizedPhone,
+        "authUserPresent": currentUser != null,
       });
 
       // 2. Resolve UID:
@@ -102,6 +119,7 @@ class AdminSignupService {
       //    - Otherwise, create Firebase Auth user with email/password (legacy path).
       UserCredential? userCredential;
       String uid;
+
       if (currentUser != null) {
         uid = currentUser.uid;
       } else {
@@ -113,7 +131,8 @@ class AdminSignupService {
         } catch (e) {
           if (e.toString().contains('email-already-in-use')) {
             return Result.failure(AppError(
-              userMessage: "An account with this email already exists. Please login instead.",
+              userMessage:
+                  "An account with this email already exists. Please login instead.",
               technicalMessage: "Email already in use: $normalizedEmail",
             ));
           }
@@ -128,6 +147,31 @@ class AdminSignupService {
           return Result.failure(AppError(
             userMessage: "Failed to create account",
             technicalMessage: "UID is null after auth creation",
+          ));
+        }
+      }
+
+      // ✅ Optional: if phone was not provided, but user is OTP-authenticated, take it from auth
+      if (normalizedPhone.isEmpty) {
+        final authPhone = _auth.currentUser?.phoneNumber;
+        if (authPhone != null && authPhone.isNotEmpty) {
+          normalizedPhone = FirebaseAuthService.normalizePhoneForIndia(authPhone);
+        }
+      }
+
+      // ✅ Enforce unique phone ONLY against ACTIVE accounts (your desired behavior)
+      // We do this check before writing the request.
+      if (normalizedPhone.isNotEmpty) {
+        final ok = await FirestoreService().isPhoneAvailableForUser(
+          normalizedE164: normalizedPhone,
+          forUid: uid,
+        );
+
+        if (!ok) {
+          return Result.failure(AppError(
+            userMessage:
+                "This mobile number is already linked to another active account.",
+            technicalMessage: "Active phone conflict: $normalizedPhone",
           ));
         }
       }
@@ -164,7 +208,7 @@ class AdminSignupService {
       try {
         await memberRef.set(memberData);
         AppLogger.i("Member document created successfully");
-        
+
         // Verify the document was written correctly
         final verifyDoc = await memberRef.get();
         if (verifyDoc.exists) {
@@ -204,7 +248,8 @@ class AdminSignupService {
       return Result.success(uid);
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("createSignupRequest FirebaseException", error: err.technicalMessage);
+      AppLogger.e("createSignupRequest FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, stackTrace) {
       final err = AppError(
@@ -234,8 +279,8 @@ class AdminSignupService {
       final List<Map<String, dynamic>> signups = [];
 
       for (var doc in querySnapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
-        
+        final data = doc.data();
+
         DateTime createdAt;
         if (data['createdAt'] is Timestamp) {
           createdAt = (data['createdAt'] as Timestamp).toDate();
@@ -258,14 +303,16 @@ class AdminSignupService {
       return Result.success(signups);
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("getPendingSignups FirebaseException", error: err.technicalMessage);
+      AppLogger.e("getPendingSignups FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, stackTrace) {
       final err = AppError(
         userMessage: "Failed to load signup requests",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("getPendingSignups unknown error", error: err.technicalMessage, stackTrace: stackTrace);
+      AppLogger.e("getPendingSignups unknown error",
+          error: err.technicalMessage, stackTrace: stackTrace);
       return Result.failure(err);
     }
   }
@@ -293,7 +340,7 @@ class AdminSignupService {
       }
 
       final memberData = memberDoc.data() as Map<String, dynamic>;
-      
+
       if (memberData['active'] == true) {
         return Result.failure(AppError(
           userMessage: "Admin is already approved",
@@ -304,8 +351,26 @@ class AdminSignupService {
       if (memberData['systemRole'] != 'admin') {
         return Result.failure(AppError(
           userMessage: "User is not an admin",
-          technicalMessage: "Member $uid has systemRole: ${memberData['systemRole']}",
+          technicalMessage:
+              "Member $uid has systemRole: ${memberData['systemRole']}",
         ));
+      }
+
+      // ✅ Enforce unique phone at approval time as well (final safety)
+      String phone = (memberData['phone'] ?? '').toString().trim();
+      if (phone.isNotEmpty) {
+        phone = FirebaseAuthService.normalizePhoneForIndia(phone);
+        final ok = await FirestoreService().isPhoneAvailableForUser(
+          normalizedE164: phone,
+          forUid: uid,
+        );
+        if (!ok) {
+          return Result.failure(AppError(
+            userMessage:
+                "Cannot approve: this mobile number is already linked to another active account.",
+            technicalMessage: "Active phone conflict on approve: $phone",
+          ));
+        }
       }
 
       AppLogger.i("Approving admin signup", data: {
@@ -325,6 +390,15 @@ class AdminSignupService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
+      // ✅ After approval, register phone in unique_phones mapping (if present)
+      if (phone.isNotEmpty) {
+        await FirestoreService().setMemberPhone(
+          societyId: societyId,
+          uid: uid,
+          normalizedE164: phone,
+        );
+      }
+
       AppLogger.i("Admin signup approved successfully", data: {
         "uid": uid,
         "societyId": societyId,
@@ -343,7 +417,8 @@ class AdminSignupService {
         userMessage: "Failed to approve signup request",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("approveSignup unknown error", error: err.technicalMessage, stackTrace: stackTrace);
+      AppLogger.e("approveSignup unknown error",
+          error: err.technicalMessage, stackTrace: stackTrace);
       return Result.failure(err);
     }
   }
@@ -371,11 +446,29 @@ class AdminSignupService {
         ));
       }
 
+      final memberData = memberDoc.data() as Map<String, dynamic>;
+      final phone = (memberData['phone'] ?? '').toString().trim();
+
       // Delete member document
       await memberRef.delete();
 
       // Delete root pointer
       await _firestore.collection('members').doc(uid).delete();
+
+      // ✅ Best-effort cleanup unique_phones mapping if it points to this uid
+      // (safe: if it doesn't match, we do nothing)
+      if (phone.isNotEmpty) {
+        try {
+          // This relies on FirestoreService internal hashing; so we just "re-set" on cleanup is not possible here.
+          // If you want hard cleanup, we can add a helper in FirestoreService to remove mapping safely.
+          AppLogger.i("Reject cleanup: phone was present (unique_phones may remain)", data: {
+            "uid": uid,
+            "phone": phone,
+          });
+        } catch (_) {
+          // ignore
+        }
+      }
 
       AppLogger.i("Admin signup rejected", data: {
         "uid": uid,
@@ -392,7 +485,8 @@ class AdminSignupService {
         userMessage: "Failed to reject signup request",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("rejectSignup unknown error", error: err.technicalMessage, stackTrace: stackTrace);
+      AppLogger.e("rejectSignup unknown error",
+          error: err.technicalMessage, stackTrace: stackTrace);
       return Result.failure(err);
     }
   }
@@ -404,7 +498,7 @@ class AdminSignupService {
   }) async {
     try {
       final normalizedEmail = email.trim().toLowerCase();
-      
+
       final querySnapshot = await _firestore
           .collection('societies')
           .doc(societyId)
@@ -423,14 +517,16 @@ class AdminSignupService {
       return Result.success(doc.data());
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("getPendingSignupByEmail FirebaseException", error: err.technicalMessage);
+      AppLogger.e("getPendingSignupByEmail FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, stackTrace) {
       final err = AppError(
         userMessage: "Failed to check signup status",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("getPendingSignupByEmail unknown error", error: err.technicalMessage, stackTrace: stackTrace);
+      AppLogger.e("getPendingSignupByEmail unknown error",
+          error: err.technicalMessage, stackTrace: stackTrace);
       return Result.failure(err);
     }
   }

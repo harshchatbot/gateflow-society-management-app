@@ -1,17 +1,27 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/app_logger.dart';
-import '../services/admin_signup_service.dart';
+import '../core/storage.dart';
+import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import '../ui/app_loader.dart';
-import '../ui/app_icons.dart';
 import 'admin_login_screen.dart';
+import 'admin_pending_approval_screen.dart';
 import 'admin_onboarding_screen.dart';
-import 'package:flutter/foundation.dart';
 
 class AdminSignupScreen extends StatefulWidget {
-  const AdminSignupScreen({super.key});
+  final String societyId;
+  final String societyName;
+  final String cityId;
+
+  const AdminSignupScreen({
+    super.key,
+    required this.societyId,
+    required this.societyName,
+    required this.cityId,
+  });
 
   @override
   State<AdminSignupScreen> createState() => _AdminSignupScreenState();
@@ -22,16 +32,10 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
-  final _societyCodeController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
 
-  final AdminSignupService _signupService = AdminSignupService();
   final FirestoreService _firestoreService = FirestoreService();
-  
+
   bool _isLoading = false;
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
   bool _signupSuccess = false;
   String _selectedRole = "ADMIN";
 
@@ -44,51 +48,100 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+
+    final user = FirebaseAuth.instance.currentUser;
+    final phone = user?.phoneNumber ?? '';
+    final normalized = FirebaseAuthService.normalizePhoneForIndia(phone);
+
+    _phoneController.text = normalized;
+    _nameController.text = (user?.displayName ?? '').trim();
+    _emailController.text = (user?.email ?? '').trim();
+  }
+
+  @override
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
-    _societyCodeController.dispose();
-    _passwordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleSignup() async {
+  Future<void> _handleRequestAccess() async {
     if (!_formKey.currentState!.validate()) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showError("You are not logged in. Please login again.");
+      return;
+    }
 
     setState(() => _isLoading = true);
 
     try {
-      // Service now handles society code resolution internally
-      final result = await _signupService.createSignupRequest(
-        societyCode: _societyCodeController.text.trim(),
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        phone: _phoneController.text.trim(),
-        password: _passwordController.text,
-        societyRole: _selectedRole,
+      final uid = user.uid;
+
+      final name = _nameController.text.trim();
+      final email = _emailController.text.trim();
+      final phoneFromAuth = (user.phoneNumber ?? '').trim();
+
+      // ✅ define normalizedPhone properly
+      final normalizedPhone = FirebaseAuthService.normalizePhoneForIndia(
+        phoneFromAuth.isNotEmpty ? phoneFromAuth : _phoneController.text.trim(),
       );
 
-      if (!mounted) return;
+      // Optional: if you want to store email in request payload and your method supports it,
+      // add it to the FirestoreService method signature. Otherwise keep it only in UI.
+      await _firestoreService.createAdminJoinRequest(
+        societyId: widget.societyId,
+        societyName: widget.societyName,
+        cityId: widget.cityId,
+        name: name,
+        phoneE164: normalizedPhone,
+        // societyRole: _selectedRole, // ✅ add this only if your firestore method supports it
+        // email: email,              // ✅ add this only if your firestore method supports it
+      );
 
-      if (result.isSuccess) {
-        setState(() {
-          _isLoading = false;
-          _signupSuccess = true;
-        });
-        AppLogger.i("Admin signup request created successfully");
-      } else {
-        setState(() => _isLoading = false);
-        _showError(result.error?.userMessage ?? "Failed to create signup request");
-      }
-    } catch (e, stackTrace) {
-      AppLogger.e("Signup exception", error: e, stackTrace: stackTrace);
+      // remember for bootstrap pending screen fallback
+      await Storage.setAdminJoinSocietyId(widget.societyId);
+
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _signupSuccess = true;
+      });
+
+      AppLogger.i("Admin join request created", data: {
+        "societyId": widget.societyId,
+        "role": _selectedRole,
+        "hasEmail": email.isNotEmpty,
+        "uid": uid,
+      });
+    } catch (e, st) {
+      AppLogger.e("Admin request exception", error: e, stackTrace: st);
       if (mounted) {
         setState(() => _isLoading = false);
-        _showError("An error occurred. Please try again.");
+        _showError("Failed to submit request. Please try again.");
       }
     }
+  }
+
+  void _goToPendingNow() {
+    final user = FirebaseAuth.instance.currentUser;
+    final uid = user?.uid ?? '';
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(
+        builder: (_) => AdminPendingApprovalScreen(
+          adminId: uid.isNotEmpty ? uid : 'admin',
+          societyId: widget.societyId,
+          adminName: _nameController.text.trim().isNotEmpty
+              ? _nameController.text.trim()
+              : 'Admin',
+          email: _phoneController.text.trim(), // backward compatible param
+        ),
+      ),
+    );
   }
 
   void _showError(String msg) {
@@ -144,7 +197,6 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
       ),
       body: Stack(
         children: [
-          // Gradient Background (onboarding theme)
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -167,17 +219,16 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
                 children: [
                   const SizedBox(height: 20),
                   _buildBrandHeader(),
-                  const SizedBox(height: 40),
-                  if (_signupSuccess)
-                    _buildSuccessCard()
-                  else
-                    _buildSignupForm(),
+                  const SizedBox(height: 18),
+                  _buildSocietyPill(),
+                  const SizedBox(height: 22),
+                  if (_signupSuccess) _buildSuccessCard() else _buildForm(),
                   const SizedBox(height: 24),
                 ],
               ),
             ),
           ),
-          AppLoader.overlay(show: _isLoading, message: "Creating Account…"),
+          AppLoader.overlay(show: _isLoading, message: "Submitting request…"),
         ],
       ),
     );
@@ -206,9 +257,9 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 18),
         Text(
-          "Admin Signup",
+          "Request Admin Access",
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w900,
@@ -218,7 +269,8 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          "Create your admin account",
+          "Super Admin will review and approve your request",
+          textAlign: TextAlign.center,
           style: TextStyle(
             color: theme.colorScheme.onSurface.withOpacity(0.7),
             fontWeight: FontWeight.w600,
@@ -229,7 +281,34 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
     );
   }
 
-  Widget _buildSignupForm() {
+  Widget _buildSocietyPill() {
+    final t = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: t.colorScheme.primary.withOpacity(0.10),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: t.colorScheme.primary.withOpacity(0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.apartment_rounded, size: 16, color: t.colorScheme.primary),
+          const SizedBox(width: 8),
+          Text(
+            widget.societyName.isNotEmpty ? widget.societyName : widget.societyId,
+            style: TextStyle(
+              color: t.colorScheme.primary,
+              fontWeight: FontWeight.w900,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildForm() {
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(28),
@@ -259,7 +338,8 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 28),
+            const SizedBox(height: 22),
+
             _PremiumField(
               controller: _nameController,
               label: "Full Name",
@@ -273,252 +353,137 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
                 return null;
               },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
+
             _PremiumField(
               controller: _emailController,
-              label: "Email Address",
+              label: "Email (optional)",
               hint: "e.g. admin@example.com",
               icon: Icons.email_rounded,
               textInputAction: TextInputAction.next,
               keyboardType: TextInputType.emailAddress,
               validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return "Please enter your email";
-                }
-                if (!value.contains('@')) {
-                  return "Please enter a valid email";
-                }
+                final v = (value ?? '').trim();
+                if (v.isEmpty) return null;
+                if (!v.contains('@')) return "Please enter a valid email";
                 return null;
               },
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 18),
+
+            // ✅ keep phone visible, but read-only (do not force digitsOnly because it may include +91)
             _PremiumField(
               controller: _phoneController,
-              label: "Phone Number",
-              hint: "10-digit mobile number",
+              label: "Phone (verified)",
+              hint: "",
               icon: Icons.phone_rounded,
               textInputAction: TextInputAction.next,
               keyboardType: TextInputType.phone,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              maxLength: 10,
+              readOnly: true,
+              enabled: true,
               validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return "Please enter your phone number";
-                }
-                if (value.length != 10) {
-                  return "Phone number must be 10 digits";
-                }
+                final v = (value ?? '').trim();
+                if (v.isEmpty) return "Phone is required";
                 return null;
               },
             ),
-            const SizedBox(height: 20),
-            _PremiumField(
-              controller: _societyCodeController,
-              label: "Society Code",
-              hint: "Enter your society code",
-              icon: Icons.business_rounded,
-              textInputAction: TextInputAction.next,
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return "Please enter your society code";
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            // Role Selection
-            Builder(
-              builder: (context) {
-                final t = Theme.of(context);
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Role",
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        color: t.colorScheme.onSurface.withOpacity(0.7),
-                        letterSpacing: 0.2,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: t.scaffoldBackgroundColor,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: t.dividerColor),
-                      ),
-                      child: DropdownButtonFormField<String>(
-                        value: _selectedRole,
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        ),
-                        items: _roles.map((role) {
-                          return DropdownMenuItem<String>(
-                            value: role,
-                            child: Text(
-                              role == "ADMIN" ? "ADMIN" : role,
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: t.colorScheme.onSurface,
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) {
-                            setState(() => _selectedRole = value);
-                          }
-                        },
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-            _PremiumField(
-              controller: _passwordController,
-              label: "Password",
-              hint: "Create a password",
-              icon: Icons.lock_rounded,
-              obscureText: _obscurePassword,
-              textInputAction: TextInputAction.next,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                  size: 20,
-                ),
-                onPressed: () {
-                  setState(() => _obscurePassword = !_obscurePassword);
-                },
+            const SizedBox(height: 18),
+
+            Text(
+              "Role",
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                letterSpacing: 0.2,
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return "Please enter a password";
-                }
-                if (value.length < 6) {
-                  return "Password must be at least 6 characters";
-                }
-                return null;
-              },
             ),
-            const SizedBox(height: 20),
-            _PremiumField(
-              controller: _confirmPasswordController,
-              label: "Confirm Password",
-              hint: "Re-enter your password",
-              icon: Icons.lock_outline_rounded,
-              obscureText: _obscureConfirmPassword,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _handleSignup(),
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                  size: 20,
-                ),
-                onPressed: () {
-                  setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
-                },
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: theme.dividerColor),
               ),
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return "Please confirm your password";
-                }
-                if (value != _passwordController.text) {
-                  return "Passwords do not match";
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-            Builder(
-              builder: (context) {
-                final t = Theme.of(context);
-                return SizedBox(
-                  height: 56,
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _handleSignup,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: t.colorScheme.primary,
-                      foregroundColor: t.colorScheme.onPrimary,
-                      elevation: 0,
-                      shadowColor: Colors.transparent,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                    ),
-                    child: const Text(
-                      "SIGN UP",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
-                        fontSize: 16,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 16),
-            Builder(
-              builder: (context) {
-                final t = Theme.of(context);
-                return Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          "Already have an account? ",
-                          style: TextStyle(
-                            color: t.colorScheme.onSurface.withOpacity(0.7),
-                            fontSize: 14,
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.of(context).pushReplacement(
-                              MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
-                            );
-                          },
+              child: DropdownButtonFormField<String>(
+                value: _selectedRole,
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+                items: _roles
+                    .map((role) => DropdownMenuItem<String>(
+                          value: role,
                           child: Text(
-                            "Login",
+                            role,
                             style: TextStyle(
-                              color: t.colorScheme.primary,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 14,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: theme.colorScheme.onSurface,
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    TextButton(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => const AdminOnboardingScreen()),
-                        );
-                      },
-                      child: Text(
-                        "Create New Society (Super Admin)",
-                        style: TextStyle(
-                          color: t.colorScheme.primary.withOpacity(0.8),
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ],
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) setState(() => _selectedRole = value);
+                },
+              ),
+            ),
+
+            const SizedBox(height: 22),
+
+            SizedBox(
+              height: 56,
+              child: ElevatedButton(
+                onPressed: _isLoading ? null : _handleRequestAccess,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: theme.colorScheme.onPrimary,
+                  elevation: 0,
+                  shadowColor: Colors.transparent,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: const Text(
+                  "REQUEST ACCESS",
+                  style: TextStyle(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1.2,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 12),
+            Text(
+              "We’ll notify you once Super Admin approves your access.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                fontWeight: FontWeight.w600,
+                fontSize: 12,
+              ),
+            ),
+
+            const SizedBox(height: 10),
+            TextButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AdminOnboardingScreen()),
                 );
               },
+              child: Text(
+                "Create New Society (Super Admin)",
+                style: TextStyle(
+                  color: theme.colorScheme.primary.withOpacity(0.85),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 12,
+                ),
+              ),
             ),
           ],
         ),
@@ -557,9 +522,9 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
               size: 50,
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
           Text(
-            "Signup Request Submitted!",
+            "Request Submitted!",
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w900,
@@ -567,9 +532,9 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
-            "Your signup request has been sent to the super admin for approval. You will be able to login once your request is approved.",
+            "Your request has been sent to the Super Admin for approval.",
             style: TextStyle(
               fontSize: 15,
               color: theme.colorScheme.onSurface.withOpacity(0.7),
@@ -577,16 +542,12 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 26),
           SizedBox(
             width: double.infinity,
             height: 56,
             child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
-                );
-              },
+              onPressed: _goToPendingNow,
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: theme.colorScheme.onPrimary,
@@ -596,12 +557,27 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
                 ),
               ),
               child: const Text(
-                "GO TO LOGIN",
+                "VIEW STATUS",
                 style: TextStyle(
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.2,
                   fontSize: 16,
                 ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const AdminLoginScreen()),
+              );
+            },
+            child: Text(
+              "Back to Login",
+              style: TextStyle(
+                color: theme.colorScheme.primary,
+                fontWeight: FontWeight.w900,
               ),
             ),
           ),
@@ -627,6 +603,7 @@ class _PremiumField extends StatelessWidget {
   final List<TextInputFormatter>? inputFormatters;
   final int? maxLength;
   final bool enabled;
+  final bool readOnly;
 
   const _PremiumField({
     required this.controller,
@@ -642,6 +619,7 @@ class _PremiumField extends StatelessWidget {
     this.inputFormatters,
     this.maxLength,
     this.enabled = true,
+    this.readOnly = false,
   });
 
   @override
@@ -683,6 +661,7 @@ class _PremiumField extends StatelessWidget {
             inputFormatters: inputFormatters,
             maxLength: maxLength,
             enabled: enabled,
+            readOnly: readOnly,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
@@ -706,10 +685,7 @@ class _PremiumField extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 18,
-              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             ),
           ),
         ),

@@ -228,34 +228,84 @@ class FirestoreService {
     required String name,
     String? city,
     String? state,
-    required String createdByUid,
+    required String createdByUid, // keep for signature compatibility
   }) async {
     try {
+      final now = FieldValue.serverTimestamp();
+
+      final authUid = FirebaseAuth.instance.currentUser?.uid;
+      if (authUid == null) {
+        throw Exception('NOT_SIGNED_IN');
+      }
+
+      // ✅ Always align with Firestore rules
+      final effectiveCreatedByUid = authUid;
+
+      final normalizedCode = code.trim().toUpperCase();
+      final nameLower = name.trim().toLowerCase();
+
+      AppLogger.i('createSociety UID check', data: {
+        'authUid': authUid,
+        'createdByUid_param': createdByUid,
+        'effectiveCreatedByUid': effectiveCreatedByUid,
+        'societyId': societyId,
+        'code': normalizedCode,
+      });
+
+      // =========================================================
+      // ✅ PRECHECK: if already exists → throw frontend-friendly error
+      // =========================================================
+      AppLogger.i('Precheck existing society', data: {
+        'societyId': societyId,
+        'code': normalizedCode,
+      });
+
+      final codeSnap = await _societyCodesRef.doc(normalizedCode).get();
+      if (codeSnap.exists) {
+        throw Exception('SOCIETY_ALREADY_EXISTS:SOCIETY_CODE');
+      }
+
       final societyData = {
         'name': name,
-        'code': code,
+        'code': normalizedCode,
         'city': city,
         'state': state,
         'active': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'createdByUid': createdByUid,
+        'createdAt': now,
+        'createdByUid': effectiveCreatedByUid,
         'modules': defaultSocietyModules,
       };
 
-      // Create society document
+      final publicSocietyData = {
+        'name': name,
+        'nameLower': nameLower,
+        'code': normalizedCode,
+        'city': city,
+        'state': state,
+        'active': true,
+        'createdAt': now,
+        'updatedAt': now,
+        'createdByUid': effectiveCreatedByUid,
+      };
+
+      AppLogger.i('Writing societies doc',
+          data: {'path': 'societies/$societyId'});
       await _societyRef(societyId).set(societyData);
 
-      // Create society code mapping (normalize to uppercase for consistency)
-      final normalizedCode = code.trim().toUpperCase();
+      AppLogger.i('Writing societyCodes doc',
+          data: {'path': 'societyCodes/$normalizedCode'});
       await _societyCodesRef.doc(normalizedCode).set({
         'societyId': societyId,
         'active': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'createdByUid': createdByUid,
+        'createdAt': now,
+        'createdByUid': effectiveCreatedByUid,
       });
 
-      AppLogger.i('Society created',
-          data: {'societyId': societyId, 'code': code});
+      AppLogger.i('Society created', data: {
+        'societyId': societyId,
+        'code': normalizedCode,
+      });
+
       return societyData;
     } catch (e, stackTrace) {
       AppLogger.e('Error creating society', error: e, stackTrace: stackTrace);
@@ -272,52 +322,32 @@ class FirestoreService {
 
   /// Prefix search for active public societies by nameLower.
   /// Scales with index: where(active==true) + orderBy(nameLower) + startAt/endAt.
+
   Future<List<Map<String, dynamic>>> searchPublicSocietiesByPrefix(
       String query) async {
     final trimmed = query.trim().toLowerCase();
     if (trimmed.isEmpty) return [];
-    try {
-      final snapshot = await _publicSocietiesRef
-          .where('active', isEqualTo: true)
-          .orderBy('nameLower')
-          .startAt([trimmed])
-          .endAt(['$trimmed\uf8ff'])
-          .limit(25)
-          .get();
 
-      final societies = snapshot.docs.map((doc) {
-        final data = doc.data() as Map<String, dynamic>? ?? {};
-        return {
-          'id': doc.id,
-          'name': (data['name'] as String?) ?? doc.id,
-          'cityName': data['cityName'],
-          'stateName': data['stateName'],
-          'active': data['active'] ?? true,
-        };
-      }).toList();
+    final snapshot = await _publicSocietiesRef
+        .where('active', isEqualTo: true)
+        .orderBy('nameLower')
+        .startAt([trimmed])
+        .endAt(['$trimmed\uf8ff'])
+        .limit(25)
+        .get();
 
-      AppLogger.i('Public societies prefix search',
-          data: {'query': trimmed, 'count': societies.length});
-      return societies;
-    } on FirebaseException catch (e, st) {
-      if (e.code == 'failed-precondition') {
-        AppLogger.e(
-          'Missing index for searchPublicSocietiesByPrefix. '
-          'Expected composite index on {active ASC, nameLower ASC}.',
-          error: e,
-          stackTrace: st,
-          data: {'query': trimmed},
-        );
-      } else {
-        AppLogger.e('Error searching public societies',
-            error: e, stackTrace: st);
-      }
-      return [];
-    } catch (e, st) {
-      AppLogger.e('Error searching public societies (unknown)',
-          error: e, stackTrace: st);
-      return [];
-    }
+    return snapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>? ?? {};
+      return {
+        'id': doc.id,
+        'name': (data['name'] as String?) ?? doc.id,
+        'cityId': data['cityId'], // ✅ add
+        'cityName': data['cityName'],
+        'stateId': data['stateId'], // optional
+        'stateName': data['stateName'],
+        'active': data['active'] ?? true,
+      };
+    }).toList();
   }
 
   /// Updates nameLower on public_societies/{societyId} from current name.
@@ -670,7 +700,9 @@ class FirestoreService {
       }
       return null;
     } catch (e, stackTrace) {
-      AppLogger.e('Error getting society', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error getting society by code',
+          error: e, stackTrace: stackTrace);
+      // Optionally rethrow or return null; but log is already good
       return null;
     }
   }
@@ -2273,6 +2305,8 @@ class FirestoreService {
     }, SetOptions(merge: true));
   }
 
+  /// Create or update an admin join request for the current user under
+  /// public_societies/{societyId}/join_requests/{uid}.
   Future<void> createAdminJoinRequest({
     required String societyId,
     required String societyName,
@@ -2280,86 +2314,39 @@ class FirestoreService {
     required String name,
     required String phoneE164,
   }) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      throw StateError('createAdminJoinRequest: user not logged in');
+    final uid = currentUid;
+    if (uid == null) {
+      throw StateError('createAdminJoinRequest: currentUid is null');
     }
 
-    final uid = user.uid;
-    final now = FieldValue.serverTimestamp();
+    try {
+      final ref = _publicSocietiesRef
+          .doc(societyId)
+          .collection('join_requests')
+          .doc(uid);
 
-    // Normalize phone (keep consistent with your unique phone logic)
-    final normalizedPhone =
-        FirebaseAuthService.normalizePhoneForIndia(phoneE164);
+      await ref.set({
+        'uid': uid,
+        'societyId': societyId,
+        'societyName': societyName,
+        'cityId': cityId,
+        'requestedRole': 'admin',
+        'name': name.trim(),
+        'phone': FirebaseAuthService.normalizePhoneForIndia(phoneE164),
+        'status': 'PENDING',
+        'createdAt': FieldValue.serverTimestamp(),
+        'handledBy': null,
+        'handledAt': null,
+      }, SetOptions(merge: true));
 
-    // Optional: enforce unique phone globally (recommended)
-    final available = await isPhoneAvailableForUser(
-      normalizedE164: normalizedPhone,
-      forUid: uid,
-    );
-    if (!available) {
-      throw StateError(
-          'This mobile number is already linked to another active account.');
+      AppLogger.i('Admin join request created', data: {
+        'uid': uid,
+        'societyId': societyId,
+      });
+    } catch (e, st) {
+      AppLogger.e('Error creating admin join request',
+          error: e, stackTrace: st);
+      rethrow;
     }
-
-    final joinRef = _publicSocietiesRef
-        .doc(societyId)
-        .collection('admin_join_requests')
-        .doc(uid);
-
-    final rootPtrRef = _firestore.collection('members').doc(uid);
-
-    await _firestore.runTransaction((tx) async {
-      // 1) Create / update admin join request (under public directory)
-      tx.set(
-        joinRef,
-        {
-          'uid': uid,
-          'societyId': societyId,
-          'societyName': societyName,
-          'cityId': cityId,
-          'requestedRole': 'admin',
-          'name': name,
-          'phone': normalizedPhone,
-          'status': 'PENDING',
-          'createdAt': now,
-          'updatedAt': now,
-          'handledBy': null,
-          'handledAt': null,
-        },
-        SetOptions(merge: true),
-      );
-
-      // 2) Create / update root pointer as inactive admin (so AuthRouter can route to pending)
-      tx.set(
-        rootPtrRef,
-        {
-          'uid': uid,
-          'societyId': societyId,
-          'systemRole': 'admin',
-          'active': false,
-          'name': name,
-          'phone': normalizedPhone,
-          'updatedAt': now,
-          'createdAt': now,
-        },
-        SetOptions(merge: true),
-      );
-    });
-
-    // 3) Ensure phone mapping exists (your project uses unique_phones)
-    // This will write to societies/{societyId}/members/{uid} too — if you do NOT want that yet,
-    // comment this out and only call setMemberPhone on approval.
-    //
-    // await setMemberPhone(
-    //   societyId: societyId,
-    //   uid: uid,
-    //   normalizedE164: normalizedPhone,
-    // );
-
-    AppLogger.i('Admin join request created', data: {
-      'uid': uid,
-      'societyId': societyId,
-    });
   }
 }

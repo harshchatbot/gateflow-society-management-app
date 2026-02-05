@@ -243,15 +243,12 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
         if (!mounted) return;
         setState(() => _isLoading = false);
 
-        final role = widget.roleHint?.toLowerCase();
+        final role = (widget.roleHint ?? 'resident').trim().toLowerCase();
 
         if (role == 'admin') {
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (_) => const AdminOnboardingScreen(
-                defaultJoinMode: true, // ✅ important
-              ),
-            ),
+                builder: (_) => const FindSocietyScreen(mode: 'admin')),
           );
           return;
         }
@@ -266,11 +263,8 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
         // resident default
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => FindSocietyScreen(
-                mode: (widget.roleHint ?? 'resident').toLowerCase()),
-          ),
+              builder: (_) => const FindSocietyScreen(mode: 'resident')),
         );
-
         return;
       }
 

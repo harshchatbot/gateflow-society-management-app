@@ -8,14 +8,16 @@ import '../core/storage.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import '../ui/app_loader.dart';
+
 import 'admin_pending_approval_screen.dart';
 import 'resident_pending_approval_screen.dart';
+import 'admin_signup_screen.dart';
 
 /// Directory-based join (Search Society -> request access).
 /// Used after Phone OTP when membership is null.
 /// mode:
 ///  - 'resident' (default): requires unit + owner/tenant, submits resident join request
-///  - 'admin': society only, submits admin join request (approval by super_admin)
+///  - 'admin': society only, routes to AdminSignupScreen (request admin access)
 class FindSocietyScreen extends StatefulWidget {
   final String mode; // 'resident' | 'admin'
   const FindSocietyScreen({super.key, this.mode = 'resident'});
@@ -145,7 +147,30 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
     );
   }
 
-  Future<void> _submitRequest() async {
+  // ✅ Admin path now: Continue -> AdminSignupScreen
+  void _continueAdmin() {
+    final society = _getSelectedSociety();
+    final societyId = (society['id'] as String?) ?? '';
+    final societyName = (society['name'] as String?) ?? '';
+    final cityId = (society['cityId'] as String?) ?? '';
+
+    if (societyId.isEmpty) {
+      _snack('Invalid society selected.', isError: true);
+      return;
+    }
+
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => AdminSignupScreen(
+          societyId: societyId,
+          societyName: societyName,
+          cityId: cityId,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submitResidentRequest() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
       _snack('You are not logged in. Please login again.', isError: true);
@@ -167,17 +192,15 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
       return;
     }
 
-    // Resident validations
-    if (!_isAdmin) {
-      if (_selectedUnitId == null) {
-        _snack('Please select your unit.', isError: true);
-        return;
-      }
-      if (_residencyType == null ||
-          (_residencyType != 'OWNER' && _residencyType != 'TENANT')) {
-        _snack('Please select Owner or Tenant.', isError: true);
-        return;
-      }
+    if (_selectedUnitId == null) {
+      _snack('Please select your unit.', isError: true);
+      return;
+    }
+
+    if (_residencyType == null ||
+        (_residencyType != 'OWNER' && _residencyType != 'TENANT')) {
+      _snack('Please select Owner or Tenant.', isError: true);
+      return;
     }
 
     final phoneRaw = user.phoneNumber ?? '';
@@ -188,35 +211,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
     setState(() => _submitting = true);
     try {
       final uid = user.uid;
-      final displayName = user.displayName ?? (_isAdmin ? 'Admin' : 'Resident');
+      final displayName = user.displayName ?? 'Resident';
 
-      if (_isAdmin) {
-        // ✅ ADMIN: Create admin join request (approval by super_admin)
-        await _firestore.createAdminJoinRequest(
-          societyId: societyId,
-          societyName: societyName,
-          cityId: cityId,
-          name: displayName,
-          phoneE164: normalizedPhone,
-        );
-
-        // Remember which society this admin requested to join.
-        await Storage.setAdminJoinSocietyId(societyId);
-
-        if (!mounted) return;
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => AdminPendingApprovalScreen(
-              adminId: uid,
-              societyId: societyId,
-              adminName: 'Admin',
-            ),
-          ),
-        );
-        return;
-      }
-
-      // ✅ RESIDENT: existing behavior (units + owner/tenant)
       final unit = _getSelectedUnit();
       final unitLabel = (unit['label'] as String?) ?? '';
 
@@ -243,7 +239,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
         ),
       );
     } catch (e, st) {
-      AppLogger.e('FindSociety: submit failed', error: e, stackTrace: st);
+      AppLogger.e('FindSociety: resident submit failed',
+          error: e, stackTrace: st);
       if (!mounted) return;
       _snack('Failed to submit request. Please try again.', isError: true);
     } finally {
@@ -255,8 +252,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor:
-            isError ? Theme.of(context).colorScheme.error : null,
+        backgroundColor: isError ? Theme.of(context).colorScheme.error : null,
       ),
     );
   }
@@ -318,7 +314,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
   String get _title => _isAdmin ? 'Find a society' : 'Find your society';
 
   String get _subtitle => _isAdmin
-      ? 'Search your society and request Admin access. Super Admin will approve.'
+      ? 'Search your society and continue to request Admin access.'
       : 'Search your society and select your unit to request access.';
 
   @override
@@ -370,13 +366,10 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                   const SizedBox(height: 18),
                   _buildSocietySection(),
                   const SizedBox(height: 14),
-
-                  // ✅ Resident-only sections
                   if (!_isAdmin) ...[
                     _buildUnitDropdown(),
                     const SizedBox(height: 18),
                   ],
-
                   _buildConfirmSection(),
                 ],
               ),
@@ -414,7 +407,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                 : (_searchController.text.trim().isNotEmpty
                     ? IconButton(
                         icon: Icon(Icons.close_rounded,
-                            color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                            color:
+                                theme.colorScheme.onSurface.withOpacity(0.6)),
                         onPressed: () {
                           _searchController.clear();
                           _resetSelection(keepSearchText: false);
@@ -503,15 +497,11 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                             )
                           : null,
                       trailing: selected
-                          ? Icon(
-                              Icons.check_circle_rounded,
-                              color: theme.colorScheme.primary,
-                            )
-                          : Icon(
-                              Icons.chevron_right_rounded,
-                              color:
-                                  theme.colorScheme.onSurface.withOpacity(0.35),
-                            ),
+                          ? Icon(Icons.check_circle_rounded,
+                              color: theme.colorScheme.primary)
+                          : Icon(Icons.chevron_right_rounded,
+                              color: theme.colorScheme.onSurface
+                                  .withOpacity(0.35)),
                     ),
                   ),
                 );
@@ -583,7 +573,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
         (society['name'] as String?) ?? _selectedSocietyId ?? '';
 
     final unitLabel = !_isAdmin
-        ? (( _getSelectedUnit()['label'] as String?) ?? _selectedUnitId ?? '')
+        ? ((_getSelectedUnit()['label'] as String?) ?? _selectedUnitId ?? '')
         : '';
 
     return Container(
@@ -602,7 +592,6 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
           ),
           const SizedBox(height: 16),
           _buildConfirmRow(Icons.apartment_rounded, 'Society', societyName),
-
           if (!_isAdmin) ...[
             const SizedBox(height: 10),
             _buildConfirmRow(Icons.home_rounded, 'Unit', unitLabel),
@@ -620,25 +609,23 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
               children: [
                 Expanded(
                   child: _buildResidencyChip(
-                    label: 'Owner',
-                    value: 'OWNER',
-                    icon: Icons.person_rounded,
-                  ),
+                      label: 'Owner',
+                      value: 'OWNER',
+                      icon: Icons.person_rounded),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: _buildResidencyChip(
-                    label: 'Tenant',
-                    value: 'TENANT',
-                    icon: Icons.badge_rounded,
-                  ),
+                      label: 'Tenant',
+                      value: 'TENANT',
+                      icon: Icons.badge_rounded),
                 ),
               ],
             ),
             const SizedBox(height: 22),
           ] else ...[
             Text(
-              'Your request will be sent to the Super Admin for approval.',
+              'Next: Enter your details and send request to Super Admin.',
               style: TextStyle(
                 color: theme.colorScheme.onSurface.withOpacity(0.7),
                 fontWeight: FontWeight.w600,
@@ -647,16 +634,17 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
             ),
             const SizedBox(height: 18),
           ],
-
           SizedBox(
             height: 52,
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: (_isAdmin
-                      ? !_submitting
-                      : (_residencyType != null && !_submitting))
-                  ? _submitRequest
-                  : null,
+              onPressed: _submitting
+                  ? null
+                  : (_isAdmin
+                      ? _continueAdmin
+                      : (_residencyType != null
+                          ? _submitResidentRequest
+                          : null)),
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: theme.colorScheme.onPrimary,
@@ -672,11 +660,9 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
               child: _submitting
                   ? AppLoader.inline(size: 22)
                   : Text(
-                      _isAdmin ? 'Request Admin Access' : 'Send Join Request',
+                      _isAdmin ? 'Continue' : 'Send Join Request',
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                      ),
+                          fontSize: 16, fontWeight: FontWeight.w900),
                     ),
             ),
           ),
@@ -761,10 +747,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w800,
-                  color: fg,
-                ),
+                    fontSize: 14, fontWeight: FontWeight.w800, color: fg),
               ),
             ],
           ),

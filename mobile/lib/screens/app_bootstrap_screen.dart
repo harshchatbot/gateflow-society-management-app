@@ -31,6 +31,7 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
 
   Future<void> _checkSessionAndNavigate() async {
     if (!mounted) return;
+    await Storage.loadLastRoleHint();
 
     Widget? targetScreen;
 
@@ -111,14 +112,22 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
 
           // ❌ If NOT allowed (membership missing/inactive/blocked) → handle onboarding routing
           if (targetScreen == null && !gateResult.allowed && mounted) {
+            bool handled = false;
             // If membership is missing, route by role hint ONLY.
             if (gateResult.blockReason == GateBlockReason.membershipNotFound) {
-              final roleHint = (Storage.lastRoleHint ?? '').trim().toLowerCase();
+              await Storage.loadLastRoleHint(); // ✅ ensure it’s available
 
-              // ✅ If no role hint, always go to Choose Role (this fixes your issue)
+              final roleHint =
+                  (Storage.lastRoleHint ?? '').trim().toLowerCase();
+
+              // ✅ If we don’t know the role, ask user (don’t force join flow)
               if (roleHint.isEmpty) {
                 targetScreen = const OnboardingChooseRoleScreen();
-              } else if (roleHint == 'admin') {
+                handled = true;
+              }
+
+              // ✅ Admin
+              if (!handled && roleHint == 'admin') {
                 final pendingSocietyId = await Storage.getAdminJoinSocietyId();
                 if (pendingSocietyId != null) {
                   targetScreen = AdminPendingApprovalScreen(
@@ -129,8 +138,13 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
                 } else {
                   targetScreen = const FindSocietyScreen(mode: 'admin');
                 }
-              } else if (roleHint == 'resident') {
-                final pendingSocietyId = await Storage.getResidentJoinSocietyId();
+                handled = true;
+              }
+
+              // ✅ Resident
+              if (!handled && roleHint == 'resident') {
+                final pendingSocietyId =
+                    await Storage.getResidentJoinSocietyId();
                 if (pendingSocietyId != null) {
                   targetScreen = ResidentPendingApprovalScreen(
                     residentId: firebaseUser.uid,
@@ -140,11 +154,13 @@ class _AppBootstrapScreenState extends State<AppBootstrapScreen> {
                 } else {
                   targetScreen = const FindSocietyScreen(mode: 'resident');
                 }
-              } else if (roleHint == 'guard') {
-                // For guard, never show FindSociety
+                handled = true;
+              }
+
+              // ✅ Guard
+              if (!handled && roleHint == 'guard') {
                 targetScreen = const OnboardingChooseRoleScreen();
-              } else {
-                targetScreen = const OnboardingChooseRoleScreen();
+                handled = true;
               }
             } else {
               // Other blocks (inactive society, etc.)

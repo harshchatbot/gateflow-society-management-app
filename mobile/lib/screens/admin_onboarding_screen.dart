@@ -18,7 +18,6 @@ import 'admin_shell_screen.dart';
 import 'admin_login_screen.dart';
 import 'admin_pending_approval_screen.dart';
 
-
 /// Admin Onboarding Screen
 ///
 /// CREATE SOCIETY: OTP-first (Send OTP on Submit -> Verify -> Create society+member+phone_index+root pointer)
@@ -166,6 +165,18 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
     return result; // null if cancelled
   }
 
+  /// Normalize typed phone to E.164 (+91...) if user entered 10 digits
+  String _normalizeTypedPhoneToE164(String raw) {
+    final v = raw.trim();
+    if (v.isEmpty) return '';
+    if (v.startsWith('+')) return v;
+    final digits = v.replaceAll(RegExp(r'[^\d]'), '');
+    if (digits.length == 10) {
+      return FirebaseAuthService.normalizePhoneForIndia(digits);
+    }
+    return v; // keep as-is; caller can decide if acceptable
+  }
+
   Future<void> _handleRegister() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -187,20 +198,19 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
     try {
       // Step A: Authenticate
       String uid;
-      String authPhoneE164;
+      String authPhoneE164 = '';
 
       if (_isCreatingSociety) {
         // ✅ OTP FIRST
         final otp = await _verifyPhoneViaOtpAndGetAuth(phone);
         if (otp == null) {
-          // user cancelled OTP screen
           if (mounted) setState(() => _isLoading = false);
           return;
         }
         uid = otp.uid;
         authPhoneE164 = otp.authPhone;
       } else {
-        // ⚠️ Join flow kept as-is (email/pin) to preserve InviteClaimService behavior.
+        // ✅ Join flow is email/pin (legacy) to preserve InviteClaimService behavior.
         final userCredential = await _authService.signUpOrSignIn(
           email: email,
           password: pin,
@@ -210,8 +220,28 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
         if (u == null) throw Exception("Failed to authenticate");
         uid = u.uid;
 
-        // phone may be empty in this legacy join path
-        authPhoneE164 = u.phoneNumber ?? '';
+        // ✅ Do NOT require OTP here.
+        // Prefer FirebaseAuth phoneNumber if present, else use typed phone (optional), else empty.
+        final tokenPhone = u.phoneNumber;
+        if (tokenPhone != null && tokenPhone.trim().isNotEmpty) {
+          authPhoneE164 = _normalizeTypedPhoneToE164(tokenPhone);
+        } else {
+          authPhoneE164 = _normalizeTypedPhoneToE164(phone);
+        }
+      }
+
+      // Optional: enforce unique phone only if we have a valid E.164-ish phone
+      if (authPhoneE164.isNotEmpty && authPhoneE164.startsWith('+')) {
+        final ok = await _firestore.isPhoneAvailableForUser(
+          normalizedE164: authPhoneE164,
+          forUid: uid,
+        );
+        if (!ok) {
+          if (mounted) setState(() => _isLoading = false);
+          _showError(
+              "This mobile number is already linked to another active account.");
+          return;
+        }
       }
 
       // Step B: Resolve or create society
@@ -249,22 +279,32 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           systemRole: 'super_admin',
           societyRole: _selectedRole.toLowerCase(),
           name: adminName,
-          phone: authPhoneE164, // ✅ VERIFIED phone from OTP auth
+          phone: authPhoneE164,
           email: email,
           active: true,
         );
 
-        // ✅ phone_index write: DOC ID MUST MATCH AUTH TOKEN PHONE NUMBER
-        await FirebaseFirestore.instance
-            .collection('phone_index')
-            .doc(authPhoneE164)
-            .set({
-          'uid': uid,
-          'societyId': societyId,
-          'systemRole': 'super_admin',
-          'active': true,
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        // ✅ Keep your legacy phone_index (safe)
+        if (authPhoneE164.isNotEmpty) {
+          await FirebaseFirestore.instance
+              .collection('phone_index')
+              .doc(authPhoneE164)
+              .set({
+            'uid': uid,
+            'societyId': societyId,
+            'systemRole': 'super_admin',
+            'active': true,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+
+          // ✅ IMPORTANT: populate unique_phones (your real uniqueness system)
+          // Writes member phone + pointer phone + unique_phones hash doc
+          await _firestore.setMemberPhone(
+            societyId: societyId,
+            uid: uid,
+            normalizedE164: authPhoneE164,
+          );
+        }
 
         await _setRootPointer(
           uid: uid,
@@ -273,9 +313,36 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           active: true,
         );
 
+        // =========================================================
+// ✅ Publish society to public directory (SUPER_ADMIN only)
+// =========================================================
+        final now = FieldValue.serverTimestamp();
+        final normalizedCode = societyCode.trim().toUpperCase();
+
+        final publicSocietyData = {
+          'name': societyName,
+          'nameLower': societyName.toLowerCase(),
+          'code': normalizedCode,
+          'city': _selectedCity,
+          'state': _selectedState,
+          'active': true,
+          'createdAt': now,
+          'updatedAt': now,
+          'createdByUid': uid,
+        };
+
+        AppLogger.i('Publishing public_societies entry',
+            data: {'path': 'public_societies/$societyId'});
+
+        await FirebaseFirestore.instance
+            .collection('public_societies')
+            .doc(societyId)
+            .set(publicSocietyData);
+
         _confettiController.play();
+        await Future.delayed(const Duration(milliseconds: 1200));
       } else {
-        // ✅ JOIN SOCIETY (OTP-only): Admin requests access -> Pending approval
+        // ✅ JOIN SOCIETY: Admin requests access -> Pending approval
         final existingSocietyId =
             await _firestore.getSocietyIdByCode(societyCode);
         if (existingSocietyId == null) {
@@ -285,35 +352,28 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
         }
         societyId = existingSocietyId;
 
-        // ✅ Must be logged in via OTP already
-        final authPhone = FirebaseAuth.instance.currentUser?.phoneNumber;
-        if (authPhone == null || authPhone.isEmpty) {
-          if (mounted) setState(() => _isLoading = false);
-          _showError("Please login with OTP first.");
-          return;
-        }
-
-        final authPhoneE164 =
-            FirebaseAuthService.normalizePhoneForIndia(authPhone);
-
         // ✅ Create (or overwrite) admin join request
-        await FirebaseFirestore.instance
-            .collection('societies')
-            .doc(societyId)
-            .collection('admin_join_requests')
-            .doc(uid) // keep one request per user
-            .set({
+        final payload = <String, dynamic>{
           'uid': uid,
           'societyId': societyId,
           'name': adminName,
-          'phone': authPhoneE164,
-          'email': email, // optional display
+          'email': email,
           'societyRole': _selectedRole.toLowerCase(),
           'status': 'PENDING',
           'active': false,
           'createdAt': FieldValue.serverTimestamp(),
           'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        };
+        if (authPhoneE164.isNotEmpty) {
+          payload['phone'] = authPhoneE164;
+        }
+
+        await FirebaseFirestore.instance
+            .collection('societies')
+            .doc(societyId)
+            .collection('admin_join_requests')
+            .doc(uid)
+            .set(payload, SetOptions(merge: true));
 
         // ✅ Create/ensure root pointer (inactive) so app can resolve society quickly
         await _setRootPointer(
@@ -324,17 +384,18 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
         );
 
         // ✅ OPTIONAL: phone_index pointer (helps recovery / faster mapping)
-        // If your rules allow writing it at this stage.
-        await FirebaseFirestore.instance
-            .collection('phone_index')
-            .doc(authPhoneE164)
-            .set({
-          'uid': uid,
-          'societyId': societyId,
-          'systemRole': 'admin',
-          'active': false,
-          'updatedAt': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+        if (authPhoneE164.isNotEmpty) {
+          await FirebaseFirestore.instance
+              .collection('phone_index')
+              .doc(authPhoneE164)
+              .set({
+            'uid': uid,
+            'societyId': societyId,
+            'systemRole': 'admin',
+            'active': false,
+            'updatedAt': FieldValue.serverTimestamp(),
+          }, SetOptions(merge: true));
+        }
 
         if (!mounted) return;
         if (mounted) setState(() => _isLoading = false);
@@ -347,10 +408,11 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               adminId: uid,
               societyId: societyId,
               adminName: adminName.isNotEmpty ? adminName : 'Admin',
+              email: authPhoneE164.isNotEmpty ? authPhoneE164 : email,
             ),
           ),
         );
-        return; // important: stop further flow
+        return;
       }
 
       // Step C: Save Firebase session
@@ -412,10 +474,33 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
     } catch (e, stackTrace) {
       AppLogger.e("Admin onboarding exception",
           error: e, stackTrace: stackTrace);
-      if (mounted) {
-        setState(() => _isLoading = false);
-        _showError("Registration failed. Please try again.");
+
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      final err = e.toString();
+
+      // ✅ Frontend-friendly: Society already exists
+      if (err.contains('SOCIETY_ALREADY_EXISTS:SOCIETY_CODE')) {
+        _showError("Society code already exists. Choose a different code.");
+        return;
       }
+
+      if (err.contains('SOCIETY_ALREADY_EXISTS')) {
+        _showError(
+            "Society is already registered. Please try a different code/name.");
+        return;
+      }
+
+      // Optional tells you it's permission issue (still user-friendly)
+      if (err.contains('permission-denied')) {
+        _showError(
+            "You don’t have permission to create this society. Please contact support.");
+        return;
+      }
+
+      // Fallback (your current behavior)
+      _showError("Registration failed. Please try again.");
     }
   }
 
@@ -468,7 +553,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
       ),
       body: Stack(
         children: [
-          // Gradient Background
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
@@ -498,7 +582,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               ),
             ),
           ),
-
           if (_isLoading || _isLoadingLocations)
             AppLoader.overlay(
               show: true,
@@ -508,7 +591,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                       : "Creating your account…")
                   : "Loading locations…",
             ),
-
           Align(
             alignment: Alignment.topCenter,
             child: ConfettiWidget(
@@ -646,8 +728,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
-
-            // Toggle: Create vs Join society
             Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
@@ -704,7 +784,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
             if (_isCreatingSociety) ...[
               _PremiumField(
                 controller: _societyNameController,
@@ -722,18 +801,13 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Expanded(
-                    child: _buildStateDropdown(theme),
-                  ),
+                  Expanded(child: _buildStateDropdown(theme)),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildCityDropdown(theme),
-                  ),
+                  Expanded(child: _buildCityDropdown(theme)),
                 ],
               ),
               const SizedBox(height: 20),
             ],
-
             _PremiumField(
               controller: _societyCodeController,
               label: "Society Code",
@@ -748,7 +822,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               },
             ),
             const SizedBox(height: 20),
-
             _PremiumField(
               controller: _adminIdController,
               label: "Email Address",
@@ -767,7 +840,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               },
             ),
             const SizedBox(height: 20),
-
             _PremiumField(
               controller: _adminNameController,
               label: "Full Name",
@@ -782,8 +854,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               },
             ),
             const SizedBox(height: 20),
-
-            // ✅ Phone is REQUIRED for Create Society (OTP-first)
             _PremiumField(
               controller: _phoneController,
               label: _isCreatingSociety
@@ -797,21 +867,21 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                 final v = (value ?? '').trim();
                 if (_isCreatingSociety) {
                   final digits = v.replaceAll(RegExp(r'[^\d]'), '');
-                  if (digits.length != 10)
+                  if (digits.length != 10) {
                     return "Enter a valid 10-digit phone number";
+                  }
                 } else {
                   if (v.isNotEmpty) {
                     final digits = v.replaceAll(RegExp(r'[^\d]'), '');
-                    if (digits.length != 10)
+                    if (digits.length != 10) {
                       return "Enter a valid 10-digit phone number";
+                    }
                   }
                 }
                 return null;
               },
             ),
             const SizedBox(height: 20),
-
-            // Role Selection
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -882,8 +952,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               ],
             ),
             const SizedBox(height: 20),
-
-            // ⚠️ PIN fields kept for Join flow only (to avoid breaking your invite flow today)
             if (!_isCreatingSociety) ...[
               _PremiumField(
                 controller: _pinController,
@@ -950,9 +1018,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               ),
               const SizedBox(height: 20),
             ],
-
             const SizedBox(height: 12),
-
             SizedBox(
               height: 56,
               child: ElevatedButton(
@@ -976,7 +1042,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
