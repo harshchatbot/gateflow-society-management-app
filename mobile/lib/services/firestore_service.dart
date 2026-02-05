@@ -663,6 +663,152 @@ class FirestoreService {
     }
   }
 
+  Future<void> approveAdminJoinRequest({
+    required String societyId,
+    required String uid,
+    required String name,
+    required String phoneE164,
+    required String handledByUid,
+    String societyRole = 'admin',
+  }) async {
+    final normalizedPhone =
+        FirebaseAuthService.normalizePhoneForIndia(phoneE164);
+
+    final available = await isPhoneAvailableForUser(
+      normalizedE164: normalizedPhone,
+      forUid: uid,
+    );
+    if (!available) {
+      throw StateError(
+        'This mobile number is already linked to another active account.',
+      );
+    }
+
+    final batch = _firestore.batch();
+    final now = FieldValue.serverTimestamp();
+
+    final memberRef = _societyRef(societyId).collection('members').doc(uid);
+    final pointerRef = _firestore.collection('members').doc(uid);
+    final joinRef =
+        _publicSocietiesRef.doc(societyId).collection('join_requests').doc(uid);
+
+    batch.set(
+        memberRef,
+        {
+          'uid': uid,
+          'societyId': societyId,
+          'systemRole': 'admin',
+          'societyRole': societyRole.toLowerCase(),
+          'active': true,
+          'name': name,
+          'phone': normalizedPhone,
+          'createdAt': now,
+          'updatedAt': now,
+        },
+        SetOptions(merge: true));
+
+    batch.set(
+        pointerRef,
+        {
+          'uid': uid,
+          'societyId': societyId,
+          'systemRole': 'admin',
+          'societyRole': societyRole.toLowerCase(),
+          'active': true,
+          'name': name,
+          'phone': normalizedPhone,
+          'createdAt': now,
+          'updatedAt': now,
+        },
+        SetOptions(merge: true));
+
+    batch.set(
+        joinRef,
+        {
+          'status': 'APPROVED',
+          'handledBy': handledByUid,
+          'handledAt': now,
+        },
+        SetOptions(merge: true));
+
+    await batch.commit();
+
+    await setMemberPhone(
+      societyId: societyId,
+      uid: uid,
+      normalizedE164: normalizedPhone,
+    );
+  }
+
+  Future<void> rejectAdminJoinRequest({
+    required String societyId,
+    required String uid,
+    required String handledByUid,
+  }) async {
+    await _publicSocietiesRef
+        .doc(societyId)
+        .collection('join_requests')
+        .doc(uid)
+        .set({
+      'status': 'REJECTED',
+      'handledBy': handledByUid,
+      'handledAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+
+/// For Super Admin UI: list pending admin join requests (Find Society flow)
+Future<List<Map<String, dynamic>>> getAdminJoinRequestsForSuperAdmin(
+  String societyId,
+) async {
+  try {
+    final snapshot = await _publicSocietiesRef
+        .doc(societyId)
+        .collection('join_requests')
+        .where('requestedRole', isEqualTo: 'admin')
+        .where('status', isEqualTo: 'PENDING')
+        .orderBy('createdAt')
+        .get();
+
+    final list = snapshot.docs.map((doc) {
+      final data = doc.data() as Map<String, dynamic>? ?? {};
+      return {
+        'uid': data['uid'] ?? doc.id,
+        'name': data['name'] ?? '',
+        'phone': data['phone'] ?? '',
+        'societyRole': data['societyRole'] ?? 'ADMIN',
+        'requestedRole': data['requestedRole'] ?? 'admin',
+        'status': data['status'] ?? 'PENDING',
+        'createdAt': data['createdAt'],
+        'email': data['email'], // if present
+      };
+    }).toList();
+
+    AppLogger.i('Admin join requests loaded',
+        data: {'societyId': societyId, 'count': list.length});
+
+    return list;
+  } on FirebaseException catch (e, st) {
+    if (e.code == 'failed-precondition') {
+      AppLogger.e(
+        'Missing index for getAdminJoinRequestsForSuperAdmin. '
+        'Expected composite index on {requestedRole ASC, status ASC, createdAt ASC}.',
+        error: e,
+        stackTrace: st,
+        data: {'societyId': societyId},
+      );
+    } else {
+      AppLogger.e('Error getting admin join requests',
+          error: e, stackTrace: st);
+    }
+    return [];
+  } catch (e, st) {
+    AppLogger.e('Error getting admin join requests (unknown)',
+        error: e, stackTrace: st);
+    return [];
+  }
+}
+
   /// Get society by code
   /// Handles codes with or without SOC_ prefix (e.g., "AMARA" or "SOC_AMARA" both work)
   Future<String?> getSocietyIdByCode(String code) async {
@@ -2313,6 +2459,7 @@ class FirestoreService {
     required String cityId,
     required String name,
     required String phoneE164,
+    String? societyRole, 
   }) async {
     final uid = currentUid;
     if (uid == null) {
