@@ -31,7 +31,6 @@ import '../widgets/dashboard_insights_card.dart';
 import '../widgets/error_retry_widget.dart';
 import '../services/admin_notification_aggregator.dart';
 
-
 /// Admin Dashboard Screen
 ///
 /// Overview screen for admins showing key metrics and quick actions
@@ -386,45 +385,69 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => AdminNotificationDrawer(
+      builder: (sheetCtx) => AdminNotificationDrawer(
         societyId: widget.societyId,
         adminId: widget.adminId,
-        onNavigateToPendingSignup: () {
-          Navigator.pop(context);
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AdminJoinRequestsScreen(
-                societyId: widget.societyId,
-              ),
-            ),
-          );
-        },
+        onNotificationTap: (notification) {
+          // 1️⃣ Close bottom sheet using ROOT navigator
+          Navigator.of(context, rootNavigator: true).pop();
 
-        // ✅ NEW: badge count comes ONLY from drawer _loadNotifications()
-        onBadgeCountChanged: (count) {
-          if (!mounted) return;
-          setState(() {
-            _notificationCount = count;
-            // optional: if you want SOS to be included via count only, keep this as-is.
-            // If you want SOS badge separate, remove this line.
-            _sosBadgeCount = 0;
+          // 2️⃣ Navigate in next frame (CRITICAL)
+          Future.microtask(() {
+            if (!mounted) return;
+
+            final type = notification['type']?.toString();
+
+            // JOIN REQUESTS
+            if (type == 'resident_signup' || type == 'admin_signup') {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => AdminJoinRequestsScreen(
+                    societyId: widget.societyId,
+                  ),
+                ),
+              );
+              return;
+            }
+
+            // COMPLAINTS TAB
+            if (type == 'complaint') {
+              _navigateToTab(3);
+              return;
+            }
+
+            // NOTICES TAB
+            if (type == 'notice') {
+              _navigateToTab(4);
+              return;
+            }
+
+            // SOS DETAILS
+            if (type == 'sos') {
+              final sosId = notification['id']?.toString() ?? '';
+              if (sosId.isEmpty) return;
+
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => SosDetailScreen(
+                    societyId: widget.societyId,
+                    sosId: sosId,
+                    flatNo: notification['flat_no']?.toString() ?? '',
+                    residentName:
+                        notification['resident_name']?.toString() ?? 'Resident',
+                    residentPhone: null,
+                  ),
+                ),
+              );
+            }
           });
         },
+        onBadgeCountChanged: (count) {
+          if (!mounted) return;
+          setState(() => _notificationCount = count);
+        },
       ),
-    ).then((_) {
-      // User has seen notifications; clear unread notices and SOS badge for this session
-      if (mounted) {
-        setState(() {
-          _unreadNoticesCount = 0;
-          _sosBadgeCount = 0;
-        });
-      }
-
-      // ✅ IMPORTANT: If you want "count logic ONLY in _loadNotifications",
-      // then comment this out (otherwise it will recompute from old logic).
-      // _loadNotificationCount();
-    });
+    );
   }
 
   void _navigateToTab(int index, [int? residentsSubTab]) {
@@ -1114,7 +1137,4 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       children: children,
     );
   }
-
-
-
 }

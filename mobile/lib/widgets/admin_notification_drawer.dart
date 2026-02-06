@@ -24,9 +24,9 @@ class AdminNotificationDrawer extends StatefulWidget {
   final String adminId;
   final ValueChanged<int>? onBadgeCountChanged;
 
-
   /// Called when admin taps a pending signup item; caller should close drawer and navigate to pending signup screen.
   final VoidCallback? onNavigateToPendingSignup;
+  final void Function(Map<String, dynamic> notification)? onNotificationTap;
 
   const AdminNotificationDrawer({
     super.key,
@@ -34,6 +34,7 @@ class AdminNotificationDrawer extends StatefulWidget {
     required this.adminId,
     this.onNavigateToPendingSignup,
     this.onBadgeCountChanged,
+    this.onNotificationTap,
   });
 
   @override
@@ -574,8 +575,13 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                           itemCount: _notifications.length,
                           itemBuilder: (context, index) {
                             final notification = _notifications[index];
-                            final type = notification['type'] ?? '';
-                            return _buildNotificationItem(notification);
+
+                            return InkWell(
+                              onTap: () {
+                                widget.onNotificationTap?.call(notification);
+                              },
+                              child: _buildNotificationItem(notification),
+                            );
                           },
                         ),
                       ),
@@ -789,48 +795,16 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
   }
 
   void _handleNotificationTap(Map<String, dynamic> notification) {
-    final type = (notification['type'] ?? '').toString();
-    final id = (notification['id'] ?? '').toString();
+    // 🔍 Log to confirm tap works
+    AppLogger.i("Notification tapped (drawer)", data: {
+      "type": notification['type'],
+      "id": notification['id'],
+    });
 
-    // For resident signup, let dashboard callback handle pop + navigation.
-    if (type == 'resident_signup') {
-      widget.onNavigateToPendingSignup?.call();
-      return;
-    }
-
-    if (id.isEmpty) return;
-
-    // For other types, drawer itself can close then navigate.
-    Navigator.pop(context);
-
-    switch (type) {
-      case 'sos':
-        if (!SocietyModules.isEnabled(SocietyModuleIds.sos)) return;
-        final flatNo = (notification['flat_no'] ?? '').toString();
-        final residentName =
-            (notification['resident_name'] ?? 'Resident').toString();
-
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SosDetailScreen(
-              societyId: widget.societyId,
-              sosId: id,
-              flatNo: flatNo,
-              residentName: residentName,
-              residentPhone: null,
-            ),
-          ),
-        );
-        break;
-
-      case 'complaint':
-        // later: navigate to complaints tab
-        break;
-
-      case 'notice':
-        // later: navigate to notices tab
-        break;
+    // ✅ Drawer does NOT navigate
+    // It only informs the parent (AdminDashboard)
+    if (widget.onNotificationTap != null) {
+      widget.onNotificationTap!(notification);
     }
   }
 }
