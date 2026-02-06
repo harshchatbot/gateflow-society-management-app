@@ -11,7 +11,7 @@ from app.routers import guards, visitors , residents, admins, complaints, notice
 import logging
 
 from app.routers import whatsapp_webhook
-
+from app.routers import admin_units
 
 
 logger = logging.getLogger() 
@@ -45,6 +45,7 @@ app.include_router(residents.router )
 app.include_router(admins.router )
 app.include_router(complaints.router )
 app.include_router(notices.router )
+app.include_router(admin_units.router)
 
 @app.get("/")
 async def root():
