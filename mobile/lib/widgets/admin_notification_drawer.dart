@@ -22,6 +22,7 @@ import '../screens/sos_detail_screen.dart';
 class AdminNotificationDrawer extends StatefulWidget {
   final String societyId;
   final String adminId;
+
   /// Called when admin taps a pending signup item; caller should close drawer and navigate to pending signup screen.
   final VoidCallback? onNavigateToPendingSignup;
 
@@ -33,14 +34,15 @@ class AdminNotificationDrawer extends StatefulWidget {
   });
 
   @override
-  State<AdminNotificationDrawer> createState() => _AdminNotificationDrawerState();
+  State<AdminNotificationDrawer> createState() =>
+      _AdminNotificationDrawerState();
 }
 
 class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
   late final ComplaintService _complaintService = ComplaintService(
     baseUrl: Env.apiBaseUrl,
   );
-  
+
   late final NoticeService _noticeService = NoticeService(
     baseUrl: Env.apiBaseUrl,
   );
@@ -69,6 +71,14 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
       // Load pending residents: Join Requests (Find Society) + society-code signups
       int pendingSignups = 0;
       List<Map<String, dynamic>> signupNotifications = [];
+      String _toIso(dynamic v) {
+        if (v == null) return '';
+        if (v is Timestamp) return v.toDate().toIso8601String();
+        if (v is DateTime) return v.toIso8601String();
+        if (v is String) return v; // assume it might already be ISO
+        return '';
+      }
+
       final joinList =
           await _firestore.getResidentJoinRequestsForAdmin(widget.societyId);
       for (final r in joinList.take(5)) {
@@ -78,7 +88,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           'title': 'Join request: ${(r['name'] ?? 'Resident').toString()}',
           'description': 'Unit ${r['unitLabel'] ?? '–'}',
           'status': 'PENDING',
-          'created_at': (r['createdAt'] as dynamic)?.toString() ?? '',
+          'created_at': _toIso(r['createdAt'] ?? r['created_at']),
           'flat_no': r['unitLabel']?.toString() ?? '',
           'resident_name': r['name']?.toString() ?? 'Resident',
         });
@@ -86,36 +96,57 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
       pendingSignups = joinList.length;
       final signupsResult =
           await _signupService.getPendingSignups(societyId: widget.societyId);
-      if (signupsResult.isSuccess && signupsResult.data != null) {
-        final list = signupsResult.data!;
-        pendingSignups += list.length;
-        for (final s in list.take(5)) {
-          signupNotifications.add({
-            'type': 'resident_signup',
-            'id': s['signup_id']?.toString() ?? s['uid']?.toString() ?? '',
-            'title': 'Society code signup: ${(s['name'] ?? '').toString().isNotEmpty ? s['name'] : (s['email'] ?? 'Unknown')}',
-            'description': 'Flat ${s['flat_no'] ?? '–'} • ${s['email'] ?? ''}',
-            'status': 'PENDING',
-            'created_at': s['created_at']?.toString() ?? '',
-            'flat_no': s['flat_no']?.toString() ?? '',
-            'resident_name': s['name']?.toString() ?? 'Unknown',
-          });
-        }
+
+      final raw = signupsResult.data;
+
+      final List<Map<String, dynamic>> list = (raw != null && raw is List)
+          ? raw
+              .whereType<Map>()
+              .map((m) => Map<String, dynamic>.from(m))
+              .toList()
+          : const [];
+
+      pendingSignups += list.length;
+
+      for (final s in list.take(5)) {
+        signupNotifications.add({
+          'type': 'resident_signup',
+          'id': s['signup_id']?.toString() ?? s['uid']?.toString() ?? '',
+          'title':
+              'Society code signup: ${(s['name'] ?? '').toString().isNotEmpty ? s['name'] : (s['email'] ?? 'Unknown')}',
+          'description': 'Flat ${s['flat_no'] ?? '–'} • ${s['email'] ?? ''}',
+          'status': 'PENDING',
+          'created_at': _toIso(s['createdAt'] ?? s['created_at']),
+          'flat_no': s['flat_no']?.toString() ?? '',
+          'resident_name': s['name']?.toString() ?? 'Unknown',
+        });
       }
+
       signupNotifications = signupNotifications.take(5).toList();
 
       // Load pending complaints (only if module enabled)
       dynamic complaintsResult;
       if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
-        complaintsResult = await _complaintService.getAllComplaints(societyId: widget.societyId);
+        complaintsResult = await _complaintService.getAllComplaints(
+            societyId: widget.societyId);
       } else {
         complaintsResult = null;
       }
       int pendingComplaints = 0;
       List<Map<String, dynamic>> complaintNotifications = [];
 
-      if (complaintsResult != null && complaintsResult.isSuccess && complaintsResult.data != null) {
-        final allComplaints = complaintsResult.data!;
+      if (complaintsResult != null &&
+          complaintsResult.isSuccess &&
+          complaintsResult.data != null) {
+        final rawComplaints = complaintsResult.data;
+
+        final List<Map<String, dynamic>> allComplaints = (rawComplaints is List)
+            ? rawComplaints
+                .whereType<Map>()
+                .map((e) => Map<String, dynamic>.from(e))
+                .toList()
+            : [];
+
         pendingComplaints = allComplaints.where((c) {
           final status = (c['status'] ?? '').toString().toUpperCase();
           return status == 'PENDING' || status == 'IN_PROGRESS';
@@ -129,17 +160,17 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
             })
             .take(5)
             .map((c) => {
-              'type': 'complaint',
-              'id': c['complaint_id']?.toString() ?? '',
-              'title': c['title']?.toString() ?? 'Untitled Complaint',
-              'description': c['description']?.toString() ?? '',
-              'status': c['status']?.toString() ?? 'PENDING',
-              'created_at': c['created_at']?.toString() ?? '',
-              'flat_no': c['flat_no']?.toString() ?? '',
-              'resident_name': c['resident_name']?.toString() ?? 'Unknown',
-            })
+                  'type': 'complaint',
+                  'id': c['complaint_id']?.toString() ?? '',
+                  'title': c['title']?.toString() ?? 'Untitled Complaint',
+                  'description': c['description']?.toString() ?? '',
+                  'status': c['status']?.toString() ?? 'PENDING',
+                  'created_at': c['created_at']?.toString() ?? '',
+                  'flat_no': c['flat_no']?.toString() ?? '',
+                  'resident_name': c['resident_name']?.toString() ?? 'Unknown',
+                })
             .toList();
-        
+
         complaintNotifications = recentPending;
       }
 
@@ -152,46 +183,47 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           activeOnly: true,
         );
         if (noticesResult.isSuccess && noticesResult.data != null) {
-        final allNotices = noticesResult.data!;
-        final now = DateTime.now();
-        
-        // Get notices from last 24 hours
-        final recentNoticesList = allNotices.where((n) {
-          try {
-            final createdAt = n['created_at']?.toString() ?? '';
-            if (createdAt.isEmpty) return false;
-            final created = DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
-            final hoursDiff = now.difference(created).inHours;
-            return hoursDiff <= 24; // Notices from last 24 hours
-          } catch (e) {
-            return false;
-          }
-        }).toList();
+          final allNotices = noticesResult.data!;
+          final now = DateTime.now();
 
-        recentNotices = recentNoticesList.length;
-        noticeNotifications = recentNoticesList
-            .take(5)
-            .map((n) {
-              final noticeType = n['notice_type']?.toString() ?? 'GENERAL';
-              String typeLabel = 'Notice';
-              if (noticeType == 'EMERGENCY') typeLabel = 'Alert';
-              else if (noticeType == 'SCHEDULE') typeLabel = 'Event';
-              else if (noticeType == 'MAINTENANCE') typeLabel = 'Maintenance';
-              else if (noticeType == 'GENERAL') typeLabel = 'Announcement';
-              
-              return {
-                'type': 'notice',
-                'id': n['notice_id']?.toString() ?? '',
-                'title': n['title']?.toString() ?? 'Untitled Notice',
-                'description': n['content']?.toString() ?? '',
-                'status': n['status']?.toString() ?? 'ACTIVE',
-                'created_at': n['created_at']?.toString() ?? '',
-                'notice_type': noticeType,
-                'type_label': typeLabel,
-                'priority': n['priority']?.toString() ?? 'NORMAL',
-              };
-            })
-            .toList();
+          // Get notices from last 24 hours
+          final recentNoticesList = allNotices.where((n) {
+            try {
+              final createdAt = n['created_at']?.toString() ?? '';
+              if (createdAt.isEmpty) return false;
+              final created =
+                  DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
+              final hoursDiff = now.difference(created).inHours;
+              return hoursDiff <= 24; // Notices from last 24 hours
+            } catch (e) {
+              return false;
+            }
+          }).toList();
+
+          recentNotices = recentNoticesList.length;
+          noticeNotifications = recentNoticesList.take(5).map((n) {
+            final noticeType = n['notice_type']?.toString() ?? 'GENERAL';
+            String typeLabel = 'Notice';
+            if (noticeType == 'EMERGENCY') {
+              typeLabel = 'Alert';
+            } else if (noticeType == 'SCHEDULE')
+              typeLabel = 'Event';
+            else if (noticeType == 'MAINTENANCE')
+              typeLabel = 'Maintenance';
+            else if (noticeType == 'GENERAL') typeLabel = 'Announcement';
+
+            return {
+              'type': 'notice',
+              'id': n['notice_id']?.toString() ?? '',
+              'title': n['title']?.toString() ?? 'Untitled Notice',
+              'description': n['content']?.toString() ?? '',
+              'status': n['status']?.toString() ?? 'ACTIVE',
+              'created_at': n['created_at']?.toString() ?? '',
+              'notice_type': noticeType,
+              'type_label': typeLabel,
+              'priority': n['priority']?.toString() ?? 'NORMAL',
+            };
+          }).toList();
         }
       }
 
@@ -201,41 +233,42 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
       if (SocietyModules.isEnabled(SocietyModuleIds.sos)) {
         try {
           final sosList = await _firestore.getSosRequests(
-          societyId: widget.societyId,
-          limit: 50,
-        );
+            societyId: widget.societyId,
+            limit: 50,
+          );
 
-        final openOnly = sosList.where((s) {
-          final status = (s['status'] ?? 'OPEN').toString().toUpperCase();
-          return status == 'OPEN';
-        }).toList();
+          final openOnly = sosList.where((s) {
+            final status = (s['status'] ?? 'OPEN').toString().toUpperCase();
+            return status == 'OPEN';
+          }).toList();
 
-        openSos = openOnly.length;
+          openSos = openOnly.length;
 
-        sosNotifications = openOnly.map((s) {
-          final flatNo = (s['flatNo'] ?? '').toString();
-          final residentName = (s['residentName'] ?? 'Resident').toString();
-          final createdAt = s['createdAt'];
-          String? createdAtIso;
-          if (createdAt is Timestamp) {
-            createdAtIso = createdAt.toDate().toIso8601String();
-          } else if (createdAt is DateTime) {
-            createdAtIso = createdAt.toIso8601String();
-          }
+          sosNotifications = openOnly.map((s) {
+            final flatNo = (s['flatNo'] ?? '').toString();
+            final residentName = (s['residentName'] ?? 'Resident').toString();
+            final createdAt = s['createdAt'];
+            String? createdAtIso;
+            if (createdAt is Timestamp) {
+              createdAtIso = createdAt.toDate().toIso8601String();
+            } else if (createdAt is DateTime) {
+              createdAtIso = createdAt.toIso8601String();
+            }
 
-          return {
-            'type': 'sos',
-            'id': (s['sosId'] ?? '').toString(),
-            'title': 'SOS from Flat $flatNo',
-            'description': residentName,
-            'status': (s['status'] ?? 'OPEN').toString(),
-            'created_at': createdAtIso ?? '',
-            'flat_no': flatNo,
-            'resident_name': residentName,
-          };
-        }).toList();
+            return {
+              'type': 'sos',
+              'id': (s['sosId'] ?? '').toString(),
+              'title': 'SOS from Flat $flatNo',
+              'description': residentName,
+              'status': (s['status'] ?? 'OPEN').toString(),
+              'created_at': createdAtIso ?? '',
+              'flat_no': flatNo,
+              'resident_name': residentName,
+            };
+          }).toList();
         } catch (e, st) {
-          AppLogger.e("Error loading SOS notifications (admin drawer)", error: e, stackTrace: st);
+          AppLogger.e("Error loading SOS notifications (admin drawer)",
+              error: e, stackTrace: st);
         }
       }
 
@@ -249,8 +282,10 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
 
       allNotifications.sort((a, b) {
         try {
-          final aTime = DateTime.parse(a['created_at']?.toString().replaceAll("Z", "+00:00") ?? '');
-          final bTime = DateTime.parse(b['created_at']?.toString().replaceAll("Z", "+00:00") ?? '');
+          final aTime = DateTime.parse(
+              a['created_at']?.toString().replaceAll("Z", "+00:00") ?? '');
+          final bTime = DateTime.parse(
+              b['created_at']?.toString().replaceAll("Z", "+00:00") ?? '');
           return bTime.compareTo(aTime); // Most recent first
         } catch (e) {
           return 0;
@@ -276,7 +311,8 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
         "total_notifications": allNotifications.length,
       });
     } catch (e, stackTrace) {
-      AppLogger.e("Error loading admin notifications", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error loading admin notifications",
+          error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -304,7 +340,9 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
     final statusUpper = status.toUpperCase();
     if (statusUpper == 'PENDING') return AppColors.warning;
     if (statusUpper == 'IN_PROGRESS') return AppColors.primary;
-    if (statusUpper == 'RESOLVED' || statusUpper == 'APPROVED' || statusUpper == 'ACTIVE') return AppColors.success;
+    if (statusUpper == 'RESOLVED' ||
+        statusUpper == 'APPROVED' ||
+        statusUpper == 'ACTIVE') return AppColors.success;
     if (statusUpper == 'REJECTED') return AppColors.error;
     return AppColors.text2;
   }
@@ -356,7 +394,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           // Header
           Container(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               border: Border(
                 bottom: BorderSide(color: AppColors.border, width: 1),
               ),
@@ -369,7 +407,8 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                     color: AppColors.admin.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.notifications_rounded, color: AppColors.admin, size: 24),
+                  child: const Icon(Icons.notifications_rounded,
+                      color: AppColors.admin, size: 24),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
@@ -512,16 +551,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                           itemBuilder: (context, index) {
                             final notification = _notifications[index];
                             final type = notification['type'] ?? '';
-                            final isSignup = type == 'resident_signup';
-                            return InkWell(
-                              onTap: isSignup && widget.onNavigateToPendingSignup != null
-                                  ? () {
-                                      widget.onNavigateToPendingSignup!();
-                                    }
-                                  : null,
-                              borderRadius: BorderRadius.circular(16),
-                              child: _buildNotificationItem(notification),
-                            );
+                            return _buildNotificationItem(notification);
                           },
                         ),
                       ),
@@ -559,7 +589,8 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: color,
                   borderRadius: BorderRadius.circular(12),
@@ -578,7 +609,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           const SizedBox(height: 8),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppColors.text2,
@@ -616,130 +647,145 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           ],
         ),
         child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: _getNotificationIconColor(type).withOpacity(0.15),
-              borderRadius: BorderRadius.circular(12),
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: _getNotificationIconColor(type).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                _getNotificationIcon(type),
+                color: _getNotificationIconColor(type),
+                size: 24,
+              ),
             ),
-            child: Icon(
-              _getNotificationIcon(type),
-              color: _getNotificationIconColor(type),
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.text,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(status).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Text(
-                        status.toUpperCase(),
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          color: _getStatusColor(status),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.text,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: AppColors.text2,
-                    fontWeight: FontWeight.w500,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(status).withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          status.toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            color: _getStatusColor(status),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.access_time_rounded, size: 12, color: AppColors.text2),
-                    const SizedBox(width: 4),
-                    Text(
-                      time,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.text2,
-                        fontWeight: FontWeight.w500,
-                      ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.text2,
+                      fontWeight: FontWeight.w500,
                     ),
-                    if (type == 'complaint' && notification['flat_no'] != null) ...[
-                      const SizedBox(width: 12),
-                      Icon(Icons.home_rounded, size: 12, color: AppColors.text2),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time_rounded,
+                          size: 12, color: AppColors.text2),
                       const SizedBox(width: 4),
                       Text(
-                        "Flat ${notification['flat_no']}",
-                        style: TextStyle(
+                        time,
+                        style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.text2,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
-                    ],
-                    if (type == 'notice' && notification['type_label'] != null) ...[
-                      const SizedBox(width: 12),
-                      Icon(Icons.category_rounded, size: 12, color: AppColors.text2),
-                      const SizedBox(width: 4),
-                      Text(
-                        notification['type_label'],
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: AppColors.text2,
-                          fontWeight: FontWeight.w500,
+                      if (type == 'complaint' &&
+                          notification['flat_no'] != null) ...[
+                        const SizedBox(width: 12),
+                        const Icon(Icons.home_rounded,
+                            size: 12, color: AppColors.text2),
+                        const SizedBox(width: 4),
+                        Text(
+                          "Flat ${notification['flat_no']}",
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.text2,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
+                      ],
+                      if (type == 'notice' &&
+                          notification['type_label'] != null) ...[
+                        const SizedBox(width: 12),
+                        const Icon(Icons.category_rounded,
+                            size: 12, color: AppColors.text2),
+                        const SizedBox(width: 4),
+                        Text(
+                          notification['type_label'],
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: AppColors.text2,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ],
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
     );
   }
 
   void _handleNotificationTap(Map<String, dynamic> notification) {
-    final type = notification['type'] ?? '';
-    final id = notification['id'] ?? '';
-    
+    final type = (notification['type'] ?? '').toString();
+    final id = (notification['id'] ?? '').toString();
+
+    // For resident signup, let dashboard callback handle pop + navigation.
+    if (type == 'resident_signup') {
+      widget.onNavigateToPendingSignup?.call();
+      return;
+    }
+
     if (id.isEmpty) return;
 
-    Navigator.pop(context); // Close drawer
+    // For other types, drawer itself can close then navigate.
+    Navigator.pop(context);
 
     switch (type) {
       case 'sos':
         if (!SocietyModules.isEnabled(SocietyModuleIds.sos)) return;
-        final flatNo = notification['flat_no'] ?? '';
-        final residentName = notification['resident_name'] ?? 'Resident';
+        final flatNo = (notification['flat_no'] ?? '').toString();
+        final residentName =
+            (notification['resident_name'] ?? 'Resident').toString();
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -753,14 +799,13 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           ),
         );
         break;
-      case 'resident_signup':
-        widget.onNavigateToPendingSignup?.call();
-        break;
+
       case 'complaint':
-        // Navigate to complaints - admin shell handles this
+        // later: navigate to complaints tab
         break;
+
       case 'notice':
-        // Navigate to notices
+        // later: navigate to notices tab
         break;
     }
   }

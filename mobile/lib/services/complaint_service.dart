@@ -31,8 +31,10 @@ class ComplaintService {
     required String title,
     required String description,
     required String category,
+
     /// 'general' = visible to everyone; 'personal' = visible to admins & guards only
     String visibility = 'general',
+
     /// Optional image URL (e.g. uploaded to Firebase Storage)
     String? photoUrl,
   }) async {
@@ -56,7 +58,8 @@ class ComplaintService {
         photoUrl: photoUrl,
       );
 
-      AppLogger.i("Complaint created successfully", data: {'complaintId': complaintId});
+      AppLogger.i("Complaint created successfully",
+          data: {'complaintId': complaintId});
 
       return ApiResult.success({
         'complaint_id': complaintId,
@@ -93,28 +96,36 @@ class ComplaintService {
         residentUid: residentUid,
       );
 
-      AppLogger.i("Resident complaints fetched", data: {'count': complaints.length});
+      AppLogger.i("Resident complaints fetched",
+          data: {'count': complaints.length});
       return ApiResult.success(complaints);
     } catch (e, stackTrace) {
-      AppLogger.e("Error getting resident complaints", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error getting resident complaints",
+          error: e, stackTrace: stackTrace);
       return ApiResult.failure("Failed to load complaints: ${e.toString()}");
     }
   }
 
-  Future<ApiResult<List<dynamic>>> getAllComplaints({
+  Future<ApiResult<List<Map<String, dynamic>>>> getAllComplaints({
     required String societyId,
     String? status,
   }) async {
     try {
-      final complaints = await _firestore.getAllComplaints(
+      final raw = await _firestore.getAllComplaints(
         societyId: societyId,
         status: status,
       );
 
+      final complaints = (raw)
+          .whereType<Map>()
+          .map((m) => Map<String, dynamic>.from(m))
+          .toList();
+
       AppLogger.i("All complaints fetched", data: {'count': complaints.length});
       return ApiResult.success(complaints);
     } catch (e, stackTrace) {
-      AppLogger.e("Error getting all complaints", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error getting all complaints",
+          error: e, stackTrace: stackTrace);
       return ApiResult.failure("Failed to load complaints: ${e.toString()}");
     }
   }
@@ -127,7 +138,9 @@ class ComplaintService {
   }) async {
     try {
       final session = await Storage.getFirebaseSession();
-      if (session == null || session['societyId'] == null || session['uid'] == null) {
+      if (session == null ||
+          session['societyId'] == null ||
+          session['uid'] == null) {
         return ApiResult.failure("User not authenticated");
       }
       final societyId = session['societyId'] as String;
@@ -139,18 +152,20 @@ class ComplaintService {
         complaintId: complaintId,
         status: status,
         resolvedByUid: resolvedBy ?? uid,
-        resolvedByName: resolvedBy != null ? resolvedBy : name,
+        resolvedByName: resolvedBy ?? name,
         adminResponse: adminResponse,
       );
 
-      AppLogger.i("Complaint status updated", data: {'complaintId': complaintId, 'status': status});
+      AppLogger.i("Complaint status updated",
+          data: {'complaintId': complaintId, 'status': status});
       return ApiResult.success({
         'ok': true,
         'complaint_id': complaintId,
         'status': status,
       });
     } catch (e, stackTrace) {
-      AppLogger.e("Error updating complaint status", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error updating complaint status",
+          error: e, stackTrace: stackTrace);
       return ApiResult.failure("Failed to update complaint: ${e.toString()}");
     }
   }
