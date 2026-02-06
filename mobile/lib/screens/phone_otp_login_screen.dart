@@ -239,7 +239,72 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
       );
 
       // 🚫 No membership → onboarding by roleHint (UI only)
+      // 🚫 No membership → could be NEW user OR pending join request
+      // 🚫 No membership → could be NEW user OR pending join request
       if (membership == null) {
+        AppLogger.w("No membership → checking pending join_requests", data: {
+          'uid': uid,
+          'roleHint': widget.roleHint,
+        });
+
+        // 🔍 STEP-1: lookup pending join request
+        try {
+          AppLogger.i("JoinRequest lookup: start", data: {'uid': uid});
+
+          final jr = await _firestore.findPendingJoinRequestByUid(uid);
+
+          AppLogger.i("JoinRequest lookup: result", data: {
+            'found': jr != null,
+            'status': jr?['status'],
+            'requestedRole': jr?['requestedRole'],
+            'societyId': jr?['societyId'],
+          });
+
+          if (jr != null) {
+            final status = (jr['status'] ?? '').toString().toUpperCase();
+            final role =
+                (jr['requestedRole'] ?? '').toString().trim().toLowerCase();
+            final societyIdFromJr = (jr['societyId'] ?? '').toString().trim();
+            final nameFromJr = (jr['name'] ?? '').toString().trim();
+            final phoneFromJr = (jr['phone'] ?? '').toString().trim();
+
+            if (status == 'PENDING' && societyIdFromJr.isNotEmpty) {
+              if (!mounted) return;
+
+              if (role == 'admin') {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => AdminPendingApprovalScreen(
+                      societyId: societyIdFromJr,
+                      adminId: uid,
+                      adminName: nameFromJr.isNotEmpty ? nameFromJr : 'Admin',
+                      email: phoneFromJr,
+                    ),
+                  ),
+                );
+                return;
+              }
+
+              if (role == 'resident') {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(
+                    builder: (_) => ResidentPendingApprovalScreen(
+                      residentId: uid,
+                      societyId: societyIdFromJr,
+                      residentName:
+                          nameFromJr.isNotEmpty ? nameFromJr : 'Resident',
+                    ),
+                  ),
+                );
+                return;
+              }
+            }
+          }
+        } catch (e, st) {
+          AppLogger.e("JoinRequest lookup failed", error: e, stackTrace: st);
+        }
+
+        // ⬇️ FALLBACK (existing behavior)
         if (!mounted) return;
         setState(() => _isLoading = false);
 
@@ -260,7 +325,6 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
           return;
         }
 
-        // resident default
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
               builder: (_) => const FindSocietyScreen(mode: 'resident')),

@@ -468,23 +468,8 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
               ),
             ),
 
-            const SizedBox(height: 10),
-            TextButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AdminOnboardingScreen()),
-                );
-              },
-              child: Text(
-                "Create New Society (Super Admin)",
-                style: TextStyle(
-                  color: theme.colorScheme.primary.withOpacity(0.85),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                ),
-              ),
-            ),
+           
+            
           ],
         ),
       ),

@@ -29,6 +29,8 @@ import '../utils/error_messages.dart';
 import '../widgets/visitors_chart.dart';
 import '../widgets/dashboard_insights_card.dart';
 import '../widgets/error_retry_widget.dart';
+import '../services/admin_notification_aggregator.dart';
+
 
 /// Admin Dashboard Screen
 ///
@@ -115,6 +117,27 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     _setupPendingSignupsListener();
     _loadAdminProfile();
     _maybeAutoRunTour();
+    _preloadBellCount();
+  }
+
+  Future<void> _preloadBellCount() async {
+    try {
+      final counts = await AdminNotificationAggregator.load(
+        societyId: widget.societyId,
+        firestore: _firestore,
+        complaintService: _complaintService,
+        noticeService: _noticeService,
+        signupService: _signupService,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _notificationCount = counts.total;
+        _sosBadgeCount = counts.openSos > 0 ? 1 : 0;
+      });
+    } catch (_) {
+      // fail silently; bell can update later
+    }
   }
 
   Future<void> _loadInsightsCounts() async {
@@ -377,6 +400,17 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           );
         },
+
+        // ✅ NEW: badge count comes ONLY from drawer _loadNotifications()
+        onBadgeCountChanged: (count) {
+          if (!mounted) return;
+          setState(() {
+            _notificationCount = count;
+            // optional: if you want SOS to be included via count only, keep this as-is.
+            // If you want SOS badge separate, remove this line.
+            _sosBadgeCount = 0;
+          });
+        },
       ),
     ).then((_) {
       // User has seen notifications; clear unread notices and SOS badge for this session
@@ -386,7 +420,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           _sosBadgeCount = 0;
         });
       }
-      _loadNotificationCount();
+
+      // ✅ IMPORTANT: If you want "count logic ONLY in _loadNotifications",
+      // then comment this out (otherwise it will recompute from old logic).
+      // _loadNotificationCount();
     });
   }
 
@@ -1077,4 +1114,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       children: children,
     );
   }
+
+
+
 }

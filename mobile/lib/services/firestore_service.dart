@@ -9,6 +9,8 @@ import 'package:flutter/foundation.dart';
 import '../core/app_logger.dart';
 import 'firebase_auth_service.dart';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 /// FirestoreService - Multi-tenant Firestore operations
 ///
 /// All operations are scoped to societies/{societyId}/...
@@ -756,58 +758,57 @@ class FirestoreService {
     }, SetOptions(merge: true));
   }
 
+  /// For Super Admin UI: list pending admin join requests (Find Society flow)
+  Future<List<Map<String, dynamic>>> getAdminJoinRequestsForSuperAdmin(
+    String societyId,
+  ) async {
+    try {
+      final snapshot = await _publicSocietiesRef
+          .doc(societyId)
+          .collection('join_requests')
+          .where('requestedRole', isEqualTo: 'admin')
+          .where('status', isEqualTo: 'PENDING')
+          .orderBy('createdAt')
+          .get();
 
-/// For Super Admin UI: list pending admin join requests (Find Society flow)
-Future<List<Map<String, dynamic>>> getAdminJoinRequestsForSuperAdmin(
-  String societyId,
-) async {
-  try {
-    final snapshot = await _publicSocietiesRef
-        .doc(societyId)
-        .collection('join_requests')
-        .where('requestedRole', isEqualTo: 'admin')
-        .where('status', isEqualTo: 'PENDING')
-        .orderBy('createdAt')
-        .get();
+      final list = snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>? ?? {};
+        return {
+          'uid': data['uid'] ?? doc.id,
+          'name': data['name'] ?? '',
+          'phone': data['phone'] ?? '',
+          'societyRole': data['societyRole'] ?? 'ADMIN',
+          'requestedRole': data['requestedRole'] ?? 'admin',
+          'status': data['status'] ?? 'PENDING',
+          'createdAt': data['createdAt'],
+          'email': data['email'], // if present
+        };
+      }).toList();
 
-    final list = snapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>? ?? {};
-      return {
-        'uid': data['uid'] ?? doc.id,
-        'name': data['name'] ?? '',
-        'phone': data['phone'] ?? '',
-        'societyRole': data['societyRole'] ?? 'ADMIN',
-        'requestedRole': data['requestedRole'] ?? 'admin',
-        'status': data['status'] ?? 'PENDING',
-        'createdAt': data['createdAt'],
-        'email': data['email'], // if present
-      };
-    }).toList();
+      AppLogger.i('Admin join requests loaded',
+          data: {'societyId': societyId, 'count': list.length});
 
-    AppLogger.i('Admin join requests loaded',
-        data: {'societyId': societyId, 'count': list.length});
-
-    return list;
-  } on FirebaseException catch (e, st) {
-    if (e.code == 'failed-precondition') {
-      AppLogger.e(
-        'Missing index for getAdminJoinRequestsForSuperAdmin. '
-        'Expected composite index on {requestedRole ASC, status ASC, createdAt ASC}.',
-        error: e,
-        stackTrace: st,
-        data: {'societyId': societyId},
-      );
-    } else {
-      AppLogger.e('Error getting admin join requests',
+      return list;
+    } on FirebaseException catch (e, st) {
+      if (e.code == 'failed-precondition') {
+        AppLogger.e(
+          'Missing index for getAdminJoinRequestsForSuperAdmin. '
+          'Expected composite index on {requestedRole ASC, status ASC, createdAt ASC}.',
+          error: e,
+          stackTrace: st,
+          data: {'societyId': societyId},
+        );
+      } else {
+        AppLogger.e('Error getting admin join requests',
+            error: e, stackTrace: st);
+      }
+      return [];
+    } catch (e, st) {
+      AppLogger.e('Error getting admin join requests (unknown)',
           error: e, stackTrace: st);
+      return [];
     }
-    return [];
-  } catch (e, st) {
-    AppLogger.e('Error getting admin join requests (unknown)',
-        error: e, stackTrace: st);
-    return [];
   }
-}
 
   /// Get society by code
   /// Handles codes with or without SOC_ prefix (e.g., "AMARA" or "SOC_AMARA" both work)
@@ -2459,7 +2460,7 @@ Future<List<Map<String, dynamic>>> getAdminJoinRequestsForSuperAdmin(
     required String cityId,
     required String name,
     required String phoneE164,
-    String? societyRole, 
+    String? societyRole,
   }) async {
     final uid = currentUid;
     if (uid == null) {
@@ -2495,5 +2496,32 @@ Future<List<Map<String, dynamic>>> getAdminJoinRequestsForSuperAdmin(
           error: e, stackTrace: st);
       rethrow;
     }
+  }
+
+  Future<Map<String, dynamic>?> findPendingJoinRequestByUid(String uid) async {
+    final qs = await FirebaseFirestore.instance
+        .collectionGroup('join_requests')
+        .where('uid', isEqualTo: uid)
+        .where('status', isEqualTo: 'PENDING')
+        .limit(1)
+        .get();
+
+    if (qs.docs.isEmpty) return null;
+    return Map<String, dynamic>.from(qs.docs.first.data());
+  }
+
+  Future<List<Map<String, dynamic>>> getAdminJoinRequestsForAdmin(
+      String societyId) async {
+    final qs = await FirebaseFirestore.instance
+        .collection('public_societies')
+        .doc(societyId)
+        .collection('join_requests')
+        .where('requestedRole', isEqualTo: 'admin')
+        .where('status', isEqualTo: 'PENDING')
+        .orderBy('createdAt', descending: true)
+        .limit(50)
+        .get();
+
+    return qs.docs.map((d) => Map<String, dynamic>.from(d.data())).toList();
   }
 }

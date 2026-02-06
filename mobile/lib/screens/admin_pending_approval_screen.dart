@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import '../ui/app_colors.dart';
 import 'phone_otp_login_screen.dart';
 
@@ -45,6 +47,24 @@ class AdminPendingApprovalScreen extends StatelessWidget {
     return '$prefix******$last4';
   }
 
+  Future<void> _logoutAndRevealLogin(BuildContext context) async {
+    // Make this behave exactly like a Logout button.
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (_) {
+      // Ignore signOut errors; still route to login.
+    }
+
+    if (!context.mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => const PhoneOtpLoginScreen(roleHint: 'admin'),
+      ),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final value = email ?? '';
@@ -76,14 +96,7 @@ class AdminPendingApprovalScreen extends StatelessWidget {
               size: 20,
             ),
           ),
-          onPressed: () {
-            // ✅ OTP-first: go back to OTP login with admin hint
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (_) => const PhoneOtpLoginScreen(roleHint: 'admin'),
-              ),
-            );
-          },
+          onPressed: () => _logoutAndRevealLogin(context),
         ),
       ),
       body: Stack(
@@ -259,17 +272,10 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                       width: double.infinity,
                       height: 56,
                       child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).pushReplacement(
-                            MaterialPageRoute(
-                              builder: (_) =>
-                                  const PhoneOtpLoginScreen(roleHint: 'admin'),
-                            ),
-                          );
-                        },
-                        icon: const Icon(Icons.arrow_back_rounded, size: 20),
+                        onPressed: () => _logoutAndRevealLogin(context),
+                        icon: const Icon(Icons.logout_rounded, size: 20),
                         label: const Text(
-                          "BACK TO LOGIN",
+                          "LOGOUT",
                           style: TextStyle(
                             fontWeight: FontWeight.w900,
                             letterSpacing: 1.2,

@@ -22,6 +22,8 @@ import '../screens/sos_detail_screen.dart';
 class AdminNotificationDrawer extends StatefulWidget {
   final String societyId;
   final String adminId;
+  final ValueChanged<int>? onBadgeCountChanged;
+
 
   /// Called when admin taps a pending signup item; caller should close drawer and navigate to pending signup screen.
   final VoidCallback? onNavigateToPendingSignup;
@@ -31,6 +33,7 @@ class AdminNotificationDrawer extends StatefulWidget {
     required this.societyId,
     required this.adminId,
     this.onNavigateToPendingSignup,
+    this.onBadgeCountChanged,
   });
 
   @override
@@ -68,20 +71,31 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
     setState(() => _isLoading = true);
 
     try {
-      // Load pending residents: Join Requests (Find Society) + society-code signups
-      int pendingSignups = 0;
-      List<Map<String, dynamic>> signupNotifications = [];
+      // -----------------------------
+      // Helpers
+      // -----------------------------
       String _toIso(dynamic v) {
         if (v == null) return '';
         if (v is Timestamp) return v.toDate().toIso8601String();
         if (v is DateTime) return v.toIso8601String();
-        if (v is String) return v; // assume it might already be ISO
+        if (v is String) return v;
         return '';
       }
 
-      final joinList =
+      // -----------------------------
+      // JOIN REQUESTS (Resident + Admin)
+      // -----------------------------
+      int pendingSignups = 0;
+      List<Map<String, dynamic>> signupNotifications = [];
+
+      final residentJoinList =
           await _firestore.getResidentJoinRequestsForAdmin(widget.societyId);
-      for (final r in joinList.take(5)) {
+
+      final adminJoinList =
+          await _firestore.getAdminJoinRequestsForAdmin(widget.societyId);
+
+      // Resident join requests
+      for (final r in residentJoinList.take(5)) {
         signupNotifications.add({
           'type': 'resident_signup',
           'id': r['uid']?.toString() ?? '',
@@ -93,7 +107,27 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           'resident_name': r['name']?.toString() ?? 'Resident',
         });
       }
-      pendingSignups = joinList.length;
+
+      // Admin join requests
+      for (final a in adminJoinList.take(5)) {
+        signupNotifications.add({
+          'type': 'admin_signup',
+          'id': a['uid']?.toString() ?? '',
+          'title': 'Admin access request: ${(a['name'] ?? 'Admin').toString()}',
+          'description': (a['phone'] ?? '').toString().isNotEmpty
+              ? 'Phone ${(a['phone'] ?? '').toString()}'
+              : 'Pending admin approval',
+          'status': 'PENDING',
+          'created_at': _toIso(a['createdAt'] ?? a['created_at']),
+          'resident_name': a['name']?.toString() ?? 'Admin',
+        });
+      }
+
+      pendingSignups = residentJoinList.length + adminJoinList.length;
+
+      // -----------------------------
+      // SOCIETY-CODE SIGNUPS
+      // -----------------------------
       final signupsResult =
           await _signupService.getPendingSignups(societyId: widget.societyId);
 
@@ -101,10 +135,10 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
 
       final List<Map<String, dynamic>> list = (raw != null && raw is List)
           ? raw
-              .whereType<Map>()
-              .map((m) => Map<String, dynamic>.from(m))
+              .where((e) => e is Map)
+              .map((e) => Map<String, dynamic>.from(e as Map))
               .toList()
-          : const [];
+          : <Map<String, dynamic>>[];
 
       pendingSignups += list.length;
 
@@ -124,93 +158,87 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
 
       signupNotifications = signupNotifications.take(5).toList();
 
-      // Load pending complaints (only if module enabled)
-      dynamic complaintsResult;
-      if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
-        complaintsResult = await _complaintService.getAllComplaints(
-            societyId: widget.societyId);
-      } else {
-        complaintsResult = null;
-      }
+      // -----------------------------
+      // COMPLAINTS
+      // -----------------------------
       int pendingComplaints = 0;
       List<Map<String, dynamic>> complaintNotifications = [];
 
-      if (complaintsResult != null &&
-          complaintsResult.isSuccess &&
-          complaintsResult.data != null) {
-        final rawComplaints = complaintsResult.data;
+      if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
+        final complaintsResult = await _complaintService.getAllComplaints(
+            societyId: widget.societyId);
 
-        final List<Map<String, dynamic>> allComplaints = (rawComplaints is List)
-            ? rawComplaints
-                .whereType<Map>()
-                .map((e) => Map<String, dynamic>.from(e))
-                .toList()
-            : [];
+        if (complaintsResult.isSuccess && complaintsResult.data != null) {
+          final rawComplaints = complaintsResult.data;
 
-        pendingComplaints = allComplaints.where((c) {
-          final status = (c['status'] ?? '').toString().toUpperCase();
-          return status == 'PENDING' || status == 'IN_PROGRESS';
-        }).length;
+          final List<Map<String, dynamic>> allComplaints =
+              (rawComplaints != null && rawComplaints is List)
+                  ? rawComplaints
+                      .where((e) => e is Map)
+                      .map((e) => Map<String, dynamic>.from(e as Map))
+                      .toList()
+                  : <Map<String, dynamic>>[];
 
-        // Get recent pending complaints (last 5)
-        final recentPending = allComplaints
-            .where((c) {
-              final status = (c['status'] ?? '').toString().toUpperCase();
-              return status == 'PENDING' || status == 'IN_PROGRESS';
-            })
-            .take(5)
-            .map((c) => {
-                  'type': 'complaint',
-                  'id': c['complaint_id']?.toString() ?? '',
-                  'title': c['title']?.toString() ?? 'Untitled Complaint',
-                  'description': c['description']?.toString() ?? '',
-                  'status': c['status']?.toString() ?? 'PENDING',
-                  'created_at': c['created_at']?.toString() ?? '',
-                  'flat_no': c['flat_no']?.toString() ?? '',
-                  'resident_name': c['resident_name']?.toString() ?? 'Unknown',
-                })
-            .toList();
+          pendingComplaints = allComplaints.where((c) {
+            final status = (c['status'] ?? '').toString().toUpperCase();
+            return status == 'PENDING' || status == 'IN_PROGRESS';
+          }).length;
 
-        complaintNotifications = recentPending;
+          complaintNotifications = allComplaints
+              .where((c) {
+                final status = (c['status'] ?? '').toString().toUpperCase();
+                return status == 'PENDING' || status == 'IN_PROGRESS';
+              })
+              .take(5)
+              .map((c) => {
+                    'type': 'complaint',
+                    'id': c['complaint_id']?.toString() ?? '',
+                    'title': c['title']?.toString() ?? 'Untitled Complaint',
+                    'description': c['description']?.toString() ?? '',
+                    'status': c['status']?.toString() ?? 'PENDING',
+                    'created_at': c['created_at']?.toString() ?? '',
+                    'flat_no': c['flat_no']?.toString() ?? '',
+                    'resident_name':
+                        c['resident_name']?.toString() ?? 'Unknown',
+                  })
+              .toList();
+        }
       }
 
-      // Load recent notices (only if module enabled)
-      List<Map<String, dynamic>> noticeNotifications = [];
+      // -----------------------------
+      // NOTICES
+      // -----------------------------
       int recentNotices = 0;
+      List<Map<String, dynamic>> noticeNotifications = [];
+
       if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
         final noticesResult = await _noticeService.getNotices(
           societyId: widget.societyId,
           activeOnly: true,
         );
+
         if (noticesResult.isSuccess && noticesResult.data != null) {
           final allNotices = noticesResult.data!;
           final now = DateTime.now();
 
-          // Get notices from last 24 hours
           final recentNoticesList = allNotices.where((n) {
             try {
-              final createdAt = n['created_at']?.toString() ?? '';
-              if (createdAt.isEmpty) return false;
               final created =
-                  DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
-              final hoursDiff = now.difference(created).inHours;
-              return hoursDiff <= 24; // Notices from last 24 hours
-            } catch (e) {
+                  DateTime.parse(n['created_at'].replaceAll("Z", "+00:00"));
+              return now.difference(created).inHours <= 24;
+            } catch (_) {
               return false;
             }
           }).toList();
 
           recentNotices = recentNoticesList.length;
+
           noticeNotifications = recentNoticesList.take(5).map((n) {
             final noticeType = n['notice_type']?.toString() ?? 'GENERAL';
             String typeLabel = 'Notice';
-            if (noticeType == 'EMERGENCY') {
-              typeLabel = 'Alert';
-            } else if (noticeType == 'SCHEDULE')
-              typeLabel = 'Event';
-            else if (noticeType == 'MAINTENANCE')
-              typeLabel = 'Maintenance';
-            else if (noticeType == 'GENERAL') typeLabel = 'Announcement';
+            if (noticeType == 'EMERGENCY') typeLabel = 'Alert';
+            if (noticeType == 'SCHEDULE') typeLabel = 'Event';
+            if (noticeType == 'MAINTENANCE') typeLabel = 'Maintenance';
 
             return {
               'type': 'notice',
@@ -227,52 +255,44 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
         }
       }
 
-      // Load open SOS alerts (only if module enabled)
-      List<Map<String, dynamic>> sosNotifications = [];
+      // -----------------------------
+      // SOS
+      // -----------------------------
       int openSos = 0;
+      List<Map<String, dynamic>> sosNotifications = [];
+
       if (SocietyModules.isEnabled(SocietyModuleIds.sos)) {
-        try {
-          final sosList = await _firestore.getSosRequests(
-            societyId: widget.societyId,
-            limit: 50,
-          );
+        final sosList =
+            await _firestore.getSosRequests(societyId: widget.societyId);
 
-          final openOnly = sosList.where((s) {
-            final status = (s['status'] ?? 'OPEN').toString().toUpperCase();
-            return status == 'OPEN';
-          }).toList();
+        final openOnly = sosList.where((s) {
+          final status = (s['status'] ?? 'OPEN').toString().toUpperCase();
+          return status == 'OPEN';
+        }).toList();
 
-          openSos = openOnly.length;
+        openSos = openOnly.length;
 
-          sosNotifications = openOnly.map((s) {
-            final flatNo = (s['flatNo'] ?? '').toString();
-            final residentName = (s['residentName'] ?? 'Resident').toString();
-            final createdAt = s['createdAt'];
-            String? createdAtIso;
-            if (createdAt is Timestamp) {
-              createdAtIso = createdAt.toDate().toIso8601String();
-            } else if (createdAt is DateTime) {
-              createdAtIso = createdAt.toIso8601String();
-            }
-
-            return {
-              'type': 'sos',
-              'id': (s['sosId'] ?? '').toString(),
-              'title': 'SOS from Flat $flatNo',
-              'description': residentName,
-              'status': (s['status'] ?? 'OPEN').toString(),
-              'created_at': createdAtIso ?? '',
-              'flat_no': flatNo,
-              'resident_name': residentName,
-            };
-          }).toList();
-        } catch (e, st) {
-          AppLogger.e("Error loading SOS notifications (admin drawer)",
-              error: e, stackTrace: st);
-        }
+        sosNotifications = openOnly.take(5).map((s) {
+          return {
+            'type': 'sos',
+            'id': (s['sosId'] ?? '').toString(),
+            'title': 'SOS from Flat ${(s['flatNo'] ?? '').toString()}',
+            'description': (s['residentName'] ?? 'Resident').toString(),
+            'status': s['status']?.toString() ?? 'OPEN',
+            'created_at': _toIso(s['createdAt']),
+            'flat_no': (s['flatNo'] ?? '').toString(),
+            'resident_name': (s['residentName'] ?? 'Resident').toString(),
+          };
+        }).toList();
       }
 
-      // Combine and sort by created_at (most recent first)
+      // ✅ total badge count computed ONLY here
+      final totalBadgeCount =
+          pendingSignups + pendingComplaints + recentNotices + openSos;
+
+      // -----------------------------
+      // COMBINE + SORT
+      // -----------------------------
       final allNotifications = [
         ...signupNotifications,
         ...sosNotifications,
@@ -282,16 +302,16 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
 
       allNotifications.sort((a, b) {
         try {
-          final aTime = DateTime.parse(
-              a['created_at']?.toString().replaceAll("Z", "+00:00") ?? '');
-          final bTime = DateTime.parse(
-              b['created_at']?.toString().replaceAll("Z", "+00:00") ?? '');
-          return bTime.compareTo(aTime); // Most recent first
-        } catch (e) {
+          return DateTime.parse(b['created_at'])
+              .compareTo(DateTime.parse(a['created_at']));
+        } catch (_) {
           return 0;
         }
       });
 
+      // -----------------------------
+      // UPDATE UI
+      // -----------------------------
       if (mounted) {
         setState(() {
           _notifications = allNotifications;
@@ -303,19 +323,23 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
         });
       }
 
+      // ✅ Push badge count up to the dashboard bell
+      widget.onBadgeCountChanged?.call(totalBadgeCount);
+
       AppLogger.i("Admin notifications loaded", data: {
-        "pending_signups": pendingSignups,
+        "pending_resident_join": residentJoinList.length,
+        "pending_admin_join": adminJoinList.length,
+        "pending_signups_total": pendingSignups,
         "pending_complaints": pendingComplaints,
         "recent_notices": recentNotices,
         "open_sos": openSos,
+        "badge_total": totalBadgeCount,
         "total_notifications": allNotifications.length,
       });
-    } catch (e, stackTrace) {
+    } catch (e, st) {
       AppLogger.e("Error loading admin notifications",
-          error: e, stackTrace: stackTrace);
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+          error: e, stackTrace: st);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
