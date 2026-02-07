@@ -6,7 +6,6 @@ import '../ui/app_colors.dart';
 import '../services/firestore_service.dart';
 import '../services/offline_queue_service.dart';
 import '../services/notice_service.dart';
-import '../ui/app_loader.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
 import '../core/tour_storage.dart';
@@ -601,14 +600,19 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                         : ((pendingCount + _sosBadgeCount) > 0
                             ? SentiMood.alert
                             : (todayCount > 0 ? SentiMood.happy : SentiMood.idle)),
-                    avatar: CircleAvatar(
-                      backgroundColor: Colors.white24,
-                      backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                          ? CachedNetworkImageProvider(_photoUrl!)
+                    avatar: GestureDetector(
+                      onTap: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                          ? () => _openGuardPhotoPreview(_photoUrl!)
                           : null,
-                      child: (_photoUrl == null || _photoUrl!.isEmpty)
-                          ? const Icon(Icons.person_rounded, color: Colors.white)
-                          : null,
+                      child: CircleAvatar(
+                        backgroundColor: Colors.white24,
+                        backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                            ? CachedNetworkImageProvider(_photoUrl!)
+                            : null,
+                        child: (_photoUrl == null || _photoUrl!.isEmpty)
+                            ? const Icon(Icons.person_rounded, color: Colors.white)
+                            : null,
+                      ),
                     ),
                     trailingActions: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -695,8 +699,6 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               ),
             ),
           ),
-          
-          if (_isLoading) AppLoader.overlay(show: true, message: "Syncing Data..."),
         ],
       ),
       ),
@@ -1143,6 +1145,58 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _openGuardPhotoPreview(String imageUrl) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(12),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 5,
+                  child: Center(
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.contain,
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      errorWidget: (context, url, error) => const Center(
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.white,
+                          size: 42,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Material(
+                  color: Colors.black54,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

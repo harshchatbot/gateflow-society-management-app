@@ -340,7 +340,7 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
               ],
             ),
           ),
-          if (_isLoading) AppLoader.overlay(show: true),
+          if (_isLoading) AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: true),
         ],
       ),
     );

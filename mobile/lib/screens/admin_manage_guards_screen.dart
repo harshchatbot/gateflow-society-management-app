@@ -3,9 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-import '../ui/app_loader.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
+import '../widgets/loading_skeletons.dart';
 
 /// Admin Manage Guards Screen
 ///
@@ -331,7 +331,6 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
               ),
             ],
           ),
-          AppLoader.overlay(show: _isLoading, message: "Loading guards…"),
         ],
       ),
     );
@@ -339,6 +338,10 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
 
   Widget _buildContent() {
     final theme = Theme.of(context);
+    if (_isLoading && _guards.isEmpty) {
+      return const HistorySkeletonList();
+    }
+
     if (_error != null) {
       return Center(
         child: Column(

@@ -298,7 +298,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(show: _isLoading, message: "Verifying Credentials…"),
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Verifying Credentials…"),
         ],
       ),
     );

@@ -283,7 +283,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), 
               show: _isLoading, message: "Verifying Credentials…"),
         ],
       ),

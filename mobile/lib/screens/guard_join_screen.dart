@@ -626,7 +626,7 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(show: _isProcessing, message: "Creating guard account…"),
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isProcessing, message: "Creating guard account…"),
         ],
       ),
     );

@@ -533,7 +533,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
               ),
             ],
           ),
-          AppLoader.overlay(show: _loading, message: "Updating logs..."),
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _loading, message: "Updating logs..."),
         ],
       ),
       ),

@@ -1072,7 +1072,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
           ),
 
           // Full screen glass loader
-          AppLoader.overlay(
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), 
             show: _loading,
             message: "Updating status…",
           ),

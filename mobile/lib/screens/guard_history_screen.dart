@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../ui/app_loader.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../core/society_modules.dart';
 import '../widgets/module_disabled_placeholder.dart';
+import '../widgets/loading_skeletons.dart';
 import '../models/visitor.dart';
 import '../widgets/status_chip.dart';
 import 'visitor_details_screen.dart';
@@ -382,7 +382,9 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                 _buildFilterBar(),
                 Expanded(
                   child: _filteredVisitors.isEmpty
-                      ? Center(
+                      ? (_isLoading && _visitors.isEmpty
+                          ? const HistorySkeletonList()
+                          : Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
@@ -409,7 +411,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                               ),
                             ],
                           ),
-                        )
+                        ))
                       : RefreshIndicator(
                           onRefresh: _loadHistory,
                           color: cs.primary,
@@ -427,7 +429,6 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                 ),
               ],
             ),
-          AppLoader.overlay(show: _isLoading, message: "Loading history…"),
         ],
       ),
       ),

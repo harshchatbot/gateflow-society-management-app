@@ -179,7 +179,7 @@ class _GuardViolationsListScreenState extends State<GuardViolationsListScreen> {
               Expanded(child: _buildContent()),
             ],
           ),
-          AppLoader.overlay(show: _isLoading, message: 'Loading…'),
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: 'Loading…'),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
-import '../ui/app_loader.dart';
 import '../services/notice_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../core/society_modules.dart';
 import '../widgets/module_disabled_placeholder.dart';
+import '../widgets/loading_skeletons.dart';
 import 'admin_create_notice_screen.dart';
 
 /// Admin Manage Notices Screen
@@ -239,13 +239,16 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
       body: Stack(
         children: [
           _buildContent(),
-          AppLoader.overlay(show: _isLoading, message: "Loading notices…"),
         ],
       ),
     );
   }
 
   Widget _buildContent() {
+    if (_isLoading && _notices.isEmpty) {
+      return const HistorySkeletonList();
+    }
+
     if (_error != null) {
       return Center(
         child: Column(

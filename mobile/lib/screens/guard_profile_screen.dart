@@ -138,7 +138,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   children: [
                     const SizedBox(height: 40),
                     GestureDetector(
-                      onTap: _pickAndUploadSelfie,
+                      onTap: (_localSelfie != null || (_photoUrl != null && _photoUrl!.isNotEmpty))
+                          ? () => _openGuardProfilePhotoPreview(
+                                _localSelfie?.path,
+                                _photoUrl,
+                              )
+                          : _pickAndUploadSelfie,
+                      onLongPress: _pickAndUploadSelfie,
                       child: CircleAvatar(
                         radius: 45,
                         backgroundColor: Colors.white24,
@@ -844,6 +850,63 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _buildTaskItem(Icons.support_agent_rounded, "Helpdesk", "2 New Tasks"),
         _buildTaskItem(Icons.info_outline_rounded, "Society Info", widget.societyId),
       ],
+    );
+  }
+
+  Future<void> _openGuardProfilePhotoPreview(
+    String? localPath,
+    String? networkUrl,
+  ) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(12),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 5,
+                  child: Center(
+                    child: localPath != null
+                        ? Image.file(File(localPath), fit: BoxFit.contain)
+                        : CachedNetworkImage(
+                            imageUrl: networkUrl ?? '',
+                            fit: BoxFit.contain,
+                            placeholder: (context, url) => const Center(
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                            errorWidget: (context, url, error) => const Center(
+                              child: Icon(
+                                Icons.broken_image_outlined,
+                                color: Colors.white,
+                                size: 42,
+                              ),
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Material(
+                  color: Colors.black54,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

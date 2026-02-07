@@ -356,19 +356,24 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 3),
                       ),
-                      child: CircleAvatar(
-                        radius: 45,
-                        backgroundColor: Colors.white24,
-                        backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                            ? CachedNetworkImageProvider(_photoUrl!)
+                      child: GestureDetector(
+                        onTap: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                            ? () => _openAdminProfilePhotoPreview(_photoUrl!)
                             : null,
-                        child: (_photoUrl == null || _photoUrl!.isNotEmpty == false)
-                            ? const Icon(
-                                Icons.admin_panel_settings_rounded,
-                                size: 50,
-                                color: Colors.white,
-                              )
-                            : null,
+                        child: CircleAvatar(
+                          radius: 45,
+                          backgroundColor: Colors.white24,
+                          backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                              ? CachedNetworkImageProvider(_photoUrl!)
+                              : null,
+                          child: (_photoUrl == null || _photoUrl!.isNotEmpty == false)
+                              ? const Icon(
+                                  Icons.admin_panel_settings_rounded,
+                                  size: 50,
+                                  color: Colors.white,
+                                )
+                              : null,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -994,6 +999,58 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Future<void> _openAdminProfilePhotoPreview(String imageUrl) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(12),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 5,
+                  child: Center(
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.contain,
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      errorWidget: (context, url, error) => const Center(
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.white,
+                          size: 42,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Material(
+                  color: Colors.black54,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

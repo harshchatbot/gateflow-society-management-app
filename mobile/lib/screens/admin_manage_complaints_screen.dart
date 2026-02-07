@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../ui/app_colors.dart';
-import '../ui/app_loader.dart';
 import '../services/complaint_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../core/society_modules.dart';
 import '../widgets/status_chip.dart';
 import '../widgets/module_disabled_placeholder.dart';
+import '../widgets/loading_skeletons.dart';
 
 /// Admin Manage Complaints Screen
 /// 
@@ -260,7 +260,6 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
               ),
             ],
           ),
-          AppLoader.overlay(show: _isLoading, message: "Loading complaints…"),
         ],
       ),
     );
@@ -326,6 +325,10 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
   }
 
   Widget _buildContent() {
+    if (_isLoading && _complaints.isEmpty) {
+      return const HistorySkeletonList();
+    }
+
     if (_error != null) {
       return Center(
         child: Column(

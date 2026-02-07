@@ -360,7 +360,7 @@ class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(show: _isLoading, message: "Creating notice…"),
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Creating notice…"),
         ],
       ),
     );

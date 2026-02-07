@@ -12,25 +12,25 @@ class SentinelColors {
   SentinelColors._();
 
   // Backgrounds
-  static const Color bgPrimary = Color(0xFFF7F7F8);
-  static const Color card = Colors.white;
+  static const Color bgPrimary = Color(0xFFF6F1EA);
+  static const Color card = Color(0xFFFFFCF8);
 
   // Text
-  static const Color textPrimary = Color(0xFF1D1D1F);
-  static const Color textSecondary = Color(0xFF6E6E73);
+  static const Color textPrimary = Color(0xFF2A1F18);
+  static const Color textSecondary = Color(0xFF7D6B5B);
 
   // Brand (premium neutral-first)
-  static const Color primary = Color(0xFF3A3A3C);      // Graphite
-  static const Color primaryDark = Color(0xFF2C2C2E);  // Deeper graphite
-  static const Color error = Color(0xFFB64A42);        // Muted red
+  static const Color primary = Color(0xFF8D5E3C);      // Warm brown
+  static const Color primaryDark = Color(0xFF5B3B28);  // Deep espresso brown
+  static const Color error = Color(0xFFB85A49);        // Soft brick red
 
   // Accent family (subtle amber/green)
-  static const Color yellow = Color(0xFFD4A83E);
-  static const Color amber = Color(0xFFC98A2E);
+  static const Color yellow = Color(0xFFD8B25A);
+  static const Color amber = Color(0xFFC58A3A);
   static const Color sentinelAccent = amber;
-  static const Color success = Color(0xFF3E8E63);      // muted green
-  static const Color redSoft = Color(0xFFF8ECEB);
-  static const Color successSoft = Color(0xFFEDF6F0);
+  static const Color success = Color(0xFF6E8A5E);      // Muted olive green
+  static const Color redSoft = Color(0xFFF7ECE8);
+  static const Color successSoft = Color(0xFFEEF4EA);
   static Color get sentinelAccentSurface => sentinelAccent.withOpacity(0.04);
   static Color get sentinelAccentBorder => sentinelAccent.withOpacity(0.06);
 
@@ -42,7 +42,7 @@ class SentinelColors {
   static Color get accentBorder => sentinelAccentBorder;
 
   // UI borders: use theme.dividerColor in widgets (neutralBorder). Fallback:
-  static const Color border = Color(0xFFE5E5EA);
+  static const Color border = Color(0xFFE6D8C9);
 }
 
 /// Notice board category colors (Event / Alert / Maintenance / Policy).
@@ -50,10 +50,10 @@ class SentinelColors {
 class NoticeCategoryPalette {
   NoticeCategoryPalette._();
 
-  static const Color event = Color(0xFF4D8E6E);       // muted green
-  static const Color alert = Color(0xFFC98A2E);       // muted amber
-  static const Color maintenance = Color(0xFF7A7A80); // soft grey
-  static const Color policy = Color(0xFF55555B);      // deep neutral
+  static const Color event = Color(0xFF6E8A5E);       // muted olive
+  static const Color alert = Color(0xFFC58A3A);       // muted amber
+  static const Color maintenance = Color(0xFF8A7B6E); // warm taupe
+  static const Color policy = Color(0xFF6E5A4A);      // deep brown-neutral
 
   /// Soft surface for chip/card background (10% opacity).
   static Color bg(Color c) => c.withOpacity(0.10);
@@ -66,10 +66,10 @@ class NoticeCategoryPalette {
 class SentinelStatusPalette {
   SentinelStatusPalette._();
 
-  static const Color success = Color(0xFF3E8E63);   // muted green
-  static const Color warning = Color(0xFFC98A2E);   // muted amber
-  static const Color error = Color(0xFFB64A42);     // muted red
-  static const Color info = Color(0xFF7A7A80);      // neutral grey
+  static const Color success = Color(0xFF6E8A5E);      // Muted olive green
+  static const Color warning = Color(0xFFC58A3A);   // muted amber
+  static const Color error = Color(0xFFB85A49);     // soft brick red
+  static const Color info = Color(0xFF8A7B6E);      // warm taupe
 
   /// Chip background (10% opacity).
   static Color bg(Color c) => c.withOpacity(0.10);

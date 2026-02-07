@@ -166,7 +166,7 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
               ),
             ],
           ),
-          AppLoader.overlay(show: _isLoading, message: 'Loading…'),
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: 'Loading…'),
         ],
       ),
     );

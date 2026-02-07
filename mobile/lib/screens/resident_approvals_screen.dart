@@ -344,7 +344,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                   },
                 ),
               ),
-            AppLoader.overlay(show: _isLoading, message: "Processing…"),
+            AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Processing…"),
           ],
         ),
       ),

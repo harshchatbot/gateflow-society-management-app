@@ -483,7 +483,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
               _buildPendingSignupsList(),
             ],
           ),
-          AppLoader.overlay(show: _isLoading, message: "Loading..."),
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Loading..."),
         ],
       ),
     );

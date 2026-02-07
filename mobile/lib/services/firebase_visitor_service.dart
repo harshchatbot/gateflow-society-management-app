@@ -83,6 +83,7 @@ class FirebaseVisitorService {
     required String visitorType,
     required String visitorPhone,
     required File photoFile,
+    void Function(double progress)? onUploadProgress,
     String? residentPhone,
     String? visitorName,
     String? deliveryPartner,
@@ -130,18 +131,30 @@ class FirebaseVisitorService {
       );
 
       // ✅ Correct: Await the UploadTask itself -> returns TaskSnapshot
-      final TaskSnapshot snapshot = await photoRef
-          .putFile(photoFile, metadata)
-          .timeout(
-            const Duration(seconds: 60),
-            onTimeout: () {
-              throw FirebaseException(
-                plugin: 'firebase_storage',
-                code: 'storage/timeout',
-                message: 'Upload timed out after 60 seconds',
-              );
-            },
-          );
+      final uploadTask = photoRef.putFile(photoFile, metadata);
+      final progressSub = uploadTask.snapshotEvents.listen((snap) {
+        if (onUploadProgress == null) return;
+        final total = snap.totalBytes;
+        if (total <= 0) return;
+        onUploadProgress((snap.bytesTransferred / total).clamp(0.0, 1.0));
+      });
+
+      late final TaskSnapshot snapshot;
+      try {
+        snapshot = await uploadTask.timeout(
+          const Duration(seconds: 60),
+          onTimeout: () {
+            throw FirebaseException(
+              plugin: 'firebase_storage',
+              code: 'storage/timeout',
+              message: 'Upload timed out after 60 seconds',
+            );
+          },
+        );
+      } finally {
+        await progressSub.cancel();
+      }
+      onUploadProgress?.call(1.0);
 
       AppLogger.i("Photo upload completed", data: {
         "bytesTransferred": snapshot.bytesTransferred,
@@ -593,6 +606,8 @@ class FirebaseVisitorService {
           'guard_id': data['guard_uid'] ?? '',
           'photo_url': data['photo_url'],
           'note': data['note'],
+          'cab': data['cab'] is Map ? Map<String, dynamic>.from(data['cab'] as Map) : null,
+          'delivery': data['delivery'] is Map ? Map<String, dynamic>.from(data['delivery'] as Map) : null,
         });
       }
 
@@ -665,6 +680,8 @@ class FirebaseVisitorService {
           'guard_id': data['guard_uid'] ?? '',
           'photo_url': data['photo_url'],
           'note': data['note'],
+          'cab': data['cab'] is Map ? Map<String, dynamic>.from(data['cab'] as Map) : null,
+          'delivery': data['delivery'] is Map ? Map<String, dynamic>.from(data['delivery'] as Map) : null,
         });
       }
 

@@ -66,6 +66,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
   String _selectedVisitorType = 'GUEST';
   bool _isLoading = false;
+  DateTime? _loadingStartedAt;
+  double? _uploadProgress;
   Visitor? _createdVisitor;
 
   String _getSelection(ChipGroupConfig g) =>
@@ -379,6 +381,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
     setState(() {
       _isLoading = true;
+      _loadingStartedAt = DateTime.now();
+      _uploadProgress = null;
       _createdVisitor = null;
     });
 
@@ -417,6 +421,11 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
     final flatNo = _selectedFlatNo?.trim() ?? '';
     if (flatNo.isEmpty) {
+      setState(() {
+        _isLoading = false;
+        _loadingStartedAt = null;
+        _uploadProgress = null;
+      });
       _showError('Please select a flat / unit');
       return;
     }
@@ -439,7 +448,11 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         photoPath: _visitorPhoto?.path,
       );
       if (!mounted) return;
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _loadingStartedAt = null;
+        _uploadProgress = null;
+      });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Offline – changes will sync when online'),
@@ -457,6 +470,10 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             visitorType: _selectedVisitorType,
             visitorPhone: _visitorPhoneController.text.trim(),
             photoFile: _visitorPhoto!,
+            onUploadProgress: (progress) {
+              if (!mounted) return;
+              setState(() => _uploadProgress = progress);
+            },
             residentPhone: residentPhone,
             visitorName: visitorName,
             deliveryPartner: deliveryPartner,
@@ -482,10 +499,16 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     if (result.isSuccess) {
       setState(() {
         _isLoading = false;
+        _loadingStartedAt = null;
+        _uploadProgress = null;
         _createdVisitor = result.data!;
       });
     } else {
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+        _loadingStartedAt = null;
+        _uploadProgress = null;
+      });
       final err = result.error ?? AppError(userMessage: 'Failed to create visitor', technicalMessage: 'Unknown');
       AppLogger.e('Visitor creation failed', error: err.technicalMessage);
       _showError(userFriendlyMessageFromError(err));
@@ -600,7 +623,15 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(show: _isLoading, message: "Syncing with Residents..."),
+          AppLoader.overlay(
+            show: _isLoading,
+            startedAt: _loadingStartedAt,
+            showAfter: const Duration(milliseconds: 300),
+            progress: _uploadProgress,
+            message: _uploadProgress != null
+                ? "Uploading visitor photo..."
+                : "Syncing with residents...",
+          ),
         ],
       ),
       ),

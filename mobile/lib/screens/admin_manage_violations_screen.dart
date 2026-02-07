@@ -367,7 +367,7 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
               ),
             ],
           ),
-          AppLoader.overlay(show: _isLoading, message: 'Loading violations…'),
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: 'Loading violations…'),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(

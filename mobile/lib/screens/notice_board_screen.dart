@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../ui/sentinel_theme.dart';
-import '../ui/app_loader.dart';
 import '../services/notice_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../core/society_modules.dart';
 import '../widgets/module_disabled_placeholder.dart';
+import '../widgets/loading_skeletons.dart';
 import 'admin_manage_notices_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
@@ -433,7 +433,6 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               ),
             ],
           ),
-          AppLoader.overlay(show: _isLoading, message: "Loading notices…"),
         ],
       ),
     );
@@ -565,6 +564,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   }
 
   Widget _buildContent() {
+    if (_isLoading && _notices.isEmpty) {
+      return const HistorySkeletonList();
+    }
+
     if (_error != null) {
       final theme = Theme.of(context);
       return Center(

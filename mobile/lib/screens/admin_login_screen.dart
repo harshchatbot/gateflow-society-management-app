@@ -401,7 +401,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(show: _isLoading, message: "Verifying Admin…"),
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Verifying Admin…"),
         ],
       ),
     );

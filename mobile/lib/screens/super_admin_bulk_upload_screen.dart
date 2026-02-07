@@ -170,7 +170,7 @@ class _SuperAdminBulkUploadScreenState
             ),
           ),
           if (_isUploadingGuards || _isUploadingResidents)
-            AppLoader.overlay(
+            AppLoader.overlay(showAfter: const Duration(milliseconds: 300), 
               show: true,
               message: _isUploadingGuards
                   ? "Uploading guards..."

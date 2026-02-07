@@ -228,7 +228,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(show: _isLoading, message: "Submitting request…"),
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Submitting request…"),
         ],
       ),
     );

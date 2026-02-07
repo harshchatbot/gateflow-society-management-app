@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:showcaseview/showcaseview.dart';
-import '../ui/app_loader.dart';
 import '../services/admin_service.dart';
 import '../services/complaint_service.dart';
 import '../services/notice_service.dart';
@@ -677,16 +676,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               : (_notificationCount > 0
                                   ? SentiMood.alert
                                   : SentiMood.idle),
-                          avatar: CircleAvatar(
-                            backgroundColor: Colors.white24,
-                            backgroundImage:
-                                (_photoUrl != null && _photoUrl!.isNotEmpty)
-                                    ? CachedNetworkImageProvider(_photoUrl!)
-                                    : null,
-                            child: (_photoUrl == null || _photoUrl!.isEmpty)
-                                ? const Icon(Icons.person_rounded,
-                                    color: Colors.white)
+                          avatar: GestureDetector(
+                            onTap: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                                ? () => _openAdminPhotoPreview(_photoUrl!)
                                 : null,
+                            child: CircleAvatar(
+                              backgroundColor: Colors.white24,
+                              backgroundImage:
+                                  (_photoUrl != null && _photoUrl!.isNotEmpty)
+                                      ? CachedNetworkImageProvider(_photoUrl!)
+                                      : null,
+                              child: (_photoUrl == null || _photoUrl!.isEmpty)
+                                  ? const Icon(Icons.person_rounded,
+                                      color: Colors.white)
+                                  : null,
+                            ),
                           ),
                           trailingActions: Stack(
                             children: [
@@ -790,8 +794,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   ),
                 ),
 
-                if (_isLoading)
-                  AppLoader.overlay(show: true, message: "Loading Stats..."),
               ],
             ),
           ),
@@ -1166,6 +1168,58 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       crossAxisSpacing: 12,
       childAspectRatio: 1.3,
       children: children,
+    );
+  }
+
+  Future<void> _openAdminPhotoPreview(String imageUrl) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(12),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 5,
+                  child: Center(
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.contain,
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      errorWidget: (context, url, error) => const Center(
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.white,
+                          size: 42,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Material(
+                  color: Colors.black54,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

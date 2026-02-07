@@ -196,7 +196,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(show: _isLoading, message: "Creating Account…"),
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Creating Account…"),
         ],
       ),
     );

@@ -333,19 +333,24 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                           ),
                         ],
                       ),
-                      child: CircleAvatar(
-                        radius: 45,
-                        backgroundColor: Theme.of(context).colorScheme.onPrimary.withOpacity(0.24),
-                        backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                            ? CachedNetworkImageProvider(_photoUrl!)
+                      child: GestureDetector(
+                        onTap: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                            ? () => _openResidentPhotoPreview(_photoUrl!)
                             : null,
-                        child: (_photoUrl == null || _photoUrl!.isEmpty)
-                            ? Icon(
-                                Icons.person_rounded,
-                                size: 50,
-                                color: Theme.of(context).colorScheme.onPrimary,
-                              )
-                            : null,
+                        child: CircleAvatar(
+                          radius: 45,
+                          backgroundColor: Theme.of(context).colorScheme.onPrimary.withOpacity(0.24),
+                          backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                              ? CachedNetworkImageProvider(_photoUrl!)
+                              : null,
+                          child: (_photoUrl == null || _photoUrl!.isEmpty)
+                              ? Icon(
+                                  Icons.person_rounded,
+                                  size: 50,
+                                  color: Theme.of(context).colorScheme.onPrimary,
+                                )
+                              : null,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -859,6 +864,58 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _openResidentPhotoPreview(String imageUrl) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(12),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 5,
+                  child: Center(
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.contain,
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      errorWidget: (context, url, error) => const Center(
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.white,
+                          size: 42,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Material(
+                  color: Colors.black54,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 

@@ -299,7 +299,7 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
               ),
             ),
           ),
-          if (_isLoading) AppLoader.overlay(show: true, message: 'Submitting...'),
+          if (_isLoading) AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: true, message: 'Submitting...'),
         ],
       ),
     );

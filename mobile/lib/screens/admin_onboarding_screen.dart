@@ -583,7 +583,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             ),
           ),
           if (_isLoading || _isLoadingLocations)
-            AppLoader.overlay(
+            AppLoader.overlay(showAfter: const Duration(milliseconds: 300), 
               show: true,
               message: _isLoading
                   ? (_isCreatingSociety

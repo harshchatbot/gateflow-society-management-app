@@ -163,7 +163,7 @@ class _GuardResidentsDirectoryScreenState
               ),
             ],
           ),
-          if (_isLoading) AppLoader.overlay(show: true, message: 'Loading residents...'),
+          if (_isLoading) AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: true, message: 'Loading residents...'),
         ],
       ),
     );

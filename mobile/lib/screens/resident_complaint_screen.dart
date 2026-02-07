@@ -711,7 +711,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(show: _isLoading, message: "Submitting complaint…"),
+          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Submitting complaint…"),
         ],
       ),
     );

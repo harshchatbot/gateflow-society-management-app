@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:showcaseview/showcaseview.dart';
-import '../ui/app_loader.dart';
 import '../services/resident_service.dart' as resident;
 import '../services/notification_service.dart';
 import '../core/app_logger.dart';
@@ -756,16 +755,21 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                           mascotMood: _pendingCount > 0
                               ? SentiMood.alert
                               : SentiMood.happy,
-                          avatar: CircleAvatar(
-                            backgroundColor: Colors.white24,
-                            backgroundImage:
-                                (_photoUrl != null && _photoUrl!.isNotEmpty)
-                                    ? CachedNetworkImageProvider(_photoUrl!)
-                                    : null,
-                            child: (_photoUrl == null || _photoUrl!.isEmpty)
-                                ? const Icon(Icons.person_rounded,
-                                    color: Colors.white)
+                          avatar: GestureDetector(
+                            onTap: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                                ? () => _openResidentPhotoPreview(_photoUrl!)
                                 : null,
+                            child: CircleAvatar(
+                              backgroundColor: Colors.white24,
+                              backgroundImage:
+                                  (_photoUrl != null && _photoUrl!.isNotEmpty)
+                                      ? CachedNetworkImageProvider(_photoUrl!)
+                                      : null,
+                              child: (_photoUrl == null || _photoUrl!.isEmpty)
+                                  ? const Icon(Icons.person_rounded,
+                                      color: Colors.white)
+                                  : null,
+                            ),
                           ),
                           trailingActions: Stack(
                             children: [
@@ -871,8 +875,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                   ),
                 ),
 
-                if (_isLoading)
-                  AppLoader.overlay(show: true, message: "Loading Dashboard…"),
               ],
             ),
           ),
@@ -1426,6 +1428,58 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       crossAxisSpacing: 12,
       childAspectRatio: 1.4,
       children: children,
+    );
+  }
+
+  Future<void> _openResidentPhotoPreview(String imageUrl) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.9),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(12),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 5,
+                  child: Center(
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.contain,
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      errorWidget: (context, url, error) => const Center(
+                        child: Icon(
+                          Icons.broken_image_outlined,
+                          color: Colors.white,
+                          size: 42,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Material(
+                  color: Colors.black54,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
