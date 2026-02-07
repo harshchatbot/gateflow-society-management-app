@@ -36,9 +36,15 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
   String? _error;
   XFile? _selfie;
 
+  // ✅ Prefill + lock username when user already authenticated via Phone OTP.
+  String? _prefilledUsername;
+  bool _usernameLocked = false;
+
   @override
   void initState() {
     super.initState();
+    // If already logged in (OTP), prefill immediately.
+    _maybePrefillUsernameFromAuth();
   }
 
   @override
@@ -49,6 +55,17 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
     _pinController.dispose();
     _shiftController.dispose();
     super.dispose();
+  }
+
+  void _maybePrefillUsernameFromAuth() {
+    final user = FirebaseAuth.instance.currentUser;
+    final phone = user?.phoneNumber;
+    if (phone != null && phone.isNotEmpty) {
+      final normalized = FirebaseAuthService.normalizePhoneForIndia(phone);
+      _usernameController.text = normalized;
+      _prefilledUsername = normalized;
+      _usernameLocked = true;
+    }
   }
 
   Future<void> _verifyCode() async {
@@ -69,6 +86,8 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
           _societyId = societyId;
           _isVerifying = false;
         });
+        // Prefill username after code verification too (covers any late auth state).
+        _maybePrefillUsernameFromAuth();
       } else {
         setState(() {
           _error = "Invalid or expired code. Please ask admin for a new code.";
@@ -223,26 +242,90 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
 
   Widget _buildIllustrationHeader() {
     final theme = Theme.of(context);
+
     return Center(
-      child: SizedBox(
-        width: 160,
-        height: 120,
-        child: Image.asset(
-          'assets/illustrations/illustration_signup_guard.png',
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => Container(
-            decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface.withOpacity(0.9),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 18,
+              offset: const Offset(0, 10),
             ),
-            child: Icon(
-              Icons.shield_rounded,
-              size: 56,
-              color: theme.colorScheme.primary,
+          ],
+        ),
+        child: SizedBox(
+          width: 160,
+          height: 120,
+          child: Image.asset(
+            'assets/mascot/senti_guard_onboarding.png',
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(
+                Icons.shield_rounded,
+                size: 56,
+                color: theme.colorScheme.primary,
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildErrorBanner(ThemeData theme) {
+    if (_error == null) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.error.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.error.withOpacity(0.18)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: theme.colorScheme.error, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              _error!,
+              style: TextStyle(
+                color: theme.colorScheme.error,
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(ThemeData theme, {required String label, String? hint, Widget? suffixIcon}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      suffixIcon: suffixIcon,
+      filled: true,
+      fillColor: theme.colorScheme.surface.withOpacity(0.92),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.6)),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: theme.colorScheme.primary.withOpacity(0.8), width: 1.4),
+      ),
+      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
     );
   }
 
@@ -274,7 +357,7 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    theme.colorScheme.primary.withOpacity(0.12),
+                    theme.colorScheme.primary.withOpacity(0.10),
                     theme.scaffoldBackgroundColor,
                     theme.scaffoldBackgroundColor,
                   ],
@@ -289,109 +372,156 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildIllustrationHeader(),
-                  const SizedBox(height: 20),
-                  if (_error != null) ...[
+                  const SizedBox(height: 14),
+                  Text(
+                    hasCode
+                        ? "Code verified. Complete your guard setup."
+                        : "Enter the 6-digit code from your admin to join as a guard.",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withOpacity(0.72),
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildErrorBanner(theme),
+                  if (_error != null) const SizedBox(height: 12),
+                  if (!hasCode) ...[
+                    const SizedBox(height: 8),
                     Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.error.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(12),
+                        color: theme.colorScheme.surface.withOpacity(0.92),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: theme.dividerColor.withOpacity(0.55)),
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Icon(Icons.error_outline, color: theme.colorScheme.error, size: 18),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _error!,
-                              style: TextStyle(
-                                color: theme.colorScheme.error,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13,
+                          Text(
+                            "Guard Join Code",
+                            style: TextStyle(
+                              color: theme.colorScheme.onSurface,
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          TextFormField(
+                            controller: _codeController,
+                            keyboardType: TextInputType.number,
+                            maxLength: 6,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 10,
+                              fontFamily: 'monospace',
+                            ),
+                            decoration: _inputDecoration(theme, label: "6-digit code", hint: "000000").copyWith(
+                              counterText: "",
+                            ),
+                            onChanged: (_) => setState(() => _error = null),
+                          ),
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            height: 52,
+                            child: ElevatedButton(
+                              onPressed: _isVerifying ? null : _verifyCode,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: theme.colorScheme.primary,
+                                foregroundColor: theme.colorScheme.onPrimary,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (_isVerifying) ...[
+                                    SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        color: theme.colorScheme.onPrimary,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    const Text("Verifying…", style: TextStyle(fontWeight: FontWeight.w900)),
+                                  ] else ...[
+                                    const Icon(Icons.arrow_forward_rounded),
+                                    const SizedBox(width: 10),
+                                    const Text("Continue", style: TextStyle(fontWeight: FontWeight.w900)),
+                                  ],
+                                ],
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 12),
                   ],
-                  Text(
-                    hasCode
-                        ? "Code verified. Set a 6-digit password to complete setup."
-                        : "Enter the 6-digit code from your admin to join as a guard.",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: theme.colorScheme.onSurface.withOpacity(0.7),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (!hasCode) ...[
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: _codeController,
-                      keyboardType: TextInputType.number,
-                      maxLength: 6,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 8,
-                        fontFamily: 'monospace',
-                      ),
-                      decoration: InputDecoration(
-                        hintText: "000000",
-                        counterText: "",
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
-                        contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
-                      ),
-                      onChanged: (_) => setState(() => _error = null),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 52,
-                      child: ElevatedButton.icon(
-                        onPressed: _isVerifying ? null : _verifyCode,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.primary,
-                          foregroundColor: theme.colorScheme.onPrimary,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        ),
-                        icon: _isVerifying
-                            ? SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.onPrimary),
-                              )
-                            : const Icon(Icons.arrow_forward_rounded),
-                        label: Text(
-                          _isVerifying ? "Verifying…" : "Continue",
-                          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 16),
                   if (hasCode) ...[
+                    const SizedBox(height: 10),
                     Form(
                       key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 28,
-                                backgroundColor: theme.colorScheme.surface,
-                                backgroundImage: _selfie != null ? FileImage(File(_selfie!.path)) : null,
-                                child: _selfie == null
-                                    ? Icon(Icons.camera_alt_rounded, color: theme.colorScheme.onSurface.withOpacity(0.7))
-                                    : null,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextButton(
+                      child: Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.surface.withOpacity(0.92),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: theme.dividerColor.withOpacity(0.55)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: () async {
+                                    final picker = ImagePicker();
+                                    final picked = await picker.pickImage(
+                                      source: ImageSource.camera,
+                                      imageQuality: 80,
+                                    );
+                                    if (picked != null) {
+                                      setState(() => _selfie = picked);
+                                    }
+                                  },
+                                  child: CircleAvatar(
+                                    radius: 30,
+                                    backgroundColor: theme.colorScheme.surface,
+                                    backgroundImage: _selfie != null ? FileImage(File(_selfie!.path)) : null,
+                                    child: _selfie == null
+                                        ? Icon(Icons.camera_alt_rounded, color: theme.colorScheme.onSurface.withOpacity(0.75))
+                                        : null,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        "Selfie (optional)",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          color: theme.colorScheme.onSurface,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        "Tap to capture for verification",
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 12,
+                                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                TextButton(
                                   onPressed: () async {
                                     final picker = ImagePicker();
                                     final picked = await picker.pickImage(
@@ -399,117 +529,99 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                                       imageQuality: 80,
                                     );
                                     if (picked != null) {
-                                      setState(() {
-                                        _selfie = picked;
-                                      });
+                                      setState(() => _selfie = picked);
                                     }
                                   },
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      "Add selfie (optional)",
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        color: theme.colorScheme.primary,
-                                      ),
+                                  child: Text(
+                                    _selfie == null ? "Add" : "Retake",
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      color: theme.colorScheme.primary,
                                     ),
                                   ),
                                 ),
+                              ],
+                            ),
+                            const SizedBox(height: 14),
+                            TextFormField(
+                              controller: _nameController,
+                              textInputAction: TextInputAction.next,
+                              decoration: _inputDecoration(theme, label: "Full Name"),
+                              validator: (value) {
+                                if (value == null || value.trim().isEmpty) return "Please enter name";
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _usernameController,
+                              textInputAction: TextInputAction.next,
+                              readOnly: _usernameLocked,
+                              decoration: _inputDecoration(
+                                theme,
+                                label: "Phone number or email (username)",
+                                hint: _usernameLocked ? null : "+91XXXXXXXXXX or email",
+                                suffixIcon: _usernameLocked
+                                    ? Icon(Icons.lock_rounded, color: theme.colorScheme.onSurface.withOpacity(0.55))
+                                    : null,
+                              ).copyWith(
+                                helperText: _usernameLocked ? "Using your OTP phone number" : null,
                               ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _nameController,
-                            textInputAction: TextInputAction.next,
-                            decoration: InputDecoration(
-                              labelText: "Full Name",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
+                              validator: (value) {
+                                final v = value?.trim() ?? "";
+                                if (v.isEmpty) return "Please enter phone or email";
+                                if (_usernameLocked && _prefilledUsername != null && v != _prefilledUsername) {
+                                  return "Phone number must match OTP login";
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _pinController,
+                              keyboardType: TextInputType.number,
+                              obscureText: true,
+                              maxLength: 6,
+                              decoration: _inputDecoration(theme, label: "Set Guard Password (6 digits)").copyWith(
+                                counterText: "",
+                              ),
+                              validator: (value) {
+                                final v = value?.trim() ?? "";
+                                if (v.length != 6 || int.tryParse(v) == null) {
+                                  return "Please enter exactly 6 digits (required by sign-in)";
+                                }
+                                return null;
+                              },
+                            ),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _shiftController,
+                              textInputAction: TextInputAction.done,
+                              decoration: _inputDecoration(theme, label: "Shift timings (optional)", hint: "8am–4pm"),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              height: 52,
+                              child: ElevatedButton.icon(
+                                onPressed: _isProcessing ? null : _handleJoin,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: theme.colorScheme.primary,
+                                  foregroundColor: theme.colorScheme.onPrimary,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                ),
+                                icon: const Icon(Icons.check_rounded),
+                                label: const Text(
+                                  "Confirm & Join",
+                                  style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.2),
+                                ),
                               ),
                             ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return "Please enter name";
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _usernameController,
-                            textInputAction: TextInputAction.next,
-                            decoration: InputDecoration(
-                              labelText: "Phone number or email (username)",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            validator: (value) {
-                              final v = value?.trim() ?? "";
-                              if (v.isEmpty) {
-                                return "Please enter phone or email";
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _pinController,
-                            keyboardType: TextInputType.number,
-                            obscureText: true,
-                            decoration: InputDecoration(
-                              labelText: "Set Guard Password (6 digits)",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            maxLength: 6,
-                            validator: (value) {
-                              final v = value?.trim() ?? "";
-                              if (v.length != 6 || int.tryParse(v) == null) {
-                                return "Please enter exactly 6 digits (required by sign-in)";
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _shiftController,
-                            textInputAction: TextInputAction.done,
-                            decoration: InputDecoration(
-                              labelText: "Shift timings (optional, e.g. 8am–4pm)",
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      height: 52,
-                      child: ElevatedButton.icon(
-                        onPressed: _isProcessing ? null : _handleJoin,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: theme.colorScheme.primary,
-                          foregroundColor: theme.colorScheme.onPrimary,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                        ),
-                        icon: const Icon(Icons.check_rounded),
-                        label: const Text(
-                          "Confirm & Join",
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0.5,
-                          ),
+                          ],
                         ),
                       ),
                     ),
                   ],
+                  const SizedBox(height: 18),
                 ],
               ),
             ),
@@ -520,4 +632,3 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
     );
   }
 }
-
