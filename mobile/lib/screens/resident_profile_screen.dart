@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
@@ -54,7 +53,6 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
   final FirestoreService _firestore = FirestoreService();
   String? _photoUrl;
   String? _phone;
-  String? _email;
 
   @override
   void initState() {
@@ -70,7 +68,6 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
       setState(() {
         _photoUrl = membership['photoUrl'] as String?;
         _phone = membership['phone'] as String?;
-        _email = membership['email'] as String?;
       });
     } catch (e, st) {
       AppLogger.e("Error loading resident profile photo", error: e, stackTrace: st);
@@ -83,11 +80,11 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        title: Row(
           children: [
-            Icon(Icons.warning_rounded, color: AppColors.warning, size: 28),
-            SizedBox(width: 12),
-            Text(
+            Icon(Icons.warning_rounded, color: Theme.of(context).colorScheme.error, size: 28),
+            const SizedBox(width: 12),
+            const Text(
               "Deactivate Account",
               style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
             ),
@@ -131,8 +128,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.warning,
-              foregroundColor: Colors.white,
+              backgroundColor: Theme.of(context).colorScheme.error,
+              foregroundColor: Theme.of(context).colorScheme.onError,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text(
@@ -218,7 +215,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             onPressed: () => Navigator.of(context).pop(true),
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
-              foregroundColor: Colors.white,
+              foregroundColor: Theme.of(context).colorScheme.onError,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text(
@@ -298,7 +295,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               backgroundColor: Theme.of(context).colorScheme.primary,
               automaticallyImplyLeading: true,
               leading: IconButton(
-                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onPrimary),
                 onPressed: () {
                   // If we're in a tab navigation, switch to dashboard
                   if (widget.onBackPressed != null) {
@@ -327,7 +324,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                     Container(
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
+                        border: Border.all(color: Theme.of(context).colorScheme.onPrimary, width: 3),
                         boxShadow: [
                           BoxShadow(
                             color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
@@ -338,15 +335,15 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                       ),
                       child: CircleAvatar(
                         radius: 45,
-                        backgroundColor: Colors.white24,
+                        backgroundColor: Theme.of(context).colorScheme.onPrimary.withOpacity(0.24),
                         backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
                             ? CachedNetworkImageProvider(_photoUrl!)
                             : null,
                         child: (_photoUrl == null || _photoUrl!.isEmpty)
-                            ? const Icon(
+                            ? Icon(
                                 Icons.person_rounded,
                                 size: 50,
-                                color: Colors.white,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               )
                             : null,
                       ),
@@ -354,8 +351,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                     const SizedBox(height: 12),
                     Text(
                       widget.residentName,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary,
                         fontSize: 22,
                         fontWeight: FontWeight.w900,
                       ),
@@ -364,7 +361,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                     Text(
                       "Flat ${widget.flatNo}",
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.9),
+                        color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.9),
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
@@ -419,7 +416,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: theme.colorScheme.onSurface.withOpacity(0.04),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -601,7 +598,10 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
     );
     if (result == true && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Email added. You can now login with email too."), backgroundColor: AppColors.success),
+        SnackBar(
+          content: const Text("Email added. You can now login with email too."),
+          backgroundColor: Theme.of(context).colorScheme.primary,
+        ),
       );
       _loadProfilePhoto();
     }
@@ -662,7 +662,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: theme.colorScheme.onSurface.withOpacity(0.04),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -863,22 +863,23 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
   }
 
   Widget _buildDeactivateButton() {
+    final theme = Theme.of(context);
     return SizedBox(
       width: double.infinity,
       height: 54,
       child: OutlinedButton.icon(
         onPressed: _isLoggingOut ? null : _handleDeactivate,
-        icon: const Icon(Icons.person_off_rounded, color: AppColors.warning),
-        label: const Text(
+        icon: Icon(Icons.person_off_rounded, color: theme.colorScheme.error),
+        label: Text(
           "DEACTIVATE ACCOUNT",
           style: TextStyle(
-            color: AppColors.warning,
+            color: theme.colorScheme.error,
             fontWeight: FontWeight.w900,
             fontSize: 16,
           ),
         ),
         style: OutlinedButton.styleFrom(
-          side: const BorderSide(color: AppColors.warning, width: 2),
+          side: BorderSide(color: theme.colorScheme.error, width: 2),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),

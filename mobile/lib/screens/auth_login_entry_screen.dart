@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../ui/app_colors.dart';
 import 'admin_login_screen.dart';
 import 'guard_login_screen.dart';
 import 'phone_otp_login_screen.dart';
@@ -39,20 +38,22 @@ class AuthLoginEntryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
+          icon: Icon(Icons.arrow_back_rounded, color: cs.onSurface),
           onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           'Login as $_roleTitle',
-          style: const TextStyle(
+          style: TextStyle(
             fontWeight: FontWeight.w700,
-            color: AppColors.text,
+            color: cs.onSurface,
             fontSize: 18,
           ),
         ),
@@ -64,6 +65,16 @@ class AuthLoginEntryScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 32),
+              Text(
+                'Fast, secure sign in for your $_roleTitle account',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: cs.onSurface.withOpacity(0.7),
+                ),
+              ),
+              const SizedBox(height: 18),
               // Primary: Continue with Mobile Number
               SizedBox(
                 height: 56,
@@ -80,8 +91,8 @@ class AuthLoginEntryScreen extends StatelessWidget {
                   icon: const Icon(Icons.phone_android_rounded, size: 22),
                   label: const Text('Continue with Mobile Number'),
                   style: FilledButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
+                    backgroundColor: cs.primary,
+                    foregroundColor: cs.onPrimary,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14),
                     ),
@@ -101,11 +112,11 @@ class AuthLoginEntryScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => _emailScreen()),
                     );
                   },
-                  child: const Text(
+                  child: Text(
                     'Login with Email',
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.text2,
+                      color: cs.onSurface.withOpacity(0.75),
                       fontWeight: FontWeight.w600,
                     ),
                   ),

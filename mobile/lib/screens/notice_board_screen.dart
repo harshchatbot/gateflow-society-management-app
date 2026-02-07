@@ -511,10 +511,11 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   }) {
     Color chipColor;
     Color iconColor;
+    final theme = Theme.of(context);
     
     if (isSelected) {
       chipColor = widget.themeColor;
-      iconColor = Colors.white;
+      iconColor = theme.colorScheme.onPrimary;
     } else {
       // Category tokens from theme (soft surfaces + icon tint)
       if (label == "Event") {
@@ -530,8 +531,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         chipColor = NoticeCategoryPalette.bg(NoticeCategoryPalette.policy);
         iconColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.policy);
       } else {
-        chipColor = Theme.of(context).colorScheme.surface;
-        iconColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.7);
+        chipColor = theme.colorScheme.surface;
+        iconColor = theme.colorScheme.onSurface.withOpacity(0.7);
       }
     }
 
@@ -554,7 +555,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w700,
-                color: isSelected ? Colors.white : iconColor,
+                color: isSelected ? theme.colorScheme.onPrimary : iconColor,
               ),
             ),
           ],
@@ -595,7 +596,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               label: const Text("Retry"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.themeColor,
-                foregroundColor: Colors.white,
+                foregroundColor: theme.colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
@@ -656,7 +657,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                     label: const Text("Refresh"),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: widget.themeColor,
-                      foregroundColor: Colors.white,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
@@ -734,7 +735,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -794,7 +795,6 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                                 style: TextStyle(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w900,
-                                  color: Colors.white,
                                 ),
                               ),
                             ),
@@ -868,7 +868,6 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   void _showNoticeDetails(Map<String, dynamic> notice) {
     final title = (notice['title'] ?? 'Untitled').toString();
     final content = (notice['content'] ?? '').toString();
-    final noticeType = (notice['notice_type'] ?? 'GENERAL').toString().toUpperCase();
     final createdAt = notice['created_at']?.toString() ?? '';
     final adminName = (notice['created_by_name'] ?? notice['admin_name'] ?? 'Society Admin').toString();
 

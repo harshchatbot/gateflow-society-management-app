@@ -4,11 +4,8 @@ import 'package:flutter/services.dart';
 import '../core/app_logger.dart';
 import '../services/resident_signup_service.dart';
 import '../services/firestore_service.dart';
-import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
-import '../ui/app_icons.dart';
 import 'resident_login_screen.dart';
-import 'package:flutter/foundation.dart';
 
 
 class ResidentSignupScreen extends StatefulWidget {
@@ -112,10 +109,11 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
   }
 
   void _showError(String msg) {
+    final theme = Theme.of(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg, style: const TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: AppColors.error,
+        backgroundColor: theme.colorScheme.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         margin: const EdgeInsets.all(16),
@@ -125,8 +123,10 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -134,19 +134,19 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
+              color: cs.surface.withOpacity(0.92),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: cs.onSurface.withOpacity(0.08),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
-            child: const Icon(
+            child: Icon(
               Icons.arrow_back_rounded,
-              color: AppColors.text,
+              color: cs.onSurface,
               size: 20,
             ),
           ),
@@ -171,9 +171,9 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.primary.withOpacity(0.15),
-                    AppColors.bg,
-                    AppColors.bg,
+                    cs.primary.withOpacity(0.12),
+                    theme.scaffoldBackgroundColor,
+                    theme.scaffoldBackgroundColor,
                   ],
                 ),
               ),
@@ -185,12 +185,12 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
               child: Column(
                 children: [
                   const SizedBox(height: 20),
-                  _buildBrandHeader(),
+                  _buildBrandHeader(theme),
                   const SizedBox(height: 40),
                   if (_signupSuccess)
-                    _buildSuccessCard()
+                    _buildSuccessCard(theme)
                   else
-                    _buildSignupForm(),
+                    _buildSignupForm(theme),
                   const SizedBox(height: 24),
                 ],
               ),
@@ -202,7 +202,8 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
     );
   }
 
-  Widget _buildBrandHeader() {
+  Widget _buildBrandHeader(ThemeData theme) {
+    final cs = theme.colorScheme;
     return Column(
       children: [
         SizedBox(
@@ -213,32 +214,32 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => Container(
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.1),
+                color: cs.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.person_add_rounded,
                 size: 64,
-                color: AppColors.primary,
+                color: cs.primary,
               ),
             ),
           ),
         ),
         const SizedBox(height: 24),
-        const Text(
+        Text(
           "Resident Signup",
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w900,
-            color: AppColors.text,
+            color: cs.onSurface,
             letterSpacing: -0.5,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
+        Text(
           "Create your account",
           style: TextStyle(
-            color: AppColors.text2,
+            color: cs.onSurface.withOpacity(0.7),
             fontWeight: FontWeight.w600,
             fontSize: 15,
           ),
@@ -247,16 +248,17 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
     );
   }
 
-  Widget _buildSignupForm() {
+  Widget _buildSignupForm(ThemeData theme) {
+    final cs = theme.colorScheme;
     return Container(
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.75)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: cs.onSurface.withOpacity(0.06),
             blurRadius: 30,
             offset: const Offset(0, 15),
           ),
@@ -267,12 +269,12 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text(
+            Text(
               "Enter your details",
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: AppColors.text2,
+                color: cs.onSurface.withOpacity(0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -368,7 +370,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  color: AppColors.text2,
+                  color: cs.onSurface.withOpacity(0.65),
                   size: 20,
                 ),
                 onPressed: () {
@@ -397,7 +399,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  color: AppColors.text2,
+                  color: cs.onSurface.withOpacity(0.65),
                   size: 20,
                 ),
                 onPressed: () {
@@ -420,8 +422,8 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleSignup,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  foregroundColor: Colors.white,
+                  backgroundColor: cs.primary,
+                  foregroundColor: cs.onPrimary,
                   elevation: 0,
                   shadowColor: Colors.transparent,
                   shape: RoundedRectangleBorder(
@@ -442,10 +444,10 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text(
+                Text(
                   "Already have an account? ",
                   style: TextStyle(
-                    color: AppColors.text2,
+                    color: cs.onSurface.withOpacity(0.75),
                     fontSize: 14,
                   ),
                 ),
@@ -455,10 +457,10 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
                       MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
                     );
                   },
-                  child: const Text(
+                  child: Text(
                     "Login",
                     style: TextStyle(
-                      color: AppColors.primary,
+                      color: cs.primary,
                       fontWeight: FontWeight.w800,
                       fontSize: 14,
                     ),
@@ -472,16 +474,17 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
     );
   }
 
-  Widget _buildSuccessCard() {
+  Widget _buildSuccessCard(ThemeData theme) {
+    final cs = theme.colorScheme;
     return Container(
       padding: const EdgeInsets.all(28),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+        border: Border.all(color: cs.primary.withOpacity(0.22)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: cs.onSurface.withOpacity(0.06),
             blurRadius: 30,
             offset: const Offset(0, 15),
           ),
@@ -493,31 +496,31 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.15),
+              color: cs.primary.withOpacity(0.14),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.check_circle_rounded,
-              color: AppColors.primary,
+              color: cs.primary,
               size: 50,
             ),
           ),
           const SizedBox(height: 24),
-          const Text(
+          Text(
             "Signup Request Submitted!",
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.w900,
-              color: AppColors.text,
+              color: cs.onSurface,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             "Your signup request has been sent to the admin for approval. You will be able to login once your request is approved.",
             style: TextStyle(
               fontSize: 15,
-              color: AppColors.text2,
+              color: cs.onSurface.withOpacity(0.72),
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -533,8 +536,8 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
                 );
               },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
+                  backgroundColor: cs.primary,
+                foregroundColor: cs.onPrimary,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -591,27 +594,29 @@ class _PremiumField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            color: AppColors.text2,
+            color: cs.onSurface.withOpacity(0.75),
             letterSpacing: 0.2,
           ),
         ),
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: AppColors.bg,
+            color: theme.scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: theme.dividerColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: cs.onSurface.withOpacity(0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -627,25 +632,25 @@ class _PremiumField extends StatelessWidget {
             inputFormatters: inputFormatters,
             maxLength: maxLength,
             enabled: enabled,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w700,
-              color: AppColors.text,
+              color: cs.onSurface,
             ),
             decoration: InputDecoration(
               prefixIcon: Container(
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primary.withOpacity(0.15),
+                  color: cs.primary.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: AppColors.primary, size: 20),
+                child: Icon(icon, color: cs.primary, size: 20),
               ),
               suffixIcon: suffixIcon,
               hintText: hint,
-              hintStyle: const TextStyle(
-                color: AppColors.textMuted,
+              hintStyle: TextStyle(
+                color: cs.onSurface.withOpacity(0.55),
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),

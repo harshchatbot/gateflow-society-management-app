@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import '../ui/app_colors.dart';
 import 'phone_otp_login_screen.dart';
 
 /// Admin Pending Approval Screen
@@ -67,12 +66,14 @@ class AdminPendingApprovalScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final value = email ?? '';
     final isPhone = _looksLikePhone(value);
     final displayValue = _maskIfPhone(value);
 
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
@@ -80,19 +81,19 @@ class AdminPendingApprovalScreen extends StatelessWidget {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppColors.surface.withOpacity(0.95),
+              color: cs.surface.withOpacity(0.95),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: cs.onSurface.withOpacity(0.08),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
               ],
             ),
-            child: const Icon(
+            child: Icon(
               Icons.arrow_back_rounded,
-              color: AppColors.text,
+              color: cs.onSurface,
               size: 20,
             ),
           ),
@@ -108,9 +109,9 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    AppColors.admin.withOpacity(0.12),
-                    AppColors.bg,
-                    AppColors.bg,
+                    cs.primary.withOpacity(0.12),
+                    theme.scaffoldBackgroundColor,
+                    theme.scaffoldBackgroundColor,
                   ],
                 ),
               ),
@@ -127,22 +128,22 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                       width: 110,
                       height: 110,
                       decoration: BoxDecoration(
-                        color: AppColors.admin.withOpacity(0.14),
+                        color: cs.primary.withOpacity(0.14),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.pending_actions_rounded,
-                        color: AppColors.admin,
+                        color: cs.primary,
                         size: 56,
                       ),
                     ),
                     const SizedBox(height: 22),
-                    const Text(
+                    Text(
                       "Pending Approval",
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
-                        color: AppColors.text,
+                        color: cs.onSurface,
                         letterSpacing: -0.5,
                       ),
                       textAlign: TextAlign.center,
@@ -152,23 +153,22 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: AppColors.admin.withOpacity(0.10),
+                        color: cs.primary.withOpacity(0.10),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                            color: AppColors.admin.withOpacity(0.18)),
+                            color: cs.primary.withOpacity(0.18)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.shield_rounded,
-                              color: AppColors.admin, size: 18),
-                          SizedBox(width: 8),
+                          Icon(Icons.shield_rounded, color: cs.primary, size: 18),
+                          const SizedBox(width: 8),
                           Text(
                             "Waiting for Super Admin approval",
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.admin,
+                              color: cs.primary,
                             ),
                           ),
                         ],
@@ -177,9 +177,9 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                     const SizedBox(height: 18),
                     Text(
                       "Hi ${adminName.isNotEmpty ? adminName : 'Admin'}, your admin access request has been submitted.\nYou’ll be able to login once it’s approved.",
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
-                        color: AppColors.text2,
+                        color: cs.onSurface.withOpacity(0.72),
                         height: 1.5,
                         fontWeight: FontWeight.w600,
                       ),
@@ -191,9 +191,9 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(18),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: cs.surface,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: theme.dividerColor),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -204,16 +204,16 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                                 isPhone
                                     ? Icons.phone_rounded
                                     : Icons.email_rounded,
-                                color: AppColors.admin,
+                                color: cs.primary,
                                 size: 20,
                               ),
                               const SizedBox(width: 10),
                               Text(
                                 isPhone ? "Contact" : "Email",
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w800,
-                                  color: AppColors.text2,
+                                  color: cs.onSurface.withOpacity(0.72),
                                 ),
                               ),
                             ],
@@ -221,10 +221,10 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                           const SizedBox(height: 8),
                           Text(
                             displayValue,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.text,
+                              color: cs.onSurface,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -232,10 +232,10 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                             isPhone
                                 ? "This phone is used to verify your identity."
                                 : "This email was used for your request.",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: AppColors.text2,
+                              color: cs.onSurface.withOpacity(0.68),
                               height: 1.4,
                             ),
                           ),
@@ -246,21 +246,20 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.surface,
+                        color: cs.surface,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.border),
+                        border: Border.all(color: theme.dividerColor),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.apartment_rounded,
-                              color: AppColors.admin),
+                          Icon(Icons.apartment_rounded, color: cs.primary),
                           const SizedBox(width: 10),
                           Expanded(
                             child: Text(
                               "Society ID: $societyId",
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.text,
+                                color: cs.onSurface,
                               ),
                             ),
                           ),
@@ -283,8 +282,8 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                           ),
                         ),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.admin,
-                          foregroundColor: Colors.white,
+                          backgroundColor: cs.primary,
+                          foregroundColor: cs.onPrimary,
                           elevation: 0,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(16),
@@ -296,7 +295,7 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                     Text(
                       "Tip: If it takes too long, contact your Super Admin.",
                       style: TextStyle(
-                        color: AppColors.text2.withOpacity(0.9),
+                        color: cs.onSurface.withOpacity(0.68),
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
@@ -317,11 +316,14 @@ class _TimelineCard extends StatelessWidget {
   const _TimelineCard();
 
   Widget _step({
+    required BuildContext context,
     required IconData icon,
     required String title,
     required String subtitle,
     required bool done,
   }) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -330,19 +332,19 @@ class _TimelineCard extends StatelessWidget {
           height: 34,
           decoration: BoxDecoration(
             color: done
-                ? AppColors.success.withOpacity(0.18)
-                : AppColors.admin.withOpacity(0.12),
+                ? Colors.green.withOpacity(0.18)
+                : cs.primary.withOpacity(0.12),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: done
-                  ? AppColors.success.withOpacity(0.28)
-                  : AppColors.admin.withOpacity(0.18),
+                  ? Colors.green.withOpacity(0.28)
+                  : cs.primary.withOpacity(0.18),
             ),
           ),
           child: Icon(
             icon,
             size: 18,
-            color: done ? AppColors.success : AppColors.admin,
+            color: done ? Colors.green.shade700 : cs.primary,
           ),
         ),
         const SizedBox(width: 12),
@@ -352,19 +354,19 @@ class _TimelineCard extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
-                  color: AppColors.text,
+                  color: cs.onSurface,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.text2,
+                  color: cs.onSurface.withOpacity(0.7),
                   height: 1.35,
                 ),
               ),
@@ -377,34 +379,39 @@ class _TimelineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: theme.dividerColor),
       ),
       child: Column(
         children: [
           _step(
+            context: context,
             icon: Icons.task_alt_rounded,
             title: "Request submitted",
             subtitle: "We’ve shared your admin request with the Super Admin.",
             done: true,
           ),
           const SizedBox(height: 14),
-          Divider(color: AppColors.border.withOpacity(0.9)),
+          Divider(color: theme.dividerColor.withOpacity(0.9)),
           const SizedBox(height: 14),
           _step(
+            context: context,
             icon: Icons.verified_user_rounded,
             title: "Approval pending",
             subtitle: "Super Admin will review and approve your access.",
             done: false,
           ),
           const SizedBox(height: 14),
-          Divider(color: AppColors.border.withOpacity(0.9)),
+          Divider(color: theme.dividerColor.withOpacity(0.9)),
           const SizedBox(height: 14),
           _step(
+            context: context,
             icon: Icons.login_rounded,
             title: "Login enabled",
             subtitle: "Once approved, you can login and manage your society.",

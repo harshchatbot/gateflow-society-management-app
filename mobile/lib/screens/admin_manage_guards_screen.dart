@@ -3,12 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
-import '../services/admin_service.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
-import '../core/env.dart';
 
 /// Admin Manage Guards Screen
 ///
@@ -34,10 +31,6 @@ class AdminManageGuardsScreen extends StatefulWidget {
 const int kGuardsPageSize = 30;
 
 class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
-  late final AdminService _service = AdminService(
-    baseUrl: Env.apiBaseUrl,
-  );
-
   final FirestoreService _firestore = FirestoreService();
 
   List<dynamic> _guards = [];
@@ -148,7 +141,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
             margin: const EdgeInsets.all(24),
             action: SnackBarAction(
               label: "Retry",
-              textColor: Colors.white,
+              textColor: Theme.of(context).colorScheme.onError,
               onPressed: _loadGuards,
             ),
           ),
@@ -376,7 +369,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
               label: const Text("Retry"),
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
-                foregroundColor: Colors.white,
+                foregroundColor: theme.colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
@@ -595,7 +588,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: active
-                            ? AppColors.success.withOpacity(0.15)
+                            ? Colors.green.withOpacity(0.15)
                             : theme.colorScheme.error.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -604,7 +597,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
-                          color: active ? AppColors.success : theme.colorScheme.error,
+                          color: active ? Colors.green.shade700 : theme.colorScheme.error,
                         ),
                       ),
                     ),
@@ -764,14 +757,15 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
   }
 
   void _showFullScreenImage(String imageUrl) {
+    final theme = Theme.of(context);
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => Scaffold(
-          backgroundColor: Colors.black,
+          backgroundColor: theme.colorScheme.surface,
           appBar: AppBar(
-            backgroundColor: Colors.black,
-            iconTheme: const IconThemeData(color: Colors.white),
-            title: const Text("Photo", style: TextStyle(color: Colors.white)),
+            backgroundColor: theme.colorScheme.surface,
+            iconTheme: IconThemeData(color: theme.colorScheme.onSurface),
+            title: Text("Photo", style: TextStyle(color: theme.colorScheme.onSurface)),
           ),
           body: Center(
             child: InteractiveViewer(
@@ -780,10 +774,14 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
               child: CachedNetworkImage(
                 imageUrl: imageUrl,
                 fit: BoxFit.contain,
-                placeholder: (_, __) => const Center(
-                  child: CircularProgressIndicator(color: Colors.white),
+                placeholder: (_, __) => Center(
+                  child: CircularProgressIndicator(color: theme.colorScheme.primary),
                 ),
-                errorWidget: (_, __, ___) => const Icon(Icons.broken_image_rounded, color: Colors.white, size: 64),
+                errorWidget: (_, __, ___) => Icon(
+                  Icons.broken_image_rounded,
+                  color: theme.colorScheme.onSurface,
+                  size: 64,
+                ),
               ),
             ),
           ),
@@ -941,7 +939,7 @@ class _AdminManageGuardsScreenState extends State<AdminManageGuardsScreen> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: sheetTheme.colorScheme.primary,
-                          foregroundColor: Colors.white,
+                          foregroundColor: sheetTheme.colorScheme.onPrimary,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                           ),

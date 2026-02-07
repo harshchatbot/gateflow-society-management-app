@@ -10,7 +10,6 @@ import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../core/env.dart';
 import '../core/society_modules.dart';
-import '../screens/sos_detail_screen.dart';
 
 /// Admin Notification Drawer
 ///
@@ -413,20 +412,22 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: Column(
         children: [
           // Header
           Container(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               border: Border(
-                bottom: BorderSide(color: AppColors.border, width: 1),
+                bottom: BorderSide(color: theme.dividerColor, width: 1),
               ),
             ),
             child: Row(
@@ -434,31 +435,30 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.admin.withOpacity(0.15),
+                    color: cs.primary.withOpacity(0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.notifications_rounded,
-                      color: AppColors.admin, size: 24),
+                  child: Icon(Icons.notifications_rounded,
+                      color: cs.primary, size: 24),
                 ),
                 const SizedBox(width: 12),
-                const Expanded(
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
+                      const Text(
                         "Notifications",
                         style: TextStyle(
                           fontSize: 22,
                           fontWeight: FontWeight.w900,
-                          color: AppColors.text,
                         ),
                       ),
-                      SizedBox(height: 2),
+                      const SizedBox(height: 2),
                       Text(
                         "Recent updates & pending items",
                         style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.text2,
+                          color: cs.onSurface.withOpacity(0.65),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -466,7 +466,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.close_rounded, color: AppColors.text2),
+                  icon: Icon(Icons.close_rounded, color: cs.onSurface.withOpacity(0.65)),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -574,7 +574,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                       )
                     : RefreshIndicator(
                         onRefresh: _loadNotifications,
-                        color: AppColors.admin,
+                        color: cs.primary,
                         child: ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           itemCount: _notifications.length,
@@ -596,6 +596,8 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
     required int count,
     required Color color,
   }) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -626,8 +628,8 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                 ),
                 child: Text(
                   count.toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: cs.onPrimary,
                     fontWeight: FontWeight.w900,
                     fontSize: 16,
                   ),
@@ -638,10 +640,10 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           const SizedBox(height: 8),
           Text(
             label,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: AppColors.text2,
+              color: cs.onSurface.withOpacity(0.65),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -652,6 +654,8 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
   }
 
   Widget _buildNotificationItem(Map<String, dynamic> notification) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final type = notification['type'] ?? '';
     final title = notification['title'] ?? '';
     final description = notification['description'] ?? '';
@@ -664,12 +668,12 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: cs.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: theme.dividerColor),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: cs.onSurface.withOpacity(0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -700,10 +704,10 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                       Expanded(
                         child: Text(
                           title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
-                            color: AppColors.text,
+                            color: cs.onSurface,
                           ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -730,9 +734,9 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                   const SizedBox(height: 4),
                   Text(
                     description,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: AppColors.text2,
+                      color: cs.onSurface.withOpacity(0.7),
                       fontWeight: FontWeight.w500,
                     ),
                     maxLines: 2,
@@ -741,28 +745,28 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(Icons.access_time_rounded,
-                          size: 12, color: AppColors.text2),
+                      Icon(Icons.access_time_rounded,
+                          size: 12, color: cs.onSurface.withOpacity(0.6)),
                       const SizedBox(width: 4),
                       Text(
                         time,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 11,
-                          color: AppColors.text2,
+                          color: cs.onSurface.withOpacity(0.6),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
                       if (type == 'complaint' &&
                           notification['flat_no'] != null) ...[
                         const SizedBox(width: 12),
-                        const Icon(Icons.home_rounded,
-                            size: 12, color: AppColors.text2),
+                        Icon(Icons.home_rounded,
+                            size: 12, color: cs.onSurface.withOpacity(0.6)),
                         const SizedBox(width: 4),
                         Text(
                           "Flat ${notification['flat_no']}",
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
-                            color: AppColors.text2,
+                            color: cs.onSurface.withOpacity(0.6),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -770,14 +774,14 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                       if (type == 'notice' &&
                           notification['type_label'] != null) ...[
                         const SizedBox(width: 12),
-                        const Icon(Icons.category_rounded,
-                            size: 12, color: AppColors.text2),
+                        Icon(Icons.category_rounded,
+                            size: 12, color: cs.onSurface.withOpacity(0.6)),
                         const SizedBox(width: 4),
                         Text(
                           notification['type_label'],
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
-                            color: AppColors.text2,
+                            color: cs.onSurface.withOpacity(0.6),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
