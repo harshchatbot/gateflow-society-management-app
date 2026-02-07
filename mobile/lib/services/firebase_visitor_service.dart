@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../core/app_error.dart';
 import '../core/app_logger.dart';
+import '../core/api_client.dart';
 import '../models/visitor.dart';
 
 class Result<T> {
@@ -31,6 +32,49 @@ class FirebaseVisitorService {
 
   Reference _visitorPhotoRef(String societyId, String visitorId) {
     return _storage.ref().child('societies/$societyId/visitors/$visitorId.jpg');
+  }
+
+  Future<void> _notifyResidentForVisitor({
+    required String societyId,
+    required String flatNo,
+    required String visitorId,
+    required String visitorType,
+    required String visitorPhone,
+  }) async {
+    try {
+      final api = ApiClient();
+      final normalizedFlatNo = flatNo.trim().toUpperCase();
+
+      final response = await api.post(
+        "/api/visitors/notify-resident",
+        data: {
+          "society_id": societyId.trim(),
+          "flat_no": normalizedFlatNo,
+          // Firestore flow currently doesn't keep a separate flat_id.
+          "flat_id": normalizedFlatNo,
+          "visitor_id": visitorId,
+          "visitor_type": visitorType.trim().toUpperCase(),
+          "visitor_phone": visitorPhone.trim(),
+          "status": "PENDING",
+        },
+      );
+
+      AppLogger.i("Visitor resident notification requested", data: {
+        "visitorId": visitorId,
+        "statusCode": response.statusCode,
+        "societyId": societyId,
+        "flatNo": normalizedFlatNo,
+      });
+    } catch (e, stackTrace) {
+      // Best-effort call: do not fail visitor creation if push fails.
+      AppLogger.w("Failed to trigger visitor resident notification", data: {
+        "visitorId": visitorId,
+        "societyId": societyId,
+        "flatNo": flatNo.trim().toUpperCase(),
+        "error": e.toString(),
+      });
+      AppLogger.d("Visitor notify stack", data: {"stack": stackTrace.toString()});
+    }
   }
 
   Future<Result<Visitor>> createVisitorWithPhoto({
@@ -136,6 +180,13 @@ class FirebaseVisitorService {
 
       final visitorRef = _visitorsRef(societyId).doc(visitorId);
       await visitorRef.set(visitorData);
+      await _notifyResidentForVisitor(
+        societyId: societyId,
+        flatNo: flatNo,
+        visitorId: visitorId,
+        visitorType: visitorType,
+        visitorPhone: visitorPhone,
+      );
 
       AppLogger.i("Visitor document created in Firestore", data: {
         "visitorId": visitorId,
@@ -241,6 +292,13 @@ class FirebaseVisitorService {
 
       final visitorRef = _visitorsRef(societyId).doc(visitorId);
       await visitorRef.set(visitorData);
+      await _notifyResidentForVisitor(
+        societyId: societyId,
+        flatNo: flatNo,
+        visitorId: visitorId,
+        visitorType: visitorType,
+        visitorPhone: visitorPhone,
+      );
 
       AppLogger.i("Visitor document created in Firestore", data: {
         "visitorId": visitorId,

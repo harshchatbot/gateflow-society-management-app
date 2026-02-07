@@ -11,6 +11,7 @@ from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form
 
 from app.models.schemas import (
     VisitorCreateRequest,
+    VisitorResidentNotifyRequest,
     VisitorResponse,
     VisitorListResponse,
     VisitorNotificationTestRequest,
@@ -273,6 +274,89 @@ async def create_visitor_with_photo(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create visitor entry with photo: {str(e)}",
         )
+
+
+@router.post(
+    "/notify-resident",
+    status_code=status.HTTP_200_OK,
+    summary="Notify resident for a new visitor entry",
+    description="""
+    Sends visitor notification to resident topics for a created visitor.
+    Useful when visitor entry is created directly in Firestore by mobile.
+
+    Sends to:
+    - canonical: flat_{society_id}_{flat_no}
+    - legacy: flat_{flat_id} (if flat_id provided)
+    """,
+)
+async def notify_resident_for_visitor(request: VisitorResidentNotifyRequest):
+    try:
+        society_id = request.society_id.strip()
+        flat_no = request.flat_no.strip().upper()
+        flat_id = (request.flat_id or "").strip()
+        visitor_type = request.visitor_type.strip().upper()
+        visitor_phone = request.visitor_phone.strip()
+        visitor_id = request.visitor_id.strip()
+        status_value = request.status.strip().upper() or "PENDING"
+
+        if not society_id:
+            raise HTTPException(status_code=400, detail="society_id is required")
+        if not flat_no:
+            raise HTTPException(status_code=400, detail="flat_no is required")
+        if not visitor_id:
+            raise HTTPException(status_code=400, detail="visitor_id is required")
+
+        svc = get_notification_service()
+        canonical_topic = f"flat_{society_id}_{flat_no}"
+        topics = [canonical_topic]
+        if flat_id:
+            legacy_topic = f"flat_{flat_id}"
+            if legacy_topic != canonical_topic:
+                topics.append(legacy_topic)
+
+        payload = {
+            "type": "visitor",
+            "visitor_id": visitor_id,
+            "society_id": society_id,
+            "flat_id": flat_id,
+            "flat_no": flat_no,
+            "visitor_type": visitor_type,
+            "status": status_value,
+        }
+
+        topic_results = {}
+        sent_any = False
+        for topic in topics:
+            ok = svc.send_to_topic(
+                topic=topic,
+                title="New Visitor Entry",
+                body=f"Visitor {visitor_type} at {flat_no}. Phone: {visitor_phone}",
+                data=payload,
+                sound="notification_sound",
+            )
+            topic_results[topic] = ok
+            sent_any = sent_any or ok
+
+        logger.info(
+            "VISITOR_NOTIFY_PUSH | society_id=%s flat_no=%s visitor_id=%s topics=%s success=%s",
+            society_id,
+            flat_no,
+            visitor_id,
+            topics,
+            sent_any,
+        )
+
+        return {
+            "ok": sent_any,
+            "visitor_id": visitor_id,
+            "topics": topic_results,
+            "payload_type": payload["type"],
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("VISITOR_NOTIFY_PUSH_FAILED")
+        raise HTTPException(status_code=500, detail=f"Visitor notify failed: {str(e)}")
 
 
 @router.post(

@@ -81,6 +81,16 @@ class VisitorNotificationTestRequest(BaseModel):
     visitor_phone: str = Field(default="9999999999", description="Visitor phone shown in notification")
     visitor_id: Optional[str] = Field(default=None, description="Optional visitor id for payload")
 
+class VisitorResidentNotifyRequest(BaseModel):
+    """Notify resident topics after visitor entry is created in Firestore/mobile flow."""
+    society_id: str = Field(..., description="Society ID")
+    flat_no: str = Field(..., description="Flat number, e.g. A-101")
+    flat_id: Optional[str] = Field(default=None, description="Optional legacy flat ID")
+    visitor_id: str = Field(..., description="Visitor id")
+    visitor_type: str = Field(default="GUEST", description="Visitor type shown in notification")
+    visitor_phone: str = Field(default="", description="Visitor phone shown in notification")
+    status: str = Field(default="PENDING", description="Visitor status")
+
 
 # Flat Models
 class FlatResponse(BaseModel):

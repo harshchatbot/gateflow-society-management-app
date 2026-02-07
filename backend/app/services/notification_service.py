@@ -121,7 +121,7 @@ class NotificationService:
                 priority="high",
                 notification=messaging.AndroidNotification(
                     sound=sound,
-                    channel_id="gateflow_channel",
+                    channel_id="sentinel_channel",
                 ),
             )
 
@@ -210,7 +210,7 @@ class NotificationService:
                 priority="high",
                 notification=messaging.AndroidNotification(
                     sound=sound,
-                    channel_id="gateflow_channel",
+                    channel_id="sentinel_channel",
                 ),
             )
 
