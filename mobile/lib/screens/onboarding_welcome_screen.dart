@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../ui/app_colors.dart';
@@ -10,7 +12,8 @@ class OnboardingWelcomeScreen extends StatefulWidget {
   const OnboardingWelcomeScreen({super.key});
 
   @override
-  State<OnboardingWelcomeScreen> createState() => _OnboardingWelcomeScreenState();
+  State<OnboardingWelcomeScreen> createState() =>
+      _OnboardingWelcomeScreenState();
 }
 
 class _OnboardingWelcomeScreenState extends State<OnboardingWelcomeScreen> {
@@ -27,85 +30,183 @@ class _OnboardingWelcomeScreenState extends State<OnboardingWelcomeScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: Column(
-          children: [
-            const SizedBox(height: 32),
-            const _IllustrationPlaceholder(
-              assetPath: 'assets/illustrations/illustration_welcome.png',
-              semanticLabel: 'Person at desk',
-            ),
-            const SizedBox(height: 40),
-            Text(
-              'Welcome to Sentinel',
-              style: GoogleFonts.outfit(
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                color: AppColors.text,
-                letterSpacing: -0.6,
-                height: 1.2,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Secure Society Management',
-              style: GoogleFonts.outfit(
-                fontSize: 16,
-                color: AppColors.text2,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0.2,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            const Spacer(),
-            _QuoteOfTheDayBubble(quoteFuture: _quoteFuture),
-            const SizedBox(height: 24),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-              child: SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (_) => const OnboardingChooseRoleScreen(),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 32),
+                      const _IllustrationPlaceholder(
+                        assetPath:
+                            'assets/illustrations/illustration_welcome.png',
+                        semanticLabel: 'Person at desk',
                       ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    textStyle: GoogleFonts.outfit(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.3,
-                    ),
+                      const SizedBox(height: 40),
+                      Text(
+                        'Welcome to Sentinel',
+                        style: GoogleFonts.outfit(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.text,
+                          letterSpacing: -0.6,
+                          height: 1.2,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Secure Society Management',
+                        style: GoogleFonts.outfit(
+                          fontSize: 16,
+                          color: AppColors.text2,
+                          fontWeight: FontWeight.w500,
+                          letterSpacing: 0.2,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 14),
+                      const _TrustStrip(),
+                      const SizedBox(height: 24),
+                      const Spacer(),
+                      _QuoteOfTheDayBubble(quoteFuture: _quoteFuture),
+                      const SizedBox(height: 24),
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                        child: SizedBox(
+                          width: double.infinity,
+                          height: 56,
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.of(context).pushReplacement(
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      const OnboardingChooseRoleScreen(),
+                                ),
+                              );
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              textStyle: GoogleFonts.outfit(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.3,
+                              ),
+                            ),
+                            child: const Text('Get Started'),
+                          ),
+                        ),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        child: Text(
+                          'Made with ❤️ in Rajasthan, India',
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppColors.text2.withOpacity(0.85),
+                            letterSpacing: 0.25,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: const Text('Get Started'),
                 ),
               ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _TrustStrip extends StatelessWidget {
+  const _TrustStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: AppColors.primary.withOpacity(0.12),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: Text(
-                'Made with ❤️ in Rajasthan, India',
-                style: GoogleFonts.outfit(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.text2.withOpacity(0.85),
-                  letterSpacing: 0.25,
-                ),
-              ),
+          ],
+        ),
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          runAlignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 8,
+          children: const [
+            _TrustItem(
+              icon: Icons.verified_user_outlined,
+              label: 'OTP Login',
+            ),
+            _TrustItem(
+              icon: Icons.notifications_active_outlined,
+              label: 'Real-time Alerts',
+            ),
+            _TrustItem(
+              icon: Icons.location_city_outlined,
+              label: 'India-ready',
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _TrustItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _TrustItem({
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          icon,
+          size: 16,
+          color: AppColors.primary,
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.outfit(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: AppColors.text,
+            letterSpacing: 0.1,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -131,7 +232,8 @@ class _QuoteOfTheDayBubble extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: const BorderRadius.only(
@@ -186,22 +288,76 @@ class _QuoteOfTheDayBubble extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 16),
-                SizedBox(
-                  width: 176,
-                  height: 176,
-                  child: Image.asset(
-                    'assets/mascot/senti_namaste.png',
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Icon(
-                      Icons.pets_rounded,
-                      size: 72,
-                      color: AppColors.primary.withOpacity(0.5),
-                    ),
-                  ),
-                ),
+                const _BlinkingMascot(),
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class _BlinkingMascot extends StatefulWidget {
+  const _BlinkingMascot();
+
+  @override
+  State<_BlinkingMascot> createState() => _BlinkingMascotState();
+}
+
+class _BlinkingMascotState extends State<_BlinkingMascot> {
+  Timer? _nextBlinkTimer;
+  Timer? _openEyesTimer;
+  bool _eyesClosed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _scheduleNextBlink();
+  }
+
+  void _scheduleNextBlink() {
+    _nextBlinkTimer?.cancel();
+    _nextBlinkTimer = Timer(const Duration(milliseconds: 3200), () {
+      if (!mounted) return;
+      setState(() => _eyesClosed = true);
+
+      _openEyesTimer?.cancel();
+      _openEyesTimer = Timer(const Duration(milliseconds: 140), () {
+        if (!mounted) return;
+        setState(() => _eyesClosed = false);
+        _scheduleNextBlink();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _nextBlinkTimer?.cancel();
+    _openEyesTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 176,
+      height: 176,
+      child: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 90),
+        switchInCurve: Curves.easeInOut,
+        switchOutCurve: Curves.easeInOut,
+        child: Image.asset(
+          _eyesClosed
+              ? 'assets/mascot/senti_eyes_closed.png'
+              : 'assets/mascot/senti_namaste.png',
+          key: ValueKey<bool>(_eyesClosed),
+          fit: BoxFit.contain,
+          errorBuilder: (_, __, ___) => Icon(
+            Icons.pets_rounded,
+            size: 72,
+            color: AppColors.primary.withOpacity(0.5),
+          ),
         ),
       ),
     );

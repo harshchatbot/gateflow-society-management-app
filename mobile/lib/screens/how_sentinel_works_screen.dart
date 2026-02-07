@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
+import '../ui/sentinel_theme.dart';
 
 /// Static pre-signup info screen: "How Sentinel Works".
 /// Explains onboarding in 4–5 steps and highlights SOS as a USP.
@@ -7,108 +8,124 @@ import '../ui/app_colors.dart';
 class HowSentinelWorksScreen extends StatelessWidget {
   const HowSentinelWorksScreen({super.key});
 
-  static const List<Map<String, String>> _steps = [
-    {
-      'title': '1. Choose your role',
-      'body': 'Guard, Resident, or Admin. Each role has a tailored flow.',
-    },
-    {
-      'title': '2. Join or create society',
-      'body': 'Residents and Admins enter a society code. Guards join via QR from Admin.',
-    },
-    {
-      'title': '3. Get approved (Resident/Admin)',
-      'body': 'Society admin approves your request. Guards join using a 6-digit admin code with expiry.',
-    },
-    {
-      'title': '4. Use your dashboard',
-      'body': 'Guards log visitors; Residents approve/reject; Admins manage society, notices & complaints.',
-    },
-    {
-      'title': '5. Emergency SOS',
-      'body': 'Residents can send an instant SOS alert. Guards and Admins see and respond to emergencies right away.',
-    },
+  static const List<_StepItem> _steps = [
+    _StepItem(
+      title: 'Choose your role',
+      body: 'Guard, Resident, or Admin. Each role gets a tailored journey.',
+      icon: Icons.badge_outlined,
+    ),
+    _StepItem(
+      title: 'Join or create your society',
+      body:
+          'Residents/Admins use society code. Guards join with admin-generated code.',
+      icon: Icons.groups_outlined,
+    ),
+    _StepItem(
+      title: 'Get approved',
+      body:
+          'Admin approval activates access. Pending users see clear waiting status.',
+      icon: Icons.verified_user_outlined,
+    ),
+    _StepItem(
+      title: 'Use role dashboards',
+      body:
+          'Visitors, complaints, notices, and alerts are available by your role.',
+      icon: Icons.dashboard_outlined,
+    ),
+    _StepItem(
+      title: 'Emergency SOS',
+      body:
+          'Residents can send SOS instantly; security and admins are alerted right away.',
+      icon: Icons.sos_outlined,
+    ),
   ];
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Scaffold(
-      backgroundColor: AppColors.bg,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.transparent,
+        foregroundColor: theme.colorScheme.onSurface,
+        surfaceTintColor: Colors.transparent,
         title: const Text(
           'How Sentinel Works',
-          style: TextStyle(fontWeight: FontWeight.w800),
+          style: TextStyle(fontWeight: FontWeight.w700),
         ),
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Onboarding in a few steps',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.text,
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: theme.dividerColor),
               ),
-            ),
-            const SizedBox(height: 20),
-            ..._steps.map((step) => Padding(
-                  padding: const EdgeInsets.only(bottom: 20),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          step['title']!,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          step['body']!,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppColors.text2,
-                            height: 1.4,
-                          ),
-                        ),
-                      ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Sentinel in 5 simple steps',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                )),
-            const SizedBox(height: 8),
+                  const SizedBox(height: 8),
+                  Text(
+                    'From onboarding to emergency response, everything is built for fast society operations.',
+                    style: theme.textTheme.bodySmall?.copyWith(height: 1.4),
+                  ),
+                  const SizedBox(height: 12),
+                  const Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      _TagChip(label: 'OTP Login'),
+                      _TagChip(label: 'Role-based Access'),
+                      _TagChip(label: 'Real-time Alerts'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...List.generate(
+              _steps.length,
+              (index) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: _StepCard(
+                  stepNumber: index + 1,
+                  item: _steps[index],
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.08),
+                color: SentinelStatusPalette.bg(AppColors.error),
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                border: Border.all(
+                    color: SentinelStatusPalette.border(AppColors.error)),
               ),
-              child: const Row(
+              child: Row(
                 children: [
-                  Icon(Icons.sos_rounded, color: AppColors.error, size: 28),
-                  SizedBox(width: 12),
+                  const Icon(Icons.sos_rounded, color: AppColors.error, size: 28),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'SOS alerts go to your society\'s security and admin instantly—so help is always one tap away.',
+                      'SOS is prioritized in Sentinel. One tap sends alerts to your society team instantly.',
                       style: TextStyle(
                         fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.text,
+                        fontWeight: FontWeight.w600,
+                        color: theme.colorScheme.onSurface,
                         height: 1.3,
                       ),
                     ),
@@ -116,7 +133,126 @@ class HowSentinelWorksScreen extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(height: 18),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.arrow_back_rounded),
+                label: const Text('Back'),
+              ),
+            ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StepItem {
+  final String title;
+  final String body;
+  final IconData icon;
+
+  const _StepItem({
+    required this.title,
+    required this.body,
+    required this.icon,
+  });
+}
+
+class _StepCard extends StatelessWidget {
+  final int stepNumber;
+  final _StepItem item;
+
+  const _StepCard({
+    required this.stepNumber,
+    required this.item,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.dividerColor),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Center(
+              child: Text(
+                '$stepNumber',
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(item.icon, size: 17, color: theme.colorScheme.primary),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontSize: 15.5,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  item.body,
+                  style: theme.textTheme.bodySmall?.copyWith(height: 1.4),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TagChip extends StatelessWidget {
+  final String label;
+
+  const _TagChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.primary.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        label,
+        style: theme.textTheme.bodySmall?.copyWith(
+          color: theme.colorScheme.primary,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
