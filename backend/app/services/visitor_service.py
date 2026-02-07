@@ -7,6 +7,7 @@ from typing import List, Optional, Dict, Tuple
 import uuid
 import logging
 import time
+import re
 
 from fastapi import HTTPException
 
@@ -35,6 +36,10 @@ class VisitorService:
     # -----------------------------
     def _norm_flat_no(self, flat_no: Optional[str]) -> str:
         return (flat_no or "").strip().upper()
+
+    def _topic_key(self, raw: Optional[str]) -> str:
+        cleaned = re.sub(r"[^A-Z0-9]+", "_", (raw or "").strip().upper())
+        return re.sub(r"_+", "_", cleaned).strip("_")
 
     def clear_flat_cache(self, society_id: Optional[str] = None) -> None:
         """Utility to clear flat cache (useful for testing)."""
@@ -205,9 +210,9 @@ class VisitorService:
 
             # Canonical topic format used by mobile subscription:
             # flat_<societyId>_<flatNo>
-            canonical_topic = f"flat_{society_id}_{resolved_flat_no}"
+            canonical_topic = f"flat_{self._topic_key(society_id)}_{self._topic_key(resolved_flat_no)}"
             # Legacy fallback topic (older implementation)
-            legacy_topic = f"flat_{resolved_flat_id}"
+            legacy_topic = f"flat_{self._topic_key(resolved_flat_id)}"
             topics = [canonical_topic]
             if legacy_topic != canonical_topic:
                 topics.append(legacy_topic)

@@ -3,6 +3,7 @@ Visitor API routes
 """
 
 import os
+import re
 import uuid
 from typing import Optional
 from fastapi import Header
@@ -30,6 +31,11 @@ from app.services.notification_service import get_notification_service
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+
+def _topic_key(raw: str) -> str:
+    cleaned = re.sub(r"[^A-Z0-9]+", "_", (raw or "").strip().upper())
+    return re.sub(r"_+", "_", cleaned).strip("_")
 
 
 def _normalize_wa_phone(phone: str) -> str:
@@ -294,6 +300,9 @@ async def notify_resident_for_visitor(request: VisitorResidentNotifyRequest):
         society_id = request.society_id.strip()
         flat_no = request.flat_no.strip().upper()
         flat_id = (request.flat_id or "").strip()
+        society_key = _topic_key(society_id)
+        flat_key = _topic_key(flat_no)
+        flat_id_key = _topic_key(flat_id) if flat_id else ""
         visitor_type = request.visitor_type.strip().upper()
         visitor_phone = request.visitor_phone.strip()
         visitor_id = request.visitor_id.strip()
@@ -307,10 +316,10 @@ async def notify_resident_for_visitor(request: VisitorResidentNotifyRequest):
             raise HTTPException(status_code=400, detail="visitor_id is required")
 
         svc = get_notification_service()
-        canonical_topic = f"flat_{society_id}_{flat_no}"
+        canonical_topic = f"flat_{society_key}_{flat_key}"
         topics = [canonical_topic]
-        if flat_id:
-            legacy_topic = f"flat_{flat_id}"
+        if flat_id_key:
+            legacy_topic = f"flat_{flat_id_key}"
             if legacy_topic != canonical_topic:
                 topics.append(legacy_topic)
 
@@ -376,6 +385,9 @@ async def test_visitor_notification(request: VisitorNotificationTestRequest):
         society_id = request.society_id.strip()
         flat_no = request.flat_no.strip().upper()
         flat_id = (request.flat_id or "").strip()
+        society_key = _topic_key(society_id)
+        flat_key = _topic_key(flat_no)
+        flat_id_key = _topic_key(flat_id) if flat_id else ""
         visitor_type = request.visitor_type.strip().upper()
         visitor_phone = request.visitor_phone.strip()
         visitor_id = (request.visitor_id or str(uuid.uuid4())).strip()
@@ -386,10 +398,10 @@ async def test_visitor_notification(request: VisitorNotificationTestRequest):
             raise HTTPException(status_code=400, detail="flat_no is required")
 
         svc = get_notification_service()
-        canonical_topic = f"flat_{society_id}_{flat_no}"
+        canonical_topic = f"flat_{society_key}_{flat_key}"
         topics = [canonical_topic]
-        if flat_id:
-            legacy_topic = f"flat_{flat_id}"
+        if flat_id_key:
+            legacy_topic = f"flat_{flat_id_key}"
             if legacy_topic != canonical_topic:
                 topics.append(legacy_topic)
 

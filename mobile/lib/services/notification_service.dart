@@ -21,6 +21,13 @@ class NotificationService {
   
   String? _fcmToken;
   bool _initialized = false;
+  AuthorizationStatus? _authorizationStatus;
+  final Set<String> _subscribedTopics = <String>{};
+
+  String _topicKey(String raw) {
+    final cleaned = raw.trim().toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]+'), '_');
+    return cleaned.replaceAll(RegExp(r'_+'), '_').replaceAll(RegExp(r'^_|_$'), '');
+  }
   
   // Callback for when notification is received (to update counts)
   Function(Map<String, dynamic>)? _onNotificationReceived;
@@ -73,11 +80,16 @@ class NotificationService {
         sound: true,
         provisional: false,
       );
+      _authorizationStatus = settings.authorizationStatus;
 
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        AppLogger.i("Notification permissions granted");
+        AppLogger.i("Notification permissions granted", data: {
+          "authorization_status": settings.authorizationStatus.name,
+        });
       } else {
-        AppLogger.w("Notification permissions denied");
+        AppLogger.w("Notification permissions denied", data: {
+          "authorization_status": settings.authorizationStatus.name,
+        });
         return;
       }
 
@@ -161,6 +173,8 @@ class NotificationService {
 
   /// Get current FCM token
   String? get fcmToken => _fcmToken;
+  AuthorizationStatus? get authorizationStatus => _authorizationStatus;
+  List<String> get subscribedTopics => _subscribedTopics.toList(growable: false);
 
   /// Save FCM token to local storage (to send to backend)
   Future<void> _saveFcmToken(String token) async {
@@ -179,6 +193,8 @@ class NotificationService {
       "title": message.notification?.title,
       "body": message.notification?.body,
       "data": message.data,
+      "from": message.from,
+      "messageId": message.messageId,
     });
 
     // Show local notification with sound
@@ -199,6 +215,9 @@ class NotificationService {
     AppLogger.i("Background notification received", data: {
       "title": message.notification?.title,
       "body": message.notification?.body,
+      "data": message.data,
+      "from": message.from,
+      "messageId": message.messageId,
     });
     // Forward data to tap handler so screens can navigate appropriately
     if (_onNotificationTap != null && message.data.isNotEmpty) {
@@ -276,6 +295,7 @@ class NotificationService {
       }
 
       await _fcm.subscribeToTopic(topic);
+      _subscribedTopics.add(topic);
       AppLogger.i("Subscribed to topic", data: {"topic": topic});
     } catch (e) {
       AppLogger.e("Error subscribing to topic", error: e);
@@ -313,27 +333,48 @@ class NotificationService {
         return;
       }
 
+      final societyKey = _topicKey(societyId);
+      final flatKey = flatId != null ? _topicKey(flatId) : null;
+
       // Subscribe to society topic (for notices) - multi-tenant format
-      await subscribeToTopic("society_$societyId");
+      await subscribeToTopic("society_$societyKey");
 
       // Subscribe to flat topic (for visitor entries) if resident - multi-tenant format
-      if (flatId != null && role == "resident") {
-        await subscribeToTopic("flat_${societyId}_$flatId");
+      if (flatKey != null && flatKey.isNotEmpty && role == "resident") {
+        await subscribeToTopic("flat_${societyKey}_$flatKey");
       }
 
       // Subscribe staff (guards/admins) to SOS / staff-only alerts
       if (role == "guard" || role == "admin") {
-        await subscribeToTopic("society_${societyId}_staff");
+        await subscribeToTopic("society_${societyKey}_staff");
       }
 
       AppLogger.i("Subscribed to topics", data: {
         "society_id": societyId,
         "flat_id": flatId,
+        "society_key": societyKey,
+        "flat_key": flatKey,
         "role": role,
+        "topics": _subscribedTopics.toList(growable: false),
+        "authorization_status": _authorizationStatus?.name,
+        "token_prefix": _fcmToken != null && _fcmToken!.length > 20
+            ? _fcmToken!.substring(0, 20)
+            : _fcmToken,
       });
     } catch (e) {
       AppLogger.e("Error subscribing to topics", error: e);
     }
+  }
+
+  Map<String, dynamic> getDebugSnapshot() {
+    return {
+      "initialized": _initialized,
+      "authorization_status": _authorizationStatus?.name ?? "unknown",
+      "token_prefix": _fcmToken != null && _fcmToken!.length > 20
+          ? "${_fcmToken!.substring(0, 20)}..."
+          : _fcmToken,
+      "topics": _subscribedTopics.toList(growable: false),
+    };
   }
 }
 
