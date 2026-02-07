@@ -300,6 +300,19 @@ service cloud.firestore {
         allow create, update, delete: if isAdmin(societyId);
       }
 
+      // Favorite visitors by unit/flat:
+      // societies/{societyId}/units/{unitId}/favorite_visitors/{visitorKey}
+      // Guards can read, but cannot write.
+      match /units/{unitId} {
+        allow read: if activeMember(societyId);
+        allow create, update, delete: if isAdmin(societyId);
+
+        match /favorite_visitors/{visitorKey} {
+          allow get, list: if activeMember(societyId);
+          allow create, update, delete: if isAdmin(societyId) || isResident(societyId);
+        }
+      }
+
       match /{col}/{doc} {
         allow read, write: if false;
       }

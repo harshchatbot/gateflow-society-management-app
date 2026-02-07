@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,13 +7,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_logger.dart';
 import '../core/app_error.dart';
-import '../core/storage.dart';
 import '../models/visitor.dart';
 import '../services/firebase_visitor_service.dart';
 import '../services/firestore_service.dart';
 import '../services/offline_queue_service.dart';
-
-import 'guard_login_screen.dart';
+import '../services/favorite_visitors_service.dart';
 
 // UI system
 import '../ui/app_colors.dart';
@@ -46,6 +45,7 @@ class NewVisitorScreen extends StatefulWidget {
 }
 
 class _NewVisitorScreenState extends State<NewVisitorScreen> {
+  static const Color _favoriteGold = Color(0xFFC9A227);
   final _formKey = GlobalKey<FormState>();
 
   /// One map for all chip selections; key = "${storageKey}.${field}".
@@ -58,6 +58,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   final _deliveryPartnerOtherController = TextEditingController();
   final _visitorService = FirebaseVisitorService();
   final _firestore = FirestoreService();
+  final FavoriteVisitorsService _favoritesService =
+      FavoriteVisitorsService.instance;
 
   final ImagePicker _picker = ImagePicker();
   File? _visitorPhoto;
@@ -94,6 +96,13 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   List<Map<String, dynamic>> _flats = [];
   bool _flatsLoading = true;
   String? _selectedFlatNo; // Selected unit label (flat no, villa label, etc.)
+  String? _selectedUnitId;
+  bool _isFavoriteForUnit = false;
+  bool _favoriteCheckLoading = false;
+  bool _favoriteVisitorsLoading = false;
+  List<Map<String, dynamic>> _favoriteVisitors = [];
+  bool _favoriteVisitorsExpanded = false;
+  Timer? _favoriteCheckDebounce;
 
   // Flat owner (resident) for current flat — shown so guard can call
   String? _flatOwnerName;
@@ -105,6 +114,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   @override
   void initState() {
     super.initState();
+    _visitorNameController.addListener(_scheduleFavoriteCheck);
+    _visitorPhoneController.addListener(_scheduleFavoriteCheck);
     _prefillFromInitialVisitor();
     _loadFlats();
   }
@@ -143,6 +154,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
   @override
   void dispose() {
+    _favoriteCheckDebounce?.cancel();
+    _visitorNameController.removeListener(_scheduleFavoriteCheck);
+    _visitorPhoneController.removeListener(_scheduleFavoriteCheck);
     _visitorNameController.dispose();
     _visitorPhoneController.dispose();
     _vehicleNumberController.dispose();
@@ -167,6 +181,11 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         _flats = list;
         _flatsLoading = false;
       });
+      _selectedUnitId = _resolveUnitId(_selectedFlatNo);
+      if (_selectedUnitId != null && _selectedUnitId!.isNotEmpty) {
+        _loadFavoriteVisitorsForUnit();
+        _scheduleFavoriteCheck();
+      }
       if (widget.initialVisitor != null && _selectedFlatNo != null && _selectedFlatNo!.trim().isNotEmpty) {
         _lookupFlatOwner();
       }
@@ -179,10 +198,80 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   void _onFlatSelected(String? flatNo) {
     setState(() {
       _selectedFlatNo = flatNo;
+      _selectedUnitId = _resolveUnitId(flatNo);
       _flatOwnerName = null;
       _flatOwnerPhone = null;
+      _isFavoriteForUnit = false;
+      _favoriteVisitors = [];
     });
-    if (flatNo != null && flatNo.isNotEmpty) _lookupFlatOwner();
+    if (flatNo != null && flatNo.isNotEmpty) {
+      _lookupFlatOwner();
+      _loadFavoriteVisitorsForUnit();
+      _scheduleFavoriteCheck();
+    }
+  }
+
+  String? _resolveUnitId(String? flatNo) {
+    if (flatNo == null || flatNo.trim().isEmpty) return null;
+    // Keep unit id aligned across resident and guard flows using the visible flat label.
+    return flatNo.trim();
+  }
+
+  Future<void> _loadFavoriteVisitorsForUnit() async {
+    final unitId = _selectedUnitId?.trim() ?? '';
+    if (unitId.isEmpty) return;
+
+    setState(() => _favoriteVisitorsLoading = true);
+    final items = await _favoritesService.getFavoriteVisitorsForUnit(
+      societyId: widget.societyId,
+      unitId: unitId,
+      limit: 5,
+    );
+    if (!mounted) return;
+    setState(() {
+      _favoriteVisitorsLoading = false;
+      _favoriteVisitors = items;
+    });
+  }
+
+  void _scheduleFavoriteCheck() {
+    _favoriteCheckDebounce?.cancel();
+    _favoriteCheckDebounce = Timer(
+      const Duration(milliseconds: 220),
+      _checkFavoriteForCurrentInput,
+    );
+  }
+
+  Future<void> _checkFavoriteForCurrentInput() async {
+    final unitId = _selectedUnitId?.trim() ?? '';
+    final name = _visitorNameController.text.trim();
+    final phone = _visitorPhoneController.text.trim();
+
+    if (unitId.isEmpty || (name.isEmpty && phone.isEmpty)) {
+      if (!mounted) return;
+      setState(() {
+        _isFavoriteForUnit = false;
+        _favoriteCheckLoading = false;
+      });
+      return;
+    }
+
+    setState(() => _favoriteCheckLoading = true);
+    final key = FavoriteVisitorsService.buildVisitorKey(
+      name: name.isEmpty ? phone : name,
+      phone: phone,
+      purpose: _selectedVisitorType,
+    );
+    final match = await _favoritesService.isFavoriteVisitor(
+      societyId: widget.societyId,
+      unitId: unitId,
+      visitorKey: key,
+    );
+    if (!mounted) return;
+    setState(() {
+      _isFavoriteForUnit = match;
+      _favoriteCheckLoading = false;
+    });
   }
 
   Future<void> _lookupFlatOwner() async {
@@ -624,6 +713,61 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             icon: AppIcons.phone,
             isPhone: true,
           ),
+          if (_selectedUnitId != null &&
+              _selectedUnitId!.isNotEmpty &&
+              (_isFavoriteForUnit || _favoriteCheckLoading)) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: _isFavoriteForUnit
+                    ? theme.colorScheme.primary.withOpacity(0.10)
+                    : theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(
+                  color: _isFavoriteForUnit
+                      ? theme.colorScheme.primary.withOpacity(0.28)
+                      : theme.dividerColor,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (_favoriteCheckLoading) ...[
+                    SizedBox(
+                      width: 14,
+                      height: 14,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      "Checking favourites...",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                  ] else ...[
+                    const Icon(Icons.star_rounded,
+                        size: 16, color: _favoriteGold),
+                    const SizedBox(width: 6),
+                    Text(
+                      "Favourite for this unit",
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: theme.colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 18),
           _buildFieldLabel("Flat / Unit"),
           _flatsLoading
@@ -667,6 +811,116 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                       }).toList(),
                       onChanged: _onFlatSelected,
                     ),
+          if (_selectedUnitId != null && _selectedUnitId!.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Container(
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surface,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: theme.dividerColor),
+              ),
+              child: ExpansionTile(
+                key: ValueKey<String>('fav_${_selectedUnitId!}'),
+                title: Text(
+                  "Favourite Visitors",
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                ),
+                subtitle: Text(
+                  "Top 5 for selected unit",
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                initiallyExpanded: _favoriteVisitorsExpanded,
+                onExpansionChanged: (expanded) {
+                  setState(() => _favoriteVisitorsExpanded = expanded);
+                },
+                children: [
+                  if (_favoriteVisitorsLoading)
+                    Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: theme.colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            "Loading favourites...",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: theme.colorScheme.onSurface.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  else if (_favoriteVisitors.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "No favourites saved for this unit.",
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: theme.colorScheme.onSurface.withOpacity(0.65),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    ..._favoriteVisitors.map((item) {
+                      final name = (item['name'] ?? '').toString().trim();
+                      final phone = (item['phone'] ?? '').toString().trim();
+                      final displayPhone = phone.isEmpty ? "No phone" : phone;
+                      return ListTile(
+                        dense: true,
+                        leading: Icon(
+                          Icons.star_rounded,
+                          size: 18,
+                          color: _favoriteGold,
+                        ),
+                        title: Text(
+                          name,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: theme.colorScheme.onSurface,
+                          ),
+                        ),
+                        subtitle: Text(
+                          displayPhone,
+                          style: TextStyle(
+                            color: theme.colorScheme.onSurface.withOpacity(0.65),
+                            fontSize: 12,
+                          ),
+                        ),
+                        onTap: () {
+                          _visitorNameController.text = name;
+                          if (phone.isNotEmpty) {
+                            _visitorPhoneController.text = phone;
+                          }
+                          _scheduleFavoriteCheck();
+                        },
+                      );
+                    }),
+                ],
+              ),
+            ),
+          ],
           const SizedBox(height: 18),
           _buildFieldLabel("Vehicle Number (optional)"),
           _buildOptionalTextField(
@@ -845,6 +1099,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             if (g.visitorType != type) _chipSelections.remove(visitorChipSelectionKey(g));
           }
           if (type != 'DELIVERY') _deliveryPartnerOtherController.clear();
+          _scheduleFavoriteCheck();
         }),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),

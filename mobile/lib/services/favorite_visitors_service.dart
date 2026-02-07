@@ -1,28 +1,35 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
 
-/// Local-only resident favorites + auto-approve management.
-/// Tenant-safe (societyId + residentId) and schema-free.
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:crypto/crypto.dart';
+
+import 'firebase_auth_service.dart';
+
+/// Firestore-first resident favorites + local auto-approve preferences.
 ///
-/// Stores:
-/// - favorites: List<String> of NORMALIZED names
+/// Firestore model:
+/// societies/{societyId}/units/{unitId}/favorite_visitors/{visitorKey}
+///
+/// Local-only (SharedPreferences):
 /// - auto-approve flag: bool
 /// - auto-approved-once map: {pendingId: timestampMs} with TTL pruning
 class FavoriteVisitorsService {
   FavoriteVisitorsService._internal();
-  static final FavoriteVisitorsService instance = FavoriteVisitorsService._internal();
+  static final FavoriteVisitorsService instance =
+      FavoriteVisitorsService._internal();
 
-  static const _favoritesPrefix = 'fav_visitors_v1';
   static const _autoApprovePrefix = 'fav_auto_approve_v1';
   static const _autoApprovedOncePrefix = 'fav_auto_approved_once_v1';
+
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
   // 24 hours in milliseconds for de-dupe TTL
   static const int _autoApprovedTtlMs = 24 * 60 * 60 * 1000;
 
   Future<SharedPreferences> get _prefs async => SharedPreferences.getInstance();
-
-  String _favoritesKey(String societyId, String residentId) =>
-      '$_favoritesPrefix:${societyId}_$residentId';
 
   String _autoApproveKey(String societyId, String residentId) =>
       '$_autoApprovePrefix:${societyId}_$residentId';
@@ -39,12 +46,100 @@ class FavoriteVisitorsService {
     return trimmed.replaceAll(RegExp(r'\s+'), ' ');
   }
 
-  /// Load favorites as a normalized Set of names.
-  Future<Set<String>> getFavorites(String societyId, String residentId) async {
-    final prefs = await _prefs;
-    final raw = prefs.getStringList(_favoritesKey(societyId, residentId)) ?? const [];
-    // IMPORTANT: enforce normalization on read (fixes legacy saved values)
-    return raw.map((e) => normalizeName(e)).toSet();
+  static String _normalizePurpose(String? purpose) {
+    final raw = purpose ?? '';
+    return raw.trim().toLowerCase();
+  }
+
+  static String? _normalizePhoneOrNull(String? phone) {
+    if (phone == null || phone.trim().isEmpty) return null;
+    final normalized = FirebaseAuthService.normalizePhoneForIndia(phone);
+    final digits = normalized.replaceAll(RegExp(r'[^\d+]'), '');
+    if (digits.isEmpty) return null;
+    return normalized;
+  }
+
+  static String _hashNamePurpose({
+    required String name,
+    required String? purpose,
+  }) {
+    final payload = '${normalizeName(name)}|${_normalizePurpose(purpose)}';
+    return sha1.convert(utf8.encode(payload)).toString();
+  }
+
+  /// visitorKey rules:
+  /// - phone exists => phone_<E164>
+  /// - otherwise => hash_<sha1(lower(name.trim()) + "|" + lower(purpose.trim()))>
+  static String buildVisitorKey({
+    required String name,
+    String? phone,
+    String? purpose,
+  }) {
+    final normalizedPhone = _normalizePhoneOrNull(phone);
+    if (normalizedPhone != null) return 'phone_$normalizedPhone';
+    return 'hash_${_hashNamePurpose(name: name, purpose: purpose)}';
+  }
+
+  CollectionReference<Map<String, dynamic>> _favoritesRef({
+    required String societyId,
+    required String unitId,
+  }) {
+    return _firestore
+        .collection('societies')
+        .doc(societyId)
+        .collection('units')
+        .doc(unitId)
+        .collection('favorite_visitors');
+  }
+
+  CollectionReference<Map<String, dynamic>> _legacyFavoritesRef({
+    required String societyId,
+    required String unitId,
+  }) {
+    return _firestore
+        .collection('societies')
+        .doc(societyId)
+        .collection('flats')
+        .doc(unitId)
+        .collection('favorite_visitors');
+  }
+
+  /// Firestore-first read of normalized favorite names for a unit.
+  /// [residentId] is retained for API compatibility.
+  Future<Set<String>> getFavorites(
+    String societyId,
+    String residentId, {
+    String? unitId,
+    int limit = 200,
+  }) async {
+    final resolvedUnit = (unitId ?? '').trim();
+    if (resolvedUnit.isEmpty) return <String>{};
+
+    try {
+      final snap = await _favoritesRef(societyId: societyId, unitId: resolvedUnit)
+          .limit(limit)
+          .get();
+      return snap.docs
+          .map((d) => (d.data()['name'] ?? '').toString())
+          .where((name) => name.trim().isNotEmpty)
+          .map(normalizeName)
+          .toSet();
+    } catch (_) {
+      // Compatibility fallback: read old Firestore path if present.
+      try {
+        final legacy = await _legacyFavoritesRef(
+          societyId: societyId,
+          unitId: resolvedUnit,
+        ).limit(limit).get();
+        return legacy.docs
+            .map((d) => (d.data()['name'] ?? '').toString())
+            .where((name) => name.trim().isNotEmpty)
+            .map(normalizeName)
+            .toSet();
+      } catch (_) {
+        return <String>{};
+      }
+    }
   }
 
   /// Check if [name] (raw) is in [favorites] using normalization.
@@ -53,26 +148,123 @@ class FavoriteVisitorsService {
     return favorites.contains(norm);
   }
 
-  /// Toggle favorite for [visitorName]. Returns updated favorites set.
+  /// Toggle favorite in Firestore for [visitorName]. Returns updated favorites set.
+  /// [residentId] is retained for API compatibility.
   Future<Set<String>> toggleFavorite({
     required String societyId,
     required String residentId,
     required String visitorName,
+    String? visitorPhone,
+    String? purpose,
+    String? photoUrl,
+    String? unitId,
   }) async {
-    final prefs = await _prefs;
-    final key = _favoritesKey(societyId, residentId);
-    final existingRaw = prefs.getStringList(key) ?? const [];
-    final existing = existingRaw.map((e) => normalizeName(e)).toSet();
+    final resolvedUnitId = (unitId ?? '').trim();
+    if (resolvedUnitId.isEmpty) return <String>{};
 
-    final norm = normalizeName(visitorName);
-    if (existing.contains(norm)) {
-      existing.remove(norm);
+    final normalizedName = visitorName.trim();
+    final normalizedPhone = _normalizePhoneOrNull(visitorPhone);
+    final normalizedPurpose = (purpose ?? '').trim();
+    final key = buildVisitorKey(
+      name: normalizedName.isEmpty ? (normalizedPhone ?? 'visitor') : normalizedName,
+      phone: normalizedPhone,
+      purpose: normalizedPurpose,
+    );
+
+    final ref = _favoritesRef(societyId: societyId, unitId: resolvedUnitId).doc(key);
+    final existing = await ref.get();
+
+    if (existing.exists) {
+      await ref.delete();
     } else {
-      existing.add(norm);
+      await ref.set({
+        'name': normalizedName.isNotEmpty ? normalizedName : (normalizedPhone ?? 'Visitor'),
+        'phone': normalizedPhone,
+        'purpose': normalizedPurpose.isEmpty ? null : normalizedPurpose,
+        'photoUrl': (photoUrl == null || photoUrl.trim().isEmpty) ? null : photoUrl.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
+        'createdByUid': _auth.currentUser?.uid ?? residentId,
+      });
     }
 
-    await prefs.setStringList(key, existing.toList());
-    return existing;
+    return getFavorites(
+      societyId,
+      residentId,
+      unitId: resolvedUnitId,
+    );
+  }
+
+  Future<bool> isFavoriteVisitor({
+    required String societyId,
+    required String unitId,
+    required String visitorKey,
+  }) async {
+    final resolvedUnit = unitId.trim();
+    if (resolvedUnit.isEmpty || visitorKey.trim().isEmpty) return false;
+
+    // Preferred path
+    final primary = await _favoritesRef(
+      societyId: societyId,
+      unitId: resolvedUnit,
+    ).doc(visitorKey).get();
+    if (primary.exists) return true;
+
+    // Compatibility fallback path
+    final legacy = await _legacyFavoritesRef(
+      societyId: societyId,
+      unitId: resolvedUnit,
+    ).doc(visitorKey).get();
+    return legacy.exists;
+  }
+
+  Future<List<Map<String, dynamic>>> getFavoriteVisitorsForUnit({
+    required String societyId,
+    required String unitId,
+    int limit = 5,
+  }) async {
+    final resolvedUnit = unitId.trim();
+    if (resolvedUnit.isEmpty) return <Map<String, dynamic>>[];
+
+    try {
+      final snap = await _favoritesRef(
+        societyId: societyId,
+        unitId: resolvedUnit,
+      ).orderBy('createdAt', descending: true).limit(limit).get();
+
+      final mapped = snap.docs.map((d) {
+        final data = d.data();
+        return <String, dynamic>{
+          'visitorKey': d.id,
+          'name': (data['name'] ?? '').toString(),
+          'phone': data['phone']?.toString(),
+          'purpose': data['purpose']?.toString(),
+          'photoUrl': data['photoUrl']?.toString(),
+        };
+      }).where((m) => (m['name'] as String).trim().isNotEmpty).toList();
+
+      if (mapped.isNotEmpty) return mapped;
+    } catch (_) {
+      // continue to compatibility fallback
+    }
+
+    try {
+      final legacy = await _legacyFavoritesRef(
+        societyId: societyId,
+        unitId: resolvedUnit,
+      ).limit(limit).get();
+      return legacy.docs.map((d) {
+        final data = d.data();
+        return <String, dynamic>{
+          'visitorKey': d.id,
+          'name': (data['name'] ?? '').toString(),
+          'phone': data['phone']?.toString(),
+          'purpose': data['purpose']?.toString(),
+          'photoUrl': data['photoUrl']?.toString(),
+        };
+      }).where((m) => (m['name'] as String).trim().isNotEmpty).toList();
+    } catch (_) {
+      return <Map<String, dynamic>>[];
+    }
   }
 
   /// Whether auto-approve for favorites is enabled for this tenant.

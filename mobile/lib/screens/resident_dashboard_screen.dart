@@ -66,10 +66,18 @@ class ResidentDashboardScreen extends StatefulWidget {
 class _FrequentVisitor {
   final String name;
   final int count;
-  const _FrequentVisitor(this.name, this.count);
+  final String? phone;
+  final String? purpose;
+  const _FrequentVisitor(
+    this.name,
+    this.count, {
+    this.phone,
+    this.purpose,
+  });
 }
 
 class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
+  static const Color _favoriteGold = Color(0xFFC9A227);
   final FirestoreService _firestore = FirestoreService();
   late final resident.ResidentService _service = resident.ResidentService(
     baseUrl: Env.apiBaseUrl,
@@ -119,7 +127,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
   Future<void> _loadFavorites() async {
     final favs = await _favoritesService.getFavorites(
-        widget.societyId, widget.residentId);
+      widget.societyId,
+      widget.residentId,
+      unitId: widget.flatNo,
+    );
     if (!mounted) return;
     setState(() => _favoriteNamesNormalized = favs);
   }
@@ -365,7 +376,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
           if (autoApproveEnabled && approvals.isNotEmpty) {
             final favorites = await _favoritesService.getFavorites(
-                widget.societyId, widget.residentId);
+              widget.societyId,
+              widget.residentId,
+              unitId: widget.flatNo,
+            );
 
             int autoApprovedCount = 0;
 
@@ -540,20 +554,34 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
         // Frequent visitors (all-time across loaded history)
         final Map<String, int> freq = {};
+        final Map<String, Map<String, String?>> sampleMeta = {};
         for (final item in history) {
           final m = item as Map<String, dynamic>;
           var name = (m['visitor_name']?.toString() ?? '').trim();
+          final phone = (m['visitor_phone']?.toString() ?? '').trim();
+          final purpose = (m['visitor_type']?.toString() ?? '').trim();
           if (name.isEmpty) {
-            name = (m['visitor_phone']?.toString() ?? '').trim();
+            name = phone;
           }
           if (name.isEmpty) name = 'Unknown';
           freq[name] = (freq[name] ?? 0) + 1;
+          sampleMeta.putIfAbsent(name, () {
+            return <String, String?>{
+              'phone': phone.isEmpty ? null : phone,
+              'purpose': purpose.isEmpty ? null : purpose,
+            };
+          });
         }
         final sorted = freq.entries.toList()
           ..sort((a, b) => b.value.compareTo(a.value));
         frequentVisitors = sorted
             .take(3)
-            .map((e) => _FrequentVisitor(e.key, e.value))
+            .map((e) => _FrequentVisitor(
+                  e.key,
+                  e.value,
+                  phone: sampleMeta[e.key]?['phone'],
+                  purpose: sampleMeta[e.key]?['purpose'],
+                ))
             .toList();
       } else {
         overviewError ??= ErrorMessages.userFriendlyMessage(
@@ -949,7 +977,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: _frequentVisitors.map((fv) {
-          final initial = fv.name.isNotEmpty ? fv.name[0].toUpperCase() : '?';
           return Padding(
               padding: const EdgeInsets.only(right: 16),
               child: Column(
@@ -973,7 +1000,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                             fv.name,
                             _favoriteNamesNormalized,
                           )
-                              ? theme.colorScheme.primary
+                              ? _favoriteGold
                               : theme.colorScheme.onSurface.withOpacity(0.3),
                         ),
                         onPressed: () async {
@@ -982,11 +1009,44 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                             societyId: widget.societyId,
                             residentId: widget.residentId,
                             visitorName: fv.name,
+                            visitorPhone: fv.phone,
+                            purpose: fv.purpose,
+                            unitId: widget.flatNo,
                           );
                           if (!mounted) return;
+
+                          final isFavoriteNow = _favoritesService.isFavorite(
+                            fv.name,
+                            updated,
+                          );
+
                           setState(() {
                             _favoriteNamesNormalized = updated;
                           });
+
+                          final messenger = ScaffoldMessenger.of(context);
+                          messenger.hideCurrentSnackBar();
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                isFavoriteNow
+                                    ? "${fv.name} added to favorites"
+                                    : "${fv.name} removed from favorites",
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onPrimary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: isFavoriteNow
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurface,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
                         },
                       ),
                       const SizedBox(width: 8),

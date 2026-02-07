@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
@@ -68,17 +67,21 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
     final date = _filterDate;
 
     return _visitors.where((v) {
-      if (date != null) {
-        DateTime? createdDt;
-        dynamic createdAt = v['createdAt'];
-        if (createdAt is Timestamp) {
-          createdDt = createdAt.toDate();
-        } else if (createdAt is DateTime) createdDt = createdAt;
-        DateTime? approvedDt;
-        final approvedAt = v['approvedAt'] ?? v['approved_at'];
-        if (approvedAt is Timestamp) {
-          approvedDt = approvedAt.toDate();
-        } else if (approvedAt is DateTime) approvedDt = approvedAt;
+        if (date != null) {
+          DateTime? createdDt;
+          dynamic createdAt = v['createdAt'];
+          if (createdAt is Timestamp) {
+            createdDt = createdAt.toDate();
+          } else if (createdAt is DateTime) {
+            createdDt = createdAt;
+          }
+          DateTime? approvedDt;
+          final approvedAt = v['approvedAt'] ?? v['approved_at'];
+          if (approvedAt is Timestamp) {
+            approvedDt = approvedAt.toDate();
+          } else if (approvedAt is DateTime) {
+            approvedDt = approvedAt;
+          }
         bool matchDate(DateTime d) => d.year == date.year && d.month == date.month && d.day == date.day;
         final onDate = (createdDt != null && matchDate(createdDt)) || (approvedDt != null && matchDate(approvedDt));
         if (!onDate) return false;
@@ -237,6 +240,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     if (!SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
       return ModuleDisabledPlaceholder(onBack: widget.onBackPressed);
     }
@@ -253,12 +258,12 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
         }
       },
       child: Scaffold(
-        backgroundColor: AppColors.bg,
+        backgroundColor: theme.scaffoldBackgroundColor,
         appBar: AppBar(
-          backgroundColor: AppColors.bg,
+          backgroundColor: theme.scaffoldBackgroundColor,
           elevation: 0,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.text),
+            icon: Icon(Icons.arrow_back, color: cs.onSurface),
             onPressed: () {
               // If we're in a tab navigation (IndexedStack), switch to dashboard
               if (widget.onBackPressed != null) {
@@ -268,10 +273,10 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
               }
             },
           ),
-        title: const Text(
+        title: Text(
           "Visitor History",
           style: TextStyle(
-            color: AppColors.text,
+            color: cs.onSurface,
             fontWeight: FontWeight.w900,
             fontSize: 20,
           ),
@@ -282,10 +287,10 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.15),
+                color: cs.primary.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.refresh_rounded, color: AppColors.primary, size: 20),
+              child: Icon(Icons.refresh_rounded, color: cs.primary, size: 20),
             ),
             onPressed: _isLoading ? null : _loadHistory,
           ),
@@ -302,16 +307,16 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: cs.error.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+                    child: Icon(Icons.error_outline, size: 64, color: cs.error),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     _error!,
-                    style: const TextStyle(
-                      color: AppColors.text2,
+                    style: TextStyle(
+                      color: cs.onSurface.withOpacity(0.7),
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
@@ -323,8 +328,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                     icon: const Icon(Icons.refresh_rounded),
                     label: const Text("Retry"),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                      backgroundColor: cs.primary,
+                      foregroundColor: cs.onPrimary,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
@@ -339,30 +344,30 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppColors.primary.withOpacity(0.1),
+                      color: cs.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.history_rounded,
                       size: 64,
-                      color: AppColors.primary,
+                      color: cs.primary,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     "No History Yet",
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
-                      color: AppColors.text,
+                      color: cs.onSurface,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     "Completed visitor entries will appear here",
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppColors.text2,
+                      color: cs.onSurface.withOpacity(0.7),
                       fontWeight: FontWeight.w500,
                     ),
                     textAlign: TextAlign.center,
@@ -381,17 +386,17 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.filter_list_off_rounded, size: 56, color: AppColors.text2),
+                              Icon(Icons.filter_list_off_rounded, size: 56, color: cs.onSurface.withOpacity(0.7)),
                               const SizedBox(height: 16),
-                              const Text(
+                              Text(
                                 "No entries match your filter",
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.text2),
+                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface.withOpacity(0.7)),
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 8),
-                              const Text(
+                              Text(
                                 "Try a different search or date",
-                                style: TextStyle(fontSize: 14, color: AppColors.textMuted),
+                                style: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.6)),
                               ),
                               const SizedBox(height: 16),
                               TextButton.icon(
@@ -407,7 +412,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                         )
                       : RefreshIndicator(
                           onRefresh: _loadHistory,
-                          color: AppColors.primary,
+                          color: cs.primary,
                           child: ListView.builder(
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
                             itemCount: _filteredVisitors.length + (_lastDoc != null ? 1 : 0),
@@ -430,9 +435,11 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
   }
 
   Widget _buildFilterBar() {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      color: AppColors.bg,
+      color: theme.scaffoldBackgroundColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -440,16 +447,16 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
             controller: _searchController,
             decoration: InputDecoration(
               hintText: "Search by flat, phone, category, delivery…",
-              hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
-              prefixIcon: const Icon(Icons.search_rounded, color: AppColors.primary, size: 22),
+              hintStyle: TextStyle(color: cs.onSurface.withOpacity(0.55), fontSize: 14),
+              prefixIcon: Icon(Icons.search_rounded, color: cs.primary, size: 22),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                      icon: const Icon(Icons.clear_rounded, size: 20),
+                      icon: Icon(Icons.clear_rounded, size: 20, color: cs.onSurface.withOpacity(0.6)),
                       onPressed: () => _searchController.clear(),
                     )
                   : null,
               filled: true,
-              fillColor: AppColors.surface,
+              fillColor: cs.surface,
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
@@ -462,16 +469,16 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              const Text("Date: ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.text2)),
+              Text("Date: ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface.withOpacity(0.7))),
               GestureDetector(
                 onTap: () => setState(() => _filterDate = null),
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: _filterDate == null ? AppColors.primary.withOpacity(0.12) : AppColors.surface,
+                    color: _filterDate == null ? cs.primary.withOpacity(0.12) : cs.surface,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: _filterDate == null ? AppColors.primary.withOpacity(0.3) : AppColors.border,
+                      color: _filterDate == null ? cs.primary.withOpacity(0.3) : theme.dividerColor,
                     ),
                   ),
                   child: Text(
@@ -479,7 +486,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: _filterDate == null ? AppColors.primary : AppColors.text2,
+                      color: _filterDate == null ? cs.primary : cs.onSurface.withOpacity(0.7),
                     ),
                   ),
                 ),
@@ -498,10 +505,10 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: _filterDate != null ? AppColors.primary.withOpacity(0.12) : AppColors.surface,
+                    color: _filterDate != null ? cs.primary.withOpacity(0.12) : cs.surface,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: _filterDate != null ? AppColors.primary.withOpacity(0.3) : AppColors.border,
+                      color: _filterDate != null ? cs.primary.withOpacity(0.3) : theme.dividerColor,
                     ),
                   ),
                   child: Row(
@@ -510,7 +517,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                       Icon(
                         Icons.calendar_today_rounded,
                         size: 16,
-                        color: _filterDate != null ? AppColors.primary : AppColors.text2,
+                        color: _filterDate != null ? cs.primary : cs.onSurface.withOpacity(0.7),
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -520,7 +527,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: _filterDate != null ? AppColors.primary : AppColors.text2,
+                          color: _filterDate != null ? cs.primary : cs.onSurface.withOpacity(0.7),
                         ),
                       ),
                     ],
@@ -531,7 +538,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: () => setState(() => _filterDate = null),
-                  child: const Icon(Icons.close_rounded, size: 20, color: AppColors.text2),
+                  child: Icon(Icons.close_rounded, size: 20, color: cs.onSurface.withOpacity(0.7)),
                 ),
               ],
             ],
@@ -540,7 +547,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
             const SizedBox(height: 6),
             Text(
               "Showing ${_filteredVisitors.length} of ${_visitors.length} entries",
-              style: const TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500),
+              style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6), fontWeight: FontWeight.w500),
             ),
           ],
         ],
@@ -550,6 +557,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
 
   /// "Load more" row at bottom of list when another page is available.
   Widget _buildLoadMoreRow() {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Center(
@@ -567,7 +576,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                 icon: const Icon(Icons.add_circle_outline_rounded, size: 20),
                 label: const Text("Load more"),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
+                  foregroundColor: cs.primary,
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
               ),
@@ -620,6 +629,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
   }
 
   Widget _buildVisitorCard(Map<String, dynamic> visitorData) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
     final visitorType = (visitorData['visitor_type'] ?? visitorData['visitorType'] ?? 'GUEST').toString();
     final flatNo = (visitorData['flat_no'] ?? visitorData['flatNo'] ?? 'N/A').toString();
     final phone = (visitorData['visitor_phone'] ?? visitorData['visitorPhone'] ?? 'N/A').toString();
@@ -635,32 +646,38 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
     if (createdAt != null) {
       if (createdAt is Timestamp) {
         createdDateTime = createdAt.toDate();
-      } else if (createdAt is DateTime) createdDateTime = createdAt;
+      } else if (createdAt is DateTime) {
+        createdDateTime = createdAt;
+      }
     }
     DateTime? approvedDateTime;
     if (approvedAtRaw != null) {
       if (approvedAtRaw is Timestamp) {
         approvedDateTime = approvedAtRaw.toDate();
-      } else if (approvedAtRaw is DateTime) approvedDateTime = approvedAtRaw;
+      } else if (approvedAtRaw is DateTime) {
+        approvedDateTime = approvedAtRaw;
+      }
     }
 
     final hasDeliveryPartner = visitorType == 'DELIVERY' &&
         (deliveryPartner.isNotEmpty || deliveryPartnerOther.isNotEmpty);
     final deliveryDisplay = hasDeliveryPartner
         ? (deliveryPartner == 'Other'
-            ? (deliveryPartnerOther.isNotEmpty ? deliveryPartnerOther : 'Other')
+            ? (deliveryPartnerOther.isNotEmpty
+                ? deliveryPartnerOther
+                : 'Other')
             : deliveryPartner)
         : null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: cs.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.border.withOpacity(0.5)),
+        border: Border.all(color: theme.dividerColor.withOpacity(0.6)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: cs.onSurface.withOpacity(0.04),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -698,15 +715,15 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.15),
+                        color: cs.primary.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
                         visitorType,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.primary,
+                          color: cs.primary,
                         ),
                       ),
                     ),
@@ -715,14 +732,14 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.12),
+                          color: cs.secondary.withOpacity(0.14),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                          border: Border.all(color: cs.secondary.withOpacity(0.3)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.local_shipping_outlined, size: 14, color: Colors.orange.shade700),
+                            Icon(Icons.local_shipping_outlined, size: 14, color: cs.secondary),
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
@@ -730,7 +747,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w700,
-                                  color: Colors.orange.shade800,
+                                  color: cs.secondary,
                                 ),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -756,7 +773,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: AppColors.primary.withOpacity(0.2),
+                          color: cs.primary.withOpacity(0.2),
                           width: 2,
                         ),
                       ),
@@ -766,19 +783,19 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                                 imageUrl: photoUrl,
                                 fit: BoxFit.cover,
                                 placeholder: (context, url) => Container(
-                                  color: Colors.grey.shade300,
-                                  child: const Center(child: Icon(Icons.person_rounded, color: AppColors.primary, size: 24)),
+                                  color: theme.dividerColor.withOpacity(0.55),
+                                  child: Center(child: Icon(Icons.person_rounded, color: cs.primary, size: 24)),
                                 ),
                                 errorWidget: (context, url, error) => Container(
-                                  color: AppColors.primarySoft,
-                                  child: const Icon(Icons.person_rounded, color: AppColors.primary, size: 24),
+                                  color: cs.primary.withOpacity(0.1),
+                                  child: Icon(Icons.person_rounded, color: cs.primary, size: 24),
                                 ),
                               )
                             : Container(
-                                color: AppColors.primarySoft,
-                                child: const Icon(
+                                color: cs.primary.withOpacity(0.1),
+                                child: Icon(
                                   Icons.person_rounded,
-                                  color: AppColors.primary,
+                                  color: cs.primary,
                                   size: 24,
                                 ),
                               ),
@@ -796,22 +813,22 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                               Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
+                                  color: cs.primary.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.home_rounded,
                                   size: 14,
-                                  color: AppColors.primary,
+                                  color: cs.primary,
                                 ),
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 "Flat $flatNo",
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w800,
-                                  color: AppColors.text,
+                                  color: cs.onSurface,
                                 ),
                               ),
                             ],
@@ -822,21 +839,21 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                               Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: AppColors.primary.withOpacity(0.1),
+                                  color: cs.primary.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
-                                child: const Icon(
+                                child: Icon(
                                   Icons.phone_rounded,
                                   size: 14,
-                                  color: AppColors.primary,
+                                  color: cs.primary,
                                 ),
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 phone,
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 14,
-                                  color: AppColors.text2,
+                                  color: cs.onSurface.withOpacity(0.7),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -859,21 +876,21 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      color: AppColors.success.withOpacity(0.1),
+                                      color: cs.tertiary.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
-                                    child: const Icon(
+                                    child: Icon(
                                       Icons.call_rounded,
                                       size: 14,
-                                      color: AppColors.success,
+                                      color: cs.tertiary,
                                     ),
                                   ),
                                   const SizedBox(width: 6),
                                   Text(
                                     "Resident: $residentPhone",
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13,
-                                      color: AppColors.success,
+                                      color: cs.tertiary,
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
@@ -895,13 +912,13 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: AppColors.primary.withOpacity(0.1),
+                        color: cs.primary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
+                      child: Icon(
                         Icons.schedule_rounded,
                         size: 14,
-                        color: AppColors.primary,
+                        color: cs.primary,
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -911,9 +928,9 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                         children: [
                           Text(
                             "Raised: ${createdDateTime != null ? _formatDateTime(createdDateTime) : '—'}",
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 13,
-                              color: AppColors.text2,
+                              color: cs.onSurface.withOpacity(0.7),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -921,9 +938,9 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                             const SizedBox(height: 4),
                             Text(
                               "Approved: ${_formatDateTime(approvedDateTime)}",
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: AppColors.success,
+                                color: cs.tertiary,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -939,19 +956,6 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
         ),
       ),
     );
-  }
-
-  String _formatTime(DateTime dateTime) {
-    final now = DateTime.now();
-    final difference = now.difference(dateTime);
-
-    if (difference.inMinutes < 1) return "Just now";
-    if (difference.inMinutes < 60) return "${difference.inMinutes}m ago";
-    if (difference.inHours < 24) return "${difference.inHours}h ago";
-    if (difference.inDays < 7) return "${difference.inDays}d ago";
-    
-    // Format: DD/MM/YYYY HH:MM
-    return "${dateTime.day}/${dateTime.month}/${dateTime.year} ${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}";
   }
 
   String _formatDateTime(DateTime dateTime) {

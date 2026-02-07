@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:gateflow/models/visitor.dart';
 import 'package:gateflow/services/visitor_service.dart';
 import 'package:gateflow/services/offline_queue_service.dart';
+import 'package:gateflow/services/favorite_visitors_service.dart';
 
 // New UI system (no logic changes)
 import '../ui/app_colors.dart';
@@ -36,8 +37,13 @@ class VisitorDetailsScreen extends StatefulWidget {
 }
 
 class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
+  static const Color _favoriteGold = Color(0xFFC9A227);
   final _service = VisitorService();
+  final FavoriteVisitorsService _favoritesService =
+      FavoriteVisitorsService.instance;
   bool _loading = false;
+  bool _favoriteLoading = false;
+  bool _isFavoriteForUnit = false;
   String? _error;
   String? _lastAttemptedStatus;
   late Visitor _visitor;
@@ -55,6 +61,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
     _previousStatus = widget.visitor.status;
     _noteController.text = _visitor.note ?? "";
     _confettiController = ConfettiController(duration: const Duration(milliseconds: 600));
+    _refreshFavoriteStatus();
   }
 
   @override
@@ -69,6 +76,9 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
     } else {
       _visitor = widget.visitor;
       _previousStatus = widget.visitor.status;
+    }
+    if (oldWidget.visitor.visitorId != widget.visitor.visitorId) {
+      _refreshFavoriteStatus();
     }
   }
 
@@ -137,7 +147,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
       });
     } catch (err) {
       if (!mounted) return;
-      final friendly = ErrorMessages.userFriendlyMessage(err is Object ? err : Object());
+      final friendly = ErrorMessages.userFriendlyMessage(err);
       setState(() {
         _loading = false;
         _error = friendly;
@@ -241,6 +251,42 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
       action = "Processed";
     }
     return "$action • ${_formatTimeAgo(at)}";
+  }
+
+  Future<void> _refreshFavoriteStatus() async {
+    if (widget.showStatusActions) return;
+
+    final unitIdRaw = _visitor.flatNo.trim().isNotEmpty
+        ? _visitor.flatNo.trim()
+        : _visitor.flatId.trim();
+    final name = (_visitor.visitorName ?? '').trim();
+    final phone = _visitor.visitorPhone.trim();
+
+    if (unitIdRaw.isEmpty || (name.isEmpty && phone.isEmpty)) {
+      if (!mounted) return;
+      setState(() {
+        _favoriteLoading = false;
+        _isFavoriteForUnit = false;
+      });
+      return;
+    }
+
+    setState(() => _favoriteLoading = true);
+    final key = FavoriteVisitorsService.buildVisitorKey(
+      name: name.isEmpty ? phone : name,
+      phone: phone,
+      purpose: _visitor.visitorType,
+    );
+    final match = await _favoritesService.isFavoriteVisitor(
+      societyId: _visitor.societyId,
+      unitId: unitIdRaw,
+      visitorKey: key,
+    );
+    if (!mounted) return;
+    setState(() {
+      _favoriteLoading = false;
+      _isFavoriteForUnit = match;
+    });
   }
 
   // ✅ Phosphor icons for visitor type
@@ -420,7 +466,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                             onPressed: _loading ? null : () => _setStatus("REJECTED"),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: SentinelStatusPalette.error,
-                              side: BorderSide(color: SentinelStatusPalette.error),
+                              side: const BorderSide(color: SentinelStatusPalette.error),
                               padding: const EdgeInsets.symmetric(vertical: 10),
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                             ),
@@ -647,6 +693,71 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                         ),
                       ],
                     ),
+                    if (!widget.showStatusActions && _isFavoriteForUnit) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withOpacity(0.10),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withOpacity(0.24),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.star_rounded,
+                              size: 15,
+                              color: _favoriteGold,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              "Favourite for this unit",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                                color: Theme.of(context).colorScheme.primary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else if (!widget.showStatusActions && _favoriteLoading) ...[
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          SizedBox(
+                            width: 14,
+                            height: 14,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            "Checking favourites...",
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.65),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     if (lastActionLine != null) ...[
                       const SizedBox(height: 6),
                       Text(

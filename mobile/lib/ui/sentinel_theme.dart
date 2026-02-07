@@ -12,19 +12,25 @@ class SentinelColors {
   SentinelColors._();
 
   // Backgrounds
-  static const Color bgPrimary = Color(0xFFF6F7FB);
+  static const Color bgPrimary = Color(0xFFF7F7F8);
   static const Color card = Colors.white;
 
   // Text
-  static const Color textPrimary = Color(0xFF0D0D0D);
-  static const Color textSecondary = Color(0xFF6B6B6B);
+  static const Color textPrimary = Color(0xFF1D1D1F);
+  static const Color textSecondary = Color(0xFF6E6E73);
 
-  // Brand
-  static const Color primary = Color(0xFF111111); // Black CTA
-  static const Color error = Color(0xFFB11226);
+  // Brand (premium neutral-first)
+  static const Color primary = Color(0xFF3A3A3C);      // Graphite
+  static const Color primaryDark = Color(0xFF2C2C2E);  // Deeper graphite
+  static const Color error = Color(0xFFB64A42);        // Muted red
 
-  // Resident accent: Pastel Teal / Aqua-Grey (canonical tokens)
-  static const Color sentinelAccent = Color(0xFF7A9E9E);
+  // Accent family (subtle amber/green)
+  static const Color yellow = Color(0xFFD4A83E);
+  static const Color amber = Color(0xFFC98A2E);
+  static const Color sentinelAccent = amber;
+  static const Color success = Color(0xFF3E8E63);      // muted green
+  static const Color redSoft = Color(0xFFF8ECEB);
+  static const Color successSoft = Color(0xFFEDF6F0);
   static Color get sentinelAccentSurface => sentinelAccent.withOpacity(0.04);
   static Color get sentinelAccentBorder => sentinelAccent.withOpacity(0.06);
 
@@ -36,7 +42,7 @@ class SentinelColors {
   static Color get accentBorder => sentinelAccentBorder;
 
   // UI borders: use theme.dividerColor in widgets (neutralBorder). Fallback:
-  static const Color border = Color(0xFFE6E6E6);
+  static const Color border = Color(0xFFE5E5EA);
 }
 
 /// Notice board category colors (Event / Alert / Maintenance / Policy).
@@ -44,10 +50,10 @@ class SentinelColors {
 class NoticeCategoryPalette {
   NoticeCategoryPalette._();
 
-  static const Color event = Color(0xFF5A9A7A);       // green/teal muted
-  static const Color alert = Color(0xFFB8863C);       // amber/orange muted
-  static const Color maintenance = Color(0xFF6B8BA4); // blue-grey muted
-  static const Color policy = Color(0xFF8B7A9E);      // purple-grey muted
+  static const Color event = Color(0xFF4D8E6E);       // muted green
+  static const Color alert = Color(0xFFC98A2E);       // muted amber
+  static const Color maintenance = Color(0xFF7A7A80); // soft grey
+  static const Color policy = Color(0xFF55555B);      // deep neutral
 
   /// Soft surface for chip/card background (10% opacity).
   static Color bg(Color c) => c.withOpacity(0.10);
@@ -60,10 +66,10 @@ class NoticeCategoryPalette {
 class SentinelStatusPalette {
   SentinelStatusPalette._();
 
-  static const Color success = Color(0xFF2E7D5E);   // green-ish, muted
-  static const Color warning = Color(0xFFB8863C);   // amber, muted
-  static const Color error = Color(0xFFA01C2E);     // red, muted
-  static const Color info = Color(0xFF5A6B7A);        // blue-grey, neutral
+  static const Color success = Color(0xFF3E8E63);   // muted green
+  static const Color warning = Color(0xFFC98A2E);   // muted amber
+  static const Color error = Color(0xFFB64A42);     // muted red
+  static const Color info = Color(0xFF7A7A80);      // neutral grey
 
   /// Chip background (10% opacity).
   static Color bg(Color c) => c.withOpacity(0.10);
@@ -85,6 +91,7 @@ class SentinelTheme {
       colorScheme: const ColorScheme.light(
         primary: SentinelColors.primary,
         secondary: SentinelColors.sentinelAccent,
+        tertiary: SentinelColors.success,
         surface: SentinelColors.card,
         error: SentinelColors.error,
         onPrimary: Colors.white,
@@ -142,33 +149,61 @@ class SentinelTheme {
 
       // ✅ ElevatedButton (fallback safety)
       elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: SentinelColors.primary,
-          foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return SentinelColors.primary.withOpacity(0.45);
+            }
+            if (states.contains(WidgetState.pressed) ||
+                states.contains(WidgetState.focused) ||
+                states.contains(WidgetState.hovered)) {
+              return SentinelColors.primaryDark;
+            }
+            return SentinelColors.primary;
+          }),
+          foregroundColor: WidgetStateProperty.all(Colors.white),
+          minimumSize: WidgetStateProperty.all(const Size.fromHeight(52)),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          elevation: 0,
+          elevation: WidgetStateProperty.all(0),
         ),
       ),
 
       // Primary CTA – FilledButton
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: SentinelColors.primary,
-          foregroundColor: Colors.white,
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+        style: ButtonStyle(
+          backgroundColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.disabled)) {
+              return SentinelColors.primary.withOpacity(0.45);
+            }
+            if (states.contains(WidgetState.pressed) ||
+                states.contains(WidgetState.focused) ||
+                states.contains(WidgetState.hovered)) {
+              return SentinelColors.primaryDark;
+            }
+            return SentinelColors.primary;
+          }),
+          foregroundColor: WidgetStateProperty.all(Colors.white),
+          minimumSize: WidgetStateProperty.all(const Size.fromHeight(52)),
+          shape: WidgetStateProperty.all(
+            RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
           ),
-          textStyle: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),
