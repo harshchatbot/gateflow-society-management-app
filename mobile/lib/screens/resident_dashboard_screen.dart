@@ -773,12 +773,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                                 icon: const Icon(Icons.notifications_rounded,
                                     color: Colors.white),
                                 onPressed: () {
-                                  if (mounted) {
-                                    setState(() {
-                                      _unreadNoticesCount = 0;
-                                      _notificationCount = _pendingCount;
-                                    });
-                                  }
                                   showModalBottomSheet(
                                     context: context,
                                     isScrollControlled: true,

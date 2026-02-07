@@ -123,7 +123,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   void _prefillFromInitialVisitor() {
     final v = widget.initialVisitor;
     if (v == null) return;
-    _selectedVisitorType = v.visitorType;
+    _selectedVisitorType = v.visitorType.toUpperCase();
     _visitorNameController.text = v.visitorName ?? '';
     _visitorPhoneController.text = v.visitorPhone;
     _vehicleNumberController.text = v.vehicleNumber ?? '';
@@ -177,8 +177,13 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         }).toList();
       }
       if (!mounted) return;
+      final normalizedSelected = _normalizeSelectedFlatForList(
+        _selectedFlatNo,
+        list,
+      );
       setState(() {
         _flats = list;
+        _selectedFlatNo = normalizedSelected;
         _flatsLoading = false;
       });
       _selectedUnitId = _resolveUnitId(_selectedFlatNo);
@@ -215,6 +220,37 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     if (flatNo == null || flatNo.trim().isEmpty) return null;
     // Keep unit id aligned across resident and guard flows using the visible flat label.
     return flatNo.trim();
+  }
+
+  String? _normalizeSelectedFlatForList(
+    String? selected,
+    List<Map<String, dynamic>> flats,
+  ) {
+    if (selected == null || selected.trim().isEmpty) return null;
+    final wanted = selected.trim();
+
+    String labelOf(Map<String, dynamic> f) =>
+        ((f['flatNo'] as String?) ?? (f['id'] as String?) ?? '').trim();
+
+    for (final f in flats) {
+      final label = labelOf(f);
+      if (label == wanted) return label;
+    }
+    for (final f in flats) {
+      final label = labelOf(f);
+      if (label.toUpperCase() == wanted.toUpperCase()) return label;
+    }
+    return null;
+  }
+
+  bool _isFlatOptionAvailable(String? value) {
+    if (value == null || value.trim().isEmpty) return false;
+    final wanted = value.trim();
+    for (final f in _flats) {
+      final label = ((f['flatNo'] as String?) ?? (f['id'] as String?) ?? '').trim();
+      if (label == wanted) return true;
+    }
+    return false;
   }
 
   Future<void> _loadFavoriteVisitorsForUnit() async {
@@ -797,7 +833,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                       child: Text("No units configured for this society.", style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w600)),
                     )
                   : DropdownButtonFormField<String>(
-                      value: _selectedFlatNo,
+                      value: _isFlatOptionAvailable(_selectedFlatNo)
+                          ? _selectedFlatNo
+                          : null,
                       decoration: InputDecoration(
                         prefixIcon: Icon(AppIcons.flat, color: theme.colorScheme.primary.withOpacity(0.8)),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),

@@ -5,11 +5,13 @@ import 'package:showcaseview/showcaseview.dart';
 import '../ui/app_colors.dart';
 import '../services/firestore_service.dart';
 import '../services/offline_queue_service.dart';
+import '../services/notice_service.dart';
 import '../ui/app_loader.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
 import '../core/tour_storage.dart';
 import '../core/society_modules.dart';
+import '../core/env.dart';
 import '../models/visitor.dart';
 import 'notice_board_screen.dart';
 import 'onboarding_choose_role_screen.dart';
@@ -64,8 +66,10 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   bool _isLoading = false;
   List<Visitor> _recentVisitors = [];
   int _sosBadgeCount = 0;
+  int _notificationCount = 0;
   /// Visitor counts per day for last 7 days (day-6 .. today). Used for dashboard chart.
   List<int>? _visitorsByDayLast7;
+  late final NoticeService _noticeService = NoticeService(baseUrl: Env.apiBaseUrl);
 
   @override
   void initState() {
@@ -76,6 +80,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
       OfflineQueueService.instance.onQueueChanged = () => setState(() {});
     });
     _syncDashboard();
+    _loadGuardNotificationCount();
     _setupNotificationListener();
     _maybeAutoRunTour();
   }
@@ -120,12 +125,10 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     notificationService.setOnNotificationReceived((data) {
       final type = (data['type'] ?? '').toString();
       if (type == 'sos' && SocietyModules.isEnabled(SocietyModuleIds.sos)) {
-        // Increment SOS badge when notification received
-        if (mounted) {
-          setState(() {
-            _sosBadgeCount = 1;
-          });
-        }
+        _loadGuardNotificationCount();
+      } else if (type == 'notice' &&
+          SocietyModules.isEnabled(SocietyModuleIds.notices)) {
+        _loadGuardNotificationCount();
       }
     });
     notificationService.setOnNotificationTap((data) {
@@ -138,10 +141,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         final sosId = (data['sos_id'] ?? '').toString();
 
         if (!mounted || sosId.isEmpty) return;
-        // Clear SOS badge when user opens the SOS details
-        setState(() {
-          _sosBadgeCount = 0;
-        });
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -153,23 +153,70 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
               residentPhone: phone.isNotEmpty ? phone : null,
             ),
           ),
-        );
+        ).then((_) => _loadGuardNotificationCount());
+      } else if (type == 'notice' &&
+          SocietyModules.isEnabled(SocietyModuleIds.notices)) {
+        _loadGuardNotificationCount();
       }
     });
   }
 
-  void _showNotificationDrawer() {
-    if (_sosBadgeCount > 0 && mounted) {
-      setState(() => _sosBadgeCount = 0);
+  Future<void> _loadGuardNotificationCount() async {
+    int openSos = 0;
+    int recentNotices = 0;
+
+    try {
+      if (SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+        final sosList = await _firestore.getSosRequests(societyId: widget.societyId);
+        openSos = sosList.where((s) {
+          final status = (s['status'] ?? 'OPEN').toString().toUpperCase();
+          return status == 'OPEN';
+        }).length;
+      }
+
+      if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
+        final noticesResult = await _noticeService.getNotices(
+          societyId: widget.societyId,
+          activeOnly: true,
+        );
+        if (noticesResult.isSuccess && noticesResult.data != null) {
+          final now = DateTime.now();
+          recentNotices = noticesResult.data!.where((n) {
+            try {
+              final createdAt = n['created_at']?.toString() ?? '';
+              if (createdAt.isEmpty) return false;
+              final created = DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
+              return now.difference(created).inHours <= 24;
+            } catch (_) {
+              return false;
+            }
+          }).length;
+        }
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _notificationCount = openSos + recentNotices;
+        _sosBadgeCount = openSos > 0 ? 1 : 0;
+      });
+    } catch (e, st) {
+      AppLogger.e("Guard notification count load failed", error: e, stackTrace: st);
     }
+  }
+
+  void _showNotificationDrawer() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (context) => GuardNotificationDrawer(
         societyId: widget.societyId,
+        onBadgeCountChanged: (badgeCount) {
+          if (!mounted) return;
+          setState(() => _notificationCount = badgeCount);
+        },
       ),
-    );
+    ).then((_) => _loadGuardNotificationCount());
   }
 
   Future<void> _syncDashboard() async {
@@ -572,7 +619,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                               icon: const Icon(Icons.notifications_rounded, color: Colors.white),
                               onPressed: _showNotificationDrawer,
                             ),
-                            if (pendingCount + _sosBadgeCount > 0)
+                            if (_notificationCount > 0)
                               Positioned(
                                 right: 8,
                                 top: 8,
@@ -584,9 +631,9 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                                   ),
                                   constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                                   child: Text(
-                                    (pendingCount + _sosBadgeCount) > 9
+                                    _notificationCount > 9
                                         ? '9+'
-                                        : (pendingCount + _sosBadgeCount).toString(),
+                                        : _notificationCount.toString(),
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 10,

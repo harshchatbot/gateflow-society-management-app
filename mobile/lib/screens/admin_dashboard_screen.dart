@@ -283,6 +283,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             _unreadNoticesCount = 0;
           });
         }
+        _loadNotificationCount();
         _navigateToTab(4);
       } else if (type == 'sos' &&
           SocietyModules.isEnabled(SocietyModuleIds.sos)) {
@@ -396,8 +397,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   Future<void> _refreshBellOnly() async {
     final state = _drawerKey.currentState;
-    if (state == null) return;
-    await (state as dynamic).refresh();
+    if (state != null) {
+      await (state as dynamic).refresh();
+      return;
+    }
+    // Drawer can be closed after navigation; refresh from source counts in that case.
+    await _loadNotificationCount();
   }
 
   void _showNotificationDrawer() {
@@ -470,9 +475,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           }
         },
 
-        onBadgeCountChanged: (count) {
+        onBadgeCountChanged: (badgeCount) {
           if (!mounted) return;
-          setState(() => _notificationCount = count);
+          setState(() => _notificationCount = badgeCount);
         },
       ),
     );

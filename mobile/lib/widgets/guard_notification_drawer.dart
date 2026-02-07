@@ -18,10 +18,12 @@ import '../screens/notice_board_screen.dart';
 /// - Recent notices (if module enabled)
 class GuardNotificationDrawer extends StatefulWidget {
   final String societyId;
+  final ValueChanged<int>? onBadgeCountChanged;
 
   const GuardNotificationDrawer({
     super.key,
     required this.societyId,
+    this.onBadgeCountChanged,
   });
 
   @override
@@ -153,6 +155,7 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
           _isLoading = false;
         });
       }
+      widget.onBadgeCountChanged?.call(openSos + recentNotices);
       AppLogger.i("Guard notifications loaded", data: {
         "open_sos": openSos,
         "recent_notices": recentNotices,
