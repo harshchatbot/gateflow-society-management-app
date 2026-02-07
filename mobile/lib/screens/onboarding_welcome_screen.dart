@@ -1,9 +1,8 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../ui/app_colors.dart';
 import '../services/quote_service.dart';
+import '../widgets/sentinel_alive_mascot.dart';
 import 'onboarding_choose_role_screen.dart';
 
 /// Welcome screen: first screen of onboarding.
@@ -279,8 +278,8 @@ class _QuoteOfTheDayBubbleState extends State<_QuoteOfTheDayBubble>
                     );
                   },
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 20),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: const BorderRadius.only(
@@ -347,76 +346,13 @@ class _QuoteOfTheDayBubbleState extends State<_QuoteOfTheDayBubble>
                   ),
                 ),
                 const SizedBox(height: 16),
-                const _BlinkingMascot(),
+                const SentinelAliveMascot(
+                  mood: AliveMascotMood.namaste,
+                  size: 176,
+                ),
               ],
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-class _BlinkingMascot extends StatefulWidget {
-  const _BlinkingMascot();
-
-  @override
-  State<_BlinkingMascot> createState() => _BlinkingMascotState();
-}
-
-class _BlinkingMascotState extends State<_BlinkingMascot> {
-  Timer? _nextBlinkTimer;
-  Timer? _openEyesTimer;
-  bool _eyesClosed = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _scheduleNextBlink();
-  }
-
-  void _scheduleNextBlink() {
-    _nextBlinkTimer?.cancel();
-    _nextBlinkTimer = Timer(const Duration(milliseconds: 3200), () {
-      if (!mounted) return;
-      setState(() => _eyesClosed = true);
-
-      _openEyesTimer?.cancel();
-      _openEyesTimer = Timer(const Duration(milliseconds: 140), () {
-        if (!mounted) return;
-        setState(() => _eyesClosed = false);
-        _scheduleNextBlink();
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _nextBlinkTimer?.cancel();
-    _openEyesTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 176,
-      height: 176,
-      child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 60),
-        switchInCurve: Curves.easeInOut,
-        switchOutCurve: Curves.easeInOut,
-        child: Image.asset(
-          _eyesClosed
-              ? 'assets/mascot/senti_namaste_eyez_closed.png'
-              : 'assets/mascot/senti_namaste.png',
-          key: ValueKey<bool>(_eyesClosed),
-          fit: BoxFit.contain,
-          errorBuilder: (_, __, ___) => Icon(
-            Icons.pets_rounded,
-            size: 72,
-            color: AppColors.primary.withOpacity(0.5),
-          ),
         ),
       ),
     );

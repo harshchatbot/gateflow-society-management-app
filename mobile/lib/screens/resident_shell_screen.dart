@@ -37,10 +37,6 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
   final GlobalKey<State<ResidentDashboardScreen>> _dashboardKey = GlobalKey<State<ResidentDashboardScreen>>();
   bool _modulesReady = false;
 
-  String _topicKey(String raw) {
-    final cleaned = raw.trim().toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]+'), '_');
-    return cleaned.replaceAll(RegExp(r'_+'), '_').replaceAll(RegExp(r'^_|_$'), '');
-  }
 
   @override
   void initState() {
@@ -73,26 +69,6 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
         flatId: normalizedFlatNo,
         role: "resident",
       );
-      final snapshot = notificationService.getDebugSnapshot();
-      AppLogger.i("Resident notification debug snapshot", data: {
-        ...snapshot,
-        "society_id": widget.societyId,
-        "flat_no": normalizedFlatNo,
-      });
-      if (mounted && kDebugMode) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          final topic = "flat_${_topicKey(widget.societyId)}_${_topicKey(normalizedFlatNo)}";
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                "FCM debug: ${snapshot["authorization_status"]} | topic $topic",
-              ),
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        });
-      }
     } catch (e) {
       // Notification subscription failed, continue anyway
       AppLogger.e("Failed to subscribe resident notification topics", error: e);

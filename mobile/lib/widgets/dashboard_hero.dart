@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
+import 'sentinel_alive_mascot.dart';
+
 /// Mascot mood for SENTI owl. Drives which asset is shown.
 enum SentiMood {
   idle,
@@ -17,16 +19,16 @@ String dashboardGreeting() {
   return 'Good Evening';
 }
 
-String _mascotAsset(SentiMood mood) {
+AliveMascotMood _aliveMoodFromSenti(SentiMood mood) {
   switch (mood) {
     case SentiMood.idle:
-      return 'assets/mascot/senti_idle.png';
+      return AliveMascotMood.idle;
     case SentiMood.alert:
-      return 'assets/mascot/senti_alert.png';
+      return AliveMascotMood.alert;
     case SentiMood.happy:
-      return 'assets/mascot/senti_happy.png';
+      return AliveMascotMood.happy;
     case SentiMood.warning:
-      return 'assets/mascot/senti_warning.png';
+      return AliveMascotMood.warning;
   }
 }
 
@@ -37,9 +39,12 @@ class DashboardHero extends StatelessWidget {
   final String userName;
   final String statusMessage;
   final SentiMood mascotMood;
-  /// Optional: pass pre-built avatar (e.g. with CachedNetworkImage) to avoid dependency.
   final Widget? avatar;
   final Widget? trailingActions;
+
+  /// Enable small delayed mascot nudge prompts (e.g. action suggestions).
+  final bool enableMascotNudges;
+  final List<String> mascotNudgeMessages;
 
   const DashboardHero({
     super.key,
@@ -48,6 +53,8 @@ class DashboardHero extends StatelessWidget {
     this.mascotMood = SentiMood.idle,
     this.avatar,
     this.trailingActions,
+    this.enableMascotNudges = false,
+    this.mascotNudgeMessages = const <String>[],
   });
 
   @override
@@ -57,7 +64,6 @@ class DashboardHero extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Top row: optional avatar + name + trailing (bell, settings)
         if (userName.isNotEmpty || trailingActions != null)
           Row(
             children: [
@@ -93,8 +99,8 @@ class DashboardHero extends StatelessWidget {
               if (trailingActions != null) trailingActions!,
             ],
           ),
-        if (userName.isNotEmpty || trailingActions != null) const SizedBox(height: 20),
-        // Status + mascot row
+        if (userName.isNotEmpty || trailingActions != null)
+          const SizedBox(height: 20),
         Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -116,7 +122,7 @@ class DashboardHero extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            _buildMascot(),
+            _buildMascot(context),
           ],
         ),
       ],
@@ -139,24 +145,19 @@ class DashboardHero extends StatelessWidget {
     );
   }
 
-  Widget _buildMascot() {
-    return Image.asset(
-      _mascotAsset(mascotMood),
-      width: 120,
-      height: 120,
-      fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => Container(
-        width: 96,
-        height: 96,
-        decoration: BoxDecoration(
-          color: Colors.white24,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: const Icon(Icons.pets_rounded, color: Colors.white, size: 48),
-      ),
-    )
-        .animate()
-        .fadeIn(duration: 400.ms)
-        .scale(begin: const Offset(0.85, 0.85), end: const Offset(1, 1), duration: 400.ms, curve: Curves.easeOut);
+  Widget _buildMascot(BuildContext context) {
+    return SentinelAliveMascot(
+      mood: _aliveMoodFromSenti(mascotMood),
+      size: 120,
+      showNudge: enableMascotNudges,
+      nudgeMessages: mascotNudgeMessages,
+      nudgeDelay: const Duration(seconds: 10),
+      nudgeRotateEvery: const Duration(seconds: 7),
+    ).animate().fadeIn(duration: 400.ms).scale(
+          begin: const Offset(0.9, 0.9),
+          end: const Offset(1, 1),
+          duration: 400.ms,
+          curve: Curves.easeOut,
+        );
   }
 }

@@ -755,6 +755,18 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                           mascotMood: _pendingCount > 0
                               ? SentiMood.alert
                               : SentiMood.happy,
+                          enableMascotNudges: true,
+                          mascotNudgeMessages: _pendingCount > 0
+                              ? const [
+                                  'Approve visitors to keep the gate smooth',
+                                  'Tap the bell to review pending entries',
+                                  'Need help? Open approvals in one tap',
+                                ]
+                              : const [
+                                  "All clear. You can check today's visitors",
+                                  'Want to add a favourite visitor? Tap the star',
+                                  "Need anything? I'm here on the dashboard",
+                                ],
                           avatar: GestureDetector(
                             onTap: (_photoUrl != null && _photoUrl!.isNotEmpty)
                                 ? () => _openResidentPhotoPreview(_photoUrl!)
@@ -874,7 +886,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                     ),
                   ),
                 ),
-
               ],
             ),
           ),
