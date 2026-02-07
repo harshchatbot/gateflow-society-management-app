@@ -67,6 +67,11 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
     _loadNotifications();
   }
 
+  /// Called by Dashboard when it wants to refresh bell badge without opening drawer.
+  Future<void> refresh() async {
+    await _loadNotifications();
+  }
+
   Future<void> _loadNotifications() async {
     if (!mounted) return;
     setState(() => _isLoading = true);

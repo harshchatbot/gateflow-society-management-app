@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../core/storage.dart';
 import '../core/app_logger.dart';
@@ -15,7 +14,6 @@ import 'onboarding_choose_role_screen.dart';
 import 'guard_join_screen.dart';
 
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_core/firebase_core.dart';
 import '../services/invite_claim_service.dart';
 import '../core/session_gate_service.dart';
 

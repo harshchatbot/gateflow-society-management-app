@@ -265,7 +265,7 @@ class ResidentSignupService {
       final List<Map<String, dynamic>> signups = [];
 
       for (var doc in querySnapshot.docs) {
-        final data = doc.data() as Map<String, dynamic>;
+        final data = doc.data();
         
         // doc.id IS the uid (document is created with uid as the document ID)
         // Always use doc.id as the primary identifier for consistency

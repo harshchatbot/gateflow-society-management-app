@@ -330,8 +330,8 @@ class _SosAlertsScreenState extends State<SosAlertsScreen> {
             controller: _searchController,
             decoration: InputDecoration(
               hintText: "Search by flat, name, phone, status, type…",
-              hintStyle: TextStyle(color: AppColors.textMuted, fontSize: 14),
-              prefixIcon: Icon(Icons.search_rounded, color: AppColors.error, size: 22),
+              hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
+              prefixIcon: const Icon(Icons.search_rounded, color: AppColors.error, size: 22),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear_rounded, size: 20),
@@ -355,7 +355,7 @@ class _SosAlertsScreenState extends State<SosAlertsScreen> {
               _searchController.text.trim().isEmpty
                   ? "${_alerts.length} alert${_alerts.length != 1 ? 's' : ''}"
                   : "Showing ${_filteredAlerts.length} of ${_alerts.length}",
-              style: TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500),
+              style: const TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500),
             ),
           ],
         ],
@@ -368,7 +368,7 @@ class _SosAlertsScreenState extends State<SosAlertsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.filter_list_off_rounded, size: 56, color: AppColors.text2),
+          const Icon(Icons.filter_list_off_rounded, size: 56, color: AppColors.text2),
           const SizedBox(height: 16),
           const Text(
             "No alerts match your search",
@@ -380,7 +380,7 @@ class _SosAlertsScreenState extends State<SosAlertsScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
-          Text(
+          const Text(
             "Try a different search term",
             style: TextStyle(fontSize: 14, color: AppColors.textMuted),
           ),

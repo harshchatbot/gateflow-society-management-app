@@ -184,7 +184,7 @@ class _ProfileLinkPhoneScreenState extends State<ProfileLinkPhoneScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const SizedBox(height: 16),
-          Text(
+          const Text(
             'Add your mobile number for easier login',
             style: TextStyle(
               fontSize: 16,
@@ -203,7 +203,7 @@ class _ProfileLinkPhoneScreenState extends State<ProfileLinkPhoneScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.border),
                 ),
-                child: Text(
+                child: const Text(
                   '+91',
                   style: TextStyle(
                     fontSize: 16,
@@ -234,7 +234,7 @@ class _ProfileLinkPhoneScreenState extends State<ProfileLinkPhoneScreen> {
           ),
           if (_errorMessage != null) ...[
             const SizedBox(height: 12),
-            Text(_errorMessage!, style: TextStyle(color: AppColors.error, fontSize: 13)),
+            Text(_errorMessage!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
           ],
           const SizedBox(height: 24),
           SizedBox(
@@ -268,7 +268,7 @@ class _ProfileLinkPhoneScreenState extends State<ProfileLinkPhoneScreen> {
           const SizedBox(height: 16),
           Text(
             'Enter the 6-digit code sent to +91 ${_phoneController.text.trim()}',
-            style: TextStyle(fontSize: 14, color: AppColors.text2),
+            style: const TextStyle(fontSize: 14, color: AppColors.text2),
           ),
           const SizedBox(height: 24),
           TextField(
@@ -288,7 +288,7 @@ class _ProfileLinkPhoneScreenState extends State<ProfileLinkPhoneScreen> {
           ),
           if (_errorMessage != null) ...[
             const SizedBox(height: 12),
-            Text(_errorMessage!, style: TextStyle(color: AppColors.error, fontSize: 13)),
+            Text(_errorMessage!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
           ],
           const SizedBox(height: 16),
           TextButton(

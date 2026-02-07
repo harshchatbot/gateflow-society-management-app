@@ -107,11 +107,11 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
+            content: const Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text(
                   "Complaint submitted successfully!",
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
@@ -268,11 +268,11 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(
+                      const Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               "Submit a Complaint",
                               style: TextStyle(
                                 fontSize: 22,
@@ -280,7 +280,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                                 color: AppColors.text,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             Text(
                               "We'll address your concern promptly",
                               style: TextStyle(
@@ -297,7 +297,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                   const SizedBox(height: 24),
 
                   // Optional photo (optional)
-                  Text(
+                  const Text(
                     "Add photo (optional)",
                     style: TextStyle(
                       fontSize: 13,
@@ -323,7 +323,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                               children: [
                                 Icon(Icons.add_photo_alternate_rounded, size: 40, color: AppColors.success.withOpacity(0.6)),
                                 const SizedBox(height: 8),
-                                Text(
+                                const Text(
                                   "Tap to add a photo",
                                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMuted),
                                 ),
@@ -354,7 +354,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                   const SizedBox(height: 24),
 
                   // Category Selection
-                  Text(
+                  const Text(
                     "Category",
                     style: TextStyle(
                       fontSize: 13,
@@ -404,7 +404,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                   const SizedBox(height: 24),
 
                   // Title Field
-                  Text(
+                  const Text(
                     "Title",
                     style: TextStyle(
                       fontSize: 13,
@@ -473,7 +473,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                   const SizedBox(height: 20),
 
                   // Description Field
-                  Text(
+                  const Text(
                     "Description",
                     style: TextStyle(
                       fontSize: 13,
@@ -543,7 +543,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                   const SizedBox(height: 24),
 
                   // Visibility: Personal (admins & guards only) vs General (visible to everyone)
-                  Text(
+                  const Text(
                     "Who can see this complaint?",
                     style: TextStyle(
                       fontSize: 13,
@@ -598,7 +598,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 4),
-                                Text(
+                                const Text(
                                   "Visible to everyone (society-level)",
                                   style: TextStyle(
                                     fontSize: 11,
@@ -655,7 +655,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                                   ],
                                 ),
                                 const SizedBox(height: 4),
-                                Text(
+                                const Text(
                                   "Admins & guards only (flat-specific)",
                                   style: TextStyle(
                                     fontSize: 11,

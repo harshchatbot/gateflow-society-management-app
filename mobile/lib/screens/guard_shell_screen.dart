@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
@@ -9,7 +8,6 @@ import 'visitor_list_screen.dart';
 import 'guard_history_screen.dart';
 
 // UI logic
-import '../ui/app_colors.dart'; 
 import '../ui/floating_bottom_nav.dart'; // Use shared SocietyBottomNav
 import 'guard_profile_screen.dart';
 import '../services/notification_service.dart';

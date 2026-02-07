@@ -129,11 +129,11 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
         AppLogger.i("Notice deleted successfully");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
+            content: const Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text(
                   "Notice deleted successfully",
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
@@ -312,7 +312,7 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               "Create your first notice to get started",
               style: TextStyle(
                 fontSize: 14,
@@ -374,8 +374,9 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
     final noticeId = (notice['notice_id'] ?? '').toString();
 
     Color priorityColor = AppColors.admin;
-    if (priority == "URGENT") priorityColor = AppColors.error;
-    else if (priority == "HIGH") priorityColor = AppColors.warning;
+    if (priority == "URGENT") {
+      priorityColor = AppColors.error;
+    } else if (priority == "HIGH") priorityColor = AppColors.warning;
     else if (priority == "LOW") priorityColor = AppColors.text2;
 
     return Container(
@@ -484,7 +485,7 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
                 if (content.isNotEmpty)
                   Text(
                     content,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 14,
                       color: AppColors.text2,
                       fontWeight: FontWeight.w500,
@@ -515,7 +516,7 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
                         const SizedBox(width: 8),
                         Text(
                           _formatDateTime(createdAt),
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 13,
                             color: AppColors.text2,
                             fontWeight: FontWeight.w600,
@@ -548,8 +549,9 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
     final adminName = (notice['admin_name'] ?? 'Unknown').toString();
 
     Color priorityColor = AppColors.admin;
-    if (priority == "URGENT") priorityColor = AppColors.error;
-    else if (priority == "HIGH") priorityColor = AppColors.warning;
+    if (priority == "URGENT") {
+      priorityColor = AppColors.error;
+    } else if (priority == "HIGH") priorityColor = AppColors.warning;
     else if (priority == "LOW") priorityColor = AppColors.text2;
 
     showModalBottomSheet(
@@ -626,7 +628,7 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
         children: [
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               color: AppColors.text2,
               fontWeight: FontWeight.w600,

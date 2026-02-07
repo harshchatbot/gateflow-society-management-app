@@ -443,6 +443,10 @@ class FirestoreService {
           .collection('join_requests')
           .doc(uid);
 
+      final CollectionReference _joinRequestIndexRef =
+      FirebaseFirestore.instance.collection('join_request_index');
+    
+
       await ref.set({
         'uid': uid,
         'societyId': societyId,
@@ -458,6 +462,18 @@ class FirestoreService {
         'handledBy': null,
         'handledAt': null,
       }, SetOptions(merge: true));
+
+      // ✅ Write pointer for OTP login (resident self GET)
+      await _joinRequestIndexRef.doc(uid).set({
+        'uid': uid,
+        'societyId': societyId,
+        'requestedRole': 'resident',
+        'status': 'PENDING',
+        'name': name,
+        'phone': phoneE164,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
 
       AppLogger.i('Resident join request created', data: {
         'uid': uid,
@@ -2510,6 +2526,24 @@ class FirestoreService {
     return Map<String, dynamic>.from(qs.docs.first.data());
   }
 
+  Future<Map<String, dynamic>?> getSelfJoinRequest({
+    required String societyId,
+    required String uid,
+  }) async {
+    final doc = await FirebaseFirestore.instance
+        .collection('public_societies')
+        .doc(societyId)
+        .collection('join_requests')
+        .doc(uid)
+        .get();
+
+    if (!doc.exists) return null;
+
+    final data = Map<String, dynamic>.from(doc.data() as Map);
+    data['societyId'] = societyId;
+    return data;
+  }
+
   Future<List<Map<String, dynamic>>> getAdminJoinRequestsForAdmin(
       String societyId) async {
     final qs = await FirebaseFirestore.instance
@@ -2523,5 +2557,30 @@ class FirestoreService {
         .get();
 
     return qs.docs.map((d) => Map<String, dynamic>.from(d.data())).toList();
+  }
+
+  Future<void> upsertJoinRequestIndex({
+    required String uid,
+    required String societyId,
+    required String requestedRole, // 'resident' | 'admin' | 'guard'
+    required String status, // 'PENDING' | 'APPROVED' | 'REJECTED'
+    String? name,
+    String? phone,
+  }) async {
+    await _firestore.collection('join_request_index').doc(uid).set({
+      'uid': uid,
+      'societyId': societyId,
+      'requestedRole': requestedRole.toLowerCase(),
+      'status': status.toUpperCase(),
+      'name': (name ?? '').trim(),
+      'phone': (phone ?? '').trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  Future<Map<String, dynamic>?> getJoinRequestIndex(String uid) async {
+    final doc = await _firestore.collection('join_request_index').doc(uid).get();
+    if (!doc.exists) return null;
+    return Map<String, dynamic>.from(doc.data() as Map);
   }
 }

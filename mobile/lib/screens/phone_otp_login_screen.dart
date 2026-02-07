@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
@@ -251,58 +252,80 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
         try {
           AppLogger.i("JoinRequest lookup: start", data: {'uid': uid});
 
-          final jr = await _firestore.findPendingJoinRequestByUid(uid);
+          Map<String, dynamic>? jr;
 
-          AppLogger.i("JoinRequest lookup: result", data: {
-            'found': jr != null,
-            'status': jr?['status'],
-            'requestedRole': jr?['requestedRole'],
-            'societyId': jr?['societyId'],
-          });
+          final roleHint = (widget.roleHint ?? '').trim().toLowerCase();
 
-          if (jr != null) {
-            final status = (jr['status'] ?? '').toString().toUpperCase();
-            final role =
-                (jr['requestedRole'] ?? '').toString().trim().toLowerCase();
-            final societyIdFromJr = (jr['societyId'] ?? '').toString().trim();
-            final nameFromJr = (jr['name'] ?? '').toString().trim();
-            final phoneFromJr = (jr['phone'] ?? '').toString().trim();
+          // ✅ RESIDENT ONLY: use join_request_index/{uid} (GET, no query)
 
-            if (status == 'PENDING' && societyIdFromJr.isNotEmpty) {
-              if (!mounted) return;
+          if (roleHint == 'resident') {
+            try {
+              AppLogger.i("Resident JoinRequestIndex: start",
+                  data: {'uid': uid});
 
-              if (role == 'admin') {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (_) => AdminPendingApprovalScreen(
-                      societyId: societyIdFromJr,
-                      adminId: uid,
-                      adminName: nameFromJr.isNotEmpty ? nameFromJr : 'Admin',
-                      email: phoneFromJr,
+              final idx = await _firestore.getJoinRequestIndex(uid);
+
+              AppLogger.i("Resident JoinRequestIndex: result", data: {
+                'found': idx != null,
+                'status': idx?['status'],
+                'societyId': idx?['societyId'],
+                'requestedRole': idx?['requestedRole'],
+              });
+
+              if (idx != null) {
+                final status = (idx['status'] ?? '').toString().toUpperCase();
+                final requestedRole = (idx['requestedRole'] ?? '')
+                    .toString()
+                    .trim()
+                    .toLowerCase();
+                final societyIdFromIdx =
+                    (idx['societyId'] ?? '').toString().trim();
+                final nameFromIdx = (idx['name'] ?? '').toString().trim();
+                final phoneFromIdx = (idx['phone'] ?? '').toString().trim();
+
+                if (requestedRole == 'resident' &&
+                    status == 'PENDING' &&
+                    societyIdFromIdx.isNotEmpty) {
+                  if (!mounted) return;
+
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (_) => ResidentPendingApprovalScreen(
+                        residentId: uid,
+                        societyId: societyIdFromIdx,
+                        residentName:
+                            nameFromIdx.isNotEmpty ? nameFromIdx : 'Resident',
+                        email: phoneFromIdx.isNotEmpty
+                            ? phoneFromIdx
+                            : _normalizedPhone,
+                      ),
                     ),
-                  ),
-                );
-                return;
-              }
+                  );
+                  return; // ✅ STOP: do not fall back to FindSociety
+                }
 
-              if (role == 'resident') {
-                Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(
-                    builder: (_) => ResidentPendingApprovalScreen(
-                      residentId: uid,
-                      societyId: societyIdFromJr,
-                      residentName:
-                          nameFromJr.isNotEmpty ? nameFromJr : 'Resident',
-                    ),
-                  ),
-                );
-                return;
+                if (requestedRole == 'resident' &&
+                    status == 'REJECTED' &&
+                    societyIdFromIdx.isNotEmpty) {
+                  // optional cleanup if you want
+                  await Storage.clearResidentJoinSocietyId();
+                }
               }
+            } catch (e, st) {
+              AppLogger.e("Resident JoinRequestIndex failed",
+                  error: e, stackTrace: st);
             }
           }
+
+  
         } catch (e, st) {
           AppLogger.e("JoinRequest lookup failed", error: e, stackTrace: st);
         }
+
+        AppLogger.e("RESIDENT FALLBACK HIT", data: {
+          'uid': uid,
+          'normalizedPhone': _normalizedPhone,
+        });
 
         // ⬇️ FALLBACK (existing behavior)
         if (!mounted) return;
@@ -573,6 +596,38 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
         ],
       ),
     );
+  }
+
+  Future<Map<String, dynamic>?> getJoinRequestIndex(String uid) async {
+    final doc = await FirebaseFirestore.instance
+        .collection('join_request_index')
+        .doc(uid)
+        .get();
+
+    if (!doc.exists) return null;
+    return Map<String, dynamic>.from(doc.data() as Map);
+  }
+
+  Future<void> upsertJoinRequestIndex({
+    required String uid,
+    required String societyId,
+    required String requestedRole,
+    required String status,
+    String? name,
+    String? phone,
+  }) async {
+    await FirebaseFirestore.instance
+        .collection('join_request_index')
+        .doc(uid)
+        .set({
+      'uid': uid,
+      'societyId': societyId,
+      'requestedRole': requestedRole.toLowerCase(),
+      'status': status.toUpperCase(),
+      'name': (name ?? '').trim(),
+      'phone': (phone ?? '').trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   void _showError(String msg) {

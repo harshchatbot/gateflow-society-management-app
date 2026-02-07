@@ -59,9 +59,11 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
       final x = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80, maxWidth: 1200);
       if (x != null) setState(() => _photo = File(x.path));
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Camera error: $e'), backgroundColor: AppColors.error),
       );
+      }
     }
   }
 
@@ -140,8 +142,9 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () {
-            if (widget.onBackPressed != null) widget.onBackPressed!();
-            else if (Navigator.canPop(context)) Navigator.pop(context);
+            if (widget.onBackPressed != null) {
+              widget.onBackPressed!();
+            } else if (Navigator.canPop(context)) Navigator.pop(context);
           },
         ),
       ),
@@ -161,10 +164,10 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: AppColors.warning.withOpacity(0.3)),
                     ),
-                    child: Row(
+                    child: const Row(
                       children: [
-                        const Icon(Icons.lock_rounded, color: AppColors.warning, size: 24),
-                        const SizedBox(width: 12),
+                        Icon(Icons.lock_rounded, color: AppColors.warning, size: 24),
+                        SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             'Violations are private. No names are publicised. Only admins see full data; residents see only their flat.',
@@ -264,12 +267,12 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
                                 ),
                               ],
                             )
-                          : Center(
+                          : const Center(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   Icon(Icons.add_a_photo, color: AppColors.textMuted, size: 36),
-                                  const SizedBox(height: 8),
+                                  SizedBox(height: 8),
                                   Text('Tap to add photo', style: TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
                                 ],
                               ),

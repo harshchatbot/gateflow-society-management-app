@@ -2,17 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../ui/app_colors.dart';
 import '../widgets/sentinel_illustration.dart';
-import 'resident_login_screen.dart';
+
+///import 'resident_login_screen.dart';
 import 'resident_shell_screen.dart';
 import 'find_society_screen.dart';
 import '../services/firestore_service.dart';
 import '../core/app_logger.dart';
 import '../core/storage.dart';
-
-
-
-
-
+import 'package:firebase_auth/firebase_auth.dart';
+import 'onboarding_choose_role_screen.dart';
 
 /// Resident Pending Approval Screen
 ///
@@ -36,7 +34,6 @@ class ResidentPendingApprovalScreen extends StatefulWidget {
     required this.societyId,
     required this.residentName,
   });
-  
 
   @override
   State<ResidentPendingApprovalScreen> createState() =>
@@ -148,6 +145,22 @@ class _ResidentPendingApprovalScreenState
     }
   }
 
+  Future<void> _logoutToChooseRole() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      await Storage.clearResidentJoinSocietyId();
+    } catch (e, st) {
+      AppLogger.e("Logout failed", error: e, stackTrace: st);
+    }
+
+    if (!mounted) return;
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
+      (route) => false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -160,12 +173,7 @@ class _ResidentPendingApprovalScreenState
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded,
               color: theme.colorScheme.onSurface),
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
-            );
-          },
+          onPressed: _logoutToChooseRole,
         ),
       ),
       body: SafeArea(
@@ -380,14 +388,9 @@ class _ResidentPendingApprovalScreenState
           height: 52,
           width: double.infinity,
           child: OutlinedButton(
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
-              );
-            },
+            onPressed: _logoutToChooseRole,
             child: const Text(
-              "BACK TO LOGIN",
+              "LOGOUT",
               style: TextStyle(
                 fontWeight: FontWeight.w800,
               ),
@@ -418,5 +421,4 @@ class _ResidentPendingApprovalScreenState
       ],
     );
   }
-  
 }

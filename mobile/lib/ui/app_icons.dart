@@ -1,4 +1,3 @@
-import 'package:flutter/widgets.dart';
 import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 /// Central icon registry so we never use PhosphorIconsBold.* directly in screens.

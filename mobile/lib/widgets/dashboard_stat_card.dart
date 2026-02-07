@@ -59,7 +59,7 @@ class DashboardStatCard extends StatelessWidget {
           const SizedBox(height: 2),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               color: AppColors.text2,
               fontWeight: FontWeight.w700,
               fontSize: 12,

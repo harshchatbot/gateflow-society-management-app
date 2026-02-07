@@ -372,12 +372,12 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
           elevation: 0,
           title: const Text("Manage Admins"),
         ),
-        body: Center(
+        body: const Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.lock_rounded, size: 64, color: AppColors.text2),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Text(
                 "Access Denied",
                 style: TextStyle(
@@ -386,7 +386,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                   color: AppColors.text,
                 ),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(
                 "Only super admins can manage admin signups",
                 style: TextStyle(
@@ -434,7 +434,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                       ),
                       child: Text(
                         "${_admins.length}",
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
                           color: AppColors.admin,
@@ -460,7 +460,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                       ),
                       child: Text(
                         "${_pendingSignups.length}",
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w800,
                           color: AppColors.error,
@@ -495,11 +495,11 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline_rounded, size: 64, color: AppColors.text2),
+            const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.text2),
             const SizedBox(height: 16),
             Text(
               _error!,
-              style: TextStyle(color: AppColors.text2),
+              style: const TextStyle(color: AppColors.text2),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -515,12 +515,12 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
     }
 
     if (_admins.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.admin_panel_settings_rounded, size: 64, color: AppColors.text2),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               "No admins found",
               style: TextStyle(
@@ -594,7 +594,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
               color: AppColors.admin.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
-            child: Icon(
+            child: const Icon(
               Icons.admin_panel_settings_rounded,
               color: AppColors.admin,
               size: 28,
@@ -639,7 +639,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                   const SizedBox(height: 4),
                   Text(
                     email,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 13,
                       color: AppColors.text2,
                     ),
@@ -649,7 +649,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                   const SizedBox(height: 2),
                   Text(
                     phone,
-                    style: TextStyle(
+                    style: const TextStyle(
                       fontSize: 13,
                       color: AppColors.text2,
                     ),
@@ -658,7 +658,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                 const SizedBox(height: 4),
                 Text(
                   "Role: ${societyRole.toString().toUpperCase()}",
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: AppColors.admin,
@@ -678,11 +678,11 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline_rounded, size: 64, color: AppColors.text2),
+            const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.text2),
             const SizedBox(height: 16),
             Text(
               _error!,
-              style: TextStyle(color: AppColors.text2),
+              style: const TextStyle(color: AppColors.text2),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -698,12 +698,12 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
     }
 
     if (_pendingSignups.isEmpty) {
-      return Center(
+      return const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.pending_actions_rounded, size: 64, color: AppColors.text2),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               "No pending signups",
               style: TextStyle(
@@ -773,7 +773,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                   color: AppColors.error.withOpacity(0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(
+                child: const Icon(
                   Icons.person_add_rounded,
                   color: AppColors.error,
                   size: 28,
@@ -796,7 +796,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                       const SizedBox(height: 4),
                       Text(
                         email,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.text2,
                         ),
@@ -806,7 +806,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                       const SizedBox(height: 2),
                       Text(
                         phone,
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.text2,
                         ),
@@ -818,7 +818,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                       const SizedBox(height: 2),
                       Text(
                         "Flat: ${flatNo.toUpperCase()}",
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 13,
                           color: AppColors.text2,
                         ),
@@ -840,7 +840,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
             ),
             child: Text(
               roleBadgeText,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: AppColors.error,
@@ -852,7 +852,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
             const SizedBox(height: 8),
             Text(
               "Requested: ${_formatCreatedAt(createdAt)}",
-              style: TextStyle(fontSize: 11, color: AppColors.text2),
+              style: const TextStyle(fontSize: 11, color: AppColors.text2),
             ),
           ],
 
@@ -865,7 +865,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                 child: OutlinedButton(
                   onPressed: () => _handleRejectSignup(signup),
                   style: OutlinedButton.styleFrom(
-                    side: BorderSide(color: AppColors.error),
+                    side: const BorderSide(color: AppColors.error),
                     foregroundColor: AppColors.error,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),

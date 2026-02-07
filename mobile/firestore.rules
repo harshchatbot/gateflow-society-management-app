@@ -388,9 +388,25 @@ service cloud.firestore {
       allow delete: if false;
     }
 
+    match /join_request_index/{uid} {
+      // Resident/Admin/Guard can read their own pointer doc
+      allow get: if request.auth != null && request.auth.uid == uid;
+
+      // Allow the user to create/update their own pointer at request time
+      allow create, update: if request.auth != null && request.auth.uid == uid;
+
+      // Never allow listing all users' pointer docs
+      allow list: if false;
+    }
+
     // Default deny everything else (KEEP THIS LAST)
     match /{document=**} {
       allow read, write: if false;
     }
   }
+
+    
+
+
+
 }

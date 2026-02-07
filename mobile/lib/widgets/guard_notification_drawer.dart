@@ -115,8 +115,9 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
           noticeNotifications = recentNoticesList.take(5).map((n) {
             final noticeType = n['notice_type']?.toString() ?? 'GENERAL';
             String typeLabel = 'Notice';
-            if (noticeType == 'EMERGENCY') typeLabel = 'Alert';
-            else if (noticeType == 'SCHEDULE') typeLabel = 'Event';
+            if (noticeType == 'EMERGENCY') {
+              typeLabel = 'Alert';
+            } else if (noticeType == 'SCHEDULE') typeLabel = 'Event';
             else if (noticeType == 'MAINTENANCE') typeLabel = 'Maintenance';
             else if (noticeType == 'GENERAL') typeLabel = 'Announcement';
             return {
@@ -211,7 +212,7 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
         children: [
           Container(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
             ),
             child: Row(
@@ -397,7 +398,7 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
           const SizedBox(height: 8),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppColors.text2,
@@ -486,7 +487,7 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
                 const SizedBox(height: 4),
                 Text(
                   description,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 13,
                     color: AppColors.text2,
                     fontWeight: FontWeight.w500,
@@ -497,11 +498,11 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    Icon(Icons.access_time_rounded, size: 12, color: AppColors.text2),
+                    const Icon(Icons.access_time_rounded, size: 12, color: AppColors.text2),
                     const SizedBox(width: 4),
                     Text(
                       time,
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 11,
                         color: AppColors.text2,
                         fontWeight: FontWeight.w500,
@@ -509,11 +510,11 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
                     ),
                     if (type == 'notice' && notification['type_label'] != null) ...[
                       const SizedBox(width: 12),
-                      Icon(Icons.category_rounded, size: 12, color: AppColors.text2),
+                      const Icon(Icons.category_rounded, size: 12, color: AppColors.text2),
                       const SizedBox(width: 4),
                       Text(
                         notification['type_label'],
-                        style: TextStyle(
+                        style: const TextStyle(
                           fontSize: 11,
                           color: AppColors.text2,
                           fontWeight: FontWeight.w500,

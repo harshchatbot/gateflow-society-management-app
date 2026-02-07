@@ -5,7 +5,8 @@ from app.services.firebase_admin import get_db
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--society", required=True, help="societyId, e.g. soc_amara")
+    #parser.add_argument("--society", required=True, help="societyId, e.g. soc_amara")
+    parser.add_argument("--society", required=True, help="societyId, e.g. soc_kediaamara")
     parser.add_argument("--limit", type=int, default=20)
     parser.add_argument("--filtered", action="store_true", help="run filtered query")
     args = parser.parse_args()

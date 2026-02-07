@@ -31,14 +31,14 @@ class ModuleDisabledPlaceholder extends StatelessWidget {
         ),
         centerTitle: true,
       ),
-      body: Center(
+      body: const Center(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.all(24),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.lock_outline_rounded, size: 64, color: AppColors.textMuted),
-              const SizedBox(height: 20),
+              SizedBox(height: 20),
               Text(
                 'This feature is not enabled for your society.',
                 style: TextStyle(

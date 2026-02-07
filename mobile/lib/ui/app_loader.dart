@@ -83,7 +83,7 @@ class AppLoader extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                _LoaderRing(size: 44),
+                const _LoaderRing(size: 44),
                 if (message != null && message!.trim().isNotEmpty) ...[
                   const SizedBox(height: 20),
                   Padding(

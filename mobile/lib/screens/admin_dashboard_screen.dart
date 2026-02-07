@@ -106,6 +106,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   StreamSubscription<QuerySnapshot>? _pendingSignupsSubscription;
 
+  final GlobalKey _drawerKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -380,68 +382,82 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
   }
 
+  Future<void> _refreshBellOnly() async {
+    final state = _drawerKey.currentState;
+    if (state == null) return;
+    await (state as dynamic).refresh();
+  }
+
   void _showNotificationDrawer() {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (sheetCtx) => AdminNotificationDrawer(
+        key: _drawerKey,
         societyId: widget.societyId,
         adminId: widget.adminId,
-        onNotificationTap: (notification) {
-          // 1️⃣ Close bottom sheet using ROOT navigator
-          Navigator.of(context, rootNavigator: true).pop();
+        // inside AdminDashboardScreen
+        onNotificationTap: (notification) async {
+          if (!mounted) return;
 
-          // 2️⃣ Navigate in next frame (CRITICAL)
-          Future.microtask(() {
-            if (!mounted) return;
+          // 1) close drawer first
+          Navigator.pop(context);
 
-            final type = notification['type']?.toString();
+          final type = notification['type']?.toString();
 
-            // JOIN REQUESTS
-            if (type == 'resident_signup' || type == 'admin_signup') {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => AdminJoinRequestsScreen(
-                    societyId: widget.societyId,
-                  ),
+          // JOIN REQUESTS
+          if (type == 'resident_signup' || type == 'admin_signup') {
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => AdminJoinRequestsScreen(
+                  societyId: widget.societyId,
                 ),
-              );
-              return;
-            }
+              ),
+            );
 
-            // COMPLAINTS TAB
-            if (type == 'complaint') {
-              _navigateToTab(3);
-              return;
-            }
+            // 2) refresh bell ONLY after coming back
+            await _refreshBellOnly();
+            return;
+          }
 
-            // NOTICES TAB
-            if (type == 'notice') {
-              _navigateToTab(4);
-              return;
-            }
+          // COMPLAINTS TAB
+          if (type == 'complaint') {
+            _navigateToTab(3);
+            await _refreshBellOnly(); // optional if tab actions can change counts
+            return;
+          }
 
-            // SOS DETAILS
-            if (type == 'sos') {
-              final sosId = notification['id']?.toString() ?? '';
-              if (sosId.isEmpty) return;
+          // NOTICES TAB
+          if (type == 'notice') {
+            _navigateToTab(4);
+            await _refreshBellOnly(); // optional
+            return;
+          }
 
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => SosDetailScreen(
-                    societyId: widget.societyId,
-                    sosId: sosId,
-                    flatNo: notification['flat_no']?.toString() ?? '',
-                    residentName:
-                        notification['resident_name']?.toString() ?? 'Resident',
-                    residentPhone: null,
-                  ),
+          // SOS DETAILS
+          if (type == 'sos') {
+            final sosId = notification['id']?.toString() ?? '';
+            if (sosId.isEmpty) return;
+
+            await Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => SosDetailScreen(
+                  societyId: widget.societyId,
+                  sosId: sosId,
+                  flatNo: notification['flat_no']?.toString() ?? '',
+                  residentName:
+                      notification['resident_name']?.toString() ?? 'Resident',
+                  residentPhone: null,
                 ),
-              );
-            }
-          });
+              ),
+            );
+
+            await _refreshBellOnly(); // refresh after returning
+            return;
+          }
         },
+
         onBadgeCountChanged: (count) {
           if (!mounted) return;
           setState(() => _notificationCount = count);

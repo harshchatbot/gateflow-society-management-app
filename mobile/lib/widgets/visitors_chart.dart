@@ -62,8 +62,8 @@ class VisitorsChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(left: 4, bottom: 12),
+          const Padding(
+            padding: EdgeInsets.only(left: 4, bottom: 12),
             child: Text(
               'Visitors (last 7 days)',
               style: TextStyle(
@@ -93,7 +93,7 @@ class VisitorsChart extends StatelessWidget {
                             padding: const EdgeInsets.only(top: 8),
                             child: Text(
                               dayLabels[i],
-                              style: TextStyle(
+                              style: const TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
                                 color: AppColors.text2,
@@ -114,7 +114,7 @@ class VisitorsChart extends StatelessWidget {
                       getTitlesWidget: (value, meta) {
                         return Text(
                           value.toInt().toString(),
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: AppColors.text2,

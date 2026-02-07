@@ -235,7 +235,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        Text(
+        const Text(
           "Create your account",
           style: TextStyle(
             color: AppColors.text2,
@@ -267,7 +267,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
+            const Text(
               "Enter your details",
               style: TextStyle(
                 fontSize: 16,
@@ -442,7 +442,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(
+                const Text(
                   "Already have an account? ",
                   style: TextStyle(
                     color: AppColors.text2,
@@ -513,7 +513,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
-          Text(
+          const Text(
             "Your signup request has been sent to the admin for approval. You will be able to login once your request is approved.",
             style: TextStyle(
               fontSize: 15,

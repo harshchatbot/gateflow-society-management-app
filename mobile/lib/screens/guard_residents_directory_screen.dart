@@ -177,7 +177,7 @@ class _GuardResidentsDirectoryScreenState
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
+              const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
               const SizedBox(height: 16),
               Text(
                 _error!,
@@ -208,7 +208,7 @@ class _GuardResidentsDirectoryScreenState
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
+            const Icon(
               Icons.people_outline_rounded,
               size: 56,
               color: AppColors.textMuted,

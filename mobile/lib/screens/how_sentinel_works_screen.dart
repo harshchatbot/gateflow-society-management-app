@@ -48,7 +48,7 @@ class HowSentinelWorksScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'Onboarding in a few steps',
               style: TextStyle(
                 fontSize: 18,
@@ -80,7 +80,7 @@ class HowSentinelWorksScreen extends StatelessWidget {
                         const SizedBox(height: 8),
                         Text(
                           step['body']!,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 14,
                             color: AppColors.text2,
                             height: 1.4,
@@ -98,10 +98,10 @@ class HowSentinelWorksScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.error.withOpacity(0.3)),
               ),
-              child: Row(
+              child: const Row(
                 children: [
                   Icon(Icons.sos_rounded, color: AppColors.error, size: 28),
-                  const SizedBox(width: 12),
+                  SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'SOS alerts go to your society\'s security and admin instantly—so help is always one tap away.',

@@ -54,7 +54,7 @@ class SocietyModules {
       _cachedSocietyId = societyId;
       final raw = data?['modules'];
       if (raw is Map) {
-        final map = raw as Map;
+        final map = raw;
         for (final id in SocietyModuleIds.all) {
           final v = map[id];
           _cachedModules[id] = (v != false);

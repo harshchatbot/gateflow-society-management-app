@@ -4,7 +4,6 @@ import '../core/app_logger.dart';
 import '../services/resident_service.dart';
 import '../core/env.dart';
 import '../widgets/app_text_field.dart';
-import '../widgets/primary_button.dart';
 import '../ui/app_loader.dart';
 
 /// Edit Account Information Screen
@@ -66,11 +65,11 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
         AppLogger.i("Account updated successfully");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
+            content: const Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                const Text(
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
+                Text(
                   "Account updated successfully",
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
@@ -176,11 +175,11 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      Expanded(
+                      const Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               "Account Information",
                               style: TextStyle(
                                 fontSize: 22,
@@ -188,7 +187,7 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
                                 color: AppColors.text,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            SizedBox(height: 4),
                             Text(
                               "Update your account details",
                               style: TextStyle(
@@ -317,7 +316,7 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
               children: [
                 Text(
                   label,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 12,
                     color: AppColors.text2,
                     fontWeight: FontWeight.w600,
@@ -335,7 +334,7 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
               ],
             ),
           ),
-          Icon(
+          const Icon(
             Icons.lock_rounded,
             size: 16,
             color: AppColors.textMuted,

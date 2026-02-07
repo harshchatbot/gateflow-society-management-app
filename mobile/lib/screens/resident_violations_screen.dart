@@ -148,10 +148,10 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.primary.withOpacity(0.3)),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    const Icon(Icons.lock_rounded, color: AppColors.primary, size: 20),
-                    const SizedBox(width: 8),
+                    Icon(Icons.lock_rounded, color: AppColors.primary, size: 20),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Violations are private. You see only reports for your flat. No names are publicised.',
@@ -178,7 +178,7 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: AppColors.error),
+            const Icon(Icons.error_outline, size: 64, color: AppColors.error),
             const SizedBox(height: 16),
             Text(_error!, style: const TextStyle(color: AppColors.text2, fontSize: 16), textAlign: TextAlign.center),
             const SizedBox(height: 24),
@@ -202,7 +202,7 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.directions_car_outlined, size: 64, color: AppColors.textMuted),
+            const Icon(Icons.directions_car_outlined, size: 64, color: AppColors.textMuted),
             const SizedBox(height: 16),
             const Text(
               'No violations for your flat',
@@ -211,7 +211,7 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
             const SizedBox(height: 8),
             Text(
               'Reports for Flat ${widget.flatNo} will appear here.',
-              style: TextStyle(fontSize: 14, color: AppColors.text2),
+              style: const TextStyle(fontSize: 14, color: AppColors.text2),
               textAlign: TextAlign.center,
             ),
           ],
@@ -271,7 +271,7 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
                   if (createdAt != null && createdAt.isNotEmpty)
                     Text(
                       createdAt.length >= 10 ? createdAt.substring(0, 10) : createdAt,
-                      style: TextStyle(fontSize: 12, color: AppColors.textMuted),
+                      style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
                     ),
                   if (note != null && note.isNotEmpty)
                     Padding(
@@ -280,7 +280,7 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
                         note,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 12, color: AppColors.text2),
+                        style: const TextStyle(fontSize: 12, color: AppColors.text2),
                       ),
                     ),
                   const SizedBox(height: 6),

@@ -101,7 +101,7 @@ class AuthLoginEntryScreen extends StatelessWidget {
                       MaterialPageRoute(builder: (_) => _emailScreen()),
                     );
                   },
-                  child: Text(
+                  child: const Text(
                     'Login with Email',
                     style: TextStyle(
                       fontSize: 14,

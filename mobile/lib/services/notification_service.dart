@@ -117,7 +117,7 @@ class NotificationService {
       try {
         _fcmToken = await _fcm.getToken();
         if (_fcmToken != null) {
-          AppLogger.i("FCM token obtained", data: {"token": _fcmToken!.substring(0, 20) + "..."});
+          AppLogger.i("FCM token obtained", data: {"token": "${_fcmToken!.substring(0, 20)}..."});
           await _saveFcmToken(_fcmToken!);
         }
 

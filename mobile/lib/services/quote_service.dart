@@ -120,9 +120,9 @@ class QuoteService {
       final quotes = <String>[];
       for (final doc in snapshot.docs) {
         final data = doc.data();
-        final text = data['text']?.toString()?.trim();
+        final text = data['text']?.toString().trim();
         if (text == null || text.isEmpty) continue;
-        final lang = data['lang']?.toString()?.toLowerCase();
+        final lang = data['lang']?.toString().toLowerCase();
         if (lang != null && lang.isNotEmpty && lang != 'en') continue;
         quotes.add(text);
       }

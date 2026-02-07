@@ -233,8 +233,8 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
       if (!mounted) return;
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Monthly summary published to Notice Board'),
+        const SnackBar(
+          content: Text('Monthly summary published to Notice Board'),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
         ),
@@ -335,10 +335,10 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: AppColors.admin.withOpacity(0.3)),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    const Icon(Icons.lock_rounded, color: AppColors.admin, size: 20),
-                    const SizedBox(width: 8),
+                    Icon(Icons.lock_rounded, color: AppColors.admin, size: 20),
+                    SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Violations are private. Society sees only anonymous summaries when you publish.',
@@ -404,7 +404,7 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.error_outline, size: 64, color: AppColors.error),
+            const Icon(Icons.error_outline, size: 64, color: AppColors.error),
             const SizedBox(height: 16),
             Text(_error!, style: const TextStyle(color: AppColors.text2, fontSize: 16), textAlign: TextAlign.center),
             const SizedBox(height: 24),
@@ -424,14 +424,14 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.directions_car_outlined, size: 64, color: AppColors.textMuted),
+            const Icon(Icons.directions_car_outlined, size: 64, color: AppColors.textMuted),
             const SizedBox(height: 16),
             Text(
               _statusFilter == 'ALL' ? 'No violations this month' : 'No $_statusFilter violations',
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.text),
             ),
             const SizedBox(height: 8),
-            Text(
+            const Text(
               'Guards can report violations from their dashboard.',
               style: TextStyle(fontSize: 14, color: AppColors.text2),
               textAlign: TextAlign.center,
@@ -492,13 +492,13 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
                   children: [
                     Text('Flat $flatNo', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.text)),
                     const SizedBox(height: 2),
-                    Text(_violationTypeLabel(type), style: TextStyle(fontSize: 13, color: AppColors.text2)),
+                    Text(_violationTypeLabel(type), style: const TextStyle(fontSize: 13, color: AppColors.text2)),
                     if (createdAt != null && createdAt.isNotEmpty)
-                      Text(createdAt.length >= 10 ? createdAt.substring(0, 10) : createdAt, style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                      Text(createdAt.length >= 10 ? createdAt.substring(0, 10) : createdAt, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
                     if (note != null && note.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
-                        child: Text(note, maxLines: 2, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: AppColors.text2)),
+                        child: Text(note, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.text2)),
                       ),
                     const SizedBox(height: 6),
                     Row(
@@ -551,11 +551,11 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
             children: [
               Text('Flat ${v['flat_no']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
               const SizedBox(height: 8),
-              Text(_violationTypeLabel(v['violation_type']?.toString() ?? 'OTHER'), style: TextStyle(fontSize: 14, color: AppColors.text2)),
+              Text(_violationTypeLabel(v['violation_type']?.toString() ?? 'OTHER'), style: const TextStyle(fontSize: 14, color: AppColors.text2)),
               if (v['note'] != null && (v['note'] as String).isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: Text(v['note'] as String, style: TextStyle(fontSize: 14, color: AppColors.text2)),
+                  child: Text(v['note'] as String, style: const TextStyle(fontSize: 14, color: AppColors.text2)),
                 ),
               const SizedBox(height: 16),
               if (status == 'OPEN')

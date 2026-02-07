@@ -81,8 +81,8 @@ class SessionGateService {
         );
       }
 
-      final pointer = pointerDoc.data() as Map<String, dynamic>? ?? {};
-      final societyId = pointer['societyId']?.toString()?.trim();
+      final pointer = pointerDoc.data() ?? {};
+      final societyId = pointer['societyId']?.toString().trim();
       if (societyId == null || societyId.isEmpty) {
         AppLogger.w('Session gate: pointer missing societyId', data: {'uid': uid});
         return GateResult.blocked(
@@ -108,7 +108,7 @@ class SessionGateService {
         );
       }
 
-      final memberData = memberDoc.data() as Map<String, dynamic>? ?? {};
+      final memberData = memberDoc.data() ?? {};
       final memberActive = memberData['active'];
       if (memberActive == false) {
         AppLogger.i('Session gate: member inactive',
@@ -130,7 +130,7 @@ class SessionGateService {
         );
       }
 
-      final societyData = societyDoc.data() as Map<String, dynamic>? ?? {};
+      final societyData = societyDoc.data() ?? {};
       final societyActive = societyData['active'];
       if (societyActive == false) {
         AppLogger.i('Session gate: society inactive', data: {'societyId': societyId});

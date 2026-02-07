@@ -256,7 +256,7 @@ class _SuperAdminBulkUploadScreenState
         Expanded(
           child: Text(
             text,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 14,
               color: AppColors.text2,
               fontWeight: FontWeight.w600,
@@ -436,8 +436,8 @@ class _SuperAdminBulkUploadScreenState
       AppLogger.e("Error generating guards sample", error: e, stackTrace: stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text("Failed to generate sample. Please try again."),
+          const SnackBar(
+            content: Text("Failed to generate sample. Please try again."),
             backgroundColor: AppColors.error,
           ),
         );
@@ -461,8 +461,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
           error: e, stackTrace: stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text("Failed to generate sample. Please try again."),
+          const SnackBar(
+            content: Text("Failed to generate sample. Please try again."),
             backgroundColor: AppColors.error,
           ),
         );
@@ -1206,7 +1206,7 @@ final inviteRef = FirebaseFirestore.instance
               'Open email ($email) and set password using the reset link. Then login with Email + Password.';
         }
 
-        final passwordReset =
+        const passwordReset =
             'Password setup email sent automatically. If not received, use “Forgot password” on login screen.';
 
         String escapeCsv(String value) {
@@ -1256,14 +1256,14 @@ final inviteRef = FirebaseFirestore.instance
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Row(
+            content: const Row(
               children: [
-                const Icon(Icons.email_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
+                Icon(Icons.email_rounded, color: Colors.white, size: 20),
+                SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     "User credentials ready. Share via email to send password reset info.",
-                    style: const TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
@@ -1297,7 +1297,7 @@ final inviteRef = FirebaseFirestore.instance
             children: [
               Row(
                 children: [
-                  Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
+                  const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     "Successful: $successCount",
@@ -1309,7 +1309,7 @@ final inviteRef = FirebaseFirestore.instance
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    Icon(Icons.error_rounded, color: AppColors.error, size: 20),
+                    const Icon(Icons.error_rounded, color: AppColors.error, size: 20),
                     const SizedBox(width: 8),
                     Text(
                       "Failed: $errorCount",
@@ -1329,14 +1329,14 @@ final inviteRef = FirebaseFirestore.instance
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
                         e,
-                        style: TextStyle(fontSize: 11, color: AppColors.text2),
+                        style: const TextStyle(fontSize: 11, color: AppColors.text2),
                       ),
                     ),
                   ),
                   if (errors.length > 5)
                     Text(
                       "... and ${errors.length - 5} more",
-                      style: TextStyle(fontSize: 11, color: AppColors.text2),
+                      style: const TextStyle(fontSize: 11, color: AppColors.text2),
                     ),
                 ],
               ],

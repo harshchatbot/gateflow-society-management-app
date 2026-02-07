@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../ui/app_colors.dart';
 import '../ui/app_loader.dart';
 import '../services/resident_service.dart';
 import '../core/app_logger.dart';
