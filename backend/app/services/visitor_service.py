@@ -202,31 +202,50 @@ class VisitorService:
         try:
             from app.services.notification_service import get_notification_service
             notification_service = get_notification_service()
-            
-            # Get resident FCM token (if stored)
-            # For MVP, we'll send to topic for the flat or get token from resident record
-            resident_phone = flat.get("resident_phone", "")
-            flat_no = resolved_flat_no
-            
-            # Try to get FCM token from resident record
-            # For now, send to flat-specific topic
-            topic = f"flat_{resolved_flat_id}"
-            
-            notification_service.send_to_topic(
-                topic=topic,
-                title="🚪 New Visitor Entry",
-                body=f"Visitor {visitor_type} at {flat_no}. Phone: {visitor_phone}",
-                data={
-                    "type": "visitor",
-                    "visitor_id": visitor_id,
-                    "flat_id": resolved_flat_id,
-                    "flat_no": flat_no,
-                    "visitor_type": visitor_type,
-                    "status": VisitorStatus.PENDING.value,
-                },
-                sound="notification_sound",
-            )
-            logger.info(f"Notification sent for new visitor: {visitor_id}")
+
+            # Canonical topic format used by mobile subscription:
+            # flat_<societyId>_<flatNo>
+            canonical_topic = f"flat_{society_id}_{resolved_flat_no}"
+            # Legacy fallback topic (older implementation)
+            legacy_topic = f"flat_{resolved_flat_id}"
+            topics = [canonical_topic]
+            if legacy_topic != canonical_topic:
+                topics.append(legacy_topic)
+
+            payload = {
+                "type": "visitor",
+                "visitor_id": visitor_id,
+                "society_id": society_id,
+                "flat_id": resolved_flat_id,
+                "flat_no": resolved_flat_no,
+                "visitor_type": visitor_type,
+                "status": VisitorStatus.PENDING.value,
+            }
+
+            sent_any = False
+            for topic in topics:
+                ok = notification_service.send_to_topic(
+                    topic=topic,
+                    title="New Visitor Entry",
+                    body=f"Visitor {visitor_type} at {resolved_flat_no}. Phone: {visitor_phone}",
+                    data=payload,
+                    sound="notification_sound",
+                )
+                sent_any = sent_any or ok
+                logger.info(
+                    "VISITOR_PUSH_TOPIC | topic=%s visitor_id=%s ok=%s",
+                    topic,
+                    visitor_id,
+                    ok,
+                )
+
+            if not sent_any:
+                logger.warning(
+                    "VISITOR_PUSH_FAILED | visitor_id=%s society_id=%s flat_no=%s",
+                    visitor_id,
+                    society_id,
+                    resolved_flat_no,
+                )
         except Exception as e:
             # Don't fail visitor creation if notification fails
             logger.warning(f"Failed to send notification for visitor {visitor_id}: {e}")

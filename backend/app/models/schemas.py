@@ -72,6 +72,16 @@ class VisitorListResponse(BaseModel):
     count: int
 
 
+class VisitorNotificationTestRequest(BaseModel):
+    """Manual test trigger for visitor push notifications."""
+    society_id: str = Field(..., description="Society ID")
+    flat_no: str = Field(..., description="Flat number, e.g. A-101")
+    flat_id: Optional[str] = Field(default=None, description="Optional legacy flat ID")
+    visitor_type: str = Field(default="GUEST", description="Visitor type shown in notification")
+    visitor_phone: str = Field(default="9999999999", description="Visitor phone shown in notification")
+    visitor_id: Optional[str] = Field(default=None, description="Optional visitor id for payload")
+
+
 # Flat Models
 class FlatResponse(BaseModel):
     """Flat information response"""

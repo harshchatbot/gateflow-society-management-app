@@ -37,8 +37,13 @@ def _initialize_firebase():
         return
 
     try:
-        # Try to initialize with service account file
-        cred_path = os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH", "firebase_service_account.json")
+        # Try to initialize with service account file.
+        # Support both env vars used across this codebase.
+        cred_path = (
+            os.getenv("FIREBASE_SERVICE_ACCOUNT_PATH")
+            or os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+            or "firebase_service_account.json"
+        )
         
         # Check if already initialized (Firebase Admin SDK doesn't allow re-initialization)
         try:
@@ -55,12 +60,12 @@ def _initialize_firebase():
             cred = credentials.Certificate(cred_path)
             initialize_app(credential=cred)
             _firebase_initialized = True
-            logger.info("Firebase Admin SDK initialized successfully")
+            logger.info(f"Firebase Admin SDK initialized successfully using: {cred_path}")
         else:
             logger.warning(
                 f"Firebase service account file not found at {cred_path}. "
                 "Push notifications will be disabled. "
-                "Set FIREBASE_SERVICE_ACCOUNT_PATH in .env to enable notifications."
+                "Set FIREBASE_SERVICE_ACCOUNT_PATH or GOOGLE_APPLICATION_CREDENTIALS."
             )
     except ValueError as ve:
         # Firebase already initialized (this is fine)

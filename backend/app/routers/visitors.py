@@ -13,6 +13,7 @@ from app.models.schemas import (
     VisitorCreateRequest,
     VisitorResponse,
     VisitorListResponse,
+    VisitorNotificationTestRequest,
 )
 from app.services.visitor_service import get_visitor_service
 
@@ -23,6 +24,7 @@ from app.models.schemas import VisitorStatusUpdateRequest
 
 # ✅ WhatsApp service (best-effort send, non-breaking)
 from app.services.whatsapp_service import get_whatsapp_service
+from app.services.notification_service import get_notification_service
 
 logger = logging.getLogger(__name__)
 
@@ -271,6 +273,85 @@ async def create_visitor_with_photo(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to create visitor entry with photo: {str(e)}",
         )
+
+
+@router.post(
+    "/test-notification",
+    status_code=status.HTTP_200_OK,
+    summary="Send test visitor push notification",
+    description="""
+    Sends a sample visitor notification to resident visitor topics for quick mobile push validation.
+
+    Sends to:
+    - canonical: flat_{society_id}_{flat_no}
+    - legacy: flat_{flat_id} (if flat_id provided)
+    """,
+)
+async def test_visitor_notification(request: VisitorNotificationTestRequest):
+    try:
+        society_id = request.society_id.strip()
+        flat_no = request.flat_no.strip().upper()
+        flat_id = (request.flat_id or "").strip()
+        visitor_type = request.visitor_type.strip().upper()
+        visitor_phone = request.visitor_phone.strip()
+        visitor_id = (request.visitor_id or str(uuid.uuid4())).strip()
+
+        if not society_id:
+            raise HTTPException(status_code=400, detail="society_id is required")
+        if not flat_no:
+            raise HTTPException(status_code=400, detail="flat_no is required")
+
+        svc = get_notification_service()
+        canonical_topic = f"flat_{society_id}_{flat_no}"
+        topics = [canonical_topic]
+        if flat_id:
+            legacy_topic = f"flat_{flat_id}"
+            if legacy_topic != canonical_topic:
+                topics.append(legacy_topic)
+
+        payload = {
+            "type": "visitor",
+            "visitor_id": visitor_id,
+            "society_id": society_id,
+            "flat_id": flat_id,
+            "flat_no": flat_no,
+            "visitor_type": visitor_type,
+            "status": "PENDING",
+        }
+
+        topic_results = {}
+        sent_any = False
+        for topic in topics:
+            ok = svc.send_to_topic(
+                topic=topic,
+                title="Test: New Visitor Entry",
+                body=f"Visitor {visitor_type} at {flat_no}. Phone: {visitor_phone}",
+                data=payload,
+                sound="notification_sound",
+            )
+            topic_results[topic] = ok
+            sent_any = sent_any or ok
+
+        logger.info(
+            "VISITOR_TEST_PUSH | society_id=%s flat_no=%s topics=%s success=%s",
+            society_id,
+            flat_no,
+            topics,
+            sent_any,
+        )
+
+        return {
+            "ok": sent_any,
+            "visitor_id": visitor_id,
+            "topics": topic_results,
+            "payload_type": payload["type"],
+            "message": "Test notification attempted. Check mobile tray and app bell.",
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("VISITOR_TEST_PUSH_FAILED")
+        raise HTTPException(status_code=500, detail=f"Test push failed: {str(e)}")
 
 
 

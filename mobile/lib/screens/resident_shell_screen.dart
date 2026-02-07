@@ -60,12 +60,10 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
   Future<void> _subscribeToNotifications() async {
     try {
       final notificationService = NotificationService();
-      // Note: We need flat_id, but we only have flat_no
-      // For MVP, we'll subscribe to society topic only
-      // In production, you'd fetch flat_id from backend
       await notificationService.subscribeUserTopics(
         societyId: widget.societyId,
-        flatId: null, // TODO: Get flat_id from backend
+        // Use flat label/key for visitor-entry topic subscription.
+        flatId: widget.flatNo.trim().toUpperCase(),
         role: "resident",
       );
     } catch (e) {

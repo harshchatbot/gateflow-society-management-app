@@ -2,14 +2,14 @@ from typing import List
 from firebase_admin import firestore
 from app.services.firebase_admin import get_db
 
-db = get_db()
-
 class UnitService:
     @staticmethod
     def bulk_create_units(
         society_id: str,
         units: List[dict],
     ):
+        db = get_db()
+
         if not units:
             raise ValueError("Units list cannot be empty")
 
