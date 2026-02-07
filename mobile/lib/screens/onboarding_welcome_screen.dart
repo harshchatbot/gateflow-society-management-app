@@ -344,12 +344,12 @@ class _BlinkingMascotState extends State<_BlinkingMascot> {
       width: 176,
       height: 176,
       child: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 90),
+        duration: const Duration(milliseconds: 60),
         switchInCurve: Curves.easeInOut,
         switchOutCurve: Curves.easeInOut,
         child: Image.asset(
           _eyesClosed
-              ? 'assets/mascot/senti_eyes_closed.png'
+              ? 'assets/mascot/senti_namaste_eyez_closed.png'
               : 'assets/mascot/senti_namaste.png',
           key: ValueKey<bool>(_eyesClosed),
           fit: BoxFit.contain,

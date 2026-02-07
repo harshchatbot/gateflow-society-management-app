@@ -318,6 +318,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _loadNotificationCount() async {
     try {
       int totalCount = 0;
+      int openSosCount = 0;
 
       // Count pending complaints (only if module enabled)
       if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
@@ -372,9 +373,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         totalCount += signupsResult.data!.length;
       }
 
+      // Count open SOS (only if module enabled)
+      if (SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+        final sosList = await _firestore.getSosRequests(societyId: widget.societyId);
+        openSosCount = sosList.where((s) {
+          final status = (s['status'] ?? 'OPEN').toString().toUpperCase();
+          return status == 'OPEN';
+        }).length;
+        totalCount += openSosCount;
+      }
+
       if (mounted) {
         setState(() {
           _notificationCount = totalCount;
+          _sosBadgeCount = openSosCount > 0 ? 1 : 0;
         });
       }
     } catch (e) {
@@ -652,13 +664,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       children: [
                         DashboardHero(
                           userName: widget.adminName,
-                          statusMessage: (_notificationCount + _sosBadgeCount) >
-                                  0
-                              ? '${_notificationCount + _sosBadgeCount} item(s) need attention'
+                          statusMessage: _notificationCount > 0
+                              ? '${_notificationCount} item(s) need attention'
                               : 'Society overview',
                           mascotMood: _sosBadgeCount > 0
                               ? SentiMood.warning
-                              : ((_notificationCount + _sosBadgeCount) > 0
+                              : (_notificationCount > 0
                                   ? SentiMood.alert
                                   : SentiMood.idle),
                           avatar: CircleAvatar(
@@ -681,8 +692,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               ),
                               Builder(
                                 builder: (context) {
-                                  final totalBadgeCount =
-                                      _notificationCount + _sosBadgeCount;
+                                  final totalBadgeCount = _notificationCount;
                                   if (totalBadgeCount <= 0)
                                     return const SizedBox.shrink();
                                   return Positioned(

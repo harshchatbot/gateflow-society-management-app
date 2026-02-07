@@ -580,13 +580,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                           itemCount: _notifications.length,
                           itemBuilder: (context, index) {
                             final notification = _notifications[index];
-
-                            return InkWell(
-                              onTap: () {
-                                widget.onNotificationTap?.call(notification);
-                              },
-                              child: _buildNotificationItem(notification),
-                            );
+                            return _buildNotificationItem(notification);
                           },
                         ),
                       ),

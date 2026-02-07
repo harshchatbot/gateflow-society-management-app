@@ -31,7 +31,13 @@ class _AuthRouterState extends State<AuthRouter> {
 
   Future<void> _route() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
+    if (user == null) {
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
+      );
+      return;
+    }
 
     // ✅ Gate check (also returns memberInfo if available)
     final gate = SessionGateService();

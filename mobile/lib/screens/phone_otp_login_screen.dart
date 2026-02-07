@@ -664,7 +664,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
     if (r == 'admin')
       return 'assets/illustrations/illustration_login_admin.png';
     if (r == 'guard') return 'assets/illustrations/guard_login.png';
-    return 'assets/illustrations/resident_login.png';
+    return 'assets/illustrations/illustration_login_resident.png';
   }
 
   IconData get _heroFallbackIcon {
