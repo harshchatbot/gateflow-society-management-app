@@ -399,6 +399,17 @@ service cloud.firestore {
       allow list: if false;
     }
 
+    match /states/{stateId} {
+      allow read: if true;
+      allow write: if false;
+
+      match /cities/{cityId} {
+        allow read: if true;
+        allow write: if false;
+      }
+    }
+
+
     // Default deny everything else (KEEP THIS LAST)
     match /{document=**} {
       allow read, write: if false;

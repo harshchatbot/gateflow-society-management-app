@@ -729,7 +729,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             ),
             const SizedBox(height: 20),
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
                 color: theme.scaffoldBackgroundColor,
                 borderRadius: BorderRadius.circular(16),
@@ -737,47 +737,30 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               ),
               child: Row(
                 children: [
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Text(
-                        "Create society",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 2,
-                      ),
-                      selected: _isCreatingSociety,
-                      onSelected: (v) {
-                        setState(() {
-                          _isCreatingSociety = true;
-                          _selectedRole = "SUPER_ADMIN";
-                        });
-                      },
+                  Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.primary.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.apartment_rounded,
+                      color: theme.colorScheme.primary,
+                      size: 20,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Expanded(
-                    child: ChoiceChip(
-                      label: const Text(
-                        "Join society",
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 2,
+                    child: Text(
+                      _isCreatingSociety
+                          ? "Create society mode"
+                          : "Join society mode",
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: theme.colorScheme.onSurface,
                       ),
-                      selected: !_isCreatingSociety,
-                      onSelected: (v) {
-                        setState(() {
-                          _isCreatingSociety = false;
-                          if (_selectedRole == "SUPER_ADMIN") {
-                            _selectedRole = "ADMIN";
-                          }
-                        });
-                      },
                     ),
                   ),
                 ],
@@ -799,12 +782,20 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                 },
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: _buildStateDropdown(theme)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildCityDropdown(theme)),
-                ],
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: theme.scaffoldBackgroundColor.withOpacity(0.6),
+                  borderRadius: BorderRadius.circular(18),
+                  border: Border.all(color: theme.dividerColor.withOpacity(0.9)),
+                ),
+                child: Column(
+                  children: [
+                    _buildStateDropdown(theme),
+                    const SizedBox(height: 12),
+                    _buildCityDropdown(theme),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
             ],
@@ -1108,6 +1099,11 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           child: DropdownButtonFormField<String>(
             value: _selectedState,
             isExpanded: true,
+            menuMaxHeight: 320,
+            borderRadius: BorderRadius.circular(16),
+            dropdownColor: theme.colorScheme.surface,
+            icon: Icon(Icons.keyboard_arrow_down_rounded,
+                color: theme.colorScheme.primary),
             decoration: InputDecoration(
               border: InputBorder.none,
               contentPadding:
@@ -1128,15 +1124,34 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                       value: st['name'],
                       child: Text(
                         st['name'] ?? '',
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.fade,
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                           color: theme.colorScheme.onSurface,
                         ),
                       ),
                     ))
                 .toList(),
+            selectedItemBuilder: (context) {
+              return _stateOptions.map((st) {
+                return Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    st['name'] ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                );
+              }).toList();
+            },
             validator: (value) {
               if (_isCreatingSociety && (value == null || value.isEmpty)) {
                 return "Please select State";
@@ -1195,6 +1210,11 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           child: DropdownButtonFormField<String>(
             value: _selectedCity,
             isExpanded: true,
+            menuMaxHeight: 320,
+            borderRadius: BorderRadius.circular(16),
+            dropdownColor: theme.colorScheme.surface,
+            icon: Icon(Icons.keyboard_arrow_down_rounded,
+                color: theme.colorScheme.primary),
             decoration: InputDecoration(
               border: InputBorder.none,
               contentPadding:
@@ -1215,15 +1235,34 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                       value: city['name'],
                       child: Text(
                         city['name'] ?? '',
-                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        softWrap: false,
+                        overflow: TextOverflow.fade,
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                           color: theme.colorScheme.onSurface,
                         ),
                       ),
                     ))
                 .toList(),
+            selectedItemBuilder: (context) {
+              return _cityOptions.map((city) {
+                return Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    city['name'] ?? '',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                );
+              }).toList();
+            },
             validator: (value) {
               if (_isCreatingSociety && (value == null || value.isEmpty)) {
                 return "Please select City";
