@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../core/session_gate_service.dart';
 import 'phone_otp_login_screen.dart';
 import 'how_sentinel_works_screen.dart';
@@ -189,6 +190,19 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                     const SizedBox(height: 32),
                   ],
                 ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Text(
+                'Made with ❤️ in Rajasthan, India',
+                style: GoogleFonts.outfit(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: theme.colorScheme.onSurface.withOpacity(0.85),
+                  letterSpacing: 0.25,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
           ],

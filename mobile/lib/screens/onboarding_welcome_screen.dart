@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../ui/app_colors.dart';
@@ -222,10 +224,16 @@ class _QuoteOfTheDayBubble extends StatefulWidget {
 
 class _QuoteOfTheDayBubbleState extends State<_QuoteOfTheDayBubble>
     with SingleTickerProviderStateMixin {
+  static const String _titleText = 'Hey, I am Senti';
+
   late final AnimationController _aliveController;
   late final Animation<double> _bubbleLift;
   late final Animation<double> _bubbleScale;
   late final Animation<double> _titlePulse;
+
+  Timer? _typeTimer;
+  String _typedTitle = '';
+  int _titleIndex = 0;
 
   @override
   void initState() {
@@ -244,10 +252,32 @@ class _QuoteOfTheDayBubbleState extends State<_QuoteOfTheDayBubble>
     _titlePulse = Tween<double>(begin: 0.88, end: 1).animate(
       CurvedAnimation(parent: _aliveController, curve: Curves.easeInOut),
     );
+
+    _scheduleTypingTick(const Duration(milliseconds: 420));
+  }
+
+  void _scheduleTypingTick(Duration delay) {
+    _typeTimer?.cancel();
+    _typeTimer = Timer(delay, _onTypingTick);
+  }
+
+  void _onTypingTick() {
+    if (!mounted) return;
+
+    if (_titleIndex < _titleText.length) {
+      setState(() {
+        _titleIndex += 1;
+        _typedTitle = _titleText.substring(0, _titleIndex);
+      });
+      _scheduleTypingTick(const Duration(milliseconds: 80));
+    } else {
+      _typeTimer?.cancel();
+    }
   }
 
   @override
   void dispose() {
+    _typeTimer?.cancel();
     _aliveController.dispose();
     super.dispose();
   }
@@ -263,6 +293,8 @@ class _QuoteOfTheDayBubbleState extends State<_QuoteOfTheDayBubble>
             final quote = snapshot.hasData && snapshot.data!.isNotEmpty
                 ? snapshot.data!
                 : kPlaceholderQuote;
+            final showCursor = _typedTitle.length < _titleText.length;
+
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -277,72 +309,11 @@ class _QuoteOfTheDayBubbleState extends State<_QuoteOfTheDayBubble>
                       ),
                     );
                   },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(32),
-                        topRight: Radius.circular(32),
-                        bottomLeft: Radius.circular(32),
-                        bottomRight: Radius.circular(32),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 24,
-                          offset: const Offset(0, 8),
-                          spreadRadius: 0,
-                        ),
-                        BoxShadow(
-                          color: AppColors.primary.withOpacity(0.06),
-                          blurRadius: 18,
-                          offset: const Offset(0, 2),
-                          spreadRadius: -2,
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AnimatedBuilder(
-                          animation: _aliveController,
-                          builder: (context, child) => Opacity(
-                            opacity: _titlePulse.value,
-                            child: child,
-                          ),
-                          child: Text(
-                            'Hey, I am Senti',
-                            style: GoogleFonts.outfit(
-                              fontSize: 17,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.primary,
-                              height: 1.3,
-                              letterSpacing: 0.2,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        AnimatedDefaultTextStyle(
-                          duration: const Duration(milliseconds: 700),
-                          curve: Curves.easeInOut,
-                          style: GoogleFonts.outfit(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: AppColors.text2,
-                            height: 1.45,
-                            letterSpacing: 0.15,
-                          ),
-                          child: Text(
-                            quote,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
+                  child: _SentiCloudBubble(
+                    title: _typedTitle,
+                    showCursor: showCursor,
+                    cursorOpacity: _titlePulse.value,
+                    quote: quote,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -354,6 +325,175 @@ class _QuoteOfTheDayBubbleState extends State<_QuoteOfTheDayBubble>
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+class _SentiCloudBubble extends StatelessWidget {
+  final String title;
+  final bool showCursor;
+  final double cursorOpacity;
+  final String quote;
+
+  const _SentiCloudBubble({
+    required this.title,
+    required this.showCursor,
+    required this.cursorOpacity,
+    required this.quote,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: Stack(
+        alignment: Alignment.topCenter,
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            top: 0,
+            left: 28,
+            child: _cloudPuff(36),
+          ),
+          Positioned(
+            top: -6,
+            left: 86,
+            child: _cloudPuff(52),
+          ),
+          Positioned(
+            top: -12,
+            left: 150,
+            right: 150,
+            child: _cloudPuff(60),
+          ),
+          Positioned(
+            top: -6,
+            right: 86,
+            child: _cloudPuff(52),
+          ),
+          Positioned(
+            top: 0,
+            right: 28,
+            child: _cloudPuff(36),
+          ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(32),
+            child: Container(
+              margin: const EdgeInsets.only(top: 18),
+              padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(32),
+                border: Border.all(
+                  color: AppColors.primary.withOpacity(0.08),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 24,
+                    offset: const Offset(0, 8),
+                  ),
+                  BoxShadow(
+                    color: AppColors.primary.withOpacity(0.05),
+                    blurRadius: 16,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.fade,
+                          softWrap: false,
+                          style: GoogleFonts.outfit(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.primary,
+                            height: 1.3,
+                            letterSpacing: 0.2,
+                          ),
+                        ),
+                      ),
+                      if (showCursor)
+                        Opacity(
+                          opacity: cursorOpacity,
+                          child: Padding(
+                            padding: const EdgeInsets.only(left: 2),
+                            child: Text(
+                              '|',
+                              style: GoogleFonts.outfit(
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800,
+                                color: AppColors.primary,
+                                height: 1.2,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  AnimatedDefaultTextStyle(
+                    duration: const Duration(milliseconds: 700),
+                    curve: Curves.easeInOut,
+                    style: GoogleFonts.outfit(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.text2,
+                      height: 1.45,
+                      letterSpacing: 0.15,
+                    ),
+                    child: Text(
+                      quote,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: -8,
+            left: 44,
+            child: _cloudPuff(18),
+          ),
+          Positioned(
+            bottom: -18,
+            left: 26,
+            child: _cloudPuff(10),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _cloudPuff(double size) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        border:
+            Border.all(color: AppColors.primary.withOpacity(0.08), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.025),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
     );
   }
