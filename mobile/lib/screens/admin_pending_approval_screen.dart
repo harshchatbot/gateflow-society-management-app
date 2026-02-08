@@ -18,6 +18,14 @@ class AdminPendingApprovalScreen extends StatelessWidget {
   /// - legacy: email
   /// - OTP: phone in this field
   final String? email;
+  final String? title;
+  final String? badgeText;
+  final String? message;
+  final String? timelineStep1Subtitle;
+  final String? timelineStep2Title;
+  final String? timelineStep2Subtitle;
+  final String? timelineStep3Subtitle;
+  final String? tipText;
 
   const AdminPendingApprovalScreen({
     super.key,
@@ -25,6 +33,14 @@ class AdminPendingApprovalScreen extends StatelessWidget {
     required this.adminId,
     required this.adminName,
     this.email,
+    this.title,
+    this.badgeText,
+    this.message,
+    this.timelineStep1Subtitle,
+    this.timelineStep2Title,
+    this.timelineStep2Subtitle,
+    this.timelineStep3Subtitle,
+    this.tipText,
   });
 
   bool _looksLikePhone(String value) {
@@ -139,7 +155,7 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 22),
                     Text(
-                      "Pending Approval",
+                      title ?? "Pending Approval",
                       style: TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.w900,
@@ -164,7 +180,7 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                           Icon(Icons.shield_rounded, color: cs.primary, size: 18),
                           const SizedBox(width: 8),
                           Text(
-                            "Waiting for Super Admin approval",
+                            badgeText ?? "Waiting for Super Admin approval",
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
@@ -176,7 +192,8 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      "Hi ${adminName.isNotEmpty ? adminName : 'Admin'}, your admin access request has been submitted.\nYou’ll be able to login once it’s approved.",
+                      message ??
+                          "Hi ${adminName.isNotEmpty ? adminName : 'Admin'}, your admin access request has been submitted.\nYou’ll be able to login once it’s approved.",
                       style: TextStyle(
                         fontSize: 15,
                         color: cs.onSurface.withOpacity(0.72),
@@ -186,7 +203,12 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 26),
-                    const _TimelineCard(),
+                    _TimelineCard(
+                      step1Subtitle: timelineStep1Subtitle,
+                      step2Title: timelineStep2Title,
+                      step2Subtitle: timelineStep2Subtitle,
+                      step3Subtitle: timelineStep3Subtitle,
+                    ),
                     const SizedBox(height: 18),
                     Container(
                       padding: const EdgeInsets.all(18),
@@ -293,7 +315,7 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      "Tip: If it takes too long, contact your Super Admin.",
+                      tipText ?? "Tip: If it takes too long, contact your Super Admin.",
                       style: TextStyle(
                         color: cs.onSurface.withOpacity(0.68),
                         fontWeight: FontWeight.w600,
@@ -313,7 +335,17 @@ class AdminPendingApprovalScreen extends StatelessWidget {
 }
 
 class _TimelineCard extends StatelessWidget {
-  const _TimelineCard();
+  final String? step1Subtitle;
+  final String? step2Title;
+  final String? step2Subtitle;
+  final String? step3Subtitle;
+
+  const _TimelineCard({
+    this.step1Subtitle,
+    this.step2Title,
+    this.step2Subtitle,
+    this.step3Subtitle,
+  });
 
   Widget _step({
     required BuildContext context,
@@ -394,7 +426,8 @@ class _TimelineCard extends StatelessWidget {
             context: context,
             icon: Icons.task_alt_rounded,
             title: "Request submitted",
-            subtitle: "We’ve shared your admin request with the Super Admin.",
+            subtitle: step1Subtitle ??
+                "We’ve shared your admin request with the Super Admin.",
             done: true,
           ),
           const SizedBox(height: 14),
@@ -403,8 +436,9 @@ class _TimelineCard extends StatelessWidget {
           _step(
             context: context,
             icon: Icons.verified_user_rounded,
-            title: "Approval pending",
-            subtitle: "Super Admin will review and approve your access.",
+            title: step2Title ?? "Approval pending",
+            subtitle: step2Subtitle ??
+                "Super Admin will review and approve your access.",
             done: false,
           ),
           const SizedBox(height: 14),
@@ -414,7 +448,8 @@ class _TimelineCard extends StatelessWidget {
             context: context,
             icon: Icons.login_rounded,
             title: "Login enabled",
-            subtitle: "Once approved, you can login and manage your society.",
+            subtitle: step3Subtitle ??
+                "Once approved, you can login and manage your society.",
             done: false,
           ),
         ],

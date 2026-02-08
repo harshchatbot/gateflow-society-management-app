@@ -12,6 +12,7 @@ import logging
 
 from app.routers import whatsapp_webhook
 from app.routers import admin_units
+from app.routers import society_requests
 
 
 logger = logging.getLogger() 
@@ -46,6 +47,7 @@ app.include_router(admins.router )
 app.include_router(complaints.router )
 app.include_router(notices.router )
 app.include_router(admin_units.router)
+app.include_router(society_requests.router)
 
 @app.get("/")
 async def root():

@@ -34,91 +34,98 @@ class _OnboardingWelcomeScreenState extends State<OnboardingWelcomeScreen> {
         child: LayoutBuilder(
           builder: (context, constraints) {
             return SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
               child: ConstrainedBox(
                 constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: IntrinsicHeight(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 32),
-                      const _IllustrationPlaceholder(
-                        assetPath:
-                            'assets/illustrations/illustration_welcome.png',
-                        semanticLabel: 'Person at desk',
-                      ),
-                      const SizedBox(height: 40),
-                      Text(
-                        'Welcome to Sentinel',
-                        style: GoogleFonts.outfit(
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                          color: AppColors.text,
-                          letterSpacing: -0.6,
-                          height: 1.2,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      children: [
+                        const SizedBox(height: 32),
+                        const _IllustrationPlaceholder(
+                          assetPath:
+                              'assets/illustrations/illustration_welcome.png',
+                          semanticLabel: 'Person at desk',
                         ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Secure Society Management',
-                        style: GoogleFonts.outfit(
-                          fontSize: 16,
-                          color: AppColors.text2,
-                          fontWeight: FontWeight.w500,
-                          letterSpacing: 0.2,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 14),
-                      const _TrustStrip(),
-                      const SizedBox(height: 24),
-                      const Spacer(),
-                      _QuoteOfTheDayBubble(quoteFuture: _quoteFuture),
-                      const SizedBox(height: 24),
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 56,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              Navigator.of(context).pushReplacement(
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      const OnboardingChooseRoleScreen(),
-                                ),
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.primary,
-                              foregroundColor: Colors.white,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              textStyle: GoogleFonts.outfit(
-                                fontSize: 17,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.3,
-                              ),
-                            ),
-                            child: const Text('Get Started'),
-                          ),
-                        ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 20),
-                        child: Text(
-                          'Made with ❤️ in Rajasthan, India',
+                        const SizedBox(height: 40),
+                        Text(
+                          'Welcome to Sentinel',
                           style: GoogleFonts.outfit(
-                            fontSize: 13,
+                            fontSize: 28,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.text,
+                            letterSpacing: -0.6,
+                            height: 1.2,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Secure Society Management',
+                          style: GoogleFonts.outfit(
+                            fontSize: 16,
+                            color: AppColors.text2,
                             fontWeight: FontWeight.w500,
-                            color: AppColors.text2.withOpacity(0.85),
-                            letterSpacing: 0.25,
+                            letterSpacing: 0.2,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 14),
+                        const _TrustStrip(),
+                        const SizedBox(height: 24),
+                        _QuoteOfTheDayBubble(quoteFuture: _quoteFuture),
+                      ],
+                    ),
+                    Column(
+                      children: [
+                        const SizedBox(height: 24),
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 24, 24, 20),
+                          child: SizedBox(
+                            width: double.infinity,
+                            height: 56,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                Navigator.of(context).pushReplacement(
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        const OnboardingChooseRoleScreen(),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.primary,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                textStyle: GoogleFonts.outfit(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.3,
+                                ),
+                              ),
+                              child: const Text('Get Started'),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 20),
+                          child: Text(
+                            'Made with ❤️ in Rajasthan, India',
+                            style: GoogleFonts.outfit(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: AppColors.text2.withOpacity(0.85),
+                              letterSpacing: 0.25,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             );

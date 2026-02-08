@@ -9,8 +9,6 @@ import 'package:flutter/foundation.dart';
 import '../core/app_logger.dart';
 import 'firebase_auth_service.dart';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 /// FirestoreService - Multi-tenant Firestore operations
 ///
 /// All operations are scoped to societies/{societyId}/...
@@ -311,6 +309,55 @@ class FirestoreService {
       return societyData;
     } catch (e, stackTrace) {
       AppLogger.e('Error creating society', error: e, stackTrace: stackTrace);
+      rethrow;
+    }
+  }
+
+  /// Submit moderated society creation request.
+  /// Returns generated request id.
+  Future<String> createSocietyCreationRequest({
+    required String proposedSocietyId,
+    required String proposedCode,
+    required String proposedName,
+    String? city,
+    String? state,
+    required String requesterUid,
+    required String requesterName,
+    String? requesterEmail,
+    String? requesterPhone,
+  }) async {
+    try {
+      final now = FieldValue.serverTimestamp();
+      final requestRef = _firestore.collection('society_creation_requests').doc();
+      final code = proposedCode.trim().toUpperCase();
+      await requestRef.set({
+        'requestId': requestRef.id,
+        'requestedByUid': requesterUid,
+        'requesterName': requesterName,
+        'requesterEmail': (requesterEmail ?? '').trim(),
+        'requesterPhone': (requesterPhone ?? '').trim(),
+        'proposedSocietyId': proposedSocietyId.trim(),
+        'proposedCode': code,
+        'proposedName': proposedName.trim(),
+        'city': city,
+        'state': state,
+        'status': 'PENDING',
+        'createdAt': now,
+        'updatedAt': now,
+      });
+      AppLogger.i('Society creation request submitted', data: {
+        'requestId': requestRef.id,
+        'requestedByUid': requesterUid,
+        'proposedSocietyId': proposedSocietyId,
+        'proposedCode': code,
+      });
+      return requestRef.id;
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Error submitting society creation request',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }

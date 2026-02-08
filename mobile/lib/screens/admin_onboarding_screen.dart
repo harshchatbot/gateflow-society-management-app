@@ -7,14 +7,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/app_logger.dart';
 import '../core/env.dart';
-import '../core/storage.dart';
 import '../services/admin_service.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/invite_claim_service.dart';
 import '../services/invite_bulk_upload_service.dart';
 import '../ui/app_loader.dart';
-import 'admin_shell_screen.dart';
 import 'admin_login_screen.dart';
 import 'admin_pending_approval_screen.dart';
 
@@ -248,7 +246,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
       String societyId;
 
       if (_isCreatingSociety) {
-        // CREATE SOCIETY = SUPER_ADMIN bootstrap (after OTP verify)
+        // CREATE SOCIETY = moderated request (after OTP verify)
         final societyName = _societyNameController.text.trim();
         final city = _selectedCity;
         final state = _selectedState;
@@ -263,28 +261,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
 
         societyId = 'soc_${societyCode.toLowerCase()}';
 
-        await _firestore.createSociety(
-          societyId: societyId,
-          code: societyCode,
-          name: societyName,
-          city: city,
-          state: state,
-          createdByUid: uid,
-        );
-
-        // ✅ Create super admin member record with VERIFIED PHONE (authPhoneE164)
-        await _firestore.setMember(
-          societyId: societyId,
-          uid: uid,
-          systemRole: 'super_admin',
-          societyRole: _selectedRole.toLowerCase(),
-          name: adminName,
-          phone: authPhoneE164,
-          email: email,
-          active: true,
-        );
-
-        // ✅ Keep your legacy phone_index (safe)
+        // Keep phone pointers for account continuity while request is pending.
         if (authPhoneE164.isNotEmpty) {
           await FirebaseFirestore.instance
               .collection('phone_index')
@@ -292,55 +269,62 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               .set({
             'uid': uid,
             'societyId': societyId,
-            'systemRole': 'super_admin',
-            'active': true,
+            'systemRole': 'admin',
+            'active': false,
             'updatedAt': FieldValue.serverTimestamp(),
           }, SetOptions(merge: true));
-
-          // ✅ IMPORTANT: populate unique_phones (your real uniqueness system)
-          // Writes member phone + pointer phone + unique_phones hash doc
-          await _firestore.setMemberPhone(
-            societyId: societyId,
-            uid: uid,
-            normalizedE164: authPhoneE164,
-          );
         }
 
+        // Save root pointer as inactive admin until request gets approved.
         await _setRootPointer(
           uid: uid,
           societyId: societyId,
-          systemRole: 'super_admin',
-          active: true,
+          systemRole: 'admin',
+          active: false,
         );
 
-        // =========================================================
-// ✅ Publish society to public directory (SUPER_ADMIN only)
-// =========================================================
-        final now = FieldValue.serverTimestamp();
-        final normalizedCode = societyCode.trim().toUpperCase();
-
-        final publicSocietyData = {
-          'name': societyName,
-          'nameLower': societyName.toLowerCase(),
-          'code': normalizedCode,
-          'city': _selectedCity,
-          'state': _selectedState,
-          'active': true,
-          'createdAt': now,
-          'updatedAt': now,
-          'createdByUid': uid,
-        };
-
-        AppLogger.i('Publishing public_societies entry',
-            data: {'path': 'public_societies/$societyId'});
-
-        await FirebaseFirestore.instance
-            .collection('public_societies')
-            .doc(societyId)
-            .set(publicSocietyData);
+        await _firestore.createSocietyCreationRequest(
+          proposedSocietyId: societyId,
+          proposedCode: societyCode,
+          proposedName: societyName,
+          city: city,
+          state: state,
+          requesterUid: uid,
+          requesterName: adminName,
+          requesterEmail: email,
+          requesterPhone: authPhoneE164,
+        );
 
         _confettiController.play();
-        await Future.delayed(const Duration(milliseconds: 1200));
+        await Future.delayed(const Duration(milliseconds: 900));
+
+        if (!mounted) return;
+        if (mounted) setState(() => _isLoading = false);
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AdminPendingApprovalScreen(
+              adminId: uid,
+              societyId: societyId,
+              adminName: adminName.isNotEmpty ? adminName : 'Admin',
+              email: authPhoneE164.isNotEmpty ? authPhoneE164 : email,
+              title: "Society Setup Pending",
+              badgeText: "Waiting for Sentinel verification",
+              message:
+                  "Your request to create $societyName has been submitted. We’ll verify and activate your society soon.",
+              timelineStep1Subtitle:
+                  "We received your society creation request.",
+              timelineStep2Title: "Verification pending",
+              timelineStep2Subtitle:
+                  "Sentinel team will validate and approve your society.",
+              timelineStep3Subtitle:
+                  "Once approved, login is enabled with full super admin access.",
+              tipText:
+                  "You’ll receive access once your request is verified.",
+            ),
+          ),
+        );
+        return;
       } else {
         // ✅ JOIN SOCIETY: Admin requests access -> Pending approval
         final existingSocietyId =
@@ -415,62 +399,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
         return;
       }
 
-      // Step C: Save Firebase session
-      final systemRoleForSession = _isCreatingSociety ? 'super_admin' : 'admin';
-
-      await Storage.saveFirebaseSession(
-        uid: uid,
-        societyId: societyId,
-        systemRole: systemRoleForSession,
-        societyRole: _selectedRole,
-        name: adminName,
-      );
-
-      AppLogger.i("Admin onboarding successful", data: {
-        'uid': uid,
-        'societyId': societyId,
-        'systemRole': systemRoleForSession,
-      });
-
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle_rounded,
-                  color: Theme.of(context).colorScheme.onPrimary, size: 20),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  "Account created successfully!",
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: Theme.of(context).colorScheme.primary,
-          behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          margin: const EdgeInsets.all(16),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => AdminShellScreen(
-            adminId: uid,
-            adminName: adminName,
-            societyId: societyId,
-            role: _selectedRole,
-            systemRole: systemRoleForSession,
-          ),
-        ),
-      );
     } catch (e, stackTrace) {
       AppLogger.e("Admin onboarding exception",
           error: e, stackTrace: stackTrace);

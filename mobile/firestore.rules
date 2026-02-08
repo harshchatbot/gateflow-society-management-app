@@ -52,17 +52,34 @@ service cloud.firestore {
 
       allow create: if signedIn()
         && request.resource.data.uid == uid
+        && (request.resource.data.systemRole != "super_admin" || isSuperAdminOfSociety(request.resource.data.societyId))
         && request.resource.data.systemRole in ["admin", "super_admin", "guard", "resident"]
         && (request.resource.data.active == true || request.resource.data.active == false)
         && request.resource.data.societyId is string
         && (
-          request.auth.uid == uid
+          (
+            request.auth.uid == uid
+            && (
+              request.resource.data.systemRole in ["admin", "guard", "resident"]
+              || (
+                request.resource.data.systemRole == "super_admin"
+                && isSuperAdminOfSociety(request.resource.data.societyId)
+              )
+            )
+          )
           || isAdminOfSociety(request.resource.data.societyId)
           || isSuperAdminOfSociety(request.resource.data.societyId)
         );
 
-      allow update: if signedIn() && (
-        request.auth.uid == uid
+      allow update: if signedIn()
+        && (request.resource.data.systemRole != "super_admin" || isSuperAdminOfSociety(request.resource.data.societyId))
+        && (
+        (
+          request.auth.uid == uid
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.societyId == resource.data.societyId
+          && request.resource.data.systemRole == resource.data.systemRole
+        )
         || (
           (resource.data.societyId is string && (isAdminOfSociety(resource.data.societyId) || isSuperAdminOfSociety(resource.data.societyId)))
           || (request.resource.data.societyId is string && (isAdminOfSociety(request.resource.data.societyId) || isSuperAdminOfSociety(request.resource.data.societyId)))
@@ -132,7 +149,7 @@ service cloud.firestore {
     // ------------------------
     match /societies/{societyId} {
 
-      allow create: if signedIn()
+      allow create: if isGlobalSuperAdmin()
         && request.resource.data.createdByUid == request.auth.uid
         && request.resource.data.active == true;
 
@@ -363,11 +380,48 @@ service cloud.firestore {
       }
     }
 
+    // Society creation requests (moderated):
+    // Normal users can submit; only global super admins can review/approve/reject.
+    match /society_creation_requests/{requestId} {
+      allow create: if signedIn()
+        && request.resource.data.requestedByUid == request.auth.uid
+        && request.resource.data.status == "PENDING"
+        && request.resource.data.proposedCode is string
+        && request.resource.data.proposedName is string
+        && request.resource.data.proposedSocietyId is string;
+
+      allow get: if signedIn()
+        && (
+          resource.data.requestedByUid == request.auth.uid
+          || isGlobalSuperAdmin()
+        );
+
+      allow list: if isGlobalSuperAdmin();
+
+      // Requester may only edit proposal fields while still pending.
+      allow update: if (
+          signedIn()
+          && resource.data.requestedByUid == request.auth.uid
+          && resource.data.status == "PENDING"
+          && request.resource.data.status == "PENDING"
+          && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+            "proposedName",
+            "proposedCode",
+            "city",
+            "state",
+            "updatedAt"
+          ])
+        )
+        || isGlobalSuperAdmin();
+
+      allow delete: if false;
+    }
+
     // society code mapping for "join by code"
     match /societyCodes/{code} {
       allow read: if true;
 
-      allow create: if signedIn()
+      allow create: if isGlobalSuperAdmin()
         && request.resource.data.createdByUid == request.auth.uid
         && request.resource.data.active == true;
 
@@ -376,7 +430,13 @@ service cloud.firestore {
 
     // unique_phones/{phoneHash}
     match /unique_phones/{phoneHash} {
-      allow read, write: if signedIn();
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if false;
     }
 
     // Guard join codes
