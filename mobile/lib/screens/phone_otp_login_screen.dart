@@ -317,8 +317,6 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
                   error: e, stackTrace: st);
             }
           }
-
-  
         } catch (e, st) {
           AppLogger.e("JoinRequest lookup failed", error: e, stackTrace: st);
         }
@@ -335,17 +333,35 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
         final role = (widget.roleHint ?? 'resident').trim().toLowerCase();
 
         if (role == 'admin') {
-          final pendingSocietyRequest =
-              await _firestore.getPendingSocietyCreationRequestForUser(uid: uid);
+          final platformAdmin =
+              await _firestore.getPlatformAdminProfile(uid: uid);
+          final platformRole =
+              (platformAdmin?['role'] ?? platformAdmin?['systemRole'] ?? '')
+                  .toString()
+                  .toLowerCase();
+          final platformActive = platformAdmin?['active'] == true;
+          if (platformRole == 'super_admin' && platformActive) {
+            if (!mounted) return;
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (_) => PlatformSuperAdminConsoleScreen(
+                  adminName:
+                      (platformAdmin?['name'] ?? 'Platform Admin').toString(),
+                ),
+              ),
+            );
+            return;
+          }
+
+          final pendingSocietyRequest = await _firestore
+              .getPendingSocietyCreationRequestForUser(uid: uid);
           if (pendingSocietyRequest != null) {
             final requestedSocietyId =
                 (pendingSocietyRequest['proposedSocietyId'] ?? '')
                     .toString()
                     .trim();
             final requestedSocietyName =
-                (pendingSocietyRequest['proposedName'] ?? '')
-                    .toString()
-                    .trim();
+                (pendingSocietyRequest['proposedName'] ?? '').toString().trim();
             if (!mounted) return;
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
@@ -394,13 +410,23 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
             return;
           }
 
-          if (pointerRole == 'super_admin' && pointerActive) {
+          if (pointerRole == 'super_admin') {
+            AppLogger.w('Platform super admin profile missing',
+                data: {'uid': uid});
+            await FirebaseAuth.instance.signOut();
+            await Storage.clearFirebaseSession();
+            await Storage.clearAllSessions();
             if (!mounted) return;
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => PlatformSuperAdminConsoleScreen(
-                  adminName: (pointer?['name'] ?? 'Platform Admin').toString(),
-                ),
+                builder: (_) => const OnboardingChooseRoleScreen(),
+              ),
+            );
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text(
+                    'Super admin profile is not provisioned. Contact backend team.'),
+                behavior: SnackBarBehavior.floating,
               ),
             );
             return;
@@ -448,7 +474,8 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
           setState(() => _isLoading = false);
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
+            MaterialPageRoute(
+                builder: (_) => const OnboardingChooseRoleScreen()),
           );
 
           if (gateResult.userMessage != null) {

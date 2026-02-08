@@ -37,9 +37,12 @@ service cloud.firestore {
     // Used for privileged root collections like public_societies
     function isGlobalSuperAdmin() {
       return signedIn()
-        && exists(/databases/$(database)/documents/members/$(request.auth.uid))
-        && get(/databases/$(database)/documents/members/$(request.auth.uid)).data.systemRole == "super_admin"
-        && get(/databases/$(database)/documents/members/$(request.auth.uid)).data.active == true;
+        && exists(/databases/$(database)/documents/platform_admins/$(request.auth.uid))
+        && (
+          get(/databases/$(database)/documents/platform_admins/$(request.auth.uid)).data.role == "super_admin"
+          || get(/databases/$(database)/documents/platform_admins/$(request.auth.uid)).data.systemRole == "super_admin"
+        )
+        && get(/databases/$(database)/documents/platform_admins/$(request.auth.uid)).data.active == true;
     }
 
     
@@ -88,7 +91,7 @@ service cloud.firestore {
 
       // ✅ Update allowed:
       // Self can ONLY update those pointer fields (not role/society/active)
-      // Admin/global super admin can update (for management)
+      // Admin/global super admin can update non-identity fields only
       allow update: if signedIn()
         && (
           (
@@ -104,8 +107,19 @@ service cloud.firestore {
             && (!("systemRole" in resource.data) || request.resource.data.systemRole == resource.data.systemRole)
             && (!("active" in resource.data) || request.resource.data.active == resource.data.active)
           )
-          || isGlobalSuperAdmin()
-          || (resource.data.societyId is string && isAdminOfSociety(resource.data.societyId))
+          || (
+            isGlobalSuperAdmin()
+            && request.resource.data.uid == resource.data.uid
+            && (!("societyId" in resource.data) || request.resource.data.societyId == resource.data.societyId)
+            && (!("systemRole" in resource.data) || request.resource.data.systemRole == resource.data.systemRole)
+          )
+          || (
+            resource.data.societyId is string
+            && isAdminOfSociety(resource.data.societyId)
+            && request.resource.data.uid == resource.data.uid
+            && request.resource.data.societyId == resource.data.societyId
+            && request.resource.data.systemRole == resource.data.systemRole
+          )
         );
 
       allow delete: if false;
@@ -173,9 +187,7 @@ service cloud.firestore {
     // ------------------------
     match /societies/{societyId} {
 
-      allow create: if isGlobalSuperAdmin()
-        && request.resource.data.createdByUid == request.auth.uid
-        && request.resource.data.active == true;
+      allow create: if false;
 
       allow read: if activeMember(societyId);
 
@@ -445,9 +457,7 @@ service cloud.firestore {
     match /societyCodes/{code} {
       allow read: if true;
 
-      allow create: if isGlobalSuperAdmin()
-        && request.resource.data.createdByUid == request.auth.uid
-        && request.resource.data.active == true;
+      allow create: if false;
 
       allow update, delete: if false;
     }
@@ -494,6 +504,14 @@ service cloud.firestore {
 
       // Never allow listing all users' pointer docs
       allow list: if false;
+    }
+
+    // Platform-level super admins (global, not society-scoped).
+    // Clients can only read their own profile for routing; never write.
+    match /platform_admins/{uid} {
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list: if false;
+      allow create, update, delete: if false;
     }
 
     match /states/{stateId} {

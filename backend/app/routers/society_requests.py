@@ -37,12 +37,13 @@ def _require_super_admin_uid(authorization: Optional[str]) -> str:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token missing uid")
 
     db = get_db()
-    root_member = db.collection("members").document(uid).get()
-    if not root_member.exists:
+    platform_admin = db.collection("platform_admins").document(uid).get()
+    if not platform_admin.exists:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
 
-    data = root_member.to_dict() or {}
-    if data.get("systemRole") != "super_admin" or data.get("active") is not True:
+    data = platform_admin.to_dict() or {}
+    role = (data.get("role") or data.get("systemRole") or "").strip().lower()
+    if role != "super_admin" or data.get("active") is not True:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Super admin access required")
 
     return uid

@@ -233,7 +233,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           await _firestore.getPendingSocietyCreationRequestForUser(uid: uid);
       if (pendingSocietyRequest != null) {
         final requestedSocietyId =
-            (pendingSocietyRequest['proposedSocietyId'] ?? '').toString().trim();
+            (pendingSocietyRequest['proposedSocietyId'] ?? '')
+                .toString()
+                .trim();
         final requestedSocietyName =
             (pendingSocietyRequest['proposedName'] ?? '').toString().trim();
         if (!mounted) return;
@@ -247,9 +249,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   : 'pending_society',
               adminName: (pendingSocietyRequest['requesterName'] ?? 'Admin')
                   .toString(),
-              email:
-                  (pendingSocietyRequest['requesterPhone'] ?? _phoneController.text)
-                      .toString(),
+              email: (pendingSocietyRequest['requesterPhone'] ??
+                      _phoneController.text)
+                  .toString(),
               title: "Society Setup Pending",
               badgeText: "Waiting for Sentinel verification",
               message: requestedSocietyName.isNotEmpty
@@ -261,12 +263,43 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         return;
       }
 
+      final platformAdmin = await _firestore.getPlatformAdminProfile(uid: uid);
+      final platformRole =
+          (platformAdmin?['role'] ?? platformAdmin?['systemRole'] ?? '')
+              .toString()
+              .toLowerCase();
+      final platformActive = platformAdmin?['active'] == true;
+      if (platformRole == 'super_admin' && platformActive) {
+        if (!mounted) return;
+        await Storage.saveFirebaseSession(
+          uid: uid,
+          societyId: 'platform',
+          systemRole: 'super_admin',
+          societyRole:
+              (platformAdmin?['societyRole'] ?? 'SUPER_ADMIN').toString(),
+          name: (platformAdmin?['name'] ?? 'Platform Admin').toString(),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => PlatformSuperAdminConsoleScreen(
+              adminName:
+                  (platformAdmin?['name'] ?? 'Platform Admin').toString(),
+            ),
+          ),
+        );
+        return;
+      }
+
       final pointer = await _firestore.getRootMemberPointer(uid: uid);
-      final pointerRole = (pointer?['systemRole'] ?? '').toString().toLowerCase();
+      final pointerRole =
+          (pointer?['systemRole'] ?? '').toString().toLowerCase();
       final pointerActive = pointer?['active'] == true;
       final pointerSocietyId = (pointer?['societyId'] ?? '').toString().trim();
 
-      if (pointerRole == 'admin' && !pointerActive && pointerSocietyId.isNotEmpty) {
+      if (pointerRole == 'admin' &&
+          !pointerActive &&
+          pointerSocietyId.isNotEmpty) {
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
@@ -282,21 +315,21 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         return;
       }
 
-      if (pointerRole == 'super_admin' && pointerActive) {
+      if (pointerRole == 'super_admin') {
+        AppLogger.w('Platform super admin profile missing', data: {'uid': uid});
+        await FirebaseAuth.instance.signOut();
+        await Storage.clearFirebaseSession();
+        await Storage.clearAllSessions();
         if (!mounted) return;
-        await Storage.saveFirebaseSession(
-          uid: uid,
-          societyId: pointerSocietyId.isNotEmpty ? pointerSocietyId : 'platform',
-          systemRole: 'super_admin',
-          societyRole: (pointer?['societyRole'] ?? 'SUPER_ADMIN').toString(),
-          name: (pointer?['name'] ?? 'Platform Admin').toString(),
-        );
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (_) => PlatformSuperAdminConsoleScreen(
-              adminName: (pointer?['name'] ?? 'Platform Admin').toString(),
-            ),
+          MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Super admin profile is not provisioned. Contact backend team.'),
+            behavior: SnackBarBehavior.floating,
           ),
         );
         return;
@@ -325,7 +358,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     if (systemRole == 'super_admin') {
       await Storage.saveFirebaseSession(
         uid: uid,
-        societyId: (societyId == null || societyId.isEmpty) ? 'platform' : societyId,
+        societyId:
+            (societyId == null || societyId.isEmpty) ? 'platform' : societyId,
         systemRole: systemRole,
         societyRole: (societyRole ?? 'SUPER_ADMIN'),
         name: name,
@@ -494,7 +528,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Verifying Admin…"),
+          AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
+              show: _isLoading,
+              message: "Verifying Admin…"),
         ],
       ),
     );

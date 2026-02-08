@@ -128,7 +128,17 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
     required String systemRole,
     required bool active,
   }) async {
-    await FirebaseFirestore.instance.collection('members').doc(uid).set({
+    final ref = FirebaseFirestore.instance.collection('members').doc(uid);
+    final existing = await ref.get();
+    final existingData = existing.data() ?? <String, dynamic>{};
+    final existingRole =
+        (existingData['systemRole'] ?? '').toString().toLowerCase();
+    if (existingRole == 'super_admin' && systemRole.toLowerCase() != 'super_admin') {
+      // Safety: never downgrade platform super admin root pointer from onboarding flow.
+      return;
+    }
+
+    await ref.set({
       'uid': uid,
       'societyId': societyId,
       'systemRole': systemRole,

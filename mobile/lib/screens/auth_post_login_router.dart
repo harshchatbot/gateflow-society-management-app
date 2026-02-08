@@ -148,9 +148,13 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
       }
 
       if (systemRole == 'super_admin') {
-        final pointer = await _firestore.getRootMemberPointer(uid: user.uid);
-        final pointerActive = pointer?['active'] == true;
-        if (!pointerActive) {
+        final platform = await _firestore.getPlatformAdminProfile(uid: user.uid);
+        final active = platform?['active'] == true;
+        final role =
+            (platform?['role'] ?? platform?['systemRole'] ?? '')
+                .toString()
+                .toLowerCase();
+        if (!(active && role == 'super_admin')) {
           setState(() {
             _loading = false;
             _error = "Super admin account is inactive.";
@@ -160,7 +164,7 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => PlatformSuperAdminConsoleScreen(
-              adminName: (pointer?['name'] ?? 'Platform Admin').toString(),
+              adminName: (platform?['name'] ?? 'Platform Admin').toString(),
             ),
           ),
         );

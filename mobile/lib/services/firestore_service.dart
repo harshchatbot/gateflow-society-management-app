@@ -384,6 +384,28 @@ class FirestoreService {
     }
   }
 
+  Future<Map<String, dynamic>?> getPlatformAdminProfile({String? uid}) async {
+    final effectiveUid = uid ?? currentUid;
+    if (effectiveUid == null || effectiveUid.isEmpty) return null;
+    try {
+      final snap =
+          await _firestore.collection('platform_admins').doc(effectiveUid).get();
+      if (!snap.exists) return null;
+      final data = snap.data() ?? <String, dynamic>{};
+      return {
+        'uid': effectiveUid,
+        ...data,
+      };
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Error loading platform admin profile',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return null;
+    }
+  }
+
   Future<Map<String, dynamic>?> getPendingSocietyCreationRequestForUser({
     required String uid,
   }) async {
@@ -1078,6 +1100,26 @@ class FirestoreService {
     if (uid == null) return null;
 
     try {
+      // 0) Platform super admin root (global, not society-scoped)
+      final platformAdminDoc =
+          await _firestore.collection('platform_admins').doc(uid).get();
+      if (platformAdminDoc.exists) {
+        final platform = platformAdminDoc.data() ?? <String, dynamic>{};
+        final role =
+            (platform['role'] ?? platform['systemRole'] ?? '').toString().toLowerCase();
+        if (role == 'super_admin' && platform['active'] == true) {
+          return {
+            'uid': uid,
+            'societyId': 'platform',
+            'systemRole': 'super_admin',
+            'societyRole': (platform['societyRole'] ?? 'SUPER_ADMIN').toString(),
+            'active': true,
+            'name': (platform['name'] ?? 'Platform Admin').toString(),
+            ...platform,
+          };
+        }
+      }
+
       // 1) Read root pointer: members/{uid}
       final pointerDoc = await _firestore.collection('members').doc(uid).get();
 
@@ -1088,7 +1130,26 @@ class FirestoreService {
 
       final pointer = pointerDoc.data() ?? {};
 
-      final societyId = pointer['societyId']?.toString();
+      final pointerRole = (pointer['systemRole'] ?? '').toString().toLowerCase();
+      final pointerActive = pointer['active'] == true;
+      final pointerSocietyId = pointer['societyId']?.toString();
+
+      // Platform super admin can be global and may not have a society member doc.
+      if (pointerRole == 'super_admin' && pointerActive) {
+        return {
+          'uid': uid,
+          'societyId': (pointerSocietyId == null || pointerSocietyId.isEmpty)
+              ? 'platform'
+              : pointerSocietyId,
+          'systemRole': 'super_admin',
+          'societyRole': (pointer['societyRole'] ?? 'SUPER_ADMIN').toString(),
+          'active': true,
+          'name': (pointer['name'] ?? 'Platform Admin').toString(),
+          ...pointer,
+        };
+      }
+
+      final societyId = pointerSocietyId;
       if (societyId == null || societyId.isEmpty) {
         AppLogger.e('Membership pointer missing societyId', error: pointer);
         return null;
@@ -2520,7 +2581,17 @@ class FirestoreService {
     required String systemRole,
     bool active = true,
   }) async {
-    await FirebaseFirestore.instance.collection('members').doc(uid).set({
+    final ref = FirebaseFirestore.instance.collection('members').doc(uid);
+    final existing = await ref.get();
+    final existingData = existing.data() ?? <String, dynamic>{};
+    final existingRole =
+        (existingData['systemRole'] ?? '').toString().toLowerCase();
+    if (existingRole == 'super_admin' && systemRole.toLowerCase() != 'super_admin') {
+      // Never downgrade platform super admin from client-side pointer writes.
+      return;
+    }
+
+    await ref.set({
       'uid': uid,
       'societyId': societyId,
       'systemRole': systemRole,
@@ -2554,6 +2625,14 @@ class FirestoreService {
     required bool active,
   }) async {
     final ref = FirebaseFirestore.instance.collection('members').doc(uid);
+    final existing = await ref.get();
+    final existingData = existing.data() ?? <String, dynamic>{};
+    final existingRole =
+        (existingData['systemRole'] ?? '').toString().toLowerCase();
+    if (existingRole == 'super_admin' && systemRole.toLowerCase() != 'super_admin') {
+      // Guard: don't overwrite platform super admin with recovered admin pointer.
+      return;
+    }
 
     await ref.set({
       "uid": uid,
