@@ -94,7 +94,7 @@ flutter_launcher_icons:
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/images/app_icon_padded.png"
   # Extra padding so logo fits inside adaptive icon (default 16; higher = smaller logo)
-  adaptive_icon_foreground_inset: 16
+  adaptive_icon_foreground_inset: 20
   remove_alpha_ios: true
 
 flutter:

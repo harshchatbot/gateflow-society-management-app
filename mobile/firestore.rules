@@ -42,52 +42,76 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/members/$(request.auth.uid)).data.active == true;
     }
 
+    
     // ============================================
     // ROOT POINTER: members/{uid}
     // ============================================
     match /members/{uid} {
 
-      // NOTE: Kept as-is to avoid changing existing behavior
-      allow read: if signedIn();
+      // ✅ Read only: self OR global super admin OR society admin of that society
+      allow get: if signedIn()
+        && (
+          request.auth.uid == uid
+          || isGlobalSuperAdmin()
+          || (resource.data.societyId is string && isAdminOfSociety(resource.data.societyId))
+        );
 
+      // ✅ Never list root members (prevents leaking user directory/roles)
+      allow list: if false;
+
+      // ✅ Create allowed in two modes:
+      // Mode 1: Minimal doc (pending society request pointer) — used by createSocietyCreationRequest()
+      // Mode 2: Full pointer doc (legacy/normal pointer creation)
       allow create: if signedIn()
+        && request.auth.uid == uid
         && request.resource.data.uid == uid
-        && (request.resource.data.systemRole != "super_admin" || isSuperAdminOfSociety(request.resource.data.societyId))
-        && request.resource.data.systemRole in ["admin", "super_admin", "guard", "resident"]
-        && (request.resource.data.active == true || request.resource.data.active == false)
-        && request.resource.data.societyId is string
+        && (
+          // MODE 1: Pending society request pointer-only create
+          (
+            request.resource.data.keys().hasOnly([
+              "uid",
+              "pendingSocietyRequestId",
+              "pendingSocietyRequestStatus",
+              "updatedAt"
+            ])
+            && request.resource.data.pendingSocietyRequestId is string
+            && request.resource.data.pendingSocietyRequestStatus == "PENDING"
+          )
+          ||
+          // MODE 2: Full pointer create (existing behavior)
+          (
+            request.resource.data.systemRole in ["admin", "guard", "resident"]
+            && request.resource.data.societyId is string
+            && (request.resource.data.active == true || request.resource.data.active == false)
+          )
+        );
+
+      // ✅ Update allowed:
+      // Self can ONLY update those pointer fields (not role/society/active)
+      // Admin/global super admin can update (for management)
+      allow update: if signedIn()
         && (
           (
             request.auth.uid == uid
-            && (
-              request.resource.data.systemRole in ["admin", "guard", "resident"]
-              || (
-                request.resource.data.systemRole == "super_admin"
-                && isSuperAdminOfSociety(request.resource.data.societyId)
-              )
-            )
+            && request.resource.data.uid == resource.data.uid
+            && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+              "pendingSocietyRequestId",
+              "pendingSocietyRequestStatus",
+              "updatedAt"
+            ])
+            // Freeze sensitive fields if present
+            && (!("societyId" in resource.data) || request.resource.data.societyId == resource.data.societyId)
+            && (!("systemRole" in resource.data) || request.resource.data.systemRole == resource.data.systemRole)
+            && (!("active" in resource.data) || request.resource.data.active == resource.data.active)
           )
-          || isAdminOfSociety(request.resource.data.societyId)
-          || isSuperAdminOfSociety(request.resource.data.societyId)
+          || isGlobalSuperAdmin()
+          || (resource.data.societyId is string && isAdminOfSociety(resource.data.societyId))
         );
-
-      allow update: if signedIn()
-        && (request.resource.data.systemRole != "super_admin" || isSuperAdminOfSociety(request.resource.data.societyId))
-        && (
-        (
-          request.auth.uid == uid
-          && request.resource.data.uid == resource.data.uid
-          && request.resource.data.societyId == resource.data.societyId
-          && request.resource.data.systemRole == resource.data.systemRole
-        )
-        || (
-          (resource.data.societyId is string && (isAdminOfSociety(resource.data.societyId) || isSuperAdminOfSociety(resource.data.societyId)))
-          || (request.resource.data.societyId is string && (isAdminOfSociety(request.resource.data.societyId) || isSuperAdminOfSociety(request.resource.data.societyId)))
-        )
-      );
 
       allow delete: if false;
     }
+
+
 
     // Helpers for society membership under societies/{societyId}/members/{uid}
     function memberPath(societyId) {
