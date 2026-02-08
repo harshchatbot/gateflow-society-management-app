@@ -81,6 +81,59 @@ def list_pending_society_requests(
     }
 
 
+@router.get("/dashboard")
+def get_society_requests_dashboard(
+    authorization: Optional[str] = Header(default=None),
+):
+    _require_super_admin_uid(authorization)
+    db = get_db()
+
+    pending_items = []
+    for s in (
+        db.collection("society_creation_requests")
+        .where("status", "==", "PENDING")
+        .limit(100)
+        .stream()
+    ):
+        d = s.to_dict() or {}
+        d["id"] = s.id
+        pending_items.append(d)
+
+    total_societies = 0
+    active_societies = 0
+    recent_societies = []
+
+    for s in (
+        db.collection("societies")
+        .limit(200)
+        .stream()
+    ):
+        total_societies += 1
+        d = s.to_dict() or {}
+        if d.get("active") is True:
+            active_societies += 1
+        recent_societies.append({
+            "id": s.id,
+            "name": d.get("name"),
+            "code": d.get("code"),
+            "city": d.get("city"),
+            "state": d.get("state"),
+            "active": d.get("active") is True,
+            "createdAt": d.get("createdAt"),
+        })
+
+    return {
+        "ok": True,
+        "summary": {
+            "total_societies": total_societies,
+            "active_societies": active_societies,
+            "pending_requests": len(pending_items),
+        },
+        "pending_requests": pending_items,
+        "recent_societies": recent_societies[:20],
+    }
+
+
 @router.post("/approve")
 def approve_society_request(
     payload: ApproveSocietyRequestPayload,

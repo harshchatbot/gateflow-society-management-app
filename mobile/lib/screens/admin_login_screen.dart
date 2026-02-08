@@ -14,6 +14,7 @@ import 'admin_shell_screen.dart';
 import 'onboarding_choose_role_screen.dart';
 import 'admin_onboarding_screen.dart';
 import 'admin_pending_approval_screen.dart';
+import 'platform_super_admin_console_screen.dart';
 
 enum _OtpStep { phone, otp }
 
@@ -281,13 +282,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         return;
       }
 
-      if (pointerRole == 'super_admin' &&
-          pointerActive &&
-          pointerSocietyId.isNotEmpty) {
+      if (pointerRole == 'super_admin' && pointerActive) {
         if (!mounted) return;
         await Storage.saveFirebaseSession(
           uid: uid,
-          societyId: pointerSocietyId,
+          societyId: pointerSocietyId.isNotEmpty ? pointerSocietyId : 'platform',
           systemRole: 'super_admin',
           societyRole: (pointer?['societyRole'] ?? 'SUPER_ADMIN').toString(),
           name: (pointer?['name'] ?? 'Platform Admin').toString(),
@@ -295,12 +294,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => AdminShellScreen(
-              adminId: uid,
+            builder: (_) => PlatformSuperAdminConsoleScreen(
               adminName: (pointer?['name'] ?? 'Platform Admin').toString(),
-              societyId: pointerSocietyId,
-              role: 'SUPER_ADMIN',
-              systemRole: 'super_admin',
             ),
           ),
         );
@@ -321,19 +316,39 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     final String name = membership['name'] as String? ?? 'Admin';
     final bool isActive = membership['active'] == true;
 
-    // 🚫 Critical guard
-    if (societyId == null || societyId.isEmpty) {
-      _showError("Society not linked to this account.");
-      return;
-    }
-
     // 🚫 Not an admin at all
     if (systemRole != 'admin' && systemRole != 'super_admin') {
       _showError("You are not authorized as an admin.");
       return;
     }
 
-    // ✅ ONLY admin needs approval — super_admin NEVER does
+    if (systemRole == 'super_admin') {
+      await Storage.saveFirebaseSession(
+        uid: uid,
+        societyId: (societyId == null || societyId.isEmpty) ? 'platform' : societyId,
+        systemRole: systemRole,
+        societyRole: (societyRole ?? 'SUPER_ADMIN'),
+        name: name,
+      );
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PlatformSuperAdminConsoleScreen(
+            adminName: name.isNotEmpty ? name : 'Platform Admin',
+          ),
+        ),
+      );
+      return;
+    }
+
+    // 🚫 Critical guard (society admin must have society)
+    if (societyId == null || societyId.isEmpty) {
+      _showError("Society not linked to this account.");
+      return;
+    }
+
+    // ✅ ONLY admin needs approval
     if (systemRole == 'admin' && !isActive) {
       Navigator.pushReplacement(
         context,

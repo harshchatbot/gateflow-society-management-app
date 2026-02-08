@@ -18,6 +18,7 @@ import 'find_society_screen.dart';
 import 'guard_join_screen.dart';
 import 'guard_shell_screen.dart';
 import 'onboarding_choose_role_screen.dart';
+import 'platform_super_admin_console_screen.dart';
 import 'resident_pending_approval_screen.dart';
 import 'resident_shell_screen.dart';
 
@@ -393,18 +394,12 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
             return;
           }
 
-          if (pointerRole == 'super_admin' &&
-              pointerActive &&
-              pointerSocietyId.isNotEmpty) {
+          if (pointerRole == 'super_admin' && pointerActive) {
             if (!mounted) return;
             Navigator.of(context).pushReplacement(
               MaterialPageRoute(
-                builder: (_) => AdminShellScreen(
-                  adminId: uid,
+                builder: (_) => PlatformSuperAdminConsoleScreen(
                   adminName: (pointer?['name'] ?? 'Platform Admin').toString(),
-                  societyId: pointerSocietyId,
-                  role: 'SUPER_ADMIN',
-                  systemRole: 'super_admin',
                 ),
               ),
             );
@@ -440,53 +435,53 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
       final societyRole = membership['societyRole']?.toString();
       final active = membership['active'] == true;
 
-      // 🔒 Gate inactive societies
-      final gate = SessionGateService();
-      final gateResult = await gate.validateSessionAfterLogin(uid);
-      if (!mounted) return;
-      if (!gateResult.allowed) {
-        await FirebaseAuth.instance.signOut();
-        await Storage.clearFirebaseSession();
-        await Storage.clearAllSessions();
+      if (systemRole != 'super_admin') {
+        // 🔒 Gate inactive societies
+        final gate = SessionGateService();
+        final gateResult = await gate.validateSessionAfterLogin(uid);
+        if (!mounted) return;
+        if (!gateResult.allowed) {
+          await FirebaseAuth.instance.signOut();
+          await Storage.clearFirebaseSession();
+          await Storage.clearAllSessions();
 
-        setState(() => _isLoading = false);
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
-        );
-
-        if (gateResult.userMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(gateResult.userMessage!),
-              backgroundColor: Colors.orange.shade800,
-              behavior: SnackBarBehavior.floating,
-            ),
+          setState(() => _isLoading = false);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
           );
+
+          if (gateResult.userMessage != null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(gateResult.userMessage!),
+                backgroundColor: Colors.orange.shade800,
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+          return;
         }
-        return;
       }
 
       // ✅ Save unified session
       await Storage.saveFirebaseSession(
         uid: uid,
-        societyId: societyId,
+        societyId: (systemRole == 'super_admin' && societyId.trim().isEmpty)
+            ? 'platform'
+            : societyId,
         systemRole: systemRole,
         societyRole: societyRole,
         name: name,
       );
 
-      // ✅ SUPER ADMIN must NEVER see pending
+      // ✅ SUPER ADMIN goes to dedicated platform console
       if (systemRole == 'super_admin') {
         if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) => AdminShellScreen(
-              adminId: uid,
-              adminName: name.isNotEmpty ? name : 'Admin',
-              societyId: societyId,
-              role: (societyRole ?? 'ADMIN').toUpperCase(),
-              systemRole: systemRole,
+            builder: (_) => PlatformSuperAdminConsoleScreen(
+              adminName: name.isNotEmpty ? name : 'Platform Admin',
             ),
           ),
         );

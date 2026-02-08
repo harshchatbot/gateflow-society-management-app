@@ -9,6 +9,7 @@ import '../services/invite_claim_service.dart';
 import '../services/firestore_service.dart';
 import 'admin_pending_approval_screen.dart';
 import 'admin_shell_screen.dart';
+import 'platform_super_admin_console_screen.dart';
 import 'guard_shell_screen.dart';
 import 'onboarding_choose_role_screen.dart';
 import 'resident_pending_approval_screen.dart';
@@ -146,7 +147,27 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
         return;
       }
 
-      if (systemRole == 'admin' || systemRole == 'super_admin') {
+      if (systemRole == 'super_admin') {
+        final pointer = await _firestore.getRootMemberPointer(uid: user.uid);
+        final pointerActive = pointer?['active'] == true;
+        if (!pointerActive) {
+          setState(() {
+            _loading = false;
+            _error = "Super admin account is inactive.";
+          });
+          return;
+        }
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => PlatformSuperAdminConsoleScreen(
+              adminName: (pointer?['name'] ?? 'Platform Admin').toString(),
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (systemRole == 'admin') {
         final memberSnap = await db
             .collection('societies')
             .doc(societyId)
@@ -179,7 +200,7 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
               adminName: name,
               societyId: societyId!,
               role: role,
-              systemRole: systemRole!,
+              systemRole: 'admin',
             ),
           ),
         );
