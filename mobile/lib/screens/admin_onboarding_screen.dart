@@ -54,7 +54,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   bool _obscurePin = true;
   bool _obscureConfirmPin = true;
   bool _isCreatingSociety = true;
-  String _selectedRole = "SUPER_ADMIN";
+  String _selectedRole = "ADMIN";
 
   late ConfettiController _confettiController;
 
@@ -63,14 +63,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   List<Map<String, String>> _cityOptions = [];
   String? _selectedStateId;
 
-  final List<String> _roles = [
-    "SUPER_ADMIN",
-    "ADMIN",
-    "PRESIDENT",
-    "SECRETARY",
-    "TREASURER",
-    "COMMITTEE",
-  ];
+  final List<String> _roles = ["ADMIN", "PRESIDENT", "SECRETARY", "TREASURER", "COMMITTEE"];
 
   @override
   void initState() {
@@ -78,7 +71,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
     _confettiController =
         ConfettiController(duration: const Duration(seconds: 2));
     _isCreatingSociety = !widget.defaultJoinMode; // ✅ key line
-    _selectedRole = _isCreatingSociety ? "SUPER_ADMIN" : "ADMIN";
+    _selectedRole = "ADMIN";
     _loadStates();
   }
 
@@ -318,7 +311,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               timelineStep2Subtitle:
                   "Sentinel team will validate and approve your society.",
               timelineStep3Subtitle:
-                  "Once approved, login is enabled with full super admin access.",
+                  "Once approved, login is enabled with full society admin access.",
               tipText:
                   "You’ll receive access once your request is verified.",
             ),
@@ -384,7 +377,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
         if (!mounted) return;
         if (mounted) setState(() => _isLoading = false);
 
-        // ✅ Go to pending approval (super admin will approve)
+        // ✅ Go to pending approval
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -515,7 +508,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               show: true,
               message: _isLoading
                   ? (_isCreatingSociety
-                      ? "Verifying OTP & creating society…"
+                      ? "Verifying OTP & submitting request…"
                       : "Creating your account…")
                   : "Loading locations…",
             ),
@@ -581,7 +574,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
         const SizedBox(height: 8),
         Text(
           _isCreatingSociety
-              ? "Set up your society and become super admin"
+              ? "Set up your society and become Society Admin"
               : "Claim your admin invite to join",
           style: TextStyle(
             color: theme.colorScheme.onSurface.withOpacity(0.7),
@@ -699,7 +692,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               _PremiumField(
                 controller: _societyNameController,
                 label: "Society Name",
-                hint: "e.g. Kedia Amara",
+                hint: "e.g. Aura Greens",
                 icon: Icons.location_city_rounded,
                 textInputAction: TextInputAction.next,
                 validator: (value) {
@@ -730,7 +723,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             _PremiumField(
               controller: _societyCodeController,
               label: "Society Code",
-              hint: "e.g. SSRESIDENCY (unique)",
+              hint: "e.g. auragreens(unique)",
               icon: Icons.apartment_rounded,
               textInputAction: TextInputAction.next,
               validator: (value) {
@@ -848,13 +841,15 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                           horizontal: 16, vertical: 18),
                     ),
                     items: (_isCreatingSociety
-                            ? ["SUPER_ADMIN"]
-                            : _roles.where((r) => r != "SUPER_ADMIN"))
+                            ? ["ADMIN"]
+                            : _roles)
                         .map((role) {
                       return DropdownMenuItem(
                         value: role,
                         child: Text(
-                          role == "SUPER_ADMIN" ? "SUPER ADMIN" : role,
+                          _isCreatingSociety && role == "ADMIN"
+                              ? "SOCIETY ADMIN"
+                              : role,
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w700,

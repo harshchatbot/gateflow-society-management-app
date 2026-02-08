@@ -345,6 +345,11 @@ class FirestoreService {
         'createdAt': now,
         'updatedAt': now,
       });
+      await _firestore.collection('members').doc(requesterUid).set({
+        'pendingSocietyRequestId': requestRef.id,
+        'pendingSocietyRequestStatus': 'PENDING',
+        'updatedAt': now,
+      }, SetOptions(merge: true));
       AppLogger.i('Society creation request submitted', data: {
         'requestId': requestRef.id,
         'requestedByUid': requesterUid,
@@ -359,6 +364,50 @@ class FirestoreService {
         stackTrace: stackTrace,
       );
       rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getRootMemberPointer({String? uid}) async {
+    final effectiveUid = uid ?? currentUid;
+    if (effectiveUid == null || effectiveUid.isEmpty) return null;
+    try {
+      final snap = await _firestore.collection('members').doc(effectiveUid).get();
+      if (!snap.exists) return null;
+      final data = snap.data() ?? <String, dynamic>{};
+      return {
+        'uid': effectiveUid,
+        ...data,
+      };
+    } catch (e, stackTrace) {
+      AppLogger.e('Error loading root member pointer', error: e, stackTrace: stackTrace);
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getPendingSocietyCreationRequestForUser({
+    required String uid,
+  }) async {
+    try {
+      final pointer = await getRootMemberPointer(uid: uid);
+      final requestId = pointer?['pendingSocietyRequestId']?.toString().trim() ?? '';
+      if (requestId.isEmpty) return null;
+
+      final snap = await _firestore.collection('society_creation_requests').doc(requestId).get();
+      if (!snap.exists) return null;
+      final data = snap.data() ?? <String, dynamic>{};
+      if ((data['requestedByUid'] ?? '').toString() != uid) return null;
+      if ((data['status'] ?? '').toString().toUpperCase() != 'PENDING') return null;
+      return {
+        'id': snap.id,
+        ...data,
+      };
+    } catch (e, stackTrace) {
+      AppLogger.e(
+        'Error loading pending society creation request',
+        error: e,
+        stackTrace: stackTrace,
+      );
+      return null;
     }
   }
 

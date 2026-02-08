@@ -141,19 +141,22 @@ def approve_society_request(
     root_member_doc = {
         "uid": requester_uid,
         "societyId": proposed_society_id,
-        "systemRole": "super_admin",
+        "systemRole": "admin",
+        "societyRole": "society_owner",
         "active": True,
         "name": requester_name,
         "email": requester_email if requester_email else None,
         "phone": requester_phone if requester_phone else None,
+        "pendingSocietyRequestId": None,
+        "pendingSocietyRequestStatus": "APPROVED",
         "updatedAt": now,
     }
 
     society_member_doc = {
         "uid": requester_uid,
         "societyId": proposed_society_id,
-        "systemRole": "super_admin",
-        "societyRole": "chairperson",
+        "systemRole": "admin",
+        "societyRole": "society_owner",
         "name": requester_name,
         "email": requester_email if requester_email else None,
         "phone": requester_phone if requester_phone else None,
@@ -189,12 +192,12 @@ def approve_society_request(
         batch.set(
             db.collection("phone_index").document(requester_phone),
             {
-                "uid": requester_uid,
-                "societyId": proposed_society_id,
-                "systemRole": "super_admin",
-                "active": True,
-                "updatedAt": now,
-            },
+                    "uid": requester_uid,
+                    "societyId": proposed_society_id,
+                    "systemRole": "admin",
+                    "active": True,
+                    "updatedAt": now,
+                },
             merge=True,
         )
         phone_hash = hashlib.sha256(requester_phone.encode("utf-8")).hexdigest()
@@ -247,6 +250,12 @@ def reject_society_request(
         "updatedAt": firestore.SERVER_TIMESTAMP,
         "rejectionReason": payload.reason,
     })
+    requester_uid = (req.get("requestedByUid") or "").strip()
+    if requester_uid:
+        db.collection("members").document(requester_uid).set({
+            "pendingSocietyRequestStatus": "REJECTED",
+            "updatedAt": firestore.SERVER_TIMESTAMP,
+        }, merge=True)
 
     return {
         "ok": True,

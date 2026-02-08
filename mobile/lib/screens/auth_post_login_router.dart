@@ -6,8 +6,13 @@ import '../core/storage.dart';
 import '../core/session_gate_service.dart';
 import '../ui/app_loader.dart';
 import '../services/invite_claim_service.dart';
+import '../services/firestore_service.dart';
+import 'admin_pending_approval_screen.dart';
+import 'admin_shell_screen.dart';
 import 'guard_shell_screen.dart';
 import 'onboarding_choose_role_screen.dart';
+import 'resident_pending_approval_screen.dart';
+import 'resident_shell_screen.dart';
 
 class AuthPostLoginRouter extends StatefulWidget {
   final String defaultSocietyId; // you must pass societyId you’re onboarding into
@@ -22,6 +27,7 @@ class AuthPostLoginRouter extends StatefulWidget {
 }
 
 class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
+  final FirestoreService _firestore = FirestoreService();
   bool _loading = true;
   String? _error;
 
@@ -57,6 +63,29 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
 
       // If no pointer, try to claim invite for the society you’re onboarding into
       if (societyId == null || societyId.isEmpty) {
+        final pendingSocietyRequest = await _firestore
+            .getPendingSocietyCreationRequestForUser(uid: user.uid);
+        if (pendingSocietyRequest != null) {
+          if (!mounted) return;
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => AdminPendingApprovalScreen(
+                adminId: user.uid,
+                societyId:
+                    (pendingSocietyRequest['proposedSocietyId'] ?? 'pending')
+                        .toString(),
+                adminName:
+                    (pendingSocietyRequest['requesterName'] ?? 'Admin').toString(),
+                email: (pendingSocietyRequest['requesterPhone'] ?? '').toString(),
+                title: "Society Setup Pending",
+                badgeText: "Waiting for Sentinel verification",
+                message: "Your request is under review by Sentinel team.",
+              ),
+            ),
+          );
+          return;
+        }
+
         final claimService = InviteClaimService();
         final result = await claimService.claimInviteForSociety(
           societyId: widget.defaultSocietyId,
@@ -117,7 +146,87 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
         return;
       }
 
-      // TODO: route resident later
+      if (systemRole == 'admin' || systemRole == 'super_admin') {
+        final memberSnap = await db
+            .collection('societies')
+            .doc(societyId)
+            .collection('members')
+            .doc(user.uid)
+            .get();
+        final member = memberSnap.data() ?? {};
+        final active = member['active'] == true;
+        final name = (member['name'] ?? 'Admin').toString();
+        final role = (member['societyRole'] ?? 'ADMIN').toString().toUpperCase();
+
+        if (systemRole == 'admin' && !active) {
+          if (!mounted) return;
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => AdminPendingApprovalScreen(
+                adminId: user.uid,
+                societyId: societyId!,
+                adminName: name,
+              ),
+            ),
+          );
+          return;
+        }
+
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => AdminShellScreen(
+              adminId: user.uid,
+              adminName: name,
+              societyId: societyId!,
+              role: role,
+              systemRole: systemRole!,
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (systemRole == 'resident') {
+        final memberSnap = await db
+            .collection('societies')
+            .doc(societyId)
+            .collection('members')
+            .doc(user.uid)
+            .get();
+        final member = memberSnap.data() ?? {};
+        final active = member['active'] == true;
+        final name = (member['name'] ?? 'Resident').toString();
+        final flatNo = (member['flatNo'] ?? '').toString();
+
+        if (!active) {
+          if (!mounted) return;
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => ResidentPendingApprovalScreen(
+                residentId: user.uid,
+                societyId: societyId!,
+                residentName: name,
+              ),
+            ),
+          );
+          return;
+        }
+
+        if (flatNo.isNotEmpty) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => ResidentShellScreen(
+                residentId: user.uid,
+                residentName: name,
+                societyId: societyId!,
+                flatNo: flatNo,
+              ),
+            ),
+          );
+          return;
+        }
+      }
+
       setState(() {
         _loading = false;
         _error = "Logged in, but role '$systemRole' UI not implemented yet.";

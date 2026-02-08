@@ -20,6 +20,7 @@ import 'admin_join_requests_screen.dart';
 import 'admin_manage_admins_screen.dart';
 import 'admin_manage_violations_screen.dart';
 import 'onboarding_choose_role_screen.dart';
+import 'super_admin_society_requests_screen.dart';
 import '../widgets/admin_notification_drawer.dart';
 import '../widgets/dashboard_hero.dart';
 import '../widgets/dashboard_stat_card.dart';
@@ -1114,6 +1115,21 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     }
 
     if ((widget.systemRole ?? '').toLowerCase() == 'super_admin') {
+      children.add(
+        DashboardQuickAction(
+          label: "Society Requests",
+          icon: Icons.approval_rounded,
+          tint: Theme.of(context).colorScheme.primary,
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const SuperAdminSocietyRequestsScreen(),
+              ),
+            );
+          },
+        ),
+      );
       // Super_admin can approve join requests and sync search name for their society
       children.add(
         DashboardQuickAction(

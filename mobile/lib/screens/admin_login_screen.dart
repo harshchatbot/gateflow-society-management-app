@@ -14,7 +14,6 @@ import 'admin_shell_screen.dart';
 import 'onboarding_choose_role_screen.dart';
 import 'admin_onboarding_screen.dart';
 import 'admin_pending_approval_screen.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 enum _OtpStep { phone, otp }
 
@@ -229,6 +228,85 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
     // 🚫 No membership → onboarding
     if (membership == null) {
+      final pendingSocietyRequest =
+          await _firestore.getPendingSocietyCreationRequestForUser(uid: uid);
+      if (pendingSocietyRequest != null) {
+        final requestedSocietyId =
+            (pendingSocietyRequest['proposedSocietyId'] ?? '').toString().trim();
+        final requestedSocietyName =
+            (pendingSocietyRequest['proposedName'] ?? '').toString().trim();
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AdminPendingApprovalScreen(
+              adminId: uid,
+              societyId: requestedSocietyId.isNotEmpty
+                  ? requestedSocietyId
+                  : 'pending_society',
+              adminName: (pendingSocietyRequest['requesterName'] ?? 'Admin')
+                  .toString(),
+              email:
+                  (pendingSocietyRequest['requesterPhone'] ?? _phoneController.text)
+                      .toString(),
+              title: "Society Setup Pending",
+              badgeText: "Waiting for Sentinel verification",
+              message: requestedSocietyName.isNotEmpty
+                  ? "Your request for $requestedSocietyName is under review by Sentinel team."
+                  : "Your request is under review by Sentinel team.",
+            ),
+          ),
+        );
+        return;
+      }
+
+      final pointer = await _firestore.getRootMemberPointer(uid: uid);
+      final pointerRole = (pointer?['systemRole'] ?? '').toString().toLowerCase();
+      final pointerActive = pointer?['active'] == true;
+      final pointerSocietyId = (pointer?['societyId'] ?? '').toString().trim();
+
+      if (pointerRole == 'admin' && !pointerActive && pointerSocietyId.isNotEmpty) {
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AdminPendingApprovalScreen(
+              adminId: uid,
+              societyId: pointerSocietyId,
+              adminName: (pointer?['name'] ?? 'Admin').toString(),
+              email: (pointer?['phone'] ?? '').toString(),
+            ),
+          ),
+        );
+        return;
+      }
+
+      if (pointerRole == 'super_admin' &&
+          pointerActive &&
+          pointerSocietyId.isNotEmpty) {
+        if (!mounted) return;
+        await Storage.saveFirebaseSession(
+          uid: uid,
+          societyId: pointerSocietyId,
+          systemRole: 'super_admin',
+          societyRole: (pointer?['societyRole'] ?? 'SUPER_ADMIN').toString(),
+          name: (pointer?['name'] ?? 'Platform Admin').toString(),
+        );
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (_) => AdminShellScreen(
+              adminId: uid,
+              adminName: (pointer?['name'] ?? 'Platform Admin').toString(),
+              societyId: pointerSocietyId,
+              role: 'SUPER_ADMIN',
+              systemRole: 'super_admin',
+            ),
+          ),
+        );
+        return;
+      }
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const AdminOnboardingScreen()),
@@ -716,7 +794,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  "Bootstrap as Super Admin (email optional)",
+                  "Request Society Admin setup (email optional)",
                   style: TextStyle(
                     color: cs.onSurface.withOpacity(0.7),
                     fontWeight: FontWeight.w600,
