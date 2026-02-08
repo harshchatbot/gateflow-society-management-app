@@ -348,39 +348,11 @@ class _SentiCloudBubble extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: Stack(
-        alignment: Alignment.topCenter,
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            top: 0,
-            left: 28,
-            child: _cloudPuff(36),
-          ),
-          Positioned(
-            top: -6,
-            left: 86,
-            child: _cloudPuff(52),
-          ),
-          Positioned(
-            top: -12,
-            left: 150,
-            right: 150,
-            child: _cloudPuff(60),
-          ),
-          Positioned(
-            top: -6,
-            right: 86,
-            child: _cloudPuff(52),
-          ),
-          Positioned(
-            top: 0,
-            right: 28,
-            child: _cloudPuff(36),
-          ),
           ClipRRect(
             borderRadius: BorderRadius.circular(32),
             child: Container(
-              margin: const EdgeInsets.only(top: 18),
               padding: const EdgeInsets.fromLTRB(24, 22, 24, 20),
               decoration: BoxDecoration(
                 color: Colors.white,
@@ -392,12 +364,12 @@ class _SentiCloudBubble extends StatelessWidget {
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.05),
-                    blurRadius: 24,
-                    offset: const Offset(0, 8),
+                    blurRadius: 20,
+                    offset: const Offset(0, 7),
                   ),
                   BoxShadow(
                     color: AppColors.primary.withOpacity(0.05),
-                    blurRadius: 16,
+                    blurRadius: 14,
                     offset: const Offset(0, 2),
                   ),
                 ],
@@ -489,8 +461,8 @@ class _SentiCloudBubble extends StatelessWidget {
             Border.all(color: AppColors.primary.withOpacity(0.08), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.025),
-            blurRadius: 8,
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
