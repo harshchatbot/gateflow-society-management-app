@@ -13,6 +13,7 @@ from fastapi import APIRouter, HTTPException, status, UploadFile, File, Form
 from app.models.schemas import (
     VisitorCreateRequest,
     VisitorResidentNotifyRequest,
+    VisitorStaffStatusNotifyRequest,
     VisitorResponse,
     VisitorListResponse,
     VisitorNotificationTestRequest,
@@ -366,6 +367,94 @@ async def notify_resident_for_visitor(request: VisitorResidentNotifyRequest):
     except Exception as e:
         logger.exception("VISITOR_NOTIFY_PUSH_FAILED")
         raise HTTPException(status_code=500, detail=f"Visitor notify failed: {str(e)}")
+
+
+@router.post(
+    "/notify-staff-status",
+    status_code=status.HTTP_200_OK,
+    summary="Notify staff when resident updates visitor status",
+    description="""
+    Sends visitor status update notification to society staff topic.
+    Intended for guard/admin awareness when a resident approves/rejects entry.
+    """,
+)
+async def notify_staff_for_visitor_status(request: VisitorStaffStatusNotifyRequest):
+    try:
+        society_id = request.society_id.strip()
+        flat_no = request.flat_no.strip().upper()
+        visitor_id = request.visitor_id.strip()
+        status_value = request.status.strip().upper()
+        visitor_type = request.visitor_type.strip().upper()
+        resident_name = (request.resident_name or "Resident").strip() or "Resident"
+
+        if not society_id:
+            raise HTTPException(status_code=400, detail="society_id is required")
+        if not flat_no:
+            raise HTTPException(status_code=400, detail="flat_no is required")
+        if not visitor_id:
+            raise HTTPException(status_code=400, detail="visitor_id is required")
+        if status_value not in ("APPROVED", "REJECTED"):
+            raise HTTPException(status_code=400, detail="status must be APPROVED or REJECTED")
+
+        society_key = _topic_key(society_id)
+        normalized_topic = f"society_{society_key}_staff"
+        raw_topic = f"society_{society_id}_staff"
+        topics = [normalized_topic]
+        if raw_topic != normalized_topic:
+            topics.append(raw_topic)
+
+        title = "Visitor Approval Update"
+        if status_value == "APPROVED":
+            body = f"{resident_name} approved {visitor_type} for {flat_no}"
+        else:
+            body = f"{resident_name} rejected {visitor_type} for {flat_no}"
+
+        payload = {
+            "type": "visitor_status",
+            "visitor_id": visitor_id,
+            "society_id": society_id,
+            "flat_no": flat_no,
+            "visitor_type": visitor_type,
+            "status": status_value,
+            "resident_name": resident_name,
+        }
+
+        svc = get_notification_service()
+        topic_results = {}
+        sent_any = False
+        for topic in topics:
+            ok = svc.send_to_topic(
+                topic=topic,
+                title=title,
+                body=body,
+                data=payload,
+                sound="notification_sound",
+            )
+            topic_results[topic] = ok
+            sent_any = sent_any or ok
+
+        logger.info(
+            "VISITOR_STATUS_NOTIFY_PUSH | society_id=%s flat_no=%s visitor_id=%s topics=%s status=%s success=%s",
+            society_id,
+            flat_no,
+            visitor_id,
+            topic_results,
+            status_value,
+            sent_any,
+        )
+
+        return {
+            "ok": sent_any,
+            "visitor_id": visitor_id,
+            "topics": topic_results,
+            "payload_type": payload["type"],
+            "status": status_value,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("VISITOR_STATUS_NOTIFY_PUSH_FAILED")
+        raise HTTPException(status_code=500, detail=f"Visitor status notify failed: {str(e)}")
 
 
 @router.post(

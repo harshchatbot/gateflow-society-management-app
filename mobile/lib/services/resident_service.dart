@@ -170,6 +170,14 @@ class ResidentService {
       );
       
       if (result.isSuccess && result.data != null) {
+        // Best-effort: notify society staff (guards/admins) about approval decision.
+        // Decision should not fail even if push call fails.
+        unawaited(_notifyStaffVisitorStatus(
+          societyId: societyId,
+          flatNo: flatNo,
+          visitorId: visitorId,
+          status: decision,
+        ));
         return ApiResult.success(result.data!);
       } else {
         return ApiResult.failure(result.error?.userMessage ?? "Failed to process decision");
@@ -177,6 +185,37 @@ class ResidentService {
     } catch (e) {
       debugPrint("decide error: $e");
       return ApiResult.failure("Connection error: ${e.toString()}");
+    }
+  }
+
+  Future<void> _notifyStaffVisitorStatus({
+    required String societyId,
+    required String flatNo,
+    required String visitorId,
+    required String status,
+  }) async {
+    try {
+      final uri = _uri("/api/visitors/notify-staff-status");
+      final body = jsonEncode({
+        "society_id": societyId,
+        "flat_no": flatNo,
+        "visitor_id": visitorId,
+        "status": status,
+      });
+
+      final res = await http
+          .post(
+            uri,
+            headers: {"Content-Type": "application/json"},
+            body: body,
+          )
+          .timeout(const Duration(seconds: 8));
+
+      if (res.statusCode != 200) {
+        debugPrint("notify-staff-status failed: ${res.statusCode} ${res.body}");
+      }
+    } catch (e) {
+      debugPrint("notify-staff-status error: $e");
     }
   }
 

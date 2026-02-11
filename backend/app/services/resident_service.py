@@ -1,4 +1,5 @@
 import logging
+import re
 from typing import Optional, List, Dict
 from datetime import datetime, timezone
 from fastapi import HTTPException
@@ -7,6 +8,11 @@ from app.sheets.client import get_sheets_client
 from app.services.notification_service import get_notification_service
 
 logger = logging.getLogger(__name__)
+
+
+def _topic_key(raw: str) -> str:
+    cleaned = re.sub(r"[^A-Z0-9]+", "_", (raw or "").strip().upper())
+    return re.sub(r"_+", "_", cleaned).strip("_")
 
 
 class ResidentService:
@@ -154,9 +160,14 @@ class ResidentService:
     ) -> None:
         """
         Send SOS alert notification to all staff (guards/admins) in a society.
-        Uses FCM topic `society_{society_id}_staff` which guards/admins subscribe to in the mobile app.
+        Uses normalized topic key to match mobile subscriptions:
+        `society_{TOPIC_KEY(society_id)}_staff`.
         """
-        topic = f"society_{society_id}_staff"
+        normalized_topic = f"society_{_topic_key(society_id)}_staff"
+        raw_topic = f"society_{(society_id or '').strip()}_staff"
+        topics = [normalized_topic]
+        if raw_topic and raw_topic != normalized_topic:
+            topics.append(raw_topic)
 
         safe_name = (resident_name or "Resident").strip() or "Resident"
         safe_flat = (flat_no or "Unknown").strip() or "Unknown"
@@ -166,23 +177,37 @@ class ResidentService:
         body = f"{safe_name} from Flat {safe_flat} needs help. Phone: {safe_phone}"
 
         svc = get_notification_service()
-        ok = svc.send_to_topic(
-            topic=topic,
-            title=title,
-            body=body,
-            data={
-                "type": "sos",
-                "society_id": society_id,
-                "flat_no": safe_flat,
-                "resident_name": safe_name,
-                "resident_phone": safe_phone,
-                **({"sos_id": sos_id} if sos_id else {}),
-            },
-            sound="notification_sound",
-        )
+        payload = {
+            "type": "sos",
+            "society_id": society_id,
+            "flat_no": safe_flat,
+            "resident_name": safe_name,
+            "resident_phone": safe_phone,
+            **({"sos_id": sos_id} if sos_id else {}),
+        }
 
-        if not ok:
-            logger.warning("Failed to send SOS alert via FCM", extra={"topic": topic})
+        topic_results = {}
+        sent_any = False
+        for topic in topics:
+            ok = svc.send_to_topic(
+                topic=topic,
+                title=title,
+                body=body,
+                data=payload,
+                sound="notification_sound",
+            )
+            topic_results[topic] = ok
+            sent_any = sent_any or ok
+
+        logger.info(
+            "SOS_PUSH | society_id=%s flat_no=%s topics=%s success=%s",
+            society_id,
+            safe_flat,
+            topic_results,
+            sent_any,
+        )
+        if not sent_any:
+            logger.warning("Failed to send SOS alert via FCM", extra={"topics": topic_results})
 
 
 

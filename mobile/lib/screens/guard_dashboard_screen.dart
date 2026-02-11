@@ -128,6 +128,20 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
       final type = (data['type'] ?? '').toString();
       if (type == 'sos' && SocietyModules.isEnabled(SocietyModuleIds.sos)) {
         _loadGuardNotificationCount();
+      } else if (type == 'visitor_status') {
+        _syncDashboard();
+        if (mounted) {
+          final status = (data['status'] ?? '').toString().toUpperCase();
+          final flatNo = (data['flat_no'] ?? '').toString();
+          final residentName = (data['resident_name'] ?? 'Resident').toString();
+          final action = status == 'APPROVED' ? 'approved' : 'rejected';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("$residentName $action visitor for $flatNo"),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       } else if (type == '__refresh__') {
         _loadGuardNotificationCount();
       } else if (type == 'notice' &&
@@ -161,6 +175,8 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
       } else if (type == 'notice' &&
           SocietyModules.isEnabled(SocietyModuleIds.notices)) {
         _loadGuardNotificationCount();
+      } else if (type == 'visitor_status') {
+        _syncDashboard();
       } else if (type == '__refresh__') {
         _loadGuardNotificationCount();
       }

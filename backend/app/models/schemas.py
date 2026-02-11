@@ -92,6 +92,16 @@ class VisitorResidentNotifyRequest(BaseModel):
     status: str = Field(default="PENDING", description="Visitor status")
 
 
+class VisitorStaffStatusNotifyRequest(BaseModel):
+    """Notify staff topics after resident updates visitor status."""
+    society_id: str = Field(..., description="Society ID")
+    flat_no: str = Field(..., description="Flat number, e.g. A-101")
+    visitor_id: str = Field(..., description="Visitor id")
+    status: str = Field(..., description="Visitor status (APPROVED/REJECTED)")
+    visitor_type: str = Field(default="GUEST", description="Visitor type shown in notification")
+    resident_name: Optional[str] = Field(default=None, description="Resident name for message body")
+
+
 # Flat Models
 class FlatResponse(BaseModel):
     """Flat information response"""

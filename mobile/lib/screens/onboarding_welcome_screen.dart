@@ -176,7 +176,7 @@ class _TrustStrip extends StatelessWidget {
             ),
             _TrustItem(
               icon: Icons.location_city_outlined,
-              label: 'India-ready',
+              label: 'Security',
             ),
           ],
         ),
