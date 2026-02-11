@@ -524,39 +524,8 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (hasPhoto) ...[
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.success.withOpacity(0.2),
-                      width: 2,
-                    ),
-                  ),
-                  child: ClipOval(
-                    child: CachedNetworkImage(
-                      imageUrl: photoUrl,
-                      fit: BoxFit.cover,
-                      width: 50,
-                      height: 50,
-                      placeholder: (context, url) => Container(
-                        color: Colors.grey.shade300,
-                        child: const Center(
-                            child: Icon(Icons.person_rounded,
-                                color: AppColors.success, size: 24)),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        color: AppColors.success.withOpacity(0.1),
-                        child: const Icon(Icons.person_rounded,
-                            color: AppColors.success, size: 24),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-              ],
+              _buildVisitorThumbnail(photoUrl, hasPhoto),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -650,6 +619,104 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildVisitorThumbnail(String? photoUrl, bool hasPhoto) {
+    final radius = BorderRadius.circular(14);
+    final borderColor = AppColors.success.withOpacity(0.2);
+    return InkWell(
+      onTap: hasPhoto ? () => _openImagePreview(photoUrl!) : null,
+      borderRadius: radius,
+      child: Container(
+        width: 82,
+        height: 82,
+        decoration: BoxDecoration(
+          borderRadius: radius,
+          border: Border.all(color: borderColor, width: 1.5),
+          color: Theme.of(context).colorScheme.surface,
+        ),
+        child: ClipRRect(
+          borderRadius: radius,
+          child: hasPhoto
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    CachedNetworkImage(
+                      imageUrl: photoUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (context, url) => Container(
+                        color: Colors.grey.shade300,
+                        child: const Center(
+                          child: Icon(Icons.image_rounded,
+                              color: AppColors.success, size: 26),
+                        ),
+                      ),
+                      errorWidget: (context, url, error) => Container(
+                        color: AppColors.success.withOpacity(0.08),
+                        child: const Center(
+                          child: Icon(Icons.broken_image_rounded,
+                              color: AppColors.success, size: 26),
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      right: 6,
+                      bottom: 6,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.6),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.open_in_full_rounded,
+                            size: 12, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                )
+              : Container(
+                  color: AppColors.success.withOpacity(0.08),
+                  child: const Center(
+                    child: Icon(Icons.person_rounded,
+                        color: AppColors.success, size: 34),
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _openImagePreview(String imageUrl) async {
+    if (!mounted) return;
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => Scaffold(
+          backgroundColor: Colors.black,
+          appBar: AppBar(
+            backgroundColor: Colors.black,
+            elevation: 0,
+            iconTheme: const IconThemeData(color: Colors.white),
+          ),
+          body: Center(
+            child: InteractiveViewer(
+              minScale: 1.0,
+              maxScale: 4.0,
+              child: CachedNetworkImage(
+                imageUrl: imageUrl,
+                fit: BoxFit.contain,
+                placeholder: (context, url) =>
+                    const CircularProgressIndicator(color: Colors.white),
+                errorWidget: (context, url, error) => const Icon(
+                  Icons.broken_image_rounded,
+                  color: Colors.white70,
+                  size: 48,
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

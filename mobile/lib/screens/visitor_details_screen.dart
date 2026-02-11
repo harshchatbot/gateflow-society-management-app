@@ -620,7 +620,12 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
           ),
 
           ListView(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+            padding: EdgeInsets.fromLTRB(
+              16,
+              12,
+              16,
+              MediaQuery.of(context).padding.bottom + 28,
+            ),
             children: [
               if (_error != null) ...[
                 _errorBanner(),
