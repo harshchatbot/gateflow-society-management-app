@@ -1549,13 +1549,28 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
       // Best-effort: also trigger FastAPI backend to send FCM to staff
       try {
-        await _service.sendSosAlert(
+        final notifyResult = await _service.sendSosAlert(
           societyId: widget.societyId,
           flatNo: widget.flatNo,
           residentName: widget.residentName,
           residentPhone: _phone,
           sosId: sosId,
         );
+        if (!notifyResult.isSuccess) {
+          AppLogger.w("SOS push notify failed", data: {
+            "societyId": widget.societyId,
+            "flatNo": widget.flatNo,
+            "error": notifyResult.error,
+          });
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('SOS saved, but push alert may be delayed.'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
       } catch (_) {
         // Ignore backend SOS errors here; Firestore record is already created
       }

@@ -391,6 +391,10 @@ class NotificationService {
 
       if (role == "guard" || role == "admin") {
         desiredTopics.add("society_${societyKey}_staff");
+        final rawSociety = societyId.trim();
+        if (rawSociety.isNotEmpty) {
+          desiredTopics.add("society_${rawSociety}_staff");
+        }
       }
 
       final staleTopics = _subscribedTopics.difference(desiredTopics).toList();

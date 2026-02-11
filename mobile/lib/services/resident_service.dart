@@ -172,12 +172,15 @@ class ResidentService {
       if (result.isSuccess && result.data != null) {
         // Best-effort: notify society staff (guards/admins) about approval decision.
         // Decision should not fail even if push call fails.
-        unawaited(_notifyStaffVisitorStatus(
+        final notifyResult = await _notifyStaffVisitorStatus(
           societyId: societyId,
           flatNo: flatNo,
           visitorId: visitorId,
           status: decision,
-        ));
+        );
+        if (!notifyResult.isSuccess) {
+          debugPrint("notify-staff-status failed: ${notifyResult.error}");
+        }
         return ApiResult.success(result.data!);
       } else {
         return ApiResult.failure(result.error?.userMessage ?? "Failed to process decision");
@@ -188,14 +191,13 @@ class ResidentService {
     }
   }
 
-  Future<void> _notifyStaffVisitorStatus({
+  Future<ApiResult<void>> _notifyStaffVisitorStatus({
     required String societyId,
     required String flatNo,
     required String visitorId,
     required String status,
   }) async {
     try {
-      final uri = _uri("/api/visitors/notify-staff-status");
       final body = jsonEncode({
         "society_id": societyId,
         "flat_no": flatNo,
@@ -203,20 +205,44 @@ class ResidentService {
         "status": status,
       });
 
-      final res = await http
-          .post(
-            uri,
-            headers: {"Content-Type": "application/json"},
-            body: body,
-          )
-          .timeout(const Duration(seconds: 8));
-
+      final res = await _postJsonWithRetry(
+        path: "/api/visitors/notify-staff-status",
+        body: body,
+      );
       if (res.statusCode != 200) {
-        debugPrint("notify-staff-status failed: ${res.statusCode} ${res.body}");
+        return ApiResult.failure(
+            "notify-staff-status failed: ${res.statusCode} ${res.body}");
       }
+      return ApiResult.success(null);
     } catch (e) {
-      debugPrint("notify-staff-status error: $e");
+      return ApiResult.failure("notify-staff-status error: $e");
     }
+  }
+
+  Future<http.Response> _postJsonWithRetry({
+    required String path,
+    required String body,
+  }) async {
+    http.Response res = await http
+        .post(
+          _uri(path),
+          headers: {"Content-Type": "application/json"},
+          body: body,
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (res.statusCode == 200) return res;
+
+    // Render cold-start / transient failures: one quick retry.
+    await Future.delayed(const Duration(milliseconds: 900));
+    res = await http
+        .post(
+          _uri(path),
+          headers: {"Content-Type": "application/json"},
+          body: body,
+        )
+        .timeout(const Duration(seconds: 10));
+    return res;
   }
 
   Future<ApiResult<Map<String, dynamic>>> updateProfile({
@@ -293,7 +319,6 @@ class ResidentService {
     String? sosId,
   }) async {
     try {
-      final uri = _uri("/api/residents/sos");
       final body = jsonEncode({
         "society_id": societyId,
         "flat_no": flatNo,
@@ -304,13 +329,10 @@ class ResidentService {
           "sos_id": sosId.trim(),
       });
 
-      final res = await http
-          .post(
-            uri,
-            headers: {"Content-Type": "application/json"},
-            body: body,
-          )
-          .timeout(const Duration(seconds: 10));
+      final res = await _postJsonWithRetry(
+        path: "/api/residents/sos",
+        body: body,
+      );
 
       if (res.statusCode == 200) {
         return ApiResult.success(null);

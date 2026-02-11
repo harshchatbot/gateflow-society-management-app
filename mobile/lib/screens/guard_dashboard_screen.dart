@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:showcaseview/showcaseview.dart';
@@ -69,6 +70,12 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   /// Visitor counts per day for last 7 days (day-6 .. today). Used for dashboard chart.
   List<int>? _visitorsByDayLast7;
   late final NoticeService _noticeService = NoticeService(baseUrl: Env.apiBaseUrl);
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _sosRealtimeSub;
+  StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? _visitorRealtimeSub;
+  bool _sosRealtimePrimed = false;
+  bool _visitorRealtimePrimed = false;
+  final Set<String> _seenOpenSosIds = <String>{};
+  final Map<String, String> _seenVisitorStatuses = <String, String>{};
 
   @override
   void initState() {
@@ -80,6 +87,7 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     });
     _syncDashboard();
     _loadGuardNotificationCount();
+    _setupRealtimeSignals();
     _setupNotificationListener();
     _maybeAutoRunTour();
   }
@@ -89,8 +97,86 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
     final notificationService = NotificationService();
     notificationService.unregisterOnNotificationReceived('guard_dashboard');
     notificationService.unregisterOnNotificationTap('guard_dashboard');
+    _sosRealtimeSub?.cancel();
+    _visitorRealtimeSub?.cancel();
     OfflineQueueService.instance.onQueueChanged = null;
     super.dispose();
+  }
+
+  void _setupRealtimeSignals() {
+    if (SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+      _sosRealtimeSub = _db
+          .collection('societies')
+          .doc(widget.societyId)
+          .collection('sos_requests')
+          .where('status', isEqualTo: 'OPEN')
+          .snapshots()
+          .listen((snapshot) {
+        if (!mounted) return;
+        final currentIds = snapshot.docs.map((d) => d.id).toSet();
+        if (_sosRealtimePrimed) {
+          final newIds = currentIds.difference(_seenOpenSosIds);
+          if (newIds.isNotEmpty) {
+            final first = snapshot.docs.firstWhere(
+              (d) => newIds.contains(d.id),
+              orElse: () => snapshot.docs.first,
+            );
+            final data = first.data();
+            final flatNo = (data['flatNo'] ?? data['flat_no'] ?? '').toString();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('SOS alert from ${flatNo.isEmpty ? "a unit" : flatNo}'),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+          }
+        }
+        _seenOpenSosIds
+          ..clear()
+          ..addAll(currentIds);
+        _sosRealtimePrimed = true;
+        _loadGuardNotificationCount();
+      }, onError: (e, st) {
+        AppLogger.w("SOS realtime listener failed", error: e.toString());
+      });
+    }
+
+    _visitorRealtimeSub = _db
+        .collection('societies')
+        .doc(widget.societyId)
+        .collection('visitors')
+        .where('guard_uid', isEqualTo: widget.guardId)
+        .limit(80)
+        .snapshots()
+        .listen((snapshot) {
+      if (!mounted) return;
+
+      final Map<String, String> next = <String, String>{};
+      for (final d in snapshot.docs) {
+        final status = (d.data()['status'] ?? '').toString().toUpperCase();
+        next[d.id] = status;
+        final prev = _seenVisitorStatuses[d.id];
+        final changed = prev != null && prev != status;
+        final isFinal = status == 'APPROVED' || status == 'REJECTED';
+        if (_visitorRealtimePrimed && changed && isFinal) {
+          final flatNo = (d.data()['flat_no'] ?? '').toString();
+          final label = status == 'APPROVED' ? 'approved' : 'rejected';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Visitor for ${flatNo.isEmpty ? "unit" : flatNo} was $label'),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+          _syncDashboard();
+        }
+      }
+      _seenVisitorStatuses
+        ..clear()
+        ..addAll(next);
+      _visitorRealtimePrimed = true;
+    }, onError: (e, st) {
+      AppLogger.w("Visitor realtime listener failed", error: e.toString());
+    });
   }
 
   void _maybeAutoRunTour() async {
