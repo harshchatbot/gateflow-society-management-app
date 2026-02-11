@@ -124,6 +124,14 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     _loadFavorites();
   }
 
+  @override
+  void dispose() {
+    final notificationService = NotificationService();
+    notificationService.unregisterOnNotificationReceived('resident_dashboard');
+    notificationService.unregisterOnNotificationTap('resident_dashboard');
+    super.dispose();
+  }
+
   Future<void> _loadFavorites() async {
     final favs = await _favoritesService.getFavorites(
       widget.societyId,
@@ -184,7 +192,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   void _setupNotificationListener() {
     // Listen for new notifications to update count
     final notificationService = NotificationService();
-    notificationService.setOnNotificationReceived((data) {
+    notificationService.registerOnNotificationReceived('resident_dashboard', (data) {
       final type = (data['type'] ?? '').toString();
       if (type == 'visitor') {
         // Visitor approvals are action-based; reload stats/pending count
@@ -216,6 +224,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             ),
           );
         }
+      } else if (type == '__refresh__') {
+        _loadDashboardData();
       } else if (type == 'notice') {
         // Informational notice: increment unread counter only
         if (!mounted) return;
@@ -250,7 +260,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         );
       }
     });
-    notificationService.setOnNotificationTap((data) {
+    notificationService.registerOnNotificationTap('resident_dashboard', (data) {
       final type = (data['type'] ?? '').toString();
       if (type == 'visitor') {
         // Open approvals screen/tab (handled via shell/tab; for now just refresh)
@@ -275,6 +285,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       } else if (type == 'complaint') {
         // For complaints, open complaints tab/screen in future; for now just log
         AppLogger.i("Complaint notification tapped (resident)", data: data);
+      } else if (type == '__refresh__') {
+        _loadDashboardData();
       }
     });
   }

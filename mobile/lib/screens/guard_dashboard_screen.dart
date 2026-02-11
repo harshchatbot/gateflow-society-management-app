@@ -86,6 +86,9 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
 
   @override
   void dispose() {
+    final notificationService = NotificationService();
+    notificationService.unregisterOnNotificationReceived('guard_dashboard');
+    notificationService.unregisterOnNotificationTap('guard_dashboard');
     OfflineQueueService.instance.onQueueChanged = null;
     super.dispose();
   }
@@ -121,16 +124,18 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
 
   void _setupNotificationListener() {
     final notificationService = NotificationService();
-    notificationService.setOnNotificationReceived((data) {
+    notificationService.registerOnNotificationReceived('guard_dashboard', (data) {
       final type = (data['type'] ?? '').toString();
       if (type == 'sos' && SocietyModules.isEnabled(SocietyModuleIds.sos)) {
+        _loadGuardNotificationCount();
+      } else if (type == '__refresh__') {
         _loadGuardNotificationCount();
       } else if (type == 'notice' &&
           SocietyModules.isEnabled(SocietyModuleIds.notices)) {
         _loadGuardNotificationCount();
       }
     });
-    notificationService.setOnNotificationTap((data) {
+    notificationService.registerOnNotificationTap('guard_dashboard', (data) {
       final type = (data['type'] ?? '').toString();
       if (type == 'sos' && SocietyModules.isEnabled(SocietyModuleIds.sos)) {
         final societyId = (data['society_id'] ?? widget.societyId).toString();
@@ -155,6 +160,8 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
         ).then((_) => _loadGuardNotificationCount());
       } else if (type == 'notice' &&
           SocietyModules.isEnabled(SocietyModuleIds.notices)) {
+        _loadGuardNotificationCount();
+      } else if (type == '__refresh__') {
         _loadGuardNotificationCount();
       }
     });

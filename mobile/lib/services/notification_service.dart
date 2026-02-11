@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 import '../core/app_logger.dart';
-import '../core/storage.dart';
 
 /// Notification Service
 /// 
@@ -23,25 +23,48 @@ class NotificationService {
   bool _initialized = false;
   AuthorizationStatus? _authorizationStatus;
   final Set<String> _subscribedTopics = <String>{};
+  StreamSubscription<User?>? _authStateSubscription;
 
   String _topicKey(String raw) {
     final cleaned = raw.trim().toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]+'), '_');
     return cleaned.replaceAll(RegExp(r'_+'), '_').replaceAll(RegExp(r'^_|_$'), '');
   }
   
-  // Callback for when notification is received (to update counts)
-  Function(Map<String, dynamic>)? _onNotificationReceived;
-  // Callback for when notification is tapped (for navigation)
-  Function(Map<String, dynamic>)? _onNotificationTap;
+  final Map<String, Function(Map<String, dynamic>)> _onNotificationReceivedListeners =
+      <String, Function(Map<String, dynamic>)>{};
+  final Map<String, Function(Map<String, dynamic>)> _onNotificationTapListeners =
+      <String, Function(Map<String, dynamic>)>{};
   
   /// Set callback for notification received
   void setOnNotificationReceived(Function(Map<String, dynamic>) callback) {
-    _onNotificationReceived = callback;
+    registerOnNotificationReceived('default', callback);
   }
 
   /// Set callback for notification tap
   void setOnNotificationTap(Function(Map<String, dynamic>) callback) {
-    _onNotificationTap = callback;
+    registerOnNotificationTap('default', callback);
+  }
+
+  void registerOnNotificationReceived(
+    String listenerId,
+    Function(Map<String, dynamic>) callback,
+  ) {
+    _onNotificationReceivedListeners[listenerId] = callback;
+  }
+
+  void unregisterOnNotificationReceived(String listenerId) {
+    _onNotificationReceivedListeners.remove(listenerId);
+  }
+
+  void registerOnNotificationTap(
+    String listenerId,
+    Function(Map<String, dynamic>) callback,
+  ) {
+    _onNotificationTapListeners[listenerId] = callback;
+  }
+
+  void unregisterOnNotificationTap(String listenerId) {
+    _onNotificationTapListeners.remove(listenerId);
   }
 
   /// Initialize notification service
@@ -164,6 +187,16 @@ class NotificationService {
         _handleBackgroundMessage(initialMessage);
       }
 
+      _authStateSubscription?.cancel();
+      _authStateSubscription = FirebaseAuth.instance.authStateChanges().listen(
+        (user) async {
+          if (user == null && _subscribedTopics.isNotEmpty) {
+            await clearAllTopicSubscriptions();
+            AppLogger.i("Cleared FCM topic subscriptions after logout");
+          }
+        },
+      );
+
       _initialized = true;
       AppLogger.i("Notification service initialized");
     } catch (e) {
@@ -197,17 +230,21 @@ class NotificationService {
       "messageId": message.messageId,
     });
 
+    final callbackData = message.data.isNotEmpty
+        ? message.data
+        : <String, dynamic>{
+            'type': '__refresh__',
+            'source': 'fcm_notification_only',
+          };
+
     // Show local notification with sound
     await _showLocalNotification(
       title: message.notification?.title ?? "New Notification",
       body: message.notification?.body ?? "",
-      payload: message.data.isNotEmpty ? jsonEncode(message.data) : null,
+      payload: jsonEncode(callbackData),
     );
     
-    // Trigger notification count update callback if set
-    if (_onNotificationReceived != null && message.data.isNotEmpty) {
-      _onNotificationReceived!(message.data);
-    }
+    _notifyReceived(callbackData);
   }
 
   /// Handle background messages (app is in background/terminated)
@@ -219,10 +256,13 @@ class NotificationService {
       "from": message.from,
       "messageId": message.messageId,
     });
-    // Forward data to tap handler so screens can navigate appropriately
-    if (_onNotificationTap != null && message.data.isNotEmpty) {
-      _onNotificationTap!(message.data);
-    }
+    final callbackData = message.data.isNotEmpty
+        ? message.data
+        : <String, dynamic>{
+            'type': '__refresh__',
+            'source': 'fcm_notification_only',
+          };
+    _notifyTap(callbackData);
   }
 
   /// Show local notification with sound
@@ -266,11 +306,11 @@ class NotificationService {
   void _onNotificationTapped(NotificationResponse response) {
     AppLogger.i("Notification tapped", data: {"payload": response.payload});
 
-    if (_onNotificationTap != null && response.payload != null) {
+    if (response.payload != null) {
       try {
         final data = jsonDecode(response.payload!);
         if (data is Map<String, dynamic>) {
-          _onNotificationTap!(data);
+          _notifyTap(data);
         }
       } catch (e, st) {
         AppLogger.e("Failed to parse notification payload", error: e, stackTrace: st);
@@ -306,9 +346,17 @@ class NotificationService {
   Future<void> unsubscribeFromTopic(String topic) async {
     try {
       await _fcm.unsubscribeFromTopic(topic);
+      _subscribedTopics.remove(topic);
       AppLogger.i("Unsubscribed from topic", data: {"topic": topic});
     } catch (e) {
       AppLogger.e("Error unsubscribing from topic", error: e);
+    }
+  }
+
+  Future<void> clearAllTopicSubscriptions() async {
+    final topics = _subscribedTopics.toList(growable: false);
+    for (final topic in topics) {
+      await unsubscribeFromTopic(topic);
     }
   }
 
@@ -335,18 +383,24 @@ class NotificationService {
 
       final societyKey = _topicKey(societyId);
       final flatKey = flatId != null ? _topicKey(flatId) : null;
+      final desiredTopics = <String>{"society_$societyKey"};
 
-      // Subscribe to society topic (for notices) - multi-tenant format
-      await subscribeToTopic("society_$societyKey");
-
-      // Subscribe to flat topic (for visitor entries) if resident - multi-tenant format
       if (flatKey != null && flatKey.isNotEmpty && role == "resident") {
-        await subscribeToTopic("flat_${societyKey}_$flatKey");
+        desiredTopics.add("flat_${societyKey}_$flatKey");
       }
 
-      // Subscribe staff (guards/admins) to SOS / staff-only alerts
       if (role == "guard" || role == "admin") {
-        await subscribeToTopic("society_${societyKey}_staff");
+        desiredTopics.add("society_${societyKey}_staff");
+      }
+
+      final staleTopics = _subscribedTopics.difference(desiredTopics).toList();
+      for (final topic in staleTopics) {
+        await unsubscribeFromTopic(topic);
+      }
+
+      final missingTopics = desiredTopics.difference(_subscribedTopics).toList();
+      for (final topic in missingTopics) {
+        await subscribeToTopic(topic);
       }
 
       AppLogger.i("Subscribed to topics", data: {
@@ -363,6 +417,34 @@ class NotificationService {
       });
     } catch (e) {
       AppLogger.e("Error subscribing to topics", error: e);
+    }
+  }
+
+  void _notifyReceived(Map<String, dynamic> data) {
+    final listeners = List<Function(Map<String, dynamic>)>.from(
+      _onNotificationReceivedListeners.values,
+    );
+    for (final listener in listeners) {
+      try {
+        listener(data);
+      } catch (e, st) {
+        AppLogger.e("Notification receive listener failed",
+            error: e, stackTrace: st);
+      }
+    }
+  }
+
+  void _notifyTap(Map<String, dynamic> data) {
+    final listeners = List<Function(Map<String, dynamic>)>.from(
+      _onNotificationTapListeners.values,
+    );
+    for (final listener in listeners) {
+      try {
+        listener(data);
+      } catch (e, st) {
+        AppLogger.e("Notification tap listener failed",
+            error: e, stackTrace: st);
+      }
     }
   }
 

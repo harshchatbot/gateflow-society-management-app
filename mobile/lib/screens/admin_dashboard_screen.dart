@@ -178,6 +178,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   void dispose() {
+    final notificationService = NotificationService();
+    notificationService.unregisterOnNotificationReceived('admin_dashboard');
+    notificationService.unregisterOnNotificationTap('admin_dashboard');
     _pendingSignupsSubscription?.cancel();
     super.dispose();
   }
@@ -247,10 +250,12 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void _setupNotificationListener() {
     // Listen for new notifications to update count
     final notificationService = NotificationService();
-    notificationService.setOnNotificationReceived((data) {
+    notificationService.registerOnNotificationReceived('admin_dashboard', (data) {
       final type = (data['type'] ?? '').toString();
       if (type == 'complaint') {
         // Complaints are action-based; reload counts from backend
+        _loadNotificationCount();
+      } else if (type == '__refresh__') {
         _loadNotificationCount();
       } else if (type == 'notice') {
         // Informational notice: increment unread counter only
@@ -270,7 +275,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         }
       }
     });
-    notificationService.setOnNotificationTap((data) {
+    notificationService.registerOnNotificationTap('admin_dashboard', (data) {
       final type = (data['type'] ?? '').toString();
       if (type == 'complaint' &&
           SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
@@ -312,6 +317,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
           ),
         );
+      } else if (type == '__refresh__') {
+        _loadNotificationCount();
       }
     });
   }
@@ -367,6 +374,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         final joinRequests =
             await _firestore.getResidentJoinRequestsForAdmin(widget.societyId);
         totalCount += joinRequests.length;
+      } catch (_) {}
+      try {
+        final adminJoinRequests =
+            await _firestore.getAdminJoinRequestsForAdmin(widget.societyId);
+        totalCount += adminJoinRequests.length;
       } catch (_) {}
       final signupsResult =
           await _signupService.getPendingSignups(societyId: widget.societyId);
