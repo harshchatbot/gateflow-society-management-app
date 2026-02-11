@@ -30,7 +30,13 @@ class _PlatformSuperAdminConsoleScreenState
   @override
   void initState() {
     super.initState();
+    _printSuperAdminIdToken();
     _load();
+  }
+
+  Future<void> _printSuperAdminIdToken() async {
+    final token = await FirebaseAuth.instance.currentUser?.getIdToken(true);
+    debugPrint('SUPER_ADMIN_ID_TOKEN=$token');
   }
 
   Future<void> _load() async {
@@ -143,13 +149,16 @@ class _PlatformSuperAdminConsoleScreenState
                         child: ListTile(
                           leading: const Icon(Icons.approval_rounded),
                           title: const Text('Society Registration Requests'),
-                          subtitle: const Text('Review and approve/reject requests'),
-                          trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                          subtitle:
+                              const Text('Review and approve/reject requests'),
+                          trailing: const Icon(Icons.arrow_forward_ios_rounded,
+                              size: 16),
                           onTap: () {
                             Navigator.push(
                               context,
                               MaterialPageRoute(
-                                builder: (_) => const SuperAdminSocietyRequestsScreen(),
+                                builder: (_) =>
+                                    const SuperAdminSocietyRequestsScreen(),
                               ),
                             );
                           },
@@ -180,7 +189,9 @@ class _PlatformSuperAdminConsoleScreenState
                               border: Border.all(color: theme.dividerColor),
                             ),
                             child: ListTile(
-                              title: Text(name.isNotEmpty ? name : (s['id'] ?? '').toString()),
+                              title: Text(name.isNotEmpty
+                                  ? name
+                                  : (s['id'] ?? '').toString()),
                               subtitle: Text(
                                 'Code: $code${city.isNotEmpty || state.isNotEmpty ? " • $city${city.isNotEmpty && state.isNotEmpty ? ", " : ""}$state" : ""}',
                               ),
@@ -196,7 +207,9 @@ class _PlatformSuperAdminConsoleScreenState
                                 child: Text(
                                   activeFlag ? 'Active' : 'Inactive',
                                   style: TextStyle(
-                                    color: activeFlag ? Colors.green.shade700 : Colors.red.shade700,
+                                    color: activeFlag
+                                        ? Colors.green.shade700
+                                        : Colors.red.shade700,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 12,
                                   ),

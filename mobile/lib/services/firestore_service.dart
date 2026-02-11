@@ -153,7 +153,13 @@ class FirestoreService {
       final uniqueRef =
           _firestore.collection(_uniquePhonesCollection).doc(hash);
       batch.set(
-          uniqueRef, {'uid': uid, 'updatedAt': FieldValue.serverTimestamp()});
+          uniqueRef,
+          {
+            'uid': uid,
+            'societyId': societyId,
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true));
       await batch.commit();
       AppLogger.i('Member phone set',
           data: {'uid': uid, 'societyId': societyId});

@@ -66,11 +66,12 @@ service cloud.firestore {
       // Mode 1: Minimal doc (pending society request pointer) — used by createSocietyCreationRequest()
       // Mode 2: Full pointer doc (legacy/normal pointer creation)
       allow create: if signedIn()
-        && request.auth.uid == uid
         && request.resource.data.uid == uid
         && (
-          // MODE 1: Pending society request pointer-only create
+          // MODE 1: Self pending society request pointer-only create
           (
+            request.auth.uid == uid
+            &&
             request.resource.data.keys().hasOnly([
               "uid",
               "pendingSocietyRequestId",
@@ -83,7 +84,15 @@ service cloud.firestore {
           ||
           // MODE 2: Full pointer create (existing behavior)
           (
-            request.resource.data.systemRole in ["admin", "guard", "resident"]
+            (
+              request.auth.uid == uid
+              || (
+                request.resource.data.societyId is string
+                && isAdminOfSociety(request.resource.data.societyId)
+              )
+              || isGlobalSuperAdmin()
+            )
+            && request.resource.data.systemRole in ["admin", "guard", "resident"]
             && request.resource.data.societyId is string
             && (request.resource.data.active == true || request.resource.data.active == false)
           )
@@ -114,11 +123,15 @@ service cloud.firestore {
             && (!("systemRole" in resource.data) || request.resource.data.systemRole == resource.data.systemRole)
           )
           || (
-            resource.data.societyId is string
-            && isAdminOfSociety(resource.data.societyId)
+            request.resource.data.societyId is string
+            && isAdminOfSociety(request.resource.data.societyId)
             && request.resource.data.uid == resource.data.uid
-            && request.resource.data.societyId == resource.data.societyId
-            && request.resource.data.systemRole == resource.data.systemRole
+            && (!("societyId" in resource.data) || request.resource.data.societyId == resource.data.societyId)
+            && (
+              !("systemRole" in resource.data)
+              || request.resource.data.systemRole == resource.data.systemRole
+            )
+            && request.resource.data.systemRole in ["admin", "guard", "resident"]
           )
         );
 
@@ -466,10 +479,32 @@ service cloud.firestore {
     match /unique_phones/{phoneHash} {
       allow read: if signedIn();
       allow create: if signedIn()
-        && request.resource.data.uid == request.auth.uid;
+        && (
+          request.resource.data.uid == request.auth.uid
+          || (
+            request.resource.data.uid is string
+            && request.resource.data.societyId is string
+            && isAdminOfSociety(request.resource.data.societyId)
+          )
+          || isGlobalSuperAdmin()
+        );
       allow update: if signedIn()
-        && resource.data.uid == request.auth.uid
-        && request.resource.data.uid == request.auth.uid;
+        && (
+          (
+            resource.data.uid == request.auth.uid
+            && request.resource.data.uid == request.auth.uid
+          )
+          || (
+            request.resource.data.uid is string
+            && request.resource.data.societyId is string
+            && isAdminOfSociety(request.resource.data.societyId)
+          )
+          || (
+            resource.data.societyId is string
+            && isAdminOfSociety(resource.data.societyId)
+          )
+          || isGlobalSuperAdmin()
+        );
       allow delete: if false;
     }
 

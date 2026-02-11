@@ -217,15 +217,25 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     ];
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: IndexedStack(
-        index: _currentIndex,
-        children: List.generate(6, (index) => _buildScreen(index)),
-      ),
-      bottomNavigationBar: SocietyBottomNav(
-        currentIndex: _modulesReady ? _getCurrentTabIndex() : (_currentIndex == 0 ? 0 : 1),
-        onTap: _onBottomNavTap,
-        showCenterButton: false,
-        items: navItems,
+      extendBody: true,
+      resizeToAvoidBottomInset: false,
+      body: Stack(
+        children: [
+          IndexedStack(
+            index: _currentIndex,
+            children: List.generate(6, (index) => _buildScreen(index)),
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: SocietyBottomNav(
+              currentIndex:
+                  _modulesReady ? _getCurrentTabIndex() : (_currentIndex == 0 ? 0 : 1),
+              onTap: _onBottomNavTap,
+              showCenterButton: false,
+              items: navItems,
+            ),
+          ),
+        ],
       ),
     );
   }

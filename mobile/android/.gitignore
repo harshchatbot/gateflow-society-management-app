@@ -19,3 +19,9 @@ google-services.json
 **/google-services.json
 *.pem
 *.p12
+
+
+# Android signing
+android/key.properties
+android/app/*.keystore
+android/app/*.jks

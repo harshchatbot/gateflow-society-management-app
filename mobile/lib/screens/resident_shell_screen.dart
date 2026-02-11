@@ -191,13 +191,22 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
       FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
     ];
     return Scaffold(
-      body: screens[clampedIndex],
-      bottomNavigationBar: SocietyBottomNav(
-        currentIndex: clampedIndex,
-        onTap: (i) => setState(() => _index = i),
-        showCenterButton: false,
-        items: navItems,
-        selectedItemColor: SentinelColors.sentinelAccent,
+      extendBody: true,
+      resizeToAvoidBottomInset: false,
+      body: Stack(
+        children: [
+          screens[clampedIndex],
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: SocietyBottomNav(
+              currentIndex: clampedIndex,
+              onTap: (i) => setState(() => _index = i),
+              showCenterButton: false,
+              items: navItems,
+              selectedItemColor: SentinelColors.sentinelAccent,
+            ),
+          ),
+        ],
       ),
     );
   }

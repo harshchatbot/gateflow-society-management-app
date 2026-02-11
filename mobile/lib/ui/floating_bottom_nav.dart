@@ -42,8 +42,11 @@ class SocietyBottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).padding.bottom;
+    final bottomPadding = bottomInset > 0 ? (bottomInset + 8) : 20.0;
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
+      padding: EdgeInsets.fromLTRB(16, 0, 16, bottomPadding),
       child: Stack(
         alignment: Alignment.bottomCenter,
         clipBehavior: Clip.none,
