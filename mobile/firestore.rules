@@ -331,7 +331,13 @@ service cloud.firestore {
         allow create: if activeMember(societyId)
           && member(societyId).data.systemRole == "guard"
           && request.resource.data.guard_uid == request.auth.uid
-          && request.resource.data.status == "PENDING";
+          && (
+            request.resource.data.status == "PENDING"
+            || (
+              request.resource.data.status == "APPROVED"
+              && request.resource.data.approved_by in ["AUTO_FAVOURITE", "AUTO_PREAPPROVAL"]
+            )
+          );
         allow update: if activeMember(societyId)
           && (
             isAdmin(societyId)
@@ -373,7 +379,33 @@ service cloud.firestore {
         allow read: if activeMember(societyId);
         allow create, update, delete: if isAdmin(societyId);
 
+        // Unit-level quick-entry setting
+        // societies/{societyId}/units/{unitId}/settings/visitor_access
+        match /settings/{settingsId} {
+          allow get, list: if activeMember(societyId);
+          allow create: if (isAdmin(societyId) || isResident(societyId))
+            && request.resource.data.keys().hasOnly([
+              "autoApproveFavouritesEnabled",
+              "updatedAt",
+              "updatedByUid"
+            ]);
+          allow update: if (isAdmin(societyId) || isResident(societyId))
+            && request.resource.data.diff(resource.data).changedKeys().hasOnly([
+              "autoApproveFavouritesEnabled",
+              "updatedAt",
+              "updatedByUid"
+            ]);
+          allow delete: if isAdmin(societyId);
+        }
+
         match /favorite_visitors/{visitorKey} {
+          allow get, list: if activeMember(societyId);
+          allow create, update, delete: if isAdmin(societyId) || isResident(societyId);
+        }
+
+        // Optional v1 scheduled pre-approvals
+        // societies/{societyId}/units/{unitId}/preapprovals/{id}
+        match /preapprovals/{preapprovalId} {
           allow get, list: if activeMember(societyId);
           allow create, update, delete: if isAdmin(societyId) || isResident(societyId);
         }

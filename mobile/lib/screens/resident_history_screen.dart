@@ -357,7 +357,12 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                       : RefreshIndicator(
                           onRefresh: _loadHistory,
                           child: ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                            padding: EdgeInsets.fromLTRB(
+                              16,
+                              8,
+                              16,
+                              24 + MediaQuery.of(context).padding.bottom + 72,
+                            ),
                             itemCount: _filteredHistory.length + (_lastDoc != null ? 1 : 0),
                             itemBuilder: (context, index) {
                               if (index == _filteredHistory.length) {
@@ -552,6 +557,15 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
     final deliveryPartner = record['delivery_partner']?.toString().trim();
     final deliveryPartnerOther = record['delivery_partner_other']?.toString().trim();
     final status = record['status']?.toString() ?? 'UNKNOWN';
+    final approvedBy =
+        (record['approved_by'] ?? record['approvedBy'])?.toString().toUpperCase() ?? '';
+    final isAutoFavourite = approvedBy == 'AUTO_FAVOURITE';
+    final isAutoPreapproval = approvedBy == 'AUTO_PREAPPROVAL';
+    final autoApprovalLabel = isAutoFavourite
+        ? 'Pre-approved (Daily Help)'
+        : isAutoPreapproval
+            ? 'Pre-approved (Schedule)'
+            : null;
     final createdAt = record['created_at']?.toString() ?? '';
     final approvedAt = record['approved_at']?.toString() ?? '';
     final photoUrl = record['photo_url']?.toString() ?? record['photoUrl']?.toString();
@@ -657,6 +671,41 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
               StatusChip(label: status),
             ],
           ),
+          if (autoApprovalLabel != null) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.25),
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.verified_rounded,
+                      size: 14,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Text(
+                      autoApprovalLabel,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           
           // Visitor Details (with optional photo)

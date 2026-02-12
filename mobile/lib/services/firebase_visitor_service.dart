@@ -40,6 +40,7 @@ class FirebaseVisitorService {
     required String visitorId,
     required String visitorType,
     required String visitorPhone,
+    String status = "PENDING",
   }) async {
     try {
       final api = ApiClient();
@@ -55,7 +56,7 @@ class FirebaseVisitorService {
           "visitor_id": visitorId,
           "visitor_type": visitorType.trim().toUpperCase(),
           "visitor_phone": visitorPhone.trim(),
-          "status": "PENDING",
+          "status": status.trim().toUpperCase(),
         },
       );
 
@@ -90,6 +91,12 @@ class FirebaseVisitorService {
     String? deliveryPartnerOther,
     String? vehicleNumber,
     Map<String, dynamic>? typePayload,
+    String initialStatus = "PENDING",
+    String? approvedBy,
+    String? matchedFavouriteId,
+    String? matchedPreapprovalId,
+    String? visitorKey,
+    bool notifyResident = true,
   }) async {
     try {
       final uid = currentUid;
@@ -170,6 +177,8 @@ class FirebaseVisitorService {
       // 5) Create Firestore document
       final now = FieldValue.serverTimestamp();
       final isDelivery = visitorType.toUpperCase() == 'DELIVERY';
+      final normalizedStatus = initialStatus.trim().toUpperCase();
+      final isAutoApproved = normalizedStatus == "APPROVED";
       final visitorData = <String, dynamic>{
         "visitor_id": visitorId,
         "society_id": societyId,
@@ -177,11 +186,20 @@ class FirebaseVisitorService {
         "visitor_type": visitorType.toUpperCase(),
         "visitor_phone": visitorPhone.trim(),
         "guard_uid": uid,
-        "status": "PENDING",
+        "status": normalizedStatus,
         "photo_url": photoUrl,
         "createdAt": now,
         "updatedAt": now,
         "entry_mode": "walk_in",
+        if (visitorKey != null && visitorKey.trim().isNotEmpty)
+          "visitor_key": visitorKey.trim(),
+        if (isAutoApproved) "approvedAt": now,
+        if (isAutoApproved && approvedBy != null && approvedBy.trim().isNotEmpty)
+          "approved_by": approvedBy.trim(),
+        if (isAutoApproved && matchedFavouriteId != null && matchedFavouriteId.trim().isNotEmpty)
+          "matchedFavouriteId": matchedFavouriteId.trim(),
+        if (isAutoApproved && matchedPreapprovalId != null && matchedPreapprovalId.trim().isNotEmpty)
+          "matchedPreapprovalId": matchedPreapprovalId.trim(),
         if (visitorName != null && visitorName.isNotEmpty) "visitor_name": visitorName.trim(),
         if (vehicleNumber != null && vehicleNumber.isNotEmpty) "vehicle_number": vehicleNumber.trim(),
         if (isDelivery && deliveryPartner != null && deliveryPartner.isNotEmpty) "delivery_partner": deliveryPartner.trim(),
@@ -193,13 +211,16 @@ class FirebaseVisitorService {
 
       final visitorRef = _visitorsRef(societyId).doc(visitorId);
       await visitorRef.set(visitorData);
-      await _notifyResidentForVisitor(
-        societyId: societyId,
-        flatNo: flatNo,
-        visitorId: visitorId,
-        visitorType: visitorType,
-        visitorPhone: visitorPhone,
-      );
+      if (notifyResident) {
+        await _notifyResidentForVisitor(
+          societyId: societyId,
+          flatNo: flatNo,
+          visitorId: visitorId,
+          visitorType: visitorType,
+          visitorPhone: visitorPhone,
+          status: normalizedStatus,
+        );
+      }
 
       AppLogger.i("Visitor document created in Firestore", data: {
         "visitorId": visitorId,
@@ -223,7 +244,7 @@ class FirebaseVisitorService {
         flatNo: flatNo.trim().toUpperCase(),
         visitorType: visitorType.toUpperCase(),
         visitorPhone: visitorPhone.trim(),
-        status: "PENDING",
+        status: normalizedStatus,
         createdAt: createdAt,
         guardId: uid,
         photoUrl: photoUrl,
@@ -258,6 +279,12 @@ class FirebaseVisitorService {
     String? deliveryPartnerOther,
     String? vehicleNumber,
     Map<String, dynamic>? typePayload,
+    String initialStatus = "PENDING",
+    String? approvedBy,
+    String? matchedFavouriteId,
+    String? matchedPreapprovalId,
+    String? visitorKey,
+    bool notifyResident = true,
   }) async {
     try {
       final uid = currentUid;
@@ -282,6 +309,8 @@ class FirebaseVisitorService {
 
       final now = FieldValue.serverTimestamp();
       final isDelivery = visitorType.toUpperCase() == 'DELIVERY';
+      final normalizedStatus = initialStatus.trim().toUpperCase();
+      final isAutoApproved = normalizedStatus == "APPROVED";
       final visitorData = <String, dynamic>{
         "visitor_id": visitorId,
         "society_id": societyId,
@@ -289,10 +318,19 @@ class FirebaseVisitorService {
         "visitor_type": visitorType.toUpperCase(),
         "visitor_phone": visitorPhone.trim(),
         "guard_uid": uid,
-        "status": "PENDING",
+        "status": normalizedStatus,
         "createdAt": now,
         "updatedAt": now,
         "entry_mode": "walk_in",
+        if (visitorKey != null && visitorKey.trim().isNotEmpty)
+          "visitor_key": visitorKey.trim(),
+        if (isAutoApproved) "approvedAt": now,
+        if (isAutoApproved && approvedBy != null && approvedBy.trim().isNotEmpty)
+          "approved_by": approvedBy.trim(),
+        if (isAutoApproved && matchedFavouriteId != null && matchedFavouriteId.trim().isNotEmpty)
+          "matchedFavouriteId": matchedFavouriteId.trim(),
+        if (isAutoApproved && matchedPreapprovalId != null && matchedPreapprovalId.trim().isNotEmpty)
+          "matchedPreapprovalId": matchedPreapprovalId.trim(),
         if (residentPhone != null && residentPhone.isNotEmpty) "resident_phone": residentPhone.trim(),
         if (visitorName != null && visitorName.isNotEmpty) "visitor_name": visitorName.trim(),
         if (vehicleNumber != null && vehicleNumber.isNotEmpty) "vehicle_number": vehicleNumber.trim(),
@@ -305,13 +343,16 @@ class FirebaseVisitorService {
 
       final visitorRef = _visitorsRef(societyId).doc(visitorId);
       await visitorRef.set(visitorData);
-      await _notifyResidentForVisitor(
-        societyId: societyId,
-        flatNo: flatNo,
-        visitorId: visitorId,
-        visitorType: visitorType,
-        visitorPhone: visitorPhone,
-      );
+      if (notifyResident) {
+        await _notifyResidentForVisitor(
+          societyId: societyId,
+          flatNo: flatNo,
+          visitorId: visitorId,
+          visitorType: visitorType,
+          visitorPhone: visitorPhone,
+          status: normalizedStatus,
+        );
+      }
 
       AppLogger.i("Visitor document created in Firestore", data: {
         "visitorId": visitorId,
@@ -335,7 +376,7 @@ class FirebaseVisitorService {
         flatNo: flatNo.trim().toUpperCase(),
         visitorType: visitorType.toUpperCase(),
         visitorPhone: visitorPhone.trim(),
-        status: "PENDING",
+        status: normalizedStatus,
         createdAt: createdAt,
         guardId: uid,
         residentPhone: residentPhone?.trim().isNotEmpty == true ? residentPhone!.trim() : null,

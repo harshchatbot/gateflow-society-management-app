@@ -100,6 +100,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   String? _selectedFlatNo; // Selected unit label (flat no, villa label, etc.)
   String? _selectedUnitId;
   bool _isFavoriteForUnit = false;
+  bool _isPreApprovedForUnit = false;
+  bool _matchedBySchedule = false;
+  bool _selectedFromFavoriteList = false;
   bool _favoriteCheckLoading = false;
   bool _favoriteVisitorsLoading = false;
   List<Map<String, dynamic>> _favoriteVisitors = [];
@@ -116,8 +119,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   @override
   void initState() {
     super.initState();
-    _visitorNameController.addListener(_scheduleFavoriteCheck);
-    _visitorPhoneController.addListener(_scheduleFavoriteCheck);
+    _visitorNameController.addListener(_onVisitorIdentityChanged);
+    _visitorPhoneController.addListener(_onVisitorIdentityChanged);
     _prefillFromInitialVisitor();
     _loadFlats();
   }
@@ -157,8 +160,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   @override
   void dispose() {
     _favoriteCheckDebounce?.cancel();
-    _visitorNameController.removeListener(_scheduleFavoriteCheck);
-    _visitorPhoneController.removeListener(_scheduleFavoriteCheck);
+    _visitorNameController.removeListener(_onVisitorIdentityChanged);
+    _visitorPhoneController.removeListener(_onVisitorIdentityChanged);
     _visitorNameController.dispose();
     _visitorPhoneController.dispose();
     _vehicleNumberController.dispose();
@@ -202,6 +205,11 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     }
   }
 
+  void _onVisitorIdentityChanged() {
+    _selectedFromFavoriteList = false;
+    _scheduleFavoriteCheck();
+  }
+
   void _onFlatSelected(String? flatNo) {
     setState(() {
       _selectedFlatNo = flatNo;
@@ -209,6 +217,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       _flatOwnerName = null;
       _flatOwnerPhone = null;
       _isFavoriteForUnit = false;
+      _isPreApprovedForUnit = false;
+      _matchedBySchedule = false;
+      _selectedFromFavoriteList = false;
       _favoriteVisitors = [];
     });
     if (flatNo != null && flatNo.isNotEmpty) {
@@ -220,8 +231,25 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
 
   String? _resolveUnitId(String? flatNo) {
     if (flatNo == null || flatNo.trim().isEmpty) return null;
-    // Keep unit id aligned across resident and guard flows using the visible flat label.
-    return flatNo.trim();
+    final selected = flatNo.trim();
+
+    for (final f in _flats) {
+      final label = ((f['flatNo'] as String?) ?? '').trim();
+      if (label == selected) {
+        final id = (f['id'] as String?)?.trim();
+        return (id != null && id.isNotEmpty) ? id : selected;
+      }
+    }
+
+    for (final f in _flats) {
+      final label = ((f['flatNo'] as String?) ?? '').trim();
+      if (label.toUpperCase() == selected.toUpperCase()) {
+        final id = (f['id'] as String?)?.trim();
+        return (id != null && id.isNotEmpty) ? id : label;
+      }
+    }
+
+    return selected;
   }
 
   String? _normalizeSelectedFlatForList(
@@ -255,16 +283,33 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     return false;
   }
 
+  List<String> _unitLookupCandidates([String? explicitUnitId]) {
+    final set = <String>{};
+    void add(String? v) {
+      final t = (v ?? '').trim();
+      if (t.isNotEmpty) set.add(t);
+    }
+
+    add(explicitUnitId);
+    add(_selectedUnitId);
+    add(_selectedFlatNo);
+    return set.toList();
+  }
+
   Future<void> _loadFavoriteVisitorsForUnit() async {
-    final unitId = _selectedUnitId?.trim() ?? '';
-    if (unitId.isEmpty) return;
+    final unitCandidates = _unitLookupCandidates();
+    if (unitCandidates.isEmpty) return;
 
     setState(() => _favoriteVisitorsLoading = true);
-    final items = await _favoritesService.getFavoriteVisitorsForUnit(
-      societyId: widget.societyId,
-      unitId: unitId,
-      limit: 5,
-    );
+    List<Map<String, dynamic>> items = <Map<String, dynamic>>[];
+    for (final unitId in unitCandidates) {
+      items = await _favoritesService.getFavoriteVisitorsForUnit(
+        societyId: widget.societyId,
+        unitId: unitId,
+        limit: 5,
+      );
+      if (items.isNotEmpty) break;
+    }
     if (!mounted) return;
     setState(() {
       _favoriteVisitorsLoading = false;
@@ -281,14 +326,16 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   }
 
   Future<void> _checkFavoriteForCurrentInput() async {
-    final unitId = _selectedUnitId?.trim() ?? '';
+    final unitCandidates = _unitLookupCandidates();
     final name = _visitorNameController.text.trim();
     final phone = _visitorPhoneController.text.trim();
 
-    if (unitId.isEmpty || (name.isEmpty && phone.isEmpty)) {
+    if (unitCandidates.isEmpty || (name.isEmpty && phone.isEmpty)) {
       if (!mounted) return;
       setState(() {
         _isFavoriteForUnit = false;
+        _isPreApprovedForUnit = false;
+        _matchedBySchedule = false;
         _favoriteCheckLoading = false;
       });
       return;
@@ -300,16 +347,136 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       phone: phone,
       purpose: _selectedVisitorType,
     );
-    final match = await _favoritesService.isFavoriteVisitor(
-      societyId: widget.societyId,
-      unitId: unitId,
-      visitorKey: key,
-    );
+    Map<String, dynamic>? match;
+    bool autoApproveEnabled = false;
+    Map<String, dynamic>? preapproval;
+    for (final unitId in unitCandidates) {
+      match ??= await _favoritesService.findMatchingFavorite(
+        societyId: widget.societyId,
+        unitId: unitId,
+        name: name,
+        phone: phone,
+        purpose: _selectedVisitorType,
+      );
+      autoApproveEnabled = autoApproveEnabled ||
+          await _favoritesService.getAutoApproveEnabled(
+            widget.societyId,
+            widget.guardId,
+            unitId: unitId,
+          );
+      preapproval ??= await _favoritesService.findActivePreapproval(
+        societyId: widget.societyId,
+        unitId: unitId,
+        visitorKey: key,
+        now: DateTime.now(),
+      );
+      if (match != null && preapproval != null && autoApproveEnabled) break;
+    }
+    final phoneAvailable = phone.trim().isNotEmpty;
+    final canUseNoPhoneAuto = phoneAvailable || _selectedFromFavoriteList;
+    final favPreApproved = match != null &&
+        (match['isPreApproved'] == true) &&
+        autoApproveEnabled &&
+        canUseNoPhoneAuto;
+    final scheduleApproved = preapproval != null && canUseNoPhoneAuto;
+    final isQuickEntry = favPreApproved || scheduleApproved;
     if (!mounted) return;
     setState(() {
-      _isFavoriteForUnit = match;
+      _isFavoriteForUnit = match != null;
+      _isPreApprovedForUnit = isQuickEntry;
+      _matchedBySchedule = scheduleApproved;
       _favoriteCheckLoading = false;
     });
+  }
+
+  Future<Map<String, dynamic>> _resolveQuickEntryDecision({
+    required String unitId,
+    required String visitorName,
+    required String visitorPhone,
+  }) async {
+    final unitCandidates = _unitLookupCandidates(unitId);
+    final name = visitorName.trim();
+    final phone = visitorPhone.trim();
+    if (unitCandidates.isEmpty || (name.isEmpty && phone.isEmpty)) {
+      return <String, dynamic>{
+        'status': 'PENDING',
+        'approvedBy': null,
+        'matchedFavouriteId': null,
+        'matchedPreapprovalId': null,
+        'visitorKey': null,
+        'notifyResident': true,
+      };
+    }
+
+    final key = FavoriteVisitorsService.buildVisitorKey(
+      name: name.isEmpty ? phone : name,
+      phone: phone,
+      purpose: _selectedVisitorType,
+    );
+    Map<String, dynamic>? favorite;
+    bool autoApproveEnabled = false;
+    Map<String, dynamic>? preapproval;
+    for (final candidateUnitId in unitCandidates) {
+      favorite ??= await _favoritesService.findMatchingFavorite(
+        societyId: widget.societyId,
+        unitId: candidateUnitId,
+        name: name,
+        phone: phone,
+        purpose: _selectedVisitorType,
+      );
+      autoApproveEnabled = autoApproveEnabled ||
+          await _favoritesService.getAutoApproveEnabled(
+            widget.societyId,
+            widget.guardId,
+            unitId: candidateUnitId,
+          );
+      preapproval ??= await _favoritesService.findActivePreapproval(
+        societyId: widget.societyId,
+        unitId: candidateUnitId,
+        visitorKey: key,
+        now: DateTime.now(),
+      );
+      if (favorite != null && preapproval != null && autoApproveEnabled) break;
+    }
+
+    final phoneAvailable = phone.isNotEmpty;
+    final canUseNoPhoneAuto = phoneAvailable || _selectedFromFavoriteList;
+
+    if (preapproval != null && canUseNoPhoneAuto) {
+      return <String, dynamic>{
+        'status': 'APPROVED',
+        'approvedBy': 'AUTO_PREAPPROVAL',
+        'matchedFavouriteId': null,
+        'matchedPreapprovalId': preapproval['id']?.toString(),
+        'visitorKey': key,
+        'notifyResident': preapproval['notifyResidentOnEntry'] != false,
+      };
+    }
+
+    final favEligible = favorite != null &&
+        favorite['isPreApproved'] == true &&
+        autoApproveEnabled &&
+        canUseNoPhoneAuto;
+
+    if (favEligible) {
+      return <String, dynamic>{
+        'status': 'APPROVED',
+        'approvedBy': 'AUTO_FAVOURITE',
+        'matchedFavouriteId': favorite['id']?.toString(),
+        'matchedPreapprovalId': null,
+        'visitorKey': key,
+        'notifyResident': favorite['notifyResidentOnEntry'] != false,
+      };
+    }
+
+    return <String, dynamic>{
+      'status': 'PENDING',
+      'approvedBy': null,
+      'matchedFavouriteId': null,
+      'matchedPreapprovalId': null,
+      'visitorKey': key,
+      'notifyResident': true,
+    };
   }
 
   Future<void> _lookupFlatOwner() async {
@@ -463,6 +630,21 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       return;
     }
 
+    final quickDecision = await _resolveQuickEntryDecision(
+      unitId: _selectedUnitId?.trim() ?? flatNo,
+      visitorName: visitorName ?? '',
+      visitorPhone: _visitorPhoneController.text.trim(),
+    );
+    final initialStatus = (quickDecision['status'] as String?) ?? 'PENDING';
+    final approvedBy = quickDecision['approvedBy'] as String?;
+    final matchedFavouriteId = quickDecision['matchedFavouriteId'] as String?;
+    final matchedPreapprovalId = quickDecision['matchedPreapprovalId'] as String?;
+    final visitorKey = quickDecision['visitorKey'] as String?;
+    final notifyResident = (quickDecision['notifyResident'] as bool?) ?? true;
+    final isAutoApprovedSubmit =
+        initialStatus == 'APPROVED' &&
+        (approvedBy == 'AUTO_FAVOURITE' || approvedBy == 'AUTO_PREAPPROVAL');
+
     final result = (_visitorPhoto != null)
         ? await _visitorService.createVisitorWithPhoto(
             societyId: widget.societyId,
@@ -480,6 +662,12 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             deliveryPartnerOther: deliveryPartnerOther,
             vehicleNumber: vehicleNumber,
             typePayload: extraTypeData.isNotEmpty ? extraTypeData : null,
+            initialStatus: initialStatus,
+            approvedBy: approvedBy,
+            matchedFavouriteId: matchedFavouriteId,
+            matchedPreapprovalId: matchedPreapprovalId,
+            visitorKey: visitorKey,
+            notifyResident: notifyResident,
           )
         : await _visitorService.createVisitor(
             societyId: widget.societyId,
@@ -492,6 +680,12 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             deliveryPartnerOther: deliveryPartnerOther,
             vehicleNumber: vehicleNumber,
             typePayload: extraTypeData.isNotEmpty ? extraTypeData : null,
+            initialStatus: initialStatus,
+            approvedBy: approvedBy,
+            matchedFavouriteId: matchedFavouriteId,
+            matchedPreapprovalId: matchedPreapprovalId,
+            visitorKey: visitorKey,
+            notifyResident: notifyResident,
           );
 
     if (!mounted) return;
@@ -501,8 +695,45 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         _isLoading = false;
         _loadingStartedAt = null;
         _uploadProgress = null;
-        _createdVisitor = result.data!;
+        _createdVisitor = isAutoApprovedSubmit ? null : result.data!;
       });
+      if (isAutoApprovedSubmit) {
+        final theme = Theme.of(context);
+        final statusText = approvedBy == 'AUTO_PREAPPROVAL'
+            ? 'Pre-approved entry recorded via schedule.'
+            : 'Pre-approved entry recorded as daily help.';
+        if (!mounted) return;
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) {
+            return AlertDialog(
+              title: const Text('Entry Recorded'),
+              content: Text(statusText),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: const Text('OK'),
+                ),
+              ],
+            );
+          },
+        );
+        if (!mounted) return;
+        _clearForm();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'No resident approval required',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            backgroundColor: theme.colorScheme.primary,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
     } else {
       setState(() {
         _isLoading = false;
@@ -539,6 +770,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       _visitorPhoto = null;
       _flatOwnerName = null;
       _flatOwnerPhone = null;
+      _selectedFromFavoriteList = false;
     });
   }
 
@@ -769,7 +1001,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
           _buildFieldLabel("Visitor Name (optional)"),
           _buildOptionalTextField(
             controller: _visitorNameController,
-            hint: "e.g. Rahul / Zomato Delivery",
+            hint: "e.g. Harsh",
             icon: Icons.person_outline_rounded,
           ),
           const SizedBox(height: 18),
@@ -819,15 +1051,28 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                       ),
                     ),
                   ] else ...[
-                    const Icon(Icons.star_rounded,
-                        size: 16, color: _favoriteGold),
+                    Icon(
+                      _isPreApprovedForUnit
+                          ? Icons.check_circle_rounded
+                          : Icons.star_rounded,
+                      size: 16,
+                      color: _isPreApprovedForUnit
+                          ? AppColors.success
+                          : _favoriteGold,
+                    ),
                     const SizedBox(width: 6),
                     Text(
-                      "Favourite for this unit",
+                      _isPreApprovedForUnit
+                          ? (_matchedBySchedule
+                              ? "Pre-approved (schedule active)"
+                              : "Pre-approved (Daily Help)")
+                          : "Favourite for this unit",
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
-                        color: theme.colorScheme.primary,
+                        color: _isPreApprovedForUnit
+                            ? AppColors.success
+                            : theme.colorScheme.primary,
                       ),
                     ),
                   ],
@@ -982,6 +1227,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                           if (phone.isNotEmpty) {
                             _visitorPhoneController.text = phone;
                           }
+                          _selectedFromFavoriteList = true;
                           _scheduleFavoriteCheck();
                         },
                       );
@@ -1102,7 +1348,16 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),
-                  child: Text("NOTIFY RESIDENT", style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                  child: Text(
+                    _isPreApprovedForUnit
+                        ? "PRE-APPROVED ENTRY"
+                        : "NOTIFY RESIDENT",
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
                 ),
               ),
             ),

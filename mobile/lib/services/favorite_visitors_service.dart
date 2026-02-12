@@ -104,6 +104,31 @@ class FavoriteVisitorsService {
         .collection('favorite_visitors');
   }
 
+  DocumentReference<Map<String, dynamic>> _unitVisitorSettingsRef({
+    required String societyId,
+    required String unitId,
+  }) {
+    return _firestore
+        .collection('societies')
+        .doc(societyId)
+        .collection('units')
+        .doc(unitId)
+        .collection('settings')
+        .doc('visitor_access');
+  }
+
+  CollectionReference<Map<String, dynamic>> _unitPreapprovalsRef({
+    required String societyId,
+    required String unitId,
+  }) {
+    return _firestore
+        .collection('societies')
+        .doc(societyId)
+        .collection('units')
+        .doc(unitId)
+        .collection('preapprovals');
+  }
+
   /// Firestore-first read of normalized favorite names for a unit.
   /// [residentId] is retained for API compatibility.
   Future<Set<String>> getFavorites(
@@ -182,6 +207,9 @@ class FavoriteVisitorsService {
         'phone': normalizedPhone,
         'purpose': normalizedPurpose.isEmpty ? null : normalizedPurpose,
         'photoUrl': (photoUrl == null || photoUrl.trim().isEmpty) ? null : photoUrl.trim(),
+        'visitorKey': key,
+        'isPreApproved': false,
+        'notifyResidentOnEntry': true,
         'createdAt': FieldValue.serverTimestamp(),
         'createdByUid': _auth.currentUser?.uid ?? residentId,
       });
@@ -239,6 +267,8 @@ class FavoriteVisitorsService {
           'phone': data['phone']?.toString(),
           'purpose': data['purpose']?.toString(),
           'photoUrl': data['photoUrl']?.toString(),
+          'isPreApproved': data['isPreApproved'] == true,
+          'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
         };
       }).where((m) => (m['name'] as String).trim().isNotEmpty).toList();
 
@@ -260,6 +290,8 @@ class FavoriteVisitorsService {
           'phone': data['phone']?.toString(),
           'purpose': data['purpose']?.toString(),
           'photoUrl': data['photoUrl']?.toString(),
+          'isPreApproved': data['isPreApproved'] == true,
+          'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
         };
       }).where((m) => (m['name'] as String).trim().isNotEmpty).toList();
     } catch (_) {
@@ -268,7 +300,26 @@ class FavoriteVisitorsService {
   }
 
   /// Whether auto-approve for favorites is enabled for this tenant.
-  Future<bool> getAutoApproveEnabled(String societyId, String residentId) async {
+  Future<bool> getAutoApproveEnabled(
+    String societyId,
+    String residentId, {
+    String? unitId,
+  }) async {
+    final resolvedUnit = (unitId ?? '').trim();
+    if (resolvedUnit.isNotEmpty) {
+      try {
+        final snap = await _unitVisitorSettingsRef(
+          societyId: societyId,
+          unitId: resolvedUnit,
+        ).get();
+        final data = snap.data();
+        if (data != null && data['autoApproveFavouritesEnabled'] is bool) {
+          return data['autoApproveFavouritesEnabled'] == true;
+        }
+      } catch (_) {
+        // fall back to local setting for backward compatibility
+      }
+    }
     final prefs = await _prefs;
     return prefs.getBool(_autoApproveKey(societyId, residentId)) ?? false;
   }
@@ -277,9 +328,257 @@ class FavoriteVisitorsService {
     String societyId,
     String residentId,
     bool enabled,
-  ) async {
+    {
+    String? unitId,
+  }) async {
+    final resolvedUnit = (unitId ?? '').trim();
+    if (resolvedUnit.isNotEmpty) {
+      try {
+        await _unitVisitorSettingsRef(
+          societyId: societyId,
+          unitId: resolvedUnit,
+        ).set({
+          'autoApproveFavouritesEnabled': enabled,
+          'updatedAt': FieldValue.serverTimestamp(),
+          'updatedByUid': _auth.currentUser?.uid ?? residentId,
+        }, SetOptions(merge: true));
+      } catch (_) {
+        // keep local fallback write below
+      }
+    }
     final prefs = await _prefs;
     await prefs.setBool(_autoApproveKey(societyId, residentId), enabled);
+  }
+
+  Future<void> updateFavoriteSettings({
+    required String societyId,
+    required String unitId,
+    required String visitorKey,
+    bool? isPreApproved,
+    bool? notifyResidentOnEntry,
+  }) async {
+    final updates = <String, dynamic>{
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedByUid': _auth.currentUser?.uid,
+    };
+    if (isPreApproved != null) updates['isPreApproved'] = isPreApproved;
+    if (notifyResidentOnEntry != null) {
+      updates['notifyResidentOnEntry'] = notifyResidentOnEntry;
+    }
+    await _favoritesRef(
+      societyId: societyId,
+      unitId: unitId,
+    ).doc(visitorKey).set(updates, SetOptions(merge: true));
+  }
+
+  Future<Map<String, dynamic>?> findMatchingFavorite({
+    required String societyId,
+    required String unitId,
+    required String name,
+    String? phone,
+    String? purpose,
+  }) async {
+    final resolvedUnit = unitId.trim();
+    if (resolvedUnit.isEmpty) return null;
+    final trimmedName = name.trim();
+    final trimmedPhone = (phone ?? '').trim();
+    if (trimmedName.isEmpty && trimmedPhone.isEmpty) return null;
+
+    final key = buildVisitorKey(
+      name: trimmedName.isEmpty ? trimmedPhone : trimmedName,
+      phone: trimmedPhone,
+      purpose: purpose,
+    );
+    final doc = await _favoritesRef(
+      societyId: societyId,
+      unitId: resolvedUnit,
+    ).doc(key).get();
+    if (doc.exists) {
+      final data = doc.data() ?? <String, dynamic>{};
+      return <String, dynamic>{
+        'id': doc.id,
+        'visitorKey': key,
+        'name': (data['name'] ?? '').toString(),
+        'phone': data['phone']?.toString(),
+        'purpose': data['purpose']?.toString(),
+        'isPreApproved': data['isPreApproved'] == true,
+        'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
+      };
+    }
+
+    // Compatibility fallback by normalized name from legacy docs.
+    final normalized = normalizeName(trimmedName);
+    if (normalized.isEmpty) return null;
+    try {
+      final legacy = await _legacyFavoritesRef(
+        societyId: societyId,
+        unitId: resolvedUnit,
+      ).limit(200).get();
+      for (final d in legacy.docs) {
+        final data = d.data();
+        final candidate = normalizeName((data['name'] ?? '').toString());
+        if (candidate == normalized) {
+          return <String, dynamic>{
+            'id': d.id,
+            'visitorKey': d.id,
+            'name': (data['name'] ?? '').toString(),
+            'phone': data['phone']?.toString(),
+            'purpose': data['purpose']?.toString(),
+            'isPreApproved': data['isPreApproved'] == true,
+            'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
+          };
+        }
+      }
+    } catch (_) {
+      // ignore fallback failures
+    }
+    return null;
+  }
+
+  Future<Map<String, dynamic>?> findActivePreapproval({
+    required String societyId,
+    required String unitId,
+    required String visitorKey,
+    required DateTime now,
+  }) async {
+    final resolvedUnit = unitId.trim();
+    if (resolvedUnit.isEmpty || visitorKey.trim().isEmpty) return null;
+    try {
+      final snap = await _unitPreapprovalsRef(
+        societyId: societyId,
+        unitId: resolvedUnit,
+      ).get();
+      final weekday = now.weekday;
+      final nowMinutes = now.hour * 60 + now.minute;
+      for (final d in snap.docs) {
+        final data = d.data();
+        if ((data['visitorKey'] ?? '').toString().trim() != visitorKey) continue;
+        final validFromTs = data['validFrom'];
+        final validToTs = data['validTo'];
+        if (validFromTs is! Timestamp || validToTs is! Timestamp) continue;
+        final validFrom = validFromTs.toDate();
+        final validTo = validToTs.toDate();
+        if (now.isBefore(validFrom) || now.isAfter(validTo)) continue;
+
+        final days = data['daysOfWeek'];
+        if (days is List && days.isNotEmpty) {
+          final parsedDays = days.map((e) => int.tryParse(e.toString())).whereType<int>().toSet();
+          if (!parsedDays.contains(weekday)) continue;
+        }
+
+        final fromMins = int.tryParse((data['timeFromMins'] ?? '').toString());
+        final toMins = int.tryParse((data['timeToMins'] ?? '').toString());
+        if (fromMins != null && toMins != null) {
+          if (nowMinutes < fromMins || nowMinutes > toMins) continue;
+        }
+
+        final maxEntries = int.tryParse((data['maxEntries'] ?? '').toString());
+        final usedEntries = int.tryParse((data['usedEntries'] ?? '').toString()) ?? 0;
+        if (maxEntries != null && usedEntries >= maxEntries) continue;
+
+        return <String, dynamic>{
+          'id': d.id,
+          'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
+        };
+      }
+    } catch (_) {
+      return null;
+    }
+    return null;
+  }
+
+  Future<List<Map<String, dynamic>>> getPreapprovalsForUnit({
+    required String societyId,
+    required String unitId,
+    int limit = 100,
+  }) async {
+    final resolvedUnit = unitId.trim();
+    if (resolvedUnit.isEmpty) return <Map<String, dynamic>>[];
+    try {
+      final snap = await _unitPreapprovalsRef(
+        societyId: societyId,
+        unitId: resolvedUnit,
+      ).limit(limit).get();
+      return snap.docs.map((d) {
+        final data = d.data();
+        final validFromTs = data['validFrom'];
+        final validToTs = data['validTo'];
+        return <String, dynamic>{
+          'id': d.id,
+          'visitorKey': (data['visitorKey'] ?? '').toString(),
+          'validFrom': validFromTs is Timestamp ? validFromTs.toDate() : null,
+          'validTo': validToTs is Timestamp ? validToTs.toDate() : null,
+          'daysOfWeek': (data['daysOfWeek'] is List)
+              ? (data['daysOfWeek'] as List)
+                  .map((e) => int.tryParse(e.toString()))
+                  .whereType<int>()
+                  .toList()
+              : <int>[],
+          'timeFromMins': int.tryParse((data['timeFromMins'] ?? '').toString()),
+          'timeToMins': int.tryParse((data['timeToMins'] ?? '').toString()),
+          'maxEntries': int.tryParse((data['maxEntries'] ?? '').toString()),
+          'usedEntries': int.tryParse((data['usedEntries'] ?? '').toString()) ?? 0,
+          'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
+        };
+      }).toList();
+    } catch (_) {
+      return <Map<String, dynamic>>[];
+    }
+  }
+
+  Future<void> upsertPreapproval({
+    required String societyId,
+    required String unitId,
+    String? preapprovalId,
+    required String visitorKey,
+    required DateTime validFrom,
+    required DateTime validTo,
+    List<int>? daysOfWeek,
+    int? timeFromMins,
+    int? timeToMins,
+    int? maxEntries,
+    bool notifyResidentOnEntry = true,
+  }) async {
+    final resolvedUnit = unitId.trim();
+    if (resolvedUnit.isEmpty || visitorKey.trim().isEmpty) return;
+    final doc = (preapprovalId == null || preapprovalId.trim().isEmpty)
+        ? _unitPreapprovalsRef(societyId: societyId, unitId: resolvedUnit).doc()
+        : _unitPreapprovalsRef(
+            societyId: societyId,
+            unitId: resolvedUnit,
+          ).doc(preapprovalId.trim());
+    final payload = <String, dynamic>{
+      'visitorKey': visitorKey.trim(),
+      'validFrom': Timestamp.fromDate(validFrom),
+      'validTo': Timestamp.fromDate(validTo),
+      'daysOfWeek': (daysOfWeek ?? <int>[]),
+      'timeFromMins': timeFromMins,
+      'timeToMins': timeToMins,
+      'maxEntries': maxEntries,
+      'notifyResidentOnEntry': notifyResidentOnEntry,
+      'updatedAt': FieldValue.serverTimestamp(),
+      'updatedByUid': _auth.currentUser?.uid,
+      'usedEntries': 0,
+    };
+    payload.removeWhere((key, value) => value == null);
+    if (preapprovalId == null || preapprovalId.trim().isEmpty) {
+      payload['createdAt'] = FieldValue.serverTimestamp();
+      payload['createdByUid'] = _auth.currentUser?.uid;
+    }
+    await doc.set(payload, SetOptions(merge: true));
+  }
+
+  Future<void> deletePreapproval({
+    required String societyId,
+    required String unitId,
+    required String preapprovalId,
+  }) async {
+    final resolvedUnit = unitId.trim();
+    if (resolvedUnit.isEmpty || preapprovalId.trim().isEmpty) return;
+    await _unitPreapprovalsRef(
+      societyId: societyId,
+      unitId: resolvedUnit,
+    ).doc(preapprovalId.trim()).delete();
   }
 
   /// Internal: load + prune auto-approved map (pendingId -> timestamp).

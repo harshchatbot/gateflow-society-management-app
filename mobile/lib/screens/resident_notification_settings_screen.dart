@@ -38,20 +38,366 @@ class _ResidentNotificationSettingsScreenState
   final FavoriteVisitorsService _favoritesService =
       FavoriteVisitorsService.instance;
   bool _autoApproveFavorites = false;
+  bool _favoritesLoading = false;
+  List<Map<String, dynamic>> _favoriteVisitors = <Map<String, dynamic>>[];
+  bool _preapprovalsLoading = false;
+  List<Map<String, dynamic>> _preapprovals = <Map<String, dynamic>>[];
 
   @override
   void initState() {
     super.initState();
     _loadAutoApproveFlag();
+    _loadFavoriteVisitors();
+    _loadPreapprovals();
   }
 
   Future<void> _loadAutoApproveFlag() async {
     final enabled = await _favoritesService.getAutoApproveEnabled(
       widget.societyId,
       widget.residentId,
+      unitId: widget.flatNo,
     );
     if (!mounted) return;
     setState(() => _autoApproveFavorites = enabled);
+  }
+
+  Future<void> _loadFavoriteVisitors() async {
+    setState(() => _favoritesLoading = true);
+    final list = await _favoritesService.getFavoriteVisitorsForUnit(
+      societyId: widget.societyId,
+      unitId: widget.flatNo,
+      limit: 200,
+    );
+    if (!mounted) return;
+    setState(() {
+      _favoriteVisitors = list;
+      _favoritesLoading = false;
+    });
+  }
+
+  Future<void> _toggleFavoritePreApproval({
+    required String visitorKey,
+    required bool enabled,
+  }) async {
+    await _favoritesService.updateFavoriteSettings(
+      societyId: widget.societyId,
+      unitId: widget.flatNo,
+      visitorKey: visitorKey,
+      isPreApproved: enabled,
+    );
+    await _loadFavoriteVisitors();
+  }
+
+  Future<void> _setAutoApproveEnabledImmediate(bool enabled) async {
+    setState(() => _autoApproveFavorites = enabled);
+    try {
+      await _favoritesService.setAutoApproveEnabled(
+        widget.societyId,
+        widget.residentId,
+        enabled,
+        unitId: widget.flatNo,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            enabled
+                ? 'Auto-approve favourites enabled'
+                : 'Auto-approve favourites disabled',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _autoApproveFavorites = !enabled);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update setting: $e'),
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: AppColors.error,
+        ),
+      );
+    }
+  }
+
+  Future<void> _loadPreapprovals() async {
+    setState(() => _preapprovalsLoading = true);
+    final list = await _favoritesService.getPreapprovalsForUnit(
+      societyId: widget.societyId,
+      unitId: widget.flatNo,
+      limit: 200,
+    );
+    if (!mounted) return;
+    setState(() {
+      _preapprovals = list;
+      _preapprovalsLoading = false;
+    });
+  }
+
+  String _fmtDateTime(DateTime? dt) {
+    if (dt == null) return '—';
+    final d = dt.toLocal();
+    String two(int n) => n.toString().padLeft(2, '0');
+    return '${d.year}-${two(d.month)}-${two(d.day)} ${two(d.hour)}:${two(d.minute)}';
+  }
+
+  String _fmtDays(List<int> days) {
+    if (days.isEmpty) return 'All days';
+    const labels = {1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun'};
+    return days.map((d) => labels[d] ?? d.toString()).join(', ');
+  }
+
+  String _fmtMins(int? mins) {
+    if (mins == null) return '—';
+    final h = mins ~/ 60;
+    final m = mins % 60;
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+  }
+
+  String _favoriteNameByKey(String key) {
+    for (final f in _favoriteVisitors) {
+      if ((f['visitorKey'] ?? '').toString() == key) {
+        return (f['name'] ?? 'Visitor').toString();
+      }
+    }
+    return key;
+  }
+
+  Future<void> _deletePreapproval(String id) async {
+    await _favoritesService.deletePreapproval(
+      societyId: widget.societyId,
+      unitId: widget.flatNo,
+      preapprovalId: id,
+    );
+    await _loadPreapprovals();
+  }
+
+  Future<void> _openAddPreapprovalDialog() async {
+    if (_favoriteVisitors.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Add favourite visitors first.')),
+      );
+      return;
+    }
+
+    String selectedVisitorKey =
+        (_favoriteVisitors.first['visitorKey'] ?? '').toString();
+    DateTime validFrom = DateTime.now();
+    DateTime validTo = DateTime.now().add(const Duration(days: 30));
+    final Set<int> days = <int>{};
+    bool useTimeWindow = false;
+    TimeOfDay timeFrom = const TimeOfDay(hour: 8, minute: 0);
+    TimeOfDay timeTo = const TimeOfDay(hour: 20, minute: 0);
+    bool notifyResident = true;
+    final maxEntriesController = TextEditingController();
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setLocal) {
+            Future<void> pickDateTime({
+              required bool isFrom,
+            }) async {
+              final base = isFrom ? validFrom : validTo;
+              final date = await showDatePicker(
+                context: context,
+                initialDate: base,
+                firstDate: DateTime.now().subtract(const Duration(days: 1)),
+                lastDate: DateTime.now().add(const Duration(days: 3650)),
+              );
+              if (date == null) return;
+              final time = await showTimePicker(
+                context: context,
+                initialTime: TimeOfDay.fromDateTime(base),
+              );
+              if (time == null) return;
+              final dt = DateTime(
+                date.year,
+                date.month,
+                date.day,
+                time.hour,
+                time.minute,
+              );
+              setLocal(() {
+                if (isFrom) {
+                  validFrom = dt;
+                  if (!validTo.isAfter(validFrom)) {
+                    validTo = validFrom.add(const Duration(hours: 1));
+                  }
+                } else {
+                  validTo = dt;
+                }
+              });
+            }
+
+            return AlertDialog(
+              title: const Text('Add Scheduled Pre-Approval'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    DropdownButtonFormField<String>(
+                      value: selectedVisitorKey,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Favourite visitor',
+                      ),
+                      items: _favoriteVisitors.map((fav) {
+                        final key = (fav['visitorKey'] ?? '').toString();
+                        final name = (fav['name'] ?? 'Visitor').toString();
+                        final phone = (fav['phone'] ?? '').toString();
+                        return DropdownMenuItem<String>(
+                          value: key,
+                          child: Text(phone.isEmpty ? name : '$name • $phone'),
+                        );
+                      }).toList(),
+                      onChanged: (v) {
+                        if (v == null) return;
+                        setLocal(() => selectedVisitorKey = v);
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Valid from'),
+                      subtitle: Text(_fmtDateTime(validFrom)),
+                      trailing: const Icon(Icons.calendar_month_rounded),
+                      onTap: () => pickDateTime(isFrom: true),
+                    ),
+                    ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Valid to'),
+                      subtitle: Text(_fmtDateTime(validTo)),
+                      trailing: const Icon(Icons.event_available_rounded),
+                      onTap: () => pickDateTime(isFrom: false),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text('Days of week (optional)'),
+                    Wrap(
+                      spacing: 6,
+                      children: List<Widget>.generate(7, (i) {
+                        final day = i + 1;
+                        const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+                        return FilterChip(
+                          label: Text(labels[i]),
+                          selected: days.contains(day),
+                          onSelected: (selected) {
+                            setLocal(() {
+                              if (selected) {
+                                days.add(day);
+                              } else {
+                                days.remove(day);
+                              }
+                            });
+                          },
+                        );
+                      }),
+                    ),
+                    const SizedBox(height: 10),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Limit by time window'),
+                      value: useTimeWindow,
+                      onChanged: (v) => setLocal(() => useTimeWindow = v),
+                    ),
+                    if (useTimeWindow)
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () async {
+                                final picked = await showTimePicker(
+                                  context: context,
+                                  initialTime: timeFrom,
+                                );
+                                if (picked != null) setLocal(() => timeFrom = picked);
+                              },
+                              child: Text('From ${timeFrom.format(context)}'),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () async {
+                                final picked = await showTimePicker(
+                                  context: context,
+                                  initialTime: timeTo,
+                                );
+                                if (picked != null) setLocal(() => timeTo = picked);
+                              },
+                              child: Text('To ${timeTo.format(context)}'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: maxEntriesController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Max entries (optional)',
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    SwitchListTile.adaptive(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Notify resident on auto-entry'),
+                      value: notifyResident,
+                      onChanged: (v) => setLocal(() => notifyResident = v),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    if (!validTo.isAfter(validFrom)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Valid to must be after valid from'),
+                        ),
+                      );
+                      return;
+                    }
+                    final maxEntries = int.tryParse(maxEntriesController.text.trim());
+                    final fromMins =
+                        useTimeWindow ? (timeFrom.hour * 60 + timeFrom.minute) : null;
+                    final toMins =
+                        useTimeWindow ? (timeTo.hour * 60 + timeTo.minute) : null;
+                    await _favoritesService.upsertPreapproval(
+                      societyId: widget.societyId,
+                      unitId: widget.flatNo,
+                      visitorKey: selectedVisitorKey,
+                      validFrom: validFrom,
+                      validTo: validTo,
+                      daysOfWeek: days.toList()..sort(),
+                      timeFromMins: fromMins,
+                      timeToMins: toMins,
+                      maxEntries: maxEntries,
+                      notifyResidentOnEntry: notifyResident,
+                    );
+                    if (!mounted) return;
+                    Navigator.of(context).pop();
+                    await _loadPreapprovals();
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   Future<void> _handleSave() async {
@@ -65,6 +411,12 @@ class _ResidentNotificationSettingsScreenState
         // and call: await _residentService.saveFcmToken(...)
         AppLogger.i("Notification preferences saved (MVP placeholder)");
       }
+      await _favoritesService.setAutoApproveEnabled(
+        widget.societyId,
+        widget.residentId,
+        _autoApproveFavorites,
+        unitId: widget.flatNo,
+      );
 
       await Future.delayed(
           const Duration(milliseconds: 500)); // Simulate API call
@@ -147,7 +499,12 @@ class _ResidentNotificationSettingsScreenState
       body: Stack(
         children: [
           SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
+            padding: EdgeInsets.fromLTRB(
+              20,
+              20,
+              20,
+              20 + MediaQuery.of(context).padding.bottom + 90,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -231,6 +588,187 @@ class _ResidentNotificationSettingsScreenState
                     setState(() => _smsNotifications = value);
                   },
                   iconColor: AppColors.warning,
+                ),
+
+                const SizedBox(height: 22),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.bolt_rounded, color: AppColors.warning),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Quick Entry (Daily Help)",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                      SwitchListTile.adaptive(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text("Auto-approve favourite visitors"),
+                        subtitle: const Text(
+                          "When enabled, pre-approved favourites can enter without manual approval.",
+                        ),
+                        value: _autoApproveFavorites,
+                        onChanged: _setAutoApproveEnabledImmediate,
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Favourite Visitors",
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(fontWeight: FontWeight.w800),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        "Mark specific favourites as pre-approved daily help.",
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.text2,
+                            ),
+                      ),
+                      const SizedBox(height: 10),
+                      if (_favoritesLoading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (_favoriteVisitors.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text("No favourites saved yet."),
+                        )
+                      else
+                        ..._favoriteVisitors.map((fav) {
+                          final key = (fav['visitorKey'] ?? '').toString();
+                          final name = (fav['name'] ?? 'Visitor').toString();
+                          final phone = (fav['phone'] ?? '').toString();
+                          final enabled = fav['isPreApproved'] == true;
+                          return SwitchListTile.adaptive(
+                            dense: true,
+                            contentPadding: EdgeInsets.zero,
+                            value: enabled,
+                            onChanged: (v) => _toggleFavoritePreApproval(
+                              visitorKey: key,
+                              enabled: v,
+                            ),
+                            title: Text(name),
+                            subtitle: Text(
+                              phone.isEmpty ? "No phone saved" : phone,
+                            ),
+                            secondary: Icon(
+                              Icons.star_rounded,
+                              color: AppColors.warning,
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.surface,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              "Scheduled Pre-Approvals",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(fontWeight: FontWeight.w800),
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: _openAddPreapprovalDialog,
+                            icon: const Icon(Icons.add_circle_outline_rounded),
+                            label: const Text('Add'),
+                          ),
+                        ],
+                      ),
+                      Text(
+                        "Create time-bound passes for favourites.",
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: AppColors.text2,
+                            ),
+                      ),
+                      const SizedBox(height: 8),
+                      if (_preapprovalsLoading)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 12),
+                          child: Center(child: CircularProgressIndicator()),
+                        )
+                      else if (_preapprovals.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Text("No schedules configured."),
+                        )
+                      else
+                        ..._preapprovals.map((item) {
+                          final id = (item['id'] ?? '').toString();
+                          final key = (item['visitorKey'] ?? '').toString();
+                          final validFrom = item['validFrom'] as DateTime?;
+                          final validTo = item['validTo'] as DateTime?;
+                          final days = (item['daysOfWeek'] as List?)?.cast<int>() ?? <int>[];
+                          final fromMins = item['timeFromMins'] as int?;
+                          final toMins = item['timeToMins'] as int?;
+                          final maxEntries = item['maxEntries'] as int?;
+                          final usedEntries = (item['usedEntries'] as int?) ?? 0;
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: const Icon(Icons.schedule_rounded),
+                            title: Text(_favoriteNameByKey(key)),
+                            subtitle: Text(
+                              '${_fmtDateTime(validFrom)} → ${_fmtDateTime(validTo)}\n'
+                              '${_fmtDays(days)}'
+                              '${fromMins != null && toMins != null ? ' • ${_fmtMins(fromMins)}-${_fmtMins(toMins)}' : ''}'
+                              '${maxEntries != null ? ' • $usedEntries/$maxEntries used' : ''}',
+                            ),
+                            isThreeLine: true,
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete_outline_rounded),
+                              color: AppColors.error,
+                              onPressed: () => _deletePreapproval(id),
+                            ),
+                          );
+                        }),
+                    ],
+                  ),
                 ),
 
                 const SizedBox(height: 32),

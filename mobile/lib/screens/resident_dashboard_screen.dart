@@ -195,7 +195,9 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     notificationService.registerOnNotificationReceived('resident_dashboard', (data) {
       final type = (data['type'] ?? '').toString();
       if (type == 'visitor') {
-        // Visitor approvals are action-based; reload stats/pending count
+        final status = (data['status'] ?? '').toString().toUpperCase();
+        final isPending = status.isEmpty || status == 'PENDING';
+        // Visitor updates are action-based; reload stats/pending count
         _loadDashboardData();
         if (mounted) {
           final theme = Theme.of(context);
@@ -203,7 +205,9 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           messenger.showSnackBar(
             SnackBar(
               content: Text(
-                "New visitor approval request",
+                isPending
+                    ? "New visitor approval request"
+                    : "Visitor entry recorded (no action required)",
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onPrimary,
                   fontWeight: FontWeight.w600,
@@ -214,7 +218,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              action: widget.onNavigateToApprovals != null
+              action: isPending && widget.onNavigateToApprovals != null
                   ? SnackBarAction(
                       label: "View",
                       textColor: theme.colorScheme.onPrimary,
@@ -383,14 +387,25 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         // -------- Auto-approve favorites (local-only, opt-in, safe) --------
         try {
           final autoApproveEnabled = await _favoritesService
-              .getAutoApproveEnabled(widget.societyId, widget.residentId);
+              .getAutoApproveEnabled(
+                widget.societyId,
+                widget.residentId,
+                unitId: widget.flatNo,
+              );
 
           if (autoApproveEnabled && approvals.isNotEmpty) {
-            final favorites = await _favoritesService.getFavorites(
-              widget.societyId,
-              widget.residentId,
+            final favoriteConfigs =
+                await _favoritesService.getFavoriteVisitorsForUnit(
+              societyId: widget.societyId,
               unitId: widget.flatNo,
+              limit: 200,
             );
+            final favorites = favoriteConfigs
+                .where((f) => f['isPreApproved'] == true)
+                .map((f) => FavoriteVisitorsService.normalizeName(
+                    (f['name'] ?? '').toString()))
+                .where((name) => name.trim().isNotEmpty)
+                .toSet();
 
             int autoApprovedCount = 0;
 
