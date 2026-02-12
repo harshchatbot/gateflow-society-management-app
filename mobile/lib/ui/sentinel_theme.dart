@@ -209,7 +209,7 @@ class SentinelTheme {
       ),
 
       // Cards
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: SentinelColors.card,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
