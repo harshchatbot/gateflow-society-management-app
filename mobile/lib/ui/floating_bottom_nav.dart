@@ -59,12 +59,13 @@ class SocietyBottomNav extends StatelessWidget {
               child: Container(
                 height: 70,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.8),
+                  color: Colors.white.withValues(alpha: 0.8),
                   borderRadius: BorderRadius.circular(30),
-                  border: Border.all(color: Colors.white.withOpacity(0.5)),
+                  border:
+                      Border.all(color: Colors.white.withValues(alpha: 0.5)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     ),
@@ -92,13 +93,17 @@ class SocietyBottomNav extends StatelessWidget {
                     color: Theme.of(context).colorScheme.primary,
                     boxShadow: [
                       BoxShadow(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.35),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.35),
                         blurRadius: 15,
                         offset: const Offset(0, 8),
                       ),
                     ],
                   ),
-                  child: Icon(centerIcon, color: Theme.of(context).colorScheme.onPrimary, size: 30),
+                  child: Icon(centerIcon,
+                      color: Theme.of(context).colorScheme.onPrimary, size: 30),
                 ),
               ),
             ),
@@ -137,7 +142,8 @@ class SocietyBottomNav extends StatelessWidget {
     if (index >= items.length) return const SizedBox.shrink();
 
     final isSelected = currentIndex == index;
-    final selectedColor = selectedItemColor ?? Theme.of(context).colorScheme.primary;
+    final selectedColor =
+        selectedItemColor ?? Theme.of(context).colorScheme.primary;
     final needsCompactLayout = showCenterButton && items.length >= 6;
 
     return Expanded(

@@ -5,7 +5,6 @@ import 'phone_otp_login_screen.dart';
 import 'how_sentinel_works_screen.dart';
 import '../core/storage.dart';
 
-
 /// Choose Role screen: single theme (primary blue), cards with illustrations.
 /// Used after logout and from onboarding. Shows gate block message if set.
 class OnboardingChooseRoleScreen extends StatefulWidget {
@@ -16,7 +15,8 @@ class OnboardingChooseRoleScreen extends StatefulWidget {
       _OnboardingChooseRoleScreenState();
 }
 
-class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen> {
+class _OnboardingChooseRoleScreenState
+    extends State<OnboardingChooseRoleScreen> {
   @override
   void initState() {
     super.initState();
@@ -58,7 +58,7 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                   height: 140,
                   width: 160,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.primary.withOpacity(0.1),
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Icon(
@@ -93,7 +93,7 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                 'Select how you\'ll use Sentinel',
                 style: TextStyle(
                   fontSize: 15,
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -136,6 +136,7 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                       fallbackIcon: Icons.shield_rounded,
                       onTap: () async {
                         await Storage.saveLastRoleHint('guard');
+                        if (!context.mounted) return;
                         // ✅ Unified OTP login for guard
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -146,9 +147,7 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                         );
                       },
                     ),
-
                     const SizedBox(height: 16),
-
                     _OnboardingRoleCard(
                       title: 'Resident',
                       subtitle: 'Approve or reject visitor requests',
@@ -156,6 +155,7 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                       fallbackIcon: Icons.home_rounded,
                       onTap: () async {
                         await Storage.saveLastRoleHint('resident');
+                        if (!context.mounted) return;
                         // ✅ Unified OTP login for resident
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -166,9 +166,7 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                         );
                       },
                     ),
-
                     const SizedBox(height: 16),
-
                     _OnboardingRoleCard(
                       title: 'Admin',
                       subtitle: 'Manage society, residents, guards & flats',
@@ -176,6 +174,7 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                       fallbackIcon: Icons.admin_panel_settings_rounded,
                       onTap: () async {
                         await Storage.saveLastRoleHint('admin');
+                        if (!context.mounted) return;
                         // ✅ Unified OTP login for admin
                         Navigator.of(context).push(
                           MaterialPageRoute(
@@ -186,7 +185,6 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                         );
                       },
                     ),
-
                     const SizedBox(height: 32),
                   ],
                 ),
@@ -199,7 +197,7 @@ class _OnboardingChooseRoleScreenState extends State<OnboardingChooseRoleScreen>
                 style: GoogleFonts.outfit(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
-                  color: theme.colorScheme.onSurface.withOpacity(0.85),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
                   letterSpacing: 0.25,
                 ),
                 textAlign: TextAlign.center,
@@ -239,10 +237,10 @@ class _OnboardingRoleCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.06),
+            color: theme.colorScheme.primary.withValues(alpha: 0.06),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: theme.colorScheme.primary.withOpacity(0.15),
+              color: theme.colorScheme.primary.withValues(alpha: 0.15),
               width: 1,
             ),
           ),
@@ -258,7 +256,7 @@ class _OnboardingRoleCard extends StatelessWidget {
                     illustrationPath,
                     fit: BoxFit.cover,
                     errorBuilder: (_, __, ___) => Container(
-                      color: theme.colorScheme.primary.withOpacity(0.12),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
                       child: Icon(
                         fallbackIcon,
                         size: 36,
@@ -286,7 +284,8 @@ class _OnboardingRoleCard extends StatelessWidget {
                       subtitle,
                       style: TextStyle(
                         fontSize: 13,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.7),
                         fontWeight: FontWeight.w500,
                       ),
                       maxLines: 2,

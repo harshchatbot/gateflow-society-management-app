@@ -10,12 +10,12 @@ import '../widgets/loading_skeletons.dart';
 import '../core/env.dart';
 
 /// Resident History Screen
-/// 
+///
 /// Purpose: Read-only list of past visitor approvals/rejections
 /// - Shows completed decisions (APPROVED/REJECTED)
 /// - No actions - just viewing history
 /// - Similar UI to approvals but read-only
-/// 
+///
 /// Differences from Guard screens:
 /// - No visitor creation or editing
 /// - No guard-specific actions
@@ -49,6 +49,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   List<dynamic> _history = [];
+
   /// Cursor for "Load more": last document from previous page (null = no more or not loaded).
   DocumentSnapshot? _lastDoc;
   bool _isLoading = false;
@@ -57,16 +58,25 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
   DateTime? _filterDate; // null = show all dates
 
   String? _getCabDisplay(Map<String, dynamic> record) {
-    final visitorType = (record['visitor_type']?.toString() ?? '').toUpperCase();
+    final visitorType =
+        (record['visitor_type']?.toString() ?? '').toUpperCase();
     if (visitorType != 'CAB') return null;
 
-    final cabMap = record['cab'] is Map ? Map<String, dynamic>.from(record['cab'] as Map) : null;
-    final provider = (cabMap?['provider'] ?? record['cab_provider'])?.toString().trim();
-    final providerOther = (cabMap?['provider_other'] ?? record['cab_provider_other'])?.toString().trim();
+    final cabMap = record['cab'] is Map
+        ? Map<String, dynamic>.from(record['cab'] as Map)
+        : null;
+    final provider =
+        (cabMap?['provider'] ?? record['cab_provider'])?.toString().trim();
+    final providerOther =
+        (cabMap?['provider_other'] ?? record['cab_provider_other'])
+            ?.toString()
+            .trim();
 
     if (provider == null || provider.isEmpty) return null;
     if (provider.toLowerCase() == 'other') {
-      return providerOther != null && providerOther.isNotEmpty ? providerOther : 'Other';
+      return providerOther != null && providerOther.isNotEmpty
+          ? providerOther
+          : 'Other';
     }
     return provider;
   }
@@ -89,41 +99,51 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
     final query = _searchController.text.trim().toLowerCase();
     final date = _filterDate;
 
-    return _history.where((e) {
-      final record = e as Map<String, dynamic>;
-      // Date filter: match created_at or approved_at date
-      if (date != null) {
-        final createdStr = record['created_at']?.toString() ?? '';
-        final approvedStr = record['approved_at']?.toString() ?? '';
-        DateTime? createdDt;
-        DateTime? approvedDt;
-        try {
-          if (createdStr.isNotEmpty) createdDt = DateTime.parse(createdStr);
-          if (approvedStr.isNotEmpty) approvedDt = DateTime.parse(approvedStr);
-        } catch (_) {}
-        matchDate(DateTime d) =>
-            d.year == date.year && d.month == date.month && d.day == date.day;
-        final onDate = (createdDt != null && matchDate(createdDt)) ||
-            (approvedDt != null && matchDate(approvedDt));
-        if (!onDate) return false;
-      }
-      // Search filter
-      if (query.isEmpty) return true;
-      final name = (record['visitor_name']?.toString() ?? '').toLowerCase();
-      final phone = (record['visitor_phone']?.toString() ?? '').toLowerCase();
-      final type = (record['visitor_type']?.toString() ?? '').toLowerCase();
-      final dp = (record['delivery_partner']?.toString() ?? '').toLowerCase();
-      final dpo = (record['delivery_partner_other']?.toString() ?? '').toLowerCase();
-      final cabDisplay = (_getCabDisplay(record) ?? '').toLowerCase();
-      final status = (record['status']?.toString() ?? '').toLowerCase();
-      return name.contains(query) ||
-          phone.contains(query) ||
-          type.contains(query) ||
-          dp.contains(query) ||
-          dpo.contains(query) ||
-          cabDisplay.contains(query) ||
-          status.contains(query);
-    }).cast<Map<String, dynamic>>().toList();
+    return _history
+        .where((e) {
+          final record = e as Map<String, dynamic>;
+          // Date filter: match created_at or approved_at date
+          if (date != null) {
+            final createdStr = record['created_at']?.toString() ?? '';
+            final approvedStr = record['approved_at']?.toString() ?? '';
+            DateTime? createdDt;
+            DateTime? approvedDt;
+            try {
+              if (createdStr.isNotEmpty) createdDt = DateTime.parse(createdStr);
+              if (approvedStr.isNotEmpty) {
+                approvedDt = DateTime.parse(approvedStr);
+              }
+            } catch (_) {}
+            matchDate(DateTime d) =>
+                d.year == date.year &&
+                d.month == date.month &&
+                d.day == date.day;
+            final onDate = (createdDt != null && matchDate(createdDt)) ||
+                (approvedDt != null && matchDate(approvedDt));
+            if (!onDate) return false;
+          }
+          // Search filter
+          if (query.isEmpty) return true;
+          final name = (record['visitor_name']?.toString() ?? '').toLowerCase();
+          final phone =
+              (record['visitor_phone']?.toString() ?? '').toLowerCase();
+          final type = (record['visitor_type']?.toString() ?? '').toLowerCase();
+          final dp =
+              (record['delivery_partner']?.toString() ?? '').toLowerCase();
+          final dpo = (record['delivery_partner_other']?.toString() ?? '')
+              .toLowerCase();
+          final cabDisplay = (_getCabDisplay(record) ?? '').toLowerCase();
+          final status = (record['status']?.toString() ?? '').toLowerCase();
+          return name.contains(query) ||
+              phone.contains(query) ||
+              type.contains(query) ||
+              dp.contains(query) ||
+              dpo.contains(query) ||
+              cabDisplay.contains(query) ||
+              status.contains(query);
+        })
+        .cast<Map<String, dynamic>>()
+        .toList();
   }
 
   /// One-time fetch: first page of approval history (paginated via getHistoryPage).
@@ -198,7 +218,9 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
         final lastDoc = result.data!['lastDoc'];
         setState(() {
           _history = [..._history, ...list];
-          _lastDoc = list.length < kHistoryPageSize ? null : (lastDoc is DocumentSnapshot ? lastDoc : null);
+          _lastDoc = list.length < kHistoryPageSize
+              ? null
+              : (lastDoc is DocumentSnapshot ? lastDoc : null);
           _isLoadingMore = false;
         });
         AppLogger.i("Loaded more: +${list.length} (total ${_history.length})");
@@ -220,7 +242,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
     }
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           // If we're in a tab navigation, switch to dashboard
           if (widget.onBackPressed != null) {
@@ -237,7 +259,8 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
           elevation: 0,
           automaticallyImplyLeading: true,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
+            icon: Icon(Icons.arrow_back_rounded,
+                color: Theme.of(context).colorScheme.onSurface),
             onPressed: () {
               // If we're in a tab navigation, switch to dashboard
               if (widget.onBackPressed != null) {
@@ -247,137 +270,167 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
               }
             },
           ),
-        title: Text(
-          "Approval History",
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh_rounded, color: Theme.of(context).colorScheme.primary),
-            onPressed: _loadHistory,
-          ),
-        ],
-      ),
-      body: Stack(
-        children: [
-          if (_error != null)
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
-                  const SizedBox(height: 16),
-                  Text(
-                    _error!,
-                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: _loadHistory,
-                    child: const Text("Retry"),
-                  ),
-                ],
-              ),
-            )
-          else if (_history.isEmpty && !_isLoading)
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.history_rounded, size: 64, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
-                  const SizedBox(height: 16),
-                  Text(
-                    "No history yet",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Your approval history will appear here",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildFilterBar(),
-                Expanded(
-                  child: _filteredHistory.isEmpty
-                      ? (_isLoading && _history.isEmpty
-                          ? const HistorySkeletonList()
-                          : Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(Icons.filter_list_off_rounded, size: 56, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    "No entries match your filter",
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    "Try a different search or date",
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextButton.icon(
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      setState(() => _filterDate = null);
-                                    },
-                                    icon: const Icon(Icons.clear_all_rounded, size: 20),
-                                    label: const Text("Clear filters"),
-                                  ),
-                                ],
-                              ),
-                            ))
-                      : RefreshIndicator(
-                          onRefresh: _loadHistory,
-                          child: ListView.builder(
-                            padding: EdgeInsets.fromLTRB(
-                              16,
-                              8,
-                              16,
-                              24 + MediaQuery.of(context).padding.bottom + 72,
-                            ),
-                            itemCount: _filteredHistory.length + (_lastDoc != null ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index == _filteredHistory.length) {
-                                return _buildLoadMoreRow();
-                              }
-                              final record = _filteredHistory[index];
-                              return _buildHistoryCard(record);
-                            },
-                          ),
-                        ),
-                ),
-              ],
+          title: Text(
+            "Approval History",
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w900,
             ),
-        ],
-      ),
+          ),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: Icon(Icons.refresh_rounded,
+                  color: Theme.of(context).colorScheme.primary),
+              onPressed: _loadHistory,
+            ),
+          ],
+        ),
+        body: Stack(
+          children: [
+            if (_error != null)
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.error_outline,
+                        size: 64, color: Theme.of(context).colorScheme.error),
+                    const SizedBox(height: 16),
+                    Text(
+                      _error!,
+                      style: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7)),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton(
+                      onPressed: _loadHistory,
+                      child: const Text("Retry"),
+                    ),
+                  ],
+                ),
+              )
+            else if (_history.isEmpty && !_isLoading)
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.history_rounded,
+                        size: 64,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7)),
+                    const SizedBox(height: 16),
+                    Text(
+                      "No history yet",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Your approval history will appear here",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildFilterBar(),
+                  Expanded(
+                    child: _filteredHistory.isEmpty
+                        ? (_isLoading && _history.isEmpty
+                            ? const HistorySkeletonList()
+                            : Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.filter_list_off_rounded,
+                                        size: 56,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.7)),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      "No entries match your filter",
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.7),
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "Try a different search or date",
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface
+                                            .withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _filterDate = null);
+                                      },
+                                      icon: const Icon(Icons.clear_all_rounded,
+                                          size: 20),
+                                      label: const Text("Clear filters"),
+                                    ),
+                                  ],
+                                ),
+                              ))
+                        : RefreshIndicator(
+                            onRefresh: _loadHistory,
+                            child: ListView.builder(
+                              padding: EdgeInsets.fromLTRB(
+                                16,
+                                8,
+                                16,
+                                24 + MediaQuery.of(context).padding.bottom + 72,
+                              ),
+                              itemCount: _filteredHistory.length +
+                                  (_lastDoc != null ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index == _filteredHistory.length) {
+                                  return _buildLoadMoreRow();
+                                }
+                                final record = _filteredHistory[index];
+                                return _buildHistoryCard(record);
+                              },
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -394,8 +447,14 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
             controller: _searchController,
             decoration: InputDecoration(
               hintText: "Search by name, phone, category, delivery…",
-              hintStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontSize: 14),
-              prefixIcon: Icon(Icons.search_rounded, color: Theme.of(context).colorScheme.primary, size: 22),
+              hintStyle: TextStyle(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                  fontSize: 14),
+              prefixIcon: Icon(Icons.search_rounded,
+                  color: Theme.of(context).colorScheme.primary, size: 22),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear_rounded, size: 20),
@@ -408,7 +467,8 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
             style: const TextStyle(fontSize: 15),
             onChanged: (_) => setState(() {}),
@@ -422,21 +482,31 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
                 ),
               ),
               GestureDetector(
                 onTap: () => setState(() => _filterDate = null),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: _filterDate == null
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
+                        ? Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.12)
                         : Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: _filterDate == null
-                          ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
+                          ? Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.3)
                           : Theme.of(context).dividerColor,
                     ),
                   ),
@@ -445,7 +515,12 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: _filterDate == null ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: _filterDate == null
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
                     ),
                   ),
                 ),
@@ -462,15 +537,22 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                   if (picked != null) setState(() => _filterDate = picked);
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
                     color: _filterDate != null
-                        ? Theme.of(context).colorScheme.primary.withOpacity(0.12)
+                        ? Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.12)
                         : Theme.of(context).colorScheme.surface,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: _filterDate != null
-                          ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
+                          ? Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.3)
                           : Theme.of(context).dividerColor,
                     ),
                   ),
@@ -480,7 +562,12 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                       Icon(
                         Icons.calendar_today_rounded,
                         size: 16,
-                        color: _filterDate != null ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: _filterDate != null
+                            ? Theme.of(context).colorScheme.primary
+                            : Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -490,7 +577,12 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: _filterDate != null ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          color: _filterDate != null
+                              ? Theme.of(context).colorScheme.primary
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -501,7 +593,12 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: () => setState(() => _filterDate = null),
-                  child: Icon(Icons.close_rounded, size: 20, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                  child: Icon(Icons.close_rounded,
+                      size: 20,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7)),
                 ),
               ],
             ],
@@ -512,7 +609,10 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
               "Showing ${_filteredHistory.length} of ${_history.length} entries",
               style: TextStyle(
                 fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -542,7 +642,8 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                 label: const Text("Load more"),
                 style: TextButton.styleFrom(
                   foregroundColor: Theme.of(context).colorScheme.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
               ),
       ),
@@ -550,15 +651,17 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
   }
 
   Widget _buildHistoryCard(Map<String, dynamic> record) {
-    final visitorId = record['visitor_id']?.toString() ?? '';
     final visitorType = record['visitor_type']?.toString() ?? 'GUEST';
     final visitorPhone = record['visitor_phone']?.toString() ?? '';
     final visitorName = record['visitor_name']?.toString().trim();
     final deliveryPartner = record['delivery_partner']?.toString().trim();
-    final deliveryPartnerOther = record['delivery_partner_other']?.toString().trim();
+    final deliveryPartnerOther =
+        record['delivery_partner_other']?.toString().trim();
     final status = record['status']?.toString() ?? 'UNKNOWN';
-    final approvedBy =
-        (record['approved_by'] ?? record['approvedBy'])?.toString().toUpperCase() ?? '';
+    final approvedBy = (record['approved_by'] ?? record['approvedBy'])
+            ?.toString()
+            .toUpperCase() ??
+        '';
     final isAutoFavourite = approvedBy == 'AUTO_FAVOURITE';
     final isAutoPreapproval = approvedBy == 'AUTO_PREAPPROVAL';
     final autoApprovalLabel = isAutoFavourite
@@ -568,13 +671,18 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
             : null;
     final createdAt = record['created_at']?.toString() ?? '';
     final approvedAt = record['approved_at']?.toString() ?? '';
-    final photoUrl = record['photo_url']?.toString() ?? record['photoUrl']?.toString();
+    final photoUrl =
+        record['photo_url']?.toString() ?? record['photoUrl']?.toString();
     final hasPhoto = photoUrl != null && photoUrl.isNotEmpty;
     final hasDeliveryPartner = visitorType == 'DELIVERY' &&
         ((deliveryPartner != null && deliveryPartner.isNotEmpty) ||
             (deliveryPartnerOther != null && deliveryPartnerOther.isNotEmpty));
     final deliveryDisplay = hasDeliveryPartner
-        ? (deliveryPartner == 'Other' ? (deliveryPartnerOther?.isNotEmpty == true ? deliveryPartnerOther! : 'Other') : (deliveryPartner ?? ''))
+        ? (deliveryPartner == 'Other'
+            ? (deliveryPartnerOther?.isNotEmpty == true
+                ? deliveryPartnerOther!
+                : 'Other')
+            : (deliveryPartner ?? ''))
         : null;
     final cabDisplay = _getCabDisplay(record);
 
@@ -587,7 +695,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
         border: Border.all(color: Theme.of(context).dividerColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -610,16 +718,19 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
               if (deliveryDisplay != null && deliveryDisplay.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.12),
+                    color: Colors.orange.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    border:
+                        Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.local_shipping_outlined, size: 14, color: Colors.orange.shade700),
+                      Icon(Icons.local_shipping_outlined,
+                          size: 14, color: Colors.orange.shade700),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
@@ -640,16 +751,19 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
               if (cabDisplay != null && cabDisplay.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.blueGrey.withOpacity(0.12),
+                    color: Colors.blueGrey.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.blueGrey.withOpacity(0.28)),
+                    border: Border.all(
+                        color: Colors.blueGrey.withValues(alpha: 0.28)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.local_taxi_rounded, size: 14, color: Colors.blueGrey),
+                      const Icon(Icons.local_taxi_rounded,
+                          size: 14, color: Colors.blueGrey),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
@@ -676,12 +790,19 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
             Align(
               alignment: Alignment.centerLeft,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(999),
                   border: Border.all(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.25),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.25),
                   ),
                 ),
                 child: Row(
@@ -707,7 +828,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
             ),
           ],
           const SizedBox(height: 12),
-          
+
           // Visitor Details (with optional photo)
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -723,7 +844,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                   child: Material(
                     color: Colors.transparent,
                     child: InkWell(
-                      onTap: () => _openPhotoPreview(photoUrl!),
+                      onTap: () => _openPhotoPreview(photoUrl),
                       borderRadius: BorderRadius.circular(999),
                       child: ClipOval(
                         child: CachedNetworkImage(
@@ -733,11 +854,22 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                           height: 50,
                           placeholder: (context, url) => Container(
                             color: Colors.grey.shade300,
-                            child: Center(child: Icon(Icons.person_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), size: 24)),
+                            child: Center(
+                                child: Icon(Icons.person_rounded,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.7),
+                                    size: 24)),
                           ),
                           errorWidget: (context, url, error) => Container(
                             color: Theme.of(context).scaffoldBackgroundColor,
-                            child: Icon(Icons.person_rounded, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), size: 24),
+                            child: Icon(Icons.person_rounded,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.7),
+                                size: 24),
                           ),
                         ),
                       ),
@@ -751,20 +883,25 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     if (visitorName != null && visitorName.isNotEmpty) ...[
-                      _buildDetailRow(Icons.person_outline_rounded, "Name", visitorName),
+                      _buildDetailRow(
+                          Icons.person_outline_rounded, "Name", visitorName),
                       const SizedBox(height: 8),
                     ],
-                    if (deliveryDisplay != null && deliveryDisplay.isNotEmpty) ...[
-                      _buildDetailRow(Icons.local_shipping_outlined, "Delivery", deliveryDisplay),
+                    if (deliveryDisplay != null &&
+                        deliveryDisplay.isNotEmpty) ...[
+                      _buildDetailRow(Icons.local_shipping_outlined, "Delivery",
+                          deliveryDisplay),
                       const SizedBox(height: 8),
                     ],
                     if (cabDisplay != null && cabDisplay.isNotEmpty) ...[
-                      _buildDetailRow(Icons.local_taxi_rounded, "Cab", cabDisplay),
+                      _buildDetailRow(
+                          Icons.local_taxi_rounded, "Cab", cabDisplay),
                       const SizedBox(height: 8),
                     ],
                     _buildDetailRow(Icons.phone_rounded, "Phone", visitorPhone),
                     const SizedBox(height: 8),
-                    _buildDetailRow(Icons.access_time_rounded, "Requested", _formatDateTime(createdAt)),
+                    _buildDetailRow(Icons.access_time_rounded, "Requested",
+                        _formatDateTime(createdAt)),
                     if (approvedAt.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       _buildDetailRow(
@@ -786,13 +923,17 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+        Icon(icon,
+            size: 16,
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
         const SizedBox(width: 8),
         Text(
           "$label: ",
           style: TextStyle(
             fontSize: 13,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -824,7 +965,7 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
     if (!mounted) return;
     await showDialog<void>(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.9),
+      barrierColor: Colors.black.withValues(alpha: 0.9),
       builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,
@@ -843,7 +984,8 @@ class _ResidentHistoryScreenState extends State<ResidentHistoryScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                       errorWidget: (context, url, error) => const Center(
-                        child: Icon(Icons.broken_image_outlined, color: Colors.white, size: 42),
+                        child: Icon(Icons.broken_image_outlined,
+                            color: Colors.white, size: 42),
                       ),
                     ),
                   ),

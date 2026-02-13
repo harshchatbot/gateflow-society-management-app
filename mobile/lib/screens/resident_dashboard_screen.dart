@@ -100,7 +100,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   int _notificationCount = 0;
   int _unreadNoticesCount = 0;
   bool _initializedUnreadNotices = false;
-  bool _isLoading = false;
   List<int>? _visitorsByDayLast7;
   String? _photoUrl;
   String? _phone;
@@ -192,7 +191,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
   void _setupNotificationListener() {
     // Listen for new notifications to update count
     final notificationService = NotificationService();
-    notificationService.registerOnNotificationReceived('resident_dashboard', (data) {
+    notificationService.registerOnNotificationReceived('resident_dashboard',
+        (data) {
       final type = (data['type'] ?? '').toString();
       if (type == 'visitor') {
         final status = (data['status'] ?? '').toString().toUpperCase();
@@ -323,7 +323,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
   Future<void> _loadDashboardData() async {
     if (!mounted) return;
-    setState(() => _isLoading = true);
 
     try {
       // Local accumulators for today's overview
@@ -332,7 +331,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       int todayPendingToday = 0;
       String? overviewError;
 
-      bool _isSameDay(DateTime a, DateTime b) =>
+      bool isSameDay(DateTime a, DateTime b) =>
           a.year == b.year && a.month == b.month && a.day == b.day;
       final now = DateTime.now();
 
@@ -386,12 +385,12 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
         // -------- Auto-approve favorites (local-only, opt-in, safe) --------
         try {
-          final autoApproveEnabled = await _favoritesService
-              .getAutoApproveEnabled(
-                widget.societyId,
-                widget.residentId,
-                unitId: widget.flatNo,
-              );
+          final autoApproveEnabled =
+              await _favoritesService.getAutoApproveEnabled(
+            widget.societyId,
+            widget.residentId,
+            unitId: widget.flatNo,
+          );
 
           if (autoApproveEnabled && approvals.isNotEmpty) {
             final favoriteConfigs =
@@ -438,8 +437,9 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                               ? rawPhone
                               : 'Visitor';
 
-              if (!_favoritesService.isFavorite(displayName, favorites))
+              if (!_favoritesService.isFavorite(displayName, favorites)) {
                 continue;
+              }
 
               try {
                 final result = await _service.decide(
@@ -536,7 +536,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           try {
             created = DateTime.parse(createdStr);
           } catch (_) {}
-          if (created == null || !_isSameDay(created, now)) continue;
+          if (created == null || !isSameDay(created, now)) continue;
 
           todayPendingToday++;
           todayVisitors++;
@@ -571,7 +571,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           try {
             created = DateTime.parse(createdStr);
           } catch (_) {}
-          if (created == null || !_isSameDay(created, now)) continue;
+          if (created == null || !isSameDay(created, now)) continue;
 
           todayVisitors++;
           final type = (m['visitor_type']?.toString() ?? '').toUpperCase();
@@ -661,7 +661,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
       if (mounted) {
         setState(() {
-          _isLoading = false;
           _visitorsByDayLast7 = visitorsByDayLast7;
 
           _todayVisitors = todayVisitors;
@@ -680,7 +679,6 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       });
     } catch (e) {
       AppLogger.e("Error loading dashboard data", error: e);
-      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -703,7 +701,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         ],
       ),
     );
-    if (shouldExit == true && context.mounted) {
+    if (!mounted) return false;
+    if (shouldExit == true) {
       // Navigate to role select instead of just popping
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
@@ -726,7 +725,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         _showCaseContext = context;
         return PopScope(
           canPop: false,
-          onPopInvoked: (didPop) async {
+          onPopInvokedWithResult: (didPop, _) async {
             if (!didPop) {
               await _onWillPop();
             }
@@ -747,8 +746,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          SentinelColors.primary.withOpacity(0.95),
-                          SentinelColors.primary.withOpacity(0.55),
+                          SentinelColors.primary.withValues(alpha: 0.95),
+                          SentinelColors.primary.withValues(alpha: 0.55),
                         ],
                       ),
                     ),
@@ -925,7 +924,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     return Material(
       elevation: 4,
       borderRadius: BorderRadius.circular(24),
-      shadowColor: Colors.black.withOpacity(0.15),
+      shadowColor: Colors.black.withValues(alpha: 0.15),
       color: Colors.white, // IMPORTANT: solid material
       child: Container(
         padding: const EdgeInsets.all(18),
@@ -933,7 +932,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
           color: Colors.white, // solid card
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+            color:
+                Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
           ),
         ),
         child: Row(
@@ -943,7 +943,10 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
@@ -976,7 +979,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
-                          .withOpacity(0.7),
+                          .withValues(alpha: 0.7),
                       fontSize: 12,
                     ),
                   ),
@@ -986,7 +989,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
 
             Icon(
               Icons.arrow_forward_ios_rounded,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
               size: 16,
             ),
           ],
@@ -1002,7 +1006,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       return Text(
         "No frequent visitors yet",
         style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurface.withOpacity(0.7),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
         ),
       );
     }
@@ -1035,7 +1039,8 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                             _favoriteNamesNormalized,
                           )
                               ? _favoriteGold
-                              : theme.colorScheme.onSurface.withOpacity(0.3),
+                              : theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.3),
                         ),
                         onPressed: () async {
                           final updated =
@@ -1087,7 +1092,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                       CircleAvatar(
                         radius: 20,
                         backgroundColor:
-                            theme.colorScheme.primary.withOpacity(0.1),
+                            theme.colorScheme.primary.withValues(alpha: 0.1),
                         child: Text(
                           fv.name.isNotEmpty ? fv.name[0].toUpperCase() : '?',
                           style: theme.textTheme.bodyMedium?.copyWith(
@@ -1114,7 +1119,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
                   Text(
                     "${fv.count} visit${fv.count == 1 ? '' : 's'}",
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -1143,7 +1148,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       return Text(
         "No data yet",
         style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurface.withOpacity(0.7),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
         ),
       );
     }
@@ -1164,7 +1169,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             Text(
               label,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
           ],
@@ -1198,7 +1203,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
       return Text(
         "No data yet",
         style: theme.textTheme.bodyMedium?.copyWith(
-          color: theme.colorScheme.onSurface.withOpacity(0.7),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
         ),
       );
     }
@@ -1217,7 +1222,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
             Text(
               label,
               style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
             ),
             const SizedBox(height: 2),
@@ -1251,7 +1256,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
         border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -1473,7 +1478,7 @@ class _ResidentDashboardScreenState extends State<ResidentDashboardScreen> {
     if (!mounted) return;
     await showDialog<void>(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.9),
+      barrierColor: Colors.black.withValues(alpha: 0.9),
       builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,

@@ -50,6 +50,7 @@ class _AuthRouterState extends State<AuthRouter> {
       await FirebaseAuth.instance.signOut();
       await Storage.clearAllSessions();
       await Storage.clearFirebaseSession();
+      if (!mounted) return;
       GateBlockMessage.set(
         gateResult.userMessage ??
             'This society is currently inactive. Please contact the society admin.',
@@ -99,7 +100,8 @@ class _AuthRouterState extends State<AuthRouter> {
     }
 
     final societyId = membership['societyId']?.toString() ?? '';
-    final systemRole = (membership['systemRole']?.toString() ?? '').toLowerCase();
+    final systemRole =
+        (membership['systemRole']?.toString() ?? '').toLowerCase();
     final name = membership['name']?.toString() ?? '';
     final flatNo = membership['flatNo']?.toString();
     final societyRole = membership['societyRole']?.toString();

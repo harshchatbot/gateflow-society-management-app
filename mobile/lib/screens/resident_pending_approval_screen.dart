@@ -208,7 +208,7 @@ class _ResidentPendingApprovalScreenState
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: theme.colorScheme.tertiary.withOpacity(0.12),
+        color: theme.colorScheme.tertiary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -224,7 +224,7 @@ class _ResidentPendingApprovalScreenState
             "Your account needs approval from your society admin to ensure only verified residents get access.",
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -246,7 +246,7 @@ class _ResidentPendingApprovalScreenState
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.8)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.8)),
       ),
       child: Row(
         children: [
@@ -254,7 +254,7 @@ class _ResidentPendingApprovalScreenState
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.12),
+              color: theme.colorScheme.primary.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(
@@ -271,7 +271,7 @@ class _ResidentPendingApprovalScreenState
                   name,
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w900,
-                    color: theme.colorScheme.onSurface.withOpacity(0.85),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.85),
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -286,7 +286,7 @@ class _ResidentPendingApprovalScreenState
                   "Society: ${widget.societyId}",
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -310,7 +310,7 @@ class _ResidentPendingApprovalScreenState
             done ? Icons.check_circle : Icons.radio_button_unchecked,
             color: done
                 ? theme.colorScheme.primary
-                : theme.colorScheme.onSurface.withOpacity(0.3),
+                : theme.colorScheme.onSurface.withValues(alpha: 0.3),
             size: 22,
           ),
           const SizedBox(width: 12),
@@ -327,7 +327,7 @@ class _ResidentPendingApprovalScreenState
                 Text(
                   subtitle,
                   style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -405,7 +405,7 @@ class _ResidentPendingApprovalScreenState
             child: OutlinedButton(
               onPressed: () async {
                 await Storage.clearResidentJoinSocietyId();
-                if (!context.mounted) return;
+                if (!mounted) return;
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(builder: (_) => const FindSocietyScreen()),

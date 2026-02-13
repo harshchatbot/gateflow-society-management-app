@@ -11,14 +11,14 @@ import 'services/notification_service.dart';
 import 'screens/app_bootstrap_screen.dart';
 import 'core/storage.dart';
 
-
-
 // Background message handler (must be top-level)
 // IMPORTANT: This function must be defined at the top-level (not inside a class)
 // so that it can be invoked when the app is in the background or terminated.
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform); // Initialize Firebase in background handler
+  await Firebase.initializeApp(
+      options: DefaultFirebaseOptions
+          .currentPlatform); // Initialize Firebase in background handler
   if (kDebugMode) {
     debugPrint("Handling a background message: ${message.messageId}");
   }
@@ -58,17 +58,15 @@ Future<void> main() async {
     if (kDebugMode) {
       debugPrint("Notification service initialized.");
     }
-
   } catch (e) {
     if (kDebugMode) {
       debugPrint("Firebase initialization failed: $e");
-      debugPrint("Skipping notification service initialization (Firebase not available)");
+      debugPrint(
+          "Skipping notification service initialization (Firebase not available)");
     }
 
     await Storage.loadLastRoleHint();
-
   }
-
 
   runApp(const MyApp());
 }

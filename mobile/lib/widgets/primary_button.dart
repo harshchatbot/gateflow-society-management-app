@@ -38,7 +38,8 @@ class PrimaryButton extends StatelessWidget {
     final btnText = (text ?? label ?? title ?? "Continue").trim();
     final effectiveLoading = isLoading ?? loading;
 
-    final callback = (disabled || effectiveLoading) ? null : (onPressed ?? onTap);
+    final callback =
+        (disabled || effectiveLoading) ? null : (onPressed ?? onTap);
 
     final child = Row(
       mainAxisSize: fullWidth ? MainAxisSize.max : MainAxisSize.min,
@@ -68,7 +69,8 @@ class PrimaryButton extends StatelessWidget {
       child: ElevatedButton(
         onPressed: callback,
         style: ElevatedButton.styleFrom(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
           backgroundColor: theme.colorScheme.primary,
           foregroundColor: theme.colorScheme.onPrimary,
           elevation: 0,

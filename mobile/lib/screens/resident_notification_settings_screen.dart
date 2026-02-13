@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../ui/app_colors.dart';
 import '../core/app_logger.dart';
-import '../services/resident_service.dart';
-import '../core/env.dart';
 import '../ui/app_loader.dart';
 import '../services/favorite_visitors_service.dart';
 
@@ -29,7 +27,6 @@ class ResidentNotificationSettingsScreen extends StatefulWidget {
 
 class _ResidentNotificationSettingsScreenState
     extends State<ResidentNotificationSettingsScreen> {
-  final _residentService = ResidentService(baseUrl: Env.apiBaseUrl);
   bool _pushNotifications = true;
   bool _emailNotifications = false;
   bool _smsNotifications = true;
@@ -144,7 +141,15 @@ class _ResidentNotificationSettingsScreenState
 
   String _fmtDays(List<int> days) {
     if (days.isEmpty) return 'All days';
-    const labels = {1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat', 7: 'Sun'};
+    const labels = {
+      1: 'Mon',
+      2: 'Tue',
+      3: 'Wed',
+      4: 'Thu',
+      5: 'Fri',
+      6: 'Sat',
+      7: 'Sun'
+    };
     return days.map((d) => labels[d] ?? d.toString()).join(', ');
   }
 
@@ -209,6 +214,7 @@ class _ResidentNotificationSettingsScreenState
                 lastDate: DateTime.now().add(const Duration(days: 3650)),
               );
               if (date == null) return;
+              if (!context.mounted) return;
               final time = await showTimePicker(
                 context: context,
                 initialTime: TimeOfDay.fromDateTime(base),
@@ -241,7 +247,7 @@ class _ResidentNotificationSettingsScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     DropdownButtonFormField<String>(
-                      value: selectedVisitorKey,
+                      initialValue: selectedVisitorKey,
                       isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Favourite visitor',
@@ -316,7 +322,9 @@ class _ResidentNotificationSettingsScreenState
                                   context: context,
                                   initialTime: timeFrom,
                                 );
-                                if (picked != null) setLocal(() => timeFrom = picked);
+                                if (picked != null) {
+                                  setLocal(() => timeFrom = picked);
+                                }
                               },
                               child: Text('From ${timeFrom.format(context)}'),
                             ),
@@ -329,7 +337,9 @@ class _ResidentNotificationSettingsScreenState
                                   context: context,
                                   initialTime: timeTo,
                                 );
-                                if (picked != null) setLocal(() => timeTo = picked);
+                                if (picked != null) {
+                                  setLocal(() => timeTo = picked);
+                                }
                               },
                               child: Text('To ${timeTo.format(context)}'),
                             ),
@@ -369,11 +379,14 @@ class _ResidentNotificationSettingsScreenState
                       );
                       return;
                     }
-                    final maxEntries = int.tryParse(maxEntriesController.text.trim());
-                    final fromMins =
-                        useTimeWindow ? (timeFrom.hour * 60 + timeFrom.minute) : null;
-                    final toMins =
-                        useTimeWindow ? (timeTo.hour * 60 + timeTo.minute) : null;
+                    final maxEntries =
+                        int.tryParse(maxEntriesController.text.trim());
+                    final fromMins = useTimeWindow
+                        ? (timeFrom.hour * 60 + timeFrom.minute)
+                        : null;
+                    final toMins = useTimeWindow
+                        ? (timeTo.hour * 60 + timeTo.minute)
+                        : null;
                     await _favoritesService.upsertPreapproval(
                       societyId: widget.societyId,
                       unitId: widget.flatNo,
@@ -386,8 +399,9 @@ class _ResidentNotificationSettingsScreenState
                       maxEntries: maxEntries,
                       notifyResidentOnEntry: notifyResident,
                     );
-                    if (!mounted) return;
+                    if (!context.mounted) return;
                     Navigator.of(context).pop();
+                    if (!mounted) return;
                     await _loadPreapprovals();
                   },
                   child: const Text('Save'),
@@ -514,7 +528,7 @@ class _ResidentNotificationSettingsScreenState
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.12),
+                        color: AppColors.success.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -603,7 +617,8 @@ class _ResidentNotificationSettingsScreenState
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.bolt_rounded, color: AppColors.warning),
+                          const Icon(Icons.bolt_rounded,
+                              color: AppColors.warning),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -683,7 +698,7 @@ class _ResidentNotificationSettingsScreenState
                             subtitle: Text(
                               phone.isEmpty ? "No phone saved" : phone,
                             ),
-                            secondary: Icon(
+                            secondary: const Icon(
                               Icons.star_rounded,
                               color: AppColors.warning,
                             ),
@@ -744,11 +759,14 @@ class _ResidentNotificationSettingsScreenState
                           final key = (item['visitorKey'] ?? '').toString();
                           final validFrom = item['validFrom'] as DateTime?;
                           final validTo = item['validTo'] as DateTime?;
-                          final days = (item['daysOfWeek'] as List?)?.cast<int>() ?? <int>[];
+                          final days =
+                              (item['daysOfWeek'] as List?)?.cast<int>() ??
+                                  <int>[];
                           final fromMins = item['timeFromMins'] as int?;
                           final toMins = item['timeToMins'] as int?;
                           final maxEntries = item['maxEntries'] as int?;
-                          final usedEntries = (item['usedEntries'] as int?) ?? 0;
+                          final usedEntries =
+                              (item['usedEntries'] as int?) ?? 0;
                           return ListTile(
                             contentPadding: EdgeInsets.zero,
                             leading: const Icon(Icons.schedule_rounded),
@@ -807,7 +825,9 @@ class _ResidentNotificationSettingsScreenState
               ],
             ),
           ),
-          if (_isLoading) AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: true),
+          if (_isLoading)
+            AppLoader.overlay(
+                showAfter: const Duration(milliseconds: 300), show: true),
         ],
       ),
     );
@@ -827,14 +847,14 @@ class _ResidentNotificationSettingsScreenState
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: value ? iconColor.withOpacity(0.3) : AppColors.border,
+          color: value ? iconColor.withValues(alpha: 0.3) : AppColors.border,
           width: value ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
             color: value
-                ? iconColor.withOpacity(0.08)
-                : Colors.black.withOpacity(0.03),
+                ? iconColor.withValues(alpha: 0.08)
+                : Colors.black.withValues(alpha: 0.03),
             blurRadius: value ? 15 : 10,
             offset: Offset(0, value ? 4 : 2),
           ),
@@ -846,7 +866,7 @@ class _ResidentNotificationSettingsScreenState
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.12),
+              color: iconColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(icon, color: iconColor, size: 24),
@@ -885,7 +905,7 @@ class _ResidentNotificationSettingsScreenState
             child: Switch.adaptive(
               value: value,
               onChanged: onChanged,
-              activeColor: iconColor,
+              activeThumbColor: iconColor,
             ),
           ),
         ],

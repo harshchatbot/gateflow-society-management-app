@@ -7,7 +7,7 @@ import '../widgets/app_text_field.dart';
 import '../ui/app_loader.dart';
 
 /// Edit Account Information Screen
-/// 
+///
 /// Allows residents to update their name and other account details.
 /// Theme: Green/Success theme (matching resident login and dashboard)
 class ResidentEditAccountScreen extends StatefulWidget {
@@ -25,7 +25,8 @@ class ResidentEditAccountScreen extends StatefulWidget {
   });
 
   @override
-  State<ResidentEditAccountScreen> createState() => _ResidentEditAccountScreenState();
+  State<ResidentEditAccountScreen> createState() =>
+      _ResidentEditAccountScreenState();
 }
 
 class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
@@ -77,7 +78,8 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -92,7 +94,8 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -108,7 +111,8 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -165,7 +169,7 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppColors.success.withOpacity(0.12),
+                          color: AppColors.success.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
@@ -202,7 +206,7 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
                     ],
                   ),
                   const SizedBox(height: 28),
-                  
+
                   // Name Input
                   AppTextField(
                     controller: _nameController,
@@ -220,7 +224,7 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
                     },
                   ),
                   const SizedBox(height: 24),
-                  
+
                   // Read-only Info Cards
                   _buildInfoCard(
                     icon: Icons.home_rounded,
@@ -235,9 +239,9 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
                     value: widget.societyId,
                     iconColor: AppColors.success,
                   ),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Save Button
                   SizedBox(
                     width: double.infinity,
@@ -273,7 +277,9 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
               ),
             ),
           ),
-          if (_isLoading) AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: true),
+          if (_isLoading)
+            AppLoader.overlay(
+                showAfter: const Duration(milliseconds: 300), show: true),
         ],
       ),
     );
@@ -293,7 +299,7 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -304,7 +310,7 @@ class _ResidentEditAccountScreenState extends State<ResidentEditAccountScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.12),
+              color: iconColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: iconColor, size: 20),

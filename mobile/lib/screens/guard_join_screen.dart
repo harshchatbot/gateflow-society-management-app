@@ -95,7 +95,8 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
         });
       }
     } catch (e, st) {
-      AppLogger.e("GuardJoinScreen verify code error", error: e, stackTrace: st);
+      AppLogger.e("GuardJoinScreen verify code error",
+          error: e, stackTrace: st);
       if (!mounted) return;
       setState(() {
         _error = "Could not verify code. Please try again.";
@@ -163,12 +164,14 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
       if (_selfie != null) {
         try {
           final storage = FirebaseStorage.instance;
-          final ref = storage.ref().child('societies/$societyId/guards/$uid.jpg');
+          final ref =
+              storage.ref().child('societies/$societyId/guards/$uid.jpg');
           final file = File(_selfie!.path);
           final task = await ref.putFile(file);
           photoUrl = await task.ref.getDownloadURL();
         } catch (e, st) {
-          AppLogger.e("GuardJoinScreen selfie upload failed", error: e, stackTrace: st);
+          AppLogger.e("GuardJoinScreen selfie upload failed",
+              error: e, stackTrace: st);
         }
       }
 
@@ -182,8 +185,9 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
         email: email,
         flatNo: null,
         photoUrl: photoUrl,
-        shiftTimings:
-            _shiftController.text.trim().isEmpty ? null : _shiftController.text.trim(),
+        shiftTimings: _shiftController.text.trim().isEmpty
+            ? null
+            : _shiftController.text.trim(),
         active: true,
       );
 
@@ -235,7 +239,8 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
       if (!mounted) return;
       setState(() {
         _isProcessing = false;
-        _error = "Failed to join as guard. Please try again or ask admin for a new code.";
+        _error =
+            "Failed to join as guard. Please try again or ask admin for a new code.";
       });
     }
   }
@@ -247,12 +252,12 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         decoration: BoxDecoration(
-          color: theme.colorScheme.surface.withOpacity(0.9),
+          color: theme.colorScheme.surface.withValues(alpha: 0.9),
           borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+          border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 18,
               offset: const Offset(0, 10),
             ),
@@ -266,7 +271,7 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => Container(
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.08),
+                color: theme.colorScheme.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Icon(
@@ -286,9 +291,10 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: theme.colorScheme.error.withOpacity(0.08),
+        color: theme.colorScheme.error.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.colorScheme.error.withOpacity(0.18)),
+        border:
+            Border.all(color: theme.colorScheme.error.withValues(alpha: 0.18)),
       ),
       child: Row(
         children: [
@@ -309,21 +315,25 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
     );
   }
 
-  InputDecoration _inputDecoration(ThemeData theme, {required String label, String? hint, Widget? suffixIcon}) {
+  InputDecoration _inputDecoration(ThemeData theme,
+      {required String label, String? hint, Widget? suffixIcon}) {
     return InputDecoration(
       labelText: label,
       hintText: hint,
       suffixIcon: suffixIcon,
       filled: true,
-      fillColor: theme.colorScheme.surface.withOpacity(0.92),
+      fillColor: theme.colorScheme.surface.withValues(alpha: 0.92),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.6)),
+        borderSide:
+            BorderSide(color: theme.dividerColor.withValues(alpha: 0.6)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(14),
-        borderSide: BorderSide(color: theme.colorScheme.primary.withOpacity(0.8), width: 1.4),
+        borderSide: BorderSide(
+            color: theme.colorScheme.primary.withValues(alpha: 0.8),
+            width: 1.4),
       ),
       contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 14),
     );
@@ -357,7 +367,7 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    theme.colorScheme.primary.withOpacity(0.10),
+                    theme.colorScheme.primary.withValues(alpha: 0.10),
                     theme.scaffoldBackgroundColor,
                     theme.scaffoldBackgroundColor,
                   ],
@@ -379,7 +389,8 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                         : "Enter the 6-digit code from your admin to join as a guard.",
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: theme.colorScheme.onSurface.withOpacity(0.72),
+                      color:
+                          theme.colorScheme.onSurface.withValues(alpha: 0.72),
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -392,9 +403,11 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.surface.withOpacity(0.92),
+                        color:
+                            theme.colorScheme.surface.withValues(alpha: 0.92),
                         borderRadius: BorderRadius.circular(18),
-                        border: Border.all(color: theme.dividerColor.withOpacity(0.55)),
+                        border: Border.all(
+                            color: theme.dividerColor.withValues(alpha: 0.55)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -419,7 +432,9 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                               letterSpacing: 10,
                               fontFamily: 'monospace',
                             ),
-                            decoration: _inputDecoration(theme, label: "6-digit code", hint: "000000").copyWith(
+                            decoration: _inputDecoration(theme,
+                                    label: "6-digit code", hint: "000000")
+                                .copyWith(
                               counterText: "",
                             ),
                             onChanged: (_) => setState(() => _error = null),
@@ -432,7 +447,8 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: theme.colorScheme.primary,
                                 foregroundColor: theme.colorScheme.onPrimary,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(14)),
                               ),
                               child: Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -447,11 +463,15 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                                       ),
                                     ),
                                     const SizedBox(width: 10),
-                                    const Text("Verifying…", style: TextStyle(fontWeight: FontWeight.w900)),
+                                    const Text("Verifying…",
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w900)),
                                   ] else ...[
                                     const Icon(Icons.arrow_forward_rounded),
                                     const SizedBox(width: 10),
-                                    const Text("Continue", style: TextStyle(fontWeight: FontWeight.w900)),
+                                    const Text("Continue",
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w900)),
                                   ],
                                 ],
                               ),
@@ -468,9 +488,12 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(14),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.surface.withOpacity(0.92),
+                          color:
+                              theme.colorScheme.surface.withValues(alpha: 0.92),
                           borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: theme.dividerColor.withOpacity(0.55)),
+                          border: Border.all(
+                              color:
+                                  theme.dividerColor.withValues(alpha: 0.55)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -491,16 +514,21 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                                   child: CircleAvatar(
                                     radius: 30,
                                     backgroundColor: theme.colorScheme.surface,
-                                    backgroundImage: _selfie != null ? FileImage(File(_selfie!.path)) : null,
+                                    backgroundImage: _selfie != null
+                                        ? FileImage(File(_selfie!.path))
+                                        : null,
                                     child: _selfie == null
-                                        ? Icon(Icons.camera_alt_rounded, color: theme.colorScheme.onSurface.withOpacity(0.75))
+                                        ? Icon(Icons.camera_alt_rounded,
+                                            color: theme.colorScheme.onSurface
+                                                .withValues(alpha: 0.75))
                                         : null,
                                   ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         "Selfie (optional)",
@@ -515,7 +543,8 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 12,
-                                          color: theme.colorScheme.onSurface.withOpacity(0.6),
+                                          color: theme.colorScheme.onSurface
+                                              .withValues(alpha: 0.6),
                                         ),
                                       ),
                                     ],
@@ -546,9 +575,12 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                             TextFormField(
                               controller: _nameController,
                               textInputAction: TextInputAction.next,
-                              decoration: _inputDecoration(theme, label: "Full Name"),
+                              decoration:
+                                  _inputDecoration(theme, label: "Full Name"),
                               validator: (value) {
-                                if (value == null || value.trim().isEmpty) return "Please enter name";
+                                if (value == null || value.trim().isEmpty) {
+                                  return "Please enter name";
+                                }
                                 return null;
                               },
                             ),
@@ -560,17 +592,27 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                               decoration: _inputDecoration(
                                 theme,
                                 label: "Phone number or email (username)",
-                                hint: _usernameLocked ? null : "+91XXXXXXXXXX or email",
+                                hint: _usernameLocked
+                                    ? null
+                                    : "+91XXXXXXXXXX or email",
                                 suffixIcon: _usernameLocked
-                                    ? Icon(Icons.lock_rounded, color: theme.colorScheme.onSurface.withOpacity(0.55))
+                                    ? Icon(Icons.lock_rounded,
+                                        color: theme.colorScheme.onSurface
+                                            .withValues(alpha: 0.55))
                                     : null,
                               ).copyWith(
-                                helperText: _usernameLocked ? "Using your OTP phone number" : null,
+                                helperText: _usernameLocked
+                                    ? "Using your OTP phone number"
+                                    : null,
                               ),
                               validator: (value) {
                                 final v = value?.trim() ?? "";
-                                if (v.isEmpty) return "Please enter phone or email";
-                                if (_usernameLocked && _prefilledUsername != null && v != _prefilledUsername) {
+                                if (v.isEmpty) {
+                                  return "Please enter phone or email";
+                                }
+                                if (_usernameLocked &&
+                                    _prefilledUsername != null &&
+                                    v != _prefilledUsername) {
                                   return "Phone number must match OTP login";
                                 }
                                 return null;
@@ -582,7 +624,9 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                               keyboardType: TextInputType.number,
                               obscureText: true,
                               maxLength: 6,
-                              decoration: _inputDecoration(theme, label: "Set Guard Password (6 digits)").copyWith(
+                              decoration: _inputDecoration(theme,
+                                      label: "Set Guard Password (6 digits)")
+                                  .copyWith(
                                 counterText: "",
                               ),
                               validator: (value) {
@@ -597,7 +641,9 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                             TextFormField(
                               controller: _shiftController,
                               textInputAction: TextInputAction.done,
-                              decoration: _inputDecoration(theme, label: "Shift timings (optional)", hint: "8am–4pm"),
+                              decoration: _inputDecoration(theme,
+                                  label: "Shift timings (optional)",
+                                  hint: "8am–4pm"),
                             ),
                             const SizedBox(height: 16),
                             SizedBox(
@@ -607,12 +653,15 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: theme.colorScheme.primary,
                                   foregroundColor: theme.colorScheme.onPrimary,
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(14)),
                                 ),
                                 icon: const Icon(Icons.check_rounded),
                                 label: const Text(
                                   "Confirm & Join",
-                                  style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.2),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: 0.2),
                                 ),
                               ),
                             ),
@@ -626,7 +675,10 @@ class _GuardJoinScreenState extends State<GuardJoinScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isProcessing, message: "Creating guard account…"),
+          AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
+              show: _isProcessing,
+              message: "Creating guard account…"),
         ],
       ),
     );

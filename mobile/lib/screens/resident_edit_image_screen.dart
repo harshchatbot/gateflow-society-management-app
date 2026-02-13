@@ -5,13 +5,11 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../ui/app_colors.dart';
 import '../core/app_logger.dart';
-import '../services/resident_service.dart';
 import '../services/firestore_service.dart';
-import '../core/env.dart';
 import '../ui/app_loader.dart';
 
 /// Edit Profile Image Screen
-/// 
+///
 /// Allows residents to upload or change their profile image.
 /// Theme: Green/Success theme (matching resident login and dashboard)
 class ResidentEditImageScreen extends StatefulWidget {
@@ -29,11 +27,11 @@ class ResidentEditImageScreen extends StatefulWidget {
   });
 
   @override
-  State<ResidentEditImageScreen> createState() => _ResidentEditImageScreenState();
+  State<ResidentEditImageScreen> createState() =>
+      _ResidentEditImageScreenState();
 }
 
 class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
-  final _residentService = ResidentService(baseUrl: Env.apiBaseUrl);
   final FirestoreService _firestore = FirestoreService();
   final _picker = ImagePicker();
   File? _selectedImage;
@@ -64,7 +62,8 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -82,7 +81,8 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
           ),
           backgroundColor: AppColors.warning,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -94,9 +94,8 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
     try {
       // Upload to Firebase Storage (similar to visitor/guard flows)
       final storage = FirebaseStorage.instance;
-      final ref = storage
-          .ref()
-          .child('societies/${widget.societyId}/residents/${widget.residentId}.jpg');
+      final ref = storage.ref().child(
+          'societies/${widget.societyId}/residents/${widget.residentId}.jpg');
       final file = _selectedImage!;
       final task = await ref.putFile(file);
       final url = await task.ref.getDownloadURL();
@@ -110,7 +109,8 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
 
       if (!mounted) return;
 
-      AppLogger.i("Profile image uploaded successfully", data: {"photoUrl": url});
+      AppLogger.i("Profile image uploaded successfully",
+          data: {"photoUrl": url});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
@@ -125,7 +125,8 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
           ),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -141,7 +142,8 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -197,7 +199,7 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.12),
+                        color: AppColors.success.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -228,7 +230,7 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 40),
-                
+
                 // Image Preview
                 GestureDetector(
                   onTap: () => _showImageSourceDialog(),
@@ -243,7 +245,7 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.success.withOpacity(0.2),
+                          color: AppColors.success.withValues(alpha: 0.2),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
@@ -261,11 +263,15 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
                                   fit: BoxFit.cover,
                                   placeholder: (context, url) => Container(
                                     color: Colors.grey.shade300,
-                                    child: const Center(child: Icon(Icons.person_rounded, size: 70, color: AppColors.text2)),
+                                    child: const Center(
+                                        child: Icon(Icons.person_rounded,
+                                            size: 70, color: AppColors.text2)),
                                   ),
-                                  errorWidget: (context, url, error) => Container(
+                                  errorWidget: (context, url, error) =>
+                                      Container(
                                     color: AppColors.bg,
-                                    child: const Icon(Icons.person_rounded, size: 70, color: AppColors.text2),
+                                    child: const Icon(Icons.person_rounded,
+                                        size: 70, color: AppColors.text2),
                                   ),
                                 )
                               : Container(
@@ -280,7 +286,7 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Change Photo Button
                 OutlinedButton.icon(
                   onPressed: () => _showImageSourceDialog(),
@@ -293,17 +299,19 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    side: const BorderSide(color: AppColors.success, width: 1.5),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
+                    side:
+                        const BorderSide(color: AppColors.success, width: 1.5),
                     foregroundColor: AppColors.success,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 40),
-                
+
                 // Upload Button
                 SizedBox(
                   width: double.infinity,
@@ -340,7 +348,9 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
               ],
             ),
           ),
-          if (_isLoading) AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: true),
+          if (_isLoading)
+            AppLoader.overlay(
+                showAfter: const Duration(milliseconds: 300), show: true),
         ],
       ),
     );
@@ -373,7 +383,7 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.12),
+                      color: AppColors.success.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
@@ -399,10 +409,11 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.12),
+                  color: AppColors.success.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.camera_alt_rounded, color: AppColors.success, size: 22),
+                child: const Icon(Icons.camera_alt_rounded,
+                    color: AppColors.success, size: 22),
               ),
               title: const Text(
                 "Take Photo",
@@ -421,10 +432,11 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.12),
+                  color: AppColors.success.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.photo_library_rounded, color: AppColors.success, size: 22),
+                child: const Icon(Icons.photo_library_rounded,
+                    color: AppColors.success, size: 22),
               ),
               title: const Text(
                 "Choose from Gallery",
@@ -445,10 +457,11 @@ class _ResidentEditImageScreenState extends State<ResidentEditImageScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.12),
+                    color: AppColors.error.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.delete_rounded, color: AppColors.error, size: 22),
+                  child: const Icon(Icons.delete_rounded,
+                      color: AppColors.error, size: 22),
                 ),
                 title: const Text(
                   "Remove Photo",

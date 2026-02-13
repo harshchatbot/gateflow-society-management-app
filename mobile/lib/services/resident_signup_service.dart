@@ -1,6 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:uuid/uuid.dart';
 
 import '../core/app_error.dart';
 import '../core/app_logger.dart';
@@ -9,6 +8,7 @@ import 'firestore_service.dart';
 class Result<T> {
   final T? data;
   final AppError? error;
+
   /// Success when no error; data may be null for void operations (e.g. rejectSignup)
   bool get isSuccess => error == null;
 
@@ -19,15 +19,6 @@ class Result<T> {
 class ResidentSignupService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final _uuid = const Uuid();
-
-  /// Get reference to resident signups collection
-  CollectionReference _residentSignupsRef(String societyId) {
-    return _firestore
-        .collection('societies')
-        .doc(societyId)
-        .collection('residentSignups');
-  }
 
   /// Create a resident signup request (NO READ QUERIES)
   /// - Works even when user is not authenticated
@@ -85,10 +76,8 @@ class ResidentSignupService {
       }
 
       // 1) Resolve societyId from societyCodes/{CODE}
-      final codeSnap = await _firestore
-          .collection('societyCodes')
-          .doc(normalizedCode)
-          .get();
+      final codeSnap =
+          await _firestore.collection('societyCodes').doc(normalizedCode).get();
 
       if (!codeSnap.exists) {
         return Result.failure(AppError(
@@ -103,8 +92,10 @@ class ResidentSignupService {
 
       if (societyId == null || societyId.trim().isEmpty || !isActive) {
         return Result.failure(AppError(
-          userMessage: "Society is inactive or invalid. Please contact support.",
-          technicalMessage: "societyId missing or inactive for code=$normalizedCode",
+          userMessage:
+              "Society is inactive or invalid. Please contact support.",
+          technicalMessage:
+              "societyId missing or inactive for code=$normalizedCode",
         ));
       }
 
@@ -131,7 +122,8 @@ class ResidentSignupService {
         } catch (e) {
           if (e.toString().contains('email-already-in-use')) {
             return Result.failure(AppError(
-              userMessage: "An account with this email already exists. Please login instead.",
+              userMessage:
+                  "An account with this email already exists. Please login instead.",
               technicalMessage: "Email already in use: $normalizedEmail",
             ));
           }
@@ -171,16 +163,21 @@ class ResidentSignupService {
                 await userCredential.user?.delete();
                 AppLogger.i("Deleted auth account due to duplicate phone");
               } catch (deleteError) {
-                AppLogger.e("Failed to delete auth account after duplicate phone", error: deleteError);
+                AppLogger.e(
+                    "Failed to delete auth account after duplicate phone",
+                    error: deleteError);
               }
             }
             return Result.failure(AppError(
-              userMessage: "This phone number is already registered in this society. Please use a different phone number or contact admin.",
-              technicalMessage: "DUPLICATE_PHONE: $normalizedPhone already exists for uid=$duplicateUid",
+              userMessage:
+                  "This phone number is already registered in this society. Please use a different phone number or contact admin.",
+              technicalMessage:
+                  "DUPLICATE_PHONE: $normalizedPhone already exists for uid=$duplicateUid",
             ));
           }
         } catch (e, st) {
-          AppLogger.e("Error checking duplicate phone, proceeding anyway", error: e, stackTrace: st);
+          AppLogger.e("Error checking duplicate phone, proceeding anyway",
+              error: e, stackTrace: st);
           // Don't block signup if duplicate check fails - better to allow than block
         }
       }
@@ -196,7 +193,7 @@ class ResidentSignupService {
         'uid': uid,
         'societyId': societyId,
         'systemRole': 'resident', // lowercase
-        'active': false,          // pending
+        'active': false, // pending
         'name': name.trim(),
         'email': effectiveEmail,
         'phone': normalizedPhone.isEmpty ? null : normalizedPhone,
@@ -234,18 +231,18 @@ class ResidentSignupService {
       return Result.success(uid);
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("Resident createSignupRequest FirebaseException", error: err.technicalMessage);
+      AppLogger.e("Resident createSignupRequest FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, st) {
-      AppLogger.e("Resident createSignupRequest unknown error", error: e, stackTrace: st);
+      AppLogger.e("Resident createSignupRequest unknown error",
+          error: e, stackTrace: st);
       return Result.failure(AppError(
         userMessage: "Failed to create signup request",
         technicalMessage: e.toString(),
       ));
     }
   }
-
-
 
   /// Get pending signup requests (for admin)
   /// Queries members with active=false and systemRole=resident
@@ -266,11 +263,11 @@ class ResidentSignupService {
 
       for (var doc in querySnapshot.docs) {
         final data = doc.data();
-        
+
         // doc.id IS the uid (document is created with uid as the document ID)
         // Always use doc.id as the primary identifier for consistency
         final uid = doc.id;
-        
+
         // Convert Firestore Timestamp to ISO string
         DateTime createdAt;
         if (data['createdAt'] is Timestamp) {
@@ -301,18 +298,21 @@ class ResidentSignupService {
         return bTime.compareTo(aTime);
       });
 
-      AppLogger.i("Found ${signups.length} pending resident signups (from members)");
+      AppLogger.i(
+          "Found ${signups.length} pending resident signups (from members)");
       return Result.success(signups);
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("getPendingSignups FirebaseException", error: err.technicalMessage);
+      AppLogger.e("getPendingSignups FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, stackTrace) {
       final err = AppError(
         userMessage: "Failed to load signup requests",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("getPendingSignups unknown error", error: err.technicalMessage, stackTrace: stackTrace);
+      AppLogger.e("getPendingSignups unknown error",
+          error: err.technicalMessage, stackTrace: stackTrace);
       return Result.failure(err);
     }
   }
@@ -328,7 +328,7 @@ class ResidentSignupService {
     try {
       // signupId is now the uid (from the new flow)
       final uid = signupId;
-      
+
       final memberRef = _firestore
           .collection('societies')
           .doc(societyId)
@@ -345,7 +345,7 @@ class ResidentSignupService {
       }
 
       final memberData = memberDoc.data() as Map<String, dynamic>;
-      
+
       if (memberData['active'] == true) {
         return Result.failure(AppError(
           userMessage: "Resident is already approved",
@@ -356,7 +356,8 @@ class ResidentSignupService {
       if (memberData['systemRole'] != 'resident') {
         return Result.failure(AppError(
           userMessage: "User is not a resident",
-          technicalMessage: "Member $uid has systemRole: ${memberData['systemRole']}",
+          technicalMessage:
+              "Member $uid has systemRole: ${memberData['systemRole']}",
         ));
       }
 
@@ -399,14 +400,16 @@ class ResidentSignupService {
       });
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("approveSignup FirebaseException", error: err.technicalMessage);
+      AppLogger.e("approveSignup FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, stackTrace) {
       final err = AppError(
         userMessage: "Failed to approve signup request",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("approveSignup unknown error", error: err.technicalMessage, stackTrace: stackTrace);
+      AppLogger.e("approveSignup unknown error",
+          error: err.technicalMessage, stackTrace: stackTrace);
       return Result.failure(err);
     }
   }
@@ -423,7 +426,7 @@ class ResidentSignupService {
     try {
       // signupId is the uid (document ID in the members collection)
       final uid = signupId.trim();
-      
+
       if (uid.isEmpty) {
         AppLogger.e("rejectSignup called with empty signupId");
         return Result.failure(AppError(
@@ -437,9 +440,9 @@ class ResidentSignupService {
         "societyId": societyId,
         "adminUid": adminUid,
       });
-      
+
       bool documentDeleted = false;
-      
+
       // Try to delete from members collection (new flow)
       final memberRef = _firestore
           .collection('societies')
@@ -454,10 +457,11 @@ class ResidentSignupService {
         documentDeleted = true;
         AppLogger.i("Deleted member document", data: {"path": memberRef.path});
       } else {
-        AppLogger.w("Member document not found, checking legacy collection", data: {
-          "uid": uid,
-          "path": memberRef.path,
-        });
+        AppLogger.w("Member document not found, checking legacy collection",
+            data: {
+              "uid": uid,
+              "path": memberRef.path,
+            });
       }
 
       // Also try to delete from legacy residentSignups collection
@@ -467,20 +471,23 @@ class ResidentSignupService {
             .doc(societyId)
             .collection('residentSignups')
             .doc(uid);
-        
+
         final legacyDoc = await legacyRef.get();
         if (legacyDoc.exists) {
           await legacyRef.delete();
           documentDeleted = true;
-          AppLogger.i("Deleted legacy signup document", data: {"path": legacyRef.path});
+          AppLogger.i("Deleted legacy signup document",
+              data: {"path": legacyRef.path});
         }
       } catch (e) {
-        AppLogger.w("Error checking/deleting legacy signup", data: {"error": e.toString()});
+        AppLogger.w("Error checking/deleting legacy signup",
+            data: {"error": e.toString()});
       }
 
       if (!documentDeleted) {
         // Document not found in either collection - might have been already deleted
-        AppLogger.w("No document found to delete - may have been already rejected");
+        AppLogger.w(
+            "No document found to delete - may have been already rejected");
         // Return success anyway since the goal (removing the signup) is achieved
         return Result.success(null);
       }
@@ -504,14 +511,16 @@ class ResidentSignupService {
       return Result.success(null);
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("rejectSignup FirebaseException", error: err.technicalMessage);
+      AppLogger.e("rejectSignup FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, stackTrace) {
       final err = AppError(
         userMessage: "Failed to reject signup request",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("rejectSignup unknown error", error: err.technicalMessage, stackTrace: stackTrace);
+      AppLogger.e("rejectSignup unknown error",
+          error: err.technicalMessage, stackTrace: stackTrace);
       return Result.failure(err);
     }
   }

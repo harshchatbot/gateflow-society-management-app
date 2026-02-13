@@ -1,22 +1,17 @@
-import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:csv/csv.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import '../ui/app_colors.dart';
 import '../core/app_logger.dart';
-import '../services/firebase_auth_service.dart';
-import '../services/firestore_service.dart';
 import '../ui/app_loader.dart';
 import '../utils/csv_validators.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
-import 'package:cloud_firestore/cloud_firestore.dart';   // FirebaseFirestore, FieldValue, SetOptions
-import 'package:firebase_auth/firebase_auth.dart';       // FirebaseAuth
-import '../core/invite_utils.dart';                       // normalizeEmail, inviteKeyFromEmail
-
+import 'package:cloud_firestore/cloud_firestore.dart'; // FirebaseFirestore, FieldValue, SetOptions
+// FirebaseAuth
+import '../core/invite_utils.dart'; // normalizeEmail, inviteKeyFromEmail
 
 // ✅ ADDED
 import 'package:firebase_core/firebase_core.dart';
@@ -47,9 +42,6 @@ class SuperAdminBulkUploadScreen extends StatefulWidget {
 
 class _SuperAdminBulkUploadScreenState
     extends State<SuperAdminBulkUploadScreen> {
-  final FirebaseAuthService _authService = FirebaseAuthService();
-  final FirestoreService _firestore = FirestoreService();
-
   bool _isUploadingGuards = false;
   bool _isUploadingResidents = false;
   String? _lastUploadStatus;
@@ -57,8 +49,6 @@ class _SuperAdminBulkUploadScreenState
   // Validation state
   ValidationResult? _guardsValidationResult;
   ValidationResult? _residentsValidationResult;
-  String? _selectedGuardsCsvPath;
-  String? _selectedResidentsCsvPath;
 
   // ✅ Secondary Auth (prevents current session from switching during createUser)
   FirebaseAuth? _secondaryAuth;
@@ -117,7 +107,7 @@ class _SuperAdminBulkUploadScreenState
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
+              color: Colors.white.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(Icons.arrow_back_rounded,
@@ -144,7 +134,7 @@ class _SuperAdminBulkUploadScreenState
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    AppColors.admin.withOpacity(0.1),
+                    AppColors.admin.withValues(alpha: 0.1),
                     AppColors.bg,
                   ],
                 ),
@@ -170,7 +160,8 @@ class _SuperAdminBulkUploadScreenState
             ),
           ),
           if (_isUploadingGuards || _isUploadingResidents)
-            AppLoader.overlay(showAfter: const Duration(milliseconds: 300), 
+            AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
               show: true,
               message: _isUploadingGuards
                   ? "Uploading guards..."
@@ -190,7 +181,7 @@ class _SuperAdminBulkUploadScreenState
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -204,7 +195,7 @@ class _SuperAdminBulkUploadScreenState
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.admin.withOpacity(0.15),
+                  color: AppColors.admin.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: const Icon(Icons.info_rounded,
@@ -305,7 +296,7 @@ class _SuperAdminBulkUploadScreenState
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -319,7 +310,7 @@ class _SuperAdminBulkUploadScreenState
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: AppColors.admin.withOpacity(0.15),
+                  color: AppColors.admin.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Icon(icon, color: AppColors.admin, size: 24),
@@ -395,9 +386,9 @@ class _SuperAdminBulkUploadScreenState
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.success.withOpacity(0.1),
+        color: AppColors.success.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.success.withOpacity(0.3)),
+        border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -433,7 +424,8 @@ class _SuperAdminBulkUploadScreenState
 
       await _generateAndShareSample('guards_sample.csv', csvContent, 'Guards');
     } catch (e, stackTrace) {
-      AppLogger.e("Error generating guards sample", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error generating guards sample",
+          error: e, stackTrace: stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -488,7 +480,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
       // Save CSV to temporary directory
       final file = File('${tempDir.path}/$fileName');
       await file.writeAsString(content);
-      AppLogger.i("Sample CSV generated", data: {'path': file.path, 'type': type});
+      AppLogger.i("Sample CSV generated",
+          data: {'path': file.path, 'type': type});
 
       // Share the file via system share sheet
       final xFile = XFile(file.path);
@@ -503,8 +496,7 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
           SnackBar(
             content: const Row(
               children: [
-                Icon(Icons.check_circle_rounded,
-                    color: Colors.white, size: 20),
+                Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -539,13 +531,13 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: result.hasValidRows
-            ? AppColors.success.withOpacity(0.1)
-            : AppColors.error.withOpacity(0.1),
+            ? AppColors.success.withValues(alpha: 0.1)
+            : AppColors.error.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: result.hasValidRows
-              ? AppColors.success.withOpacity(0.3)
-              : AppColors.error.withOpacity(0.3),
+              ? AppColors.success.withValues(alpha: 0.3)
+              : AppColors.error.withValues(alpha: 0.3),
         ),
       ),
       child: Column(
@@ -567,9 +559,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w800,
-                  color: result.hasValidRows
-                      ? AppColors.success
-                      : AppColors.error,
+                  color:
+                      result.hasValidRows ? AppColors.success : AppColors.error,
                 ),
               ),
             ],
@@ -578,9 +569,12 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildStatItem("Total", result.totalRows.toString(), AppColors.text2),
-              _buildStatItem("Valid", result.validCount.toString(), AppColors.success),
-              _buildStatItem("Invalid", result.invalidCount.toString(), AppColors.error),
+              _buildStatItem(
+                  "Total", result.totalRows.toString(), AppColors.text2),
+              _buildStatItem(
+                  "Valid", result.validCount.toString(), AppColors.success),
+              _buildStatItem(
+                  "Invalid", result.invalidCount.toString(), AppColors.error),
             ],
           ),
           if (result.invalidCount > 0) ...[
@@ -602,25 +596,25 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
           if (result.warnings.isNotEmpty) ...[
             const SizedBox(height: 8),
             ...result.warnings.take(2).map(
-              (warning) => Padding(
-                padding: const EdgeInsets.only(bottom: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.warning_amber_rounded,
-                        size: 16, color: AppColors.warning),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        warning,
-                        style:
-                            const TextStyle(fontSize: 12, color: AppColors.warning),
-                      ),
+                  (warning) => Padding(
+                    padding: const EdgeInsets.only(bottom: 4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.warning_amber_rounded,
+                            size: 16, color: AppColors.warning),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            warning,
+                            style: const TextStyle(
+                                fontSize: 12, color: AppColors.warning),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
           ],
         ],
       ),
@@ -669,7 +663,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
               children: [
                 Text(
                   "${result.invalidCount} row(s) have errors:",
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 14),
                 ),
                 const SizedBox(height: 12),
                 ...result.invalidRows.map(
@@ -677,9 +672,10 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
                     margin: const EdgeInsets.only(bottom: 12),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: AppColors.error.withOpacity(0.1),
+                      color: AppColors.error.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.error.withOpacity(0.3)),
+                      border: Border.all(
+                          color: AppColors.error.withValues(alpha: 0.3)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -702,7 +698,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
                         const SizedBox(height: 6),
                         Text(
                           error.reason,
-                          style: const TextStyle(fontSize: 12, color: AppColors.text),
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.text),
                         ),
                       ],
                     ),
@@ -718,9 +715,11 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.admin,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text("OK", style: TextStyle(fontWeight: FontWeight.w900)),
+            child:
+                const Text("OK", style: TextStyle(fontWeight: FontWeight.w900)),
           ),
         ],
       ),
@@ -732,7 +731,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
   // ============================================
 
   Future<void> _validateAndUploadGuards() async {
-    if (_guardsValidationResult == null || !_guardsValidationResult!.hasValidRows) {
+    if (_guardsValidationResult == null ||
+        !_guardsValidationResult!.hasValidRows) {
       // First, pick and validate file
       await _pickAndValidateGuardsCsv();
       return;
@@ -743,7 +743,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
   }
 
   Future<void> _validateAndUploadResidents() async {
-    if (_residentsValidationResult == null || !_residentsValidationResult!.hasValidRows) {
+    if (_residentsValidationResult == null ||
+        !_residentsValidationResult!.hasValidRows) {
       // First, pick and validate file
       await _pickAndValidateResidentsCsv();
       return;
@@ -773,7 +774,6 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
 
       setState(() {
         _guardsValidationResult = validationResult;
-        _selectedGuardsCsvPath = filePath;
       });
 
       // Show validation results
@@ -783,10 +783,12 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
 
       // If valid rows exist, ask user to confirm upload
       if (validationResult.hasValidRows) {
+        if (!mounted) return;
         final shouldUpload = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Text(
               "Ready to Upload",
               style: TextStyle(fontWeight: FontWeight.w900),
@@ -805,7 +807,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
                   backgroundColor: AppColors.admin,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text("Upload", style: TextStyle(fontWeight: FontWeight.w900)),
+                child: const Text("Upload",
+                    style: TextStyle(fontWeight: FontWeight.w900)),
               ),
             ],
           ),
@@ -816,7 +819,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
         }
       }
     } catch (e, stackTrace) {
-      AppLogger.e("Error validating guards CSV", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error validating guards CSV",
+          error: e, stackTrace: stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -848,7 +852,6 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
 
       setState(() {
         _residentsValidationResult = validationResult;
-        _selectedResidentsCsvPath = filePath;
       });
 
       // Show validation results
@@ -858,10 +861,12 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
 
       // If valid rows exist, ask user to confirm upload
       if (validationResult.hasValidRows) {
+        if (!mounted) return;
         final shouldUpload = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: const Text(
               "Ready to Upload",
               style: TextStyle(fontWeight: FontWeight.w900),
@@ -880,7 +885,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
                   backgroundColor: AppColors.admin,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text("Upload", style: TextStyle(fontWeight: FontWeight.w900)),
+                child: const Text("Upload",
+                    style: TextStyle(fontWeight: FontWeight.w900)),
               ),
             ],
           ),
@@ -891,7 +897,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
         }
       }
     } catch (e, stackTrace) {
-      AppLogger.e("Error validating residents CSV", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error validating residents CSV",
+          error: e, stackTrace: stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -908,7 +915,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
   // ============================================
 
   Future<void> _uploadGuardsFromValidated() async {
-    if (_guardsValidationResult == null || !_guardsValidationResult!.hasValidRows) {
+    if (_guardsValidationResult == null ||
+        !_guardsValidationResult!.hasValidRows) {
       return;
     }
 
@@ -934,14 +942,10 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
           final email = row['email']!;
           final phone = row['phone']!;
 
-          // Use employeeId as guardId if available, otherwise generate from email
-          final guardId = row['employeeid']?.isNotEmpty == true
-              ? row['employeeid']!
-              : email.split('@').first.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '');
-
           // ✅ IMPORTANT: Create user using secondary auth so current session doesn't switch
           final tempPassword = _generateTempPassword();
-          final userCredential = await secondaryAuth.createUserWithEmailAndPassword(
+          final userCredential =
+              await secondaryAuth.createUserWithEmailAndPassword(
             email: email.trim(),
             password: tempPassword,
           );
@@ -951,7 +955,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
 
           final uid = userCredential.user?.uid;
           if (uid == null) {
-            errors.add("Row $rowNumber: Failed to create Firebase Auth account");
+            errors
+                .add("Row $rowNumber: Failed to create Firebase Auth account");
             errorCount++;
             continue;
           }
@@ -961,9 +966,9 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
           // The guard will "claim" after login using InviteClaimService.
           final emailNorm = normalizeEmail(email);
           final inviteKey = inviteKeyFromEmail(emailNorm);
-          final societyRole = (row['societyrole'] ?? '').toString().trim().toLowerCase();
-          final flatNo   = (row['flatno'] ?? '').toString().trim();
-
+          final societyRole =
+              (row['societyrole'] ?? '').toString().trim().toLowerCase();
+          final flatNo = (row['flatno'] ?? '').toString().trim();
 
           final inviteRef = FirebaseFirestore.instance
               .collection('societies')
@@ -981,7 +986,6 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
             'createdAt': FieldValue.serverTimestamp(),
           });
 
-
           createdUsers.add({
             'inviteKey': inviteKeyFromEmail(email),
             'name': name,
@@ -991,15 +995,14 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
             'status': 'pending',
           });
 
-
           successCount++;
           AppLogger.i("Guard invite created via bulk upload", data: {
             'inviteKey': inviteKeyFromEmail(email),
             'email': email,
           });
-
         } catch (e, stackTrace) {
-          AppLogger.e("Error processing guard row $rowNumber", error: e, stackTrace: stackTrace);
+          AppLogger.e("Error processing guard row $rowNumber",
+              error: e, stackTrace: stackTrace);
           errors.add("Row $rowNumber: ${e.toString()}");
           errorCount++;
         }
@@ -1009,7 +1012,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
 
       setState(() {
         _isUploadingGuards = false;
-        _lastUploadStatus = "Guards: $successCount successful, $errorCount failed";
+        _lastUploadStatus =
+            "Guards: $successCount successful, $errorCount failed";
       });
 
       if (mounted) {
@@ -1020,7 +1024,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
         }
       }
     } catch (e, stackTrace) {
-      AppLogger.e("Error uploading guards CSV", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error uploading guards CSV",
+          error: e, stackTrace: stackTrace);
       setState(() => _isUploadingGuards = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1034,7 +1039,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
   }
 
   Future<void> _uploadResidentsFromValidated() async {
-    if (_residentsValidationResult == null || !_residentsValidationResult!.hasValidRows) {
+    if (_residentsValidationResult == null ||
+        !_residentsValidationResult!.hasValidRows) {
       return;
     }
 
@@ -1063,7 +1069,8 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
 
           // ✅ IMPORTANT: Create user using secondary auth so current session doesn't switch
           final tempPassword = _generateTempPassword();
-          final userCredential = await secondaryAuth.createUserWithEmailAndPassword(
+          final userCredential =
+              await secondaryAuth.createUserWithEmailAndPassword(
             email: email.trim(),
             password: tempPassword,
           );
@@ -1073,45 +1080,45 @@ Priya Singh,priya.singh@example.com,9876543213,B-202,Tower B,tenant''';
 
           final uid = userCredential.user?.uid;
           if (uid == null) {
-            errors.add("Row $rowNumber: Failed to create Firebase Auth account");
+            errors
+                .add("Row $rowNumber: Failed to create Firebase Auth account");
             errorCount++;
             continue;
           }
 
           final emailNorm = normalizeEmail(email);
-final inviteKey = inviteKeyFromEmail(emailNorm);
+          final inviteKey = inviteKeyFromEmail(emailNorm);
 
-final inviteRef = FirebaseFirestore.instance
-    .collection('societies')
-    .doc(widget.societyId)
-    .collection('invites')
-    .doc(inviteKey);
+          final inviteRef = FirebaseFirestore.instance
+              .collection('societies')
+              .doc(widget.societyId)
+              .collection('invites')
+              .doc(inviteKey);
 
-        await inviteRef.set({
-          'email': emailNorm,
-          'systemRole': 'resident',
-          'societyRole': role,                 // e.g. president/secretary/etc or null
-          'flatNo': flatNo.isEmpty ? null : flatNo,
-          'status': 'pending',
-          'active': true,
-          'createdAt': FieldValue.serverTimestamp(),
-          'createdByUid': FirebaseAuth.instance.currentUser?.uid,
+          await inviteRef.set({
+            'email': emailNorm,
+            'systemRole': 'resident',
+            'societyRole': role, // e.g. president/secretary/etc or null
+            'flatNo': flatNo.isEmpty ? null : flatNo,
+            'status': 'pending',
+            'active': true,
+            'createdAt': FieldValue.serverTimestamp(),
+            'createdByUid': FirebaseAuth.instance.currentUser?.uid,
 
-          // Optional metadata (helps admin UI before claim)
-          'meta': {
-            'name': name,
-            'phone': phone,
-            'tower': row['tower'],
-          },
-        }, SetOptions(merge: true));
+            // Optional metadata (helps admin UI before claim)
+            'meta': {
+              'name': name,
+              'phone': phone,
+              'tower': row['tower'],
+            },
+          }, SetOptions(merge: true));
 
-        AppLogger.i("Resident invite created via bulk upload", data: {
-          'inviteKey': inviteKey,
-          'email': emailNorm,
-          'flatNo': flatNo,
-          'role': role,
-        });
-
+          AppLogger.i("Resident invite created via bulk upload", data: {
+            'inviteKey': inviteKey,
+            'email': emailNorm,
+            'flatNo': flatNo,
+            'role': role,
+          });
 
           createdUsers.add({
             'inviteKey': inviteKey,
@@ -1123,11 +1130,12 @@ final inviteRef = FirebaseFirestore.instance
             'status': 'pending',
           });
 
-
           successCount++;
-          AppLogger.i("Resident created via bulk upload", data: {'flatNo': flatNo, 'uid': uid});
+          AppLogger.i("Resident created via bulk upload",
+              data: {'flatNo': flatNo, 'uid': uid});
         } catch (e, stackTrace) {
-          AppLogger.e("Error processing resident row $rowNumber", error: e, stackTrace: stackTrace);
+          AppLogger.e("Error processing resident row $rowNumber",
+              error: e, stackTrace: stackTrace);
           errors.add("Row $rowNumber: ${e.toString()}");
           errorCount++;
         }
@@ -1137,18 +1145,21 @@ final inviteRef = FirebaseFirestore.instance
 
       setState(() {
         _isUploadingResidents = false;
-        _lastUploadStatus = "Residents: $successCount successful, $errorCount failed";
+        _lastUploadStatus =
+            "Residents: $successCount successful, $errorCount failed";
       });
 
       if (mounted) {
-        _showUploadResults("Residents Upload", successCount, errorCount, errors);
+        _showUploadResults(
+            "Residents Upload", successCount, errorCount, errors);
 
         if (successCount > 0 && createdUsers.isNotEmpty) {
           await _generateAndShareUserCredentials(createdUsers, 'Residents');
         }
       }
     } catch (e, stackTrace) {
-      AppLogger.e("Error uploading residents CSV", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error uploading residents CSV",
+          error: e, stackTrace: stackTrace);
       setState(() => _isUploadingResidents = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1168,14 +1179,6 @@ final inviteRef = FirebaseFirestore.instance
   // NOTE: Kept untouched as requested.
   //
 
-  Future<void> _uploadGuards() async {
-    // kept unchanged
-  }
-
-  Future<void> _uploadResidents() async {
-    // kept unchanged
-  }
-
   /// Generate user credentials summary CSV and share via email
   ///
   /// Creates a CSV with user IDs, names, login credentials, and password reset instructions
@@ -1188,7 +1191,8 @@ final inviteRef = FirebaseFirestore.instance
       final csvBuffer = StringBuffer();
 
       // CSV Header
-      csvBuffer.writeln('User ID,Name,Phone,Email,Login Instructions,Password Reset');
+      csvBuffer.writeln(
+          'User ID,Name,Phone,Email,Login Instructions,Password Reset');
 
       for (final user in users) {
         final userId = user['userId'] ?? 'N/A';
@@ -1210,7 +1214,9 @@ final inviteRef = FirebaseFirestore.instance
             'Password setup email sent automatically. If not received, use “Forgot password” on login screen.';
 
         String escapeCsv(String value) {
-          if (value.contains(',') || value.contains('"') || value.contains('\n')) {
+          if (value.contains(',') ||
+              value.contains('"') ||
+              value.contains('\n')) {
             return '"${value.replaceAll('"', '""')}"';
           }
           return value;
@@ -1230,8 +1236,10 @@ final inviteRef = FirebaseFirestore.instance
       csvBuffer.writeln('--- IMPORTANT INSTRUCTIONS ---');
       csvBuffer.writeln('1. Share this file with users via email');
       csvBuffer.writeln('2. Users can use their User ID and PIN to login');
-      csvBuffer.writeln('3. For password reset, users should contact society admin');
-      csvBuffer.writeln('4. User IDs are: ${users.map((u) => u['userId']).join(", ")}');
+      csvBuffer
+          .writeln('3. For password reset, users should contact society admin');
+      csvBuffer.writeln(
+          '4. User IDs are: ${users.map((u) => u['userId']).join(", ")}');
 
       final csvContent = csvBuffer.toString();
 
@@ -1240,10 +1248,12 @@ final inviteRef = FirebaseFirestore.instance
         await tempDir.create(recursive: true);
       }
 
-      final fileName = '${userType.toLowerCase()}_credentials_${DateTime.now().millisecondsSinceEpoch}.csv';
+      final fileName =
+          '${userType.toLowerCase()}_credentials_${DateTime.now().millisecondsSinceEpoch}.csv';
       final file = File('${tempDir.path}/$fileName');
       await file.writeAsString(csvContent);
-      AppLogger.i("User credentials CSV generated", data: {'path': file.path, 'userCount': users.length});
+      AppLogger.i("User credentials CSV generated",
+          data: {'path': file.path, 'userCount': users.length});
 
       final xFile = XFile(file.path);
       await Share.shareXFiles(
@@ -1270,18 +1280,21 @@ final inviteRef = FirebaseFirestore.instance
             ),
             backgroundColor: AppColors.admin,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
             duration: const Duration(seconds: 5),
           ),
         );
       }
     } catch (e, stackTrace) {
-      AppLogger.e("Error generating user credentials", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error generating user credentials",
+          error: e, stackTrace: stackTrace);
     }
   }
 
-  void _showUploadResults(String title, int successCount, int errorCount, List<String> errors) {
+  void _showUploadResults(
+      String title, int successCount, int errorCount, List<String> errors) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1297,11 +1310,13 @@ final inviteRef = FirebaseFirestore.instance
             children: [
               Row(
                 children: [
-                  const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 20),
+                  const Icon(Icons.check_circle_rounded,
+                      color: AppColors.success, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     "Successful: $successCount",
-                    style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.success),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, color: AppColors.success),
                   ),
                 ],
               ),
@@ -1309,11 +1324,13 @@ final inviteRef = FirebaseFirestore.instance
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    const Icon(Icons.error_rounded, color: AppColors.error, size: 20),
+                    const Icon(Icons.error_rounded,
+                        color: AppColors.error, size: 20),
                     const SizedBox(width: 8),
                     Text(
                       "Failed: $errorCount",
-                      style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.error),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700, color: AppColors.error),
                     ),
                   ],
                 ),
@@ -1325,18 +1342,20 @@ final inviteRef = FirebaseFirestore.instance
                   ),
                   const SizedBox(height: 4),
                   ...errors.take(5).map(
-                    (e) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        e,
-                        style: const TextStyle(fontSize: 11, color: AppColors.text2),
+                        (e) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            e,
+                            style: const TextStyle(
+                                fontSize: 11, color: AppColors.text2),
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
                   if (errors.length > 5)
                     Text(
                       "... and ${errors.length - 5} more",
-                      style: const TextStyle(fontSize: 11, color: AppColors.text2),
+                      style:
+                          const TextStyle(fontSize: 11, color: AppColors.text2),
                     ),
                 ],
               ],
@@ -1349,9 +1368,11 @@ final inviteRef = FirebaseFirestore.instance
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.admin,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text("OK", style: TextStyle(fontWeight: FontWeight.w900)),
+            child:
+                const Text("OK", style: TextStyle(fontWeight: FontWeight.w900)),
           ),
         ],
       ),

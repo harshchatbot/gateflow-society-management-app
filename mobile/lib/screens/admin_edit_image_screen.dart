@@ -9,7 +9,7 @@ import '../services/firestore_service.dart';
 import '../ui/app_loader.dart';
 
 /// Edit Profile Image Screen for Admin
-/// 
+///
 /// Allows admins to upload or change their profile image.
 /// Theme: Purple/Admin theme
 class AdminEditImageScreen extends StatefulWidget {
@@ -59,7 +59,8 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -77,7 +78,8 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
           ),
           backgroundColor: AppColors.warning,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -105,7 +107,8 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
 
       if (!mounted) return;
 
-      AppLogger.i("Profile image uploaded successfully", data: {"photoUrl": url});
+      AppLogger.i("Profile image uploaded successfully",
+          data: {"photoUrl": url});
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Row(
@@ -120,7 +123,8 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
           ),
           backgroundColor: AppColors.admin,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -136,7 +140,8 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -184,7 +189,7 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppColors.admin.withOpacity(0.12),
+                        color: AppColors.admin.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -215,7 +220,7 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 40),
-                
+
                 // Image Preview
                 GestureDetector(
                   onTap: () => _showImageSourceDialog(),
@@ -230,7 +235,7 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.admin.withOpacity(0.2),
+                          color: AppColors.admin.withValues(alpha: 0.2),
                           blurRadius: 20,
                           offset: const Offset(0, 8),
                         ),
@@ -248,11 +253,19 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                                   fit: BoxFit.cover,
                                   placeholder: (context, url) => Container(
                                     color: Colors.grey.shade300,
-                                    child: const Center(child: Icon(Icons.admin_panel_settings_rounded, size: 70, color: AppColors.text2)),
+                                    child: const Center(
+                                        child: Icon(
+                                            Icons.admin_panel_settings_rounded,
+                                            size: 70,
+                                            color: AppColors.text2)),
                                   ),
-                                  errorWidget: (context, url, error) => Container(
+                                  errorWidget: (context, url, error) =>
+                                      Container(
                                     color: AppColors.bg,
-                                    child: const Icon(Icons.admin_panel_settings_rounded, size: 70, color: AppColors.text2),
+                                    child: const Icon(
+                                        Icons.admin_panel_settings_rounded,
+                                        size: 70,
+                                        color: AppColors.text2),
                                   ),
                                 )
                               : Container(
@@ -267,7 +280,7 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                
+
                 // Change Photo Button
                 OutlinedButton.icon(
                   onPressed: () => _showImageSourceDialog(),
@@ -280,7 +293,8 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                     ),
                   ),
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                     side: const BorderSide(color: AppColors.admin, width: 1.5),
                     foregroundColor: AppColors.admin,
                     shape: RoundedRectangleBorder(
@@ -288,9 +302,9 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                     ),
                   ),
                 ),
-                
+
                 const SizedBox(height: 40),
-                
+
                 // Upload Button
                 SizedBox(
                   width: double.infinity,
@@ -327,7 +341,9 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
               ],
             ),
           ),
-          if (_isLoading) AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: true),
+          if (_isLoading)
+            AppLoader.overlay(
+                showAfter: const Duration(milliseconds: 300), show: true),
         ],
       ),
     );
@@ -360,7 +376,7 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: AppColors.admin.withOpacity(0.12),
+                      color: AppColors.admin.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
@@ -386,10 +402,11 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.admin.withOpacity(0.12),
+                  color: AppColors.admin.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.camera_alt_rounded, color: AppColors.admin, size: 22),
+                child: const Icon(Icons.camera_alt_rounded,
+                    color: AppColors.admin, size: 22),
               ),
               title: const Text(
                 "Take Photo",
@@ -408,10 +425,11 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.admin.withOpacity(0.12),
+                  color: AppColors.admin.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.photo_library_rounded, color: AppColors.admin, size: 22),
+                child: const Icon(Icons.photo_library_rounded,
+                    color: AppColors.admin, size: 22),
               ),
               title: const Text(
                 "Choose from Gallery",
@@ -432,10 +450,11 @@ class _AdminEditImageScreenState extends State<AdminEditImageScreen> {
                 leading: Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.error.withOpacity(0.12),
+                    color: AppColors.error.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.delete_rounded, color: AppColors.error, size: 22),
+                  child: const Icon(Icons.delete_rounded,
+                      color: AppColors.error, size: 22),
                 ),
                 title: const Text(
                   "Remove Photo",

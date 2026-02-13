@@ -27,12 +27,14 @@ class GuardNotificationDrawer extends StatefulWidget {
   });
 
   @override
-  State<GuardNotificationDrawer> createState() => _GuardNotificationDrawerState();
+  State<GuardNotificationDrawer> createState() =>
+      _GuardNotificationDrawerState();
 }
 
 class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
   final FirestoreService _firestore = FirestoreService();
-  late final NoticeService _noticeService = NoticeService(baseUrl: Env.apiBaseUrl);
+  late final NoticeService _noticeService =
+      NoticeService(baseUrl: Env.apiBaseUrl);
 
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
@@ -87,7 +89,8 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
             };
           }).toList();
         } catch (e, st) {
-          AppLogger.e("Error loading SOS notifications (guard drawer)", error: e, stackTrace: st);
+          AppLogger.e("Error loading SOS notifications (guard drawer)",
+              error: e, stackTrace: st);
         }
       }
 
@@ -106,7 +109,8 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
             try {
               final createdAt = n['created_at']?.toString() ?? '';
               if (createdAt.isEmpty) return false;
-              final created = DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
+              final created =
+                  DateTime.parse(createdAt.replaceAll("Z", "+00:00"));
               return now.difference(created).inHours <= 24;
             } catch (e) {
               return false;
@@ -119,9 +123,13 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
             String typeLabel = 'Notice';
             if (noticeType == 'EMERGENCY') {
               typeLabel = 'Alert';
-            } else if (noticeType == 'SCHEDULE') typeLabel = 'Event';
-            else if (noticeType == 'MAINTENANCE') typeLabel = 'Maintenance';
-            else if (noticeType == 'GENERAL') typeLabel = 'Announcement';
+            } else if (noticeType == 'SCHEDULE') {
+              typeLabel = 'Event';
+            } else if (noticeType == 'MAINTENANCE') {
+              typeLabel = 'Maintenance';
+            } else if (noticeType == 'GENERAL') {
+              typeLabel = 'Announcement';
+            }
             return {
               'type': 'notice',
               'id': n['notice_id']?.toString() ?? '',
@@ -139,8 +147,10 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
       final allNotifications = [...sosNotifications, ...noticeNotifications];
       allNotifications.sort((a, b) {
         try {
-          final aTime = DateTime.parse(a['created_at']?.toString().replaceAll("Z", "+00:00") ?? '');
-          final bTime = DateTime.parse(b['created_at']?.toString().replaceAll("Z", "+00:00") ?? '');
+          final aTime = DateTime.parse(
+              a['created_at']?.toString().replaceAll("Z", "+00:00") ?? '');
+          final bTime = DateTime.parse(
+              b['created_at']?.toString().replaceAll("Z", "+00:00") ?? '');
           return bTime.compareTo(aTime);
         } catch (e) {
           return 0;
@@ -162,7 +172,8 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
         "total": allNotifications.length,
       });
     } catch (e, stackTrace) {
-      AppLogger.e("Error loading guard notifications", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error loading guard notifications",
+          error: e, stackTrace: stackTrace);
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -216,17 +227,19 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
           Container(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
             decoration: const BoxDecoration(
-              border: Border(bottom: BorderSide(color: AppColors.border, width: 1)),
+              border:
+                  Border(bottom: BorderSide(color: AppColors.border, width: 1)),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.15),
+                    color: AppColors.primary.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.notifications_rounded, color: AppColors.primary, size: 24),
+                  child: const Icon(Icons.notifications_rounded,
+                      color: AppColors.primary, size: 24),
                 ),
                 const SizedBox(width: 12),
                 const Expanded(
@@ -303,7 +316,7 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
                             Container(
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: AppColors.primary.withOpacity(0.1),
+                                color: AppColors.primary.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
@@ -326,7 +339,7 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
                               "You're all caught up!",
                               style: TextStyle(
                                 fontSize: 14,
-                                color: AppColors.text2.withOpacity(0.7),
+                                color: AppColors.text2.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -363,9 +376,9 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -375,14 +388,15 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
+                  color: color.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 20),
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: color,
                   borderRadius: BorderRadius.circular(12),
@@ -430,7 +444,7 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -442,7 +456,7 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: _getNotificationIconColor(type).withOpacity(0.15),
+              color: _getNotificationIconColor(type).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -471,9 +485,10 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(status).withOpacity(0.15),
+                        color: _getStatusColor(status).withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -501,7 +516,8 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
                 const SizedBox(height: 6),
                 Row(
                   children: [
-                    const Icon(Icons.access_time_rounded, size: 12, color: AppColors.text2),
+                    const Icon(Icons.access_time_rounded,
+                        size: 12, color: AppColors.text2),
                     const SizedBox(width: 4),
                     Text(
                       time,
@@ -511,9 +527,11 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
                         fontWeight: FontWeight.w500,
                       ),
                     ),
-                    if (type == 'notice' && notification['type_label'] != null) ...[
+                    if (type == 'notice' &&
+                        notification['type_label'] != null) ...[
                       const SizedBox(width: 12),
-                      const Icon(Icons.category_rounded, size: 12, color: AppColors.text2),
+                      const Icon(Icons.category_rounded,
+                          size: 12, color: AppColors.text2),
                       const SizedBox(width: 4),
                       Text(
                         notification['type_label'],
@@ -542,7 +560,9 @@ class _GuardNotificationDrawerState extends State<GuardNotificationDrawer> {
 
     switch (type) {
       case 'sos':
-        if (!SocietyModules.isEnabled(SocietyModuleIds.sos) || id.isEmpty) return;
+        if (!SocietyModules.isEnabled(SocietyModuleIds.sos) || id.isEmpty) {
+          return;
+        }
         final flatNo = notification['flat_no'] ?? '';
         final residentName = notification['resident_name'] ?? 'Resident';
         Navigator.push(

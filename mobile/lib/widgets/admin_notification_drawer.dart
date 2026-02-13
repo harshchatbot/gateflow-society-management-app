@@ -79,7 +79,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
       // -----------------------------
       // Helpers
       // -----------------------------
-      String _toIso(dynamic v) {
+      String toIso(dynamic v) {
         if (v == null) return '';
         if (v is Timestamp) return v.toDate().toIso8601String();
         if (v is DateTime) return v.toIso8601String();
@@ -107,7 +107,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           'title': 'Join request: ${(r['name'] ?? 'Resident').toString()}',
           'description': 'Unit ${r['unitLabel'] ?? '–'}',
           'status': 'PENDING',
-          'created_at': _toIso(r['createdAt'] ?? r['created_at']),
+          'created_at': toIso(r['createdAt'] ?? r['created_at']),
           'flat_no': r['unitLabel']?.toString() ?? '',
           'resident_name': r['name']?.toString() ?? 'Resident',
         });
@@ -123,7 +123,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
               ? 'Phone ${(a['phone'] ?? '').toString()}'
               : 'Pending admin approval',
           'status': 'PENDING',
-          'created_at': _toIso(a['createdAt'] ?? a['created_at']),
+          'created_at': toIso(a['createdAt'] ?? a['created_at']),
           'resident_name': a['name']?.toString() ?? 'Admin',
         });
       }
@@ -138,10 +138,10 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
 
       final raw = signupsResult.data;
 
-      final List<Map<String, dynamic>> list = (raw != null && raw is List)
+      final List<Map<String, dynamic>> list = (raw != null)
           ? raw
-              .where((e) => e is Map)
-              .map((e) => Map<String, dynamic>.from(e as Map))
+              .whereType<Map>()
+              .map((e) => Map<String, dynamic>.from(e))
               .toList()
           : <Map<String, dynamic>>[];
 
@@ -155,7 +155,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
               'Society code signup: ${(s['name'] ?? '').toString().isNotEmpty ? s['name'] : (s['email'] ?? 'Unknown')}',
           'description': 'Flat ${s['flat_no'] ?? '–'} • ${s['email'] ?? ''}',
           'status': 'PENDING',
-          'created_at': _toIso(s['createdAt'] ?? s['created_at']),
+          'created_at': toIso(s['createdAt'] ?? s['created_at']),
           'flat_no': s['flat_no']?.toString() ?? '',
           'resident_name': s['name']?.toString() ?? 'Unknown',
         });
@@ -177,10 +177,10 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           final rawComplaints = complaintsResult.data;
 
           final List<Map<String, dynamic>> allComplaints =
-              (rawComplaints != null && rawComplaints is List)
+              (rawComplaints != null)
                   ? rawComplaints
-                      .where((e) => e is Map)
-                      .map((e) => Map<String, dynamic>.from(e as Map))
+                      .whereType<Map>()
+                      .map((e) => Map<String, dynamic>.from(e))
                       .toList()
                   : <Map<String, dynamic>>[];
 
@@ -284,7 +284,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
             'title': 'SOS from Flat ${(s['flatNo'] ?? '').toString()}',
             'description': (s['residentName'] ?? 'Resident').toString(),
             'status': s['status']?.toString() ?? 'OPEN',
-            'created_at': _toIso(s['createdAt']),
+            'created_at': toIso(s['createdAt']),
             'flat_no': (s['flatNo'] ?? '').toString(),
             'resident_name': (s['residentName'] ?? 'Resident').toString(),
           };
@@ -371,7 +371,9 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
     if (statusUpper == 'IN_PROGRESS') return AppColors.primary;
     if (statusUpper == 'RESOLVED' ||
         statusUpper == 'APPROVED' ||
-        statusUpper == 'ACTIVE') return AppColors.success;
+        statusUpper == 'ACTIVE') {
+      return AppColors.success;
+    }
     if (statusUpper == 'REJECTED') return AppColors.error;
     return AppColors.text2;
   }
@@ -435,7 +437,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                 Container(
                   padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: cs.primary.withOpacity(0.12),
+                    color: cs.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(Icons.notifications_rounded,
@@ -458,7 +460,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                         "Recent updates & pending items",
                         style: TextStyle(
                           fontSize: 13,
-                          color: cs.onSurface.withOpacity(0.65),
+                          color: cs.onSurface.withValues(alpha: 0.65),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -466,7 +468,8 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                   ),
                 ),
                 IconButton(
-                  icon: Icon(Icons.close_rounded, color: cs.onSurface.withOpacity(0.65)),
+                  icon: Icon(Icons.close_rounded,
+                      color: cs.onSurface.withValues(alpha: 0.65)),
                   onPressed: () => Navigator.pop(context),
                 ),
               ],
@@ -543,7 +546,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                             Container(
                               padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
-                                color: AppColors.admin.withOpacity(0.1),
+                                color: AppColors.admin.withValues(alpha: 0.1),
                                 shape: BoxShape.circle,
                               ),
                               child: const Icon(
@@ -566,7 +569,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                               "You're all caught up!",
                               style: TextStyle(
                                 fontSize: 14,
-                                color: AppColors.text2.withOpacity(0.7),
+                                color: AppColors.text2.withValues(alpha: 0.7),
                               ),
                             ),
                           ],
@@ -601,9 +604,9 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.2)),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -613,7 +616,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.2),
+                  color: color.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: color, size: 20),
@@ -643,7 +646,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color: cs.onSurface.withOpacity(0.65),
+              color: cs.onSurface.withValues(alpha: 0.65),
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -673,7 +676,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           border: Border.all(color: theme.dividerColor),
           boxShadow: [
             BoxShadow(
-              color: cs.onSurface.withOpacity(0.04),
+              color: cs.onSurface.withValues(alpha: 0.04),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -685,7 +688,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: _getNotificationIconColor(type).withOpacity(0.15),
+                color: _getNotificationIconColor(type).withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -717,7 +720,8 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(status).withOpacity(0.15),
+                          color:
+                              _getStatusColor(status).withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
@@ -736,7 +740,7 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                     description,
                     style: TextStyle(
                       fontSize: 13,
-                      color: cs.onSurface.withOpacity(0.7),
+                      color: cs.onSurface.withValues(alpha: 0.7),
                       fontWeight: FontWeight.w500,
                     ),
                     maxLines: 2,
@@ -746,13 +750,13 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                   Row(
                     children: [
                       Icon(Icons.access_time_rounded,
-                          size: 12, color: cs.onSurface.withOpacity(0.6)),
+                          size: 12, color: cs.onSurface.withValues(alpha: 0.6)),
                       const SizedBox(width: 4),
                       Text(
                         time,
                         style: TextStyle(
                           fontSize: 11,
-                          color: cs.onSurface.withOpacity(0.6),
+                          color: cs.onSurface.withValues(alpha: 0.6),
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -760,13 +764,14 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                           notification['flat_no'] != null) ...[
                         const SizedBox(width: 12),
                         Icon(Icons.home_rounded,
-                            size: 12, color: cs.onSurface.withOpacity(0.6)),
+                            size: 12,
+                            color: cs.onSurface.withValues(alpha: 0.6)),
                         const SizedBox(width: 4),
                         Text(
                           "Flat ${notification['flat_no']}",
                           style: TextStyle(
                             fontSize: 11,
-                            color: cs.onSurface.withOpacity(0.6),
+                            color: cs.onSurface.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -775,13 +780,14 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                           notification['type_label'] != null) ...[
                         const SizedBox(width: 12),
                         Icon(Icons.category_rounded,
-                            size: 12, color: cs.onSurface.withOpacity(0.6)),
+                            size: 12,
+                            color: cs.onSurface.withValues(alpha: 0.6)),
                         const SizedBox(width: 4),
                         Text(
                           notification['type_label'],
                           style: TextStyle(
                             fontSize: 11,
-                            color: cs.onSurface.withOpacity(0.6),
+                            color: cs.onSurface.withValues(alpha: 0.6),
                             fontWeight: FontWeight.w500,
                           ),
                         ),

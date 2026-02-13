@@ -27,7 +27,8 @@ class ModuleDisabledPlaceholder extends StatelessWidget {
         ),
         title: const Text(
           'Feature unavailable',
-          style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w800, fontSize: 18),
+          style: TextStyle(
+              color: AppColors.text, fontWeight: FontWeight.w800, fontSize: 18),
         ),
         centerTitle: true,
       ),
@@ -37,7 +38,8 @@ class ModuleDisabledPlaceholder extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.lock_outline_rounded, size: 64, color: AppColors.textMuted),
+              Icon(Icons.lock_outline_rounded,
+                  size: 64, color: AppColors.textMuted),
               SizedBox(height: 20),
               Text(
                 'This feature is not enabled for your society.',

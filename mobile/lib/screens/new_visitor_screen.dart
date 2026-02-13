@@ -28,6 +28,7 @@ class NewVisitorScreen extends StatefulWidget {
   final String guardName;
   final String societyId;
   final VoidCallback? onBackPressed;
+
   /// When set, form is prefilled from this visitor (Repeat visitor flow). No schema changes.
   final Visitor? initialVisitor;
 
@@ -137,13 +138,15 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       for (final g in visitorChipGroups) {
         if (g.visitorType == 'CAB') {
           final raw = (v.cab?['provider'] as String?)?.trim();
-          _chipSelections[visitorChipSelectionKey(g)] = _normalizeChipValue(g, raw);
+          _chipSelections[visitorChipSelectionKey(g)] =
+              _normalizeChipValue(g, raw);
           break;
         }
       }
     }
     if (v.visitorType.toUpperCase() == 'DELIVERY') {
-      final deliveryConfig = visitorChipGroups.firstWhere((c) => c.visitorType == 'DELIVERY');
+      final deliveryConfig =
+          visitorChipGroups.firstWhere((c) => c.visitorType == 'DELIVERY');
       final raw = (v.delivery?['provider'] as String?)?.trim();
       final normalized = _normalizeChipValue(deliveryConfig, raw);
       _chipSelections[visitorChipSelectionKey(deliveryConfig)] = normalized;
@@ -173,9 +176,11 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     setState(() => _flatsLoading = true);
     try {
       // Prefer society flats (societies/{id}/flats); if empty, use public_societies units (e.g. Villa-E01)
-      List<Map<String, dynamic>> list = await _firestore.getSocietyFlats(widget.societyId);
+      List<Map<String, dynamic>> list =
+          await _firestore.getSocietyFlats(widget.societyId);
       if (list.isEmpty) {
-        final publicUnits = await _firestore.getPublicSocietyUnits(widget.societyId);
+        final publicUnits =
+            await _firestore.getPublicSocietyUnits(widget.societyId);
         list = publicUnits.map((u) {
           final label = (u['label'] as String?) ?? u['id'] as String;
           return {'id': u['id'], 'flatNo': label};
@@ -196,7 +201,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         _loadFavoriteVisitorsForUnit();
         _scheduleFavoriteCheck();
       }
-      if (widget.initialVisitor != null && _selectedFlatNo != null && _selectedFlatNo!.trim().isNotEmpty) {
+      if (widget.initialVisitor != null &&
+          _selectedFlatNo != null &&
+          _selectedFlatNo!.trim().isNotEmpty) {
         _lookupFlatOwner();
       }
     } catch (e) {
@@ -277,7 +284,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     if (value == null || value.trim().isEmpty) return false;
     final wanted = value.trim();
     for (final f in _flats) {
-      final label = ((f['flatNo'] as String?) ?? (f['id'] as String?) ?? '').trim();
+      final label =
+          ((f['flatNo'] as String?) ?? (f['id'] as String?) ?? '').trim();
       if (label == wanted) return true;
     }
     return false;
@@ -484,10 +492,10 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     if (flat.isEmpty) {
       if (mounted) {
         setState(() {
-        _flatOwnerName = null;
-        _flatOwnerPhone = null;
-        _flatOwnerLoading = false;
-      });
+          _flatOwnerName = null;
+          _flatOwnerPhone = null;
+          _flatOwnerLoading = false;
+        });
       }
       return;
     }
@@ -500,14 +508,16 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       );
       final flatNorm = flat.toUpperCase();
       final matches = members.cast<Map<String, dynamic>>().where((m) {
-        final mFlat = (m['flat_no'] ?? m['flatNo'] ?? '').toString().trim().toUpperCase();
+        final mFlat =
+            (m['flat_no'] ?? m['flatNo'] ?? '').toString().trim().toUpperCase();
         return mFlat == flatNorm;
       }).toList();
       if (!mounted) return;
       if (matches.isNotEmpty) {
         final m = matches.first;
         final name = (m['resident_name'] ?? m['name'] ?? 'Resident').toString();
-        final phone = (m['resident_phone'] ?? m['phone'] ?? m['mobile'] ?? '').toString();
+        final phone =
+            (m['resident_phone'] ?? m['phone'] ?? m['mobile'] ?? '').toString();
         setState(() {
           _flatOwnerName = name;
           _flatOwnerPhone = phone.isNotEmpty ? phone : null;
@@ -524,10 +534,10 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       AppLogger.w('Flat owner lookup failed', error: e.toString());
       if (mounted) {
         setState(() {
-        _flatOwnerName = null;
-        _flatOwnerPhone = null;
-        _flatOwnerLoading = false;
-      });
+          _flatOwnerName = null;
+          _flatOwnerPhone = null;
+          _flatOwnerLoading = false;
+        });
       }
     }
   }
@@ -562,28 +572,38 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       );
       final flatNorm = (_selectedFlatNo?.trim() ?? '').toUpperCase();
       final matches = members.cast<Map<String, dynamic>>().where((m) {
-        final mFlat = (m['flat_no'] ?? m['flatNo'] ?? '').toString().trim().toUpperCase();
+        final mFlat =
+            (m['flat_no'] ?? m['flatNo'] ?? '').toString().trim().toUpperCase();
         return mFlat == flatNorm;
       }).toList();
       if (matches.isNotEmpty) {
         final m = matches.first;
-        residentPhone = (m['resident_phone'] ?? m['phone'] ?? m['mobile'] ?? '').toString();
+        residentPhone =
+            (m['resident_phone'] ?? m['phone'] ?? m['mobile'] ?? '').toString();
         if (residentPhone.isEmpty) residentPhone = null;
       }
     } catch (e) {
-      AppLogger.w('Resident phone lookup failed (continuing without)', error: e.toString());
+      AppLogger.w('Resident phone lookup failed (continuing without)',
+          error: e.toString());
     }
 
-    final visitorName = _visitorNameController.text.trim().isEmpty ? null : _visitorNameController.text.trim();
-    final vehicleNumber = _vehicleNumberController.text.trim().isEmpty ? null : _vehicleNumberController.text.trim();
+    final visitorName = _visitorNameController.text.trim().isEmpty
+        ? null
+        : _visitorNameController.text.trim();
+    final vehicleNumber = _vehicleNumberController.text.trim().isEmpty
+        ? null
+        : _vehicleNumberController.text.trim();
     final isDelivery = _selectedVisitorType == 'DELIVERY';
-    final deliveryConfig = visitorChipGroups.firstWhere((g) => g.visitorType == 'DELIVERY');
+    final deliveryConfig =
+        visitorChipGroups.firstWhere((g) => g.visitorType == 'DELIVERY');
     final deliveryPartnerValue = _getSelection(deliveryConfig);
     final deliveryPartner = isDelivery && deliveryPartnerValue.trim().isNotEmpty
         ? deliveryPartnerValue.trim()
         : null;
     final deliveryPartnerOther = isDelivery && deliveryPartnerValue == 'Other'
-        ? (_deliveryPartnerOtherController.text.trim().isEmpty ? null : _deliveryPartnerOtherController.text.trim())
+        ? (_deliveryPartnerOtherController.text.trim().isEmpty
+            ? null
+            : _deliveryPartnerOtherController.text.trim())
         : null;
 
     final flatNo = _selectedFlatNo?.trim() ?? '';
@@ -638,11 +658,11 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     final initialStatus = (quickDecision['status'] as String?) ?? 'PENDING';
     final approvedBy = quickDecision['approvedBy'] as String?;
     final matchedFavouriteId = quickDecision['matchedFavouriteId'] as String?;
-    final matchedPreapprovalId = quickDecision['matchedPreapprovalId'] as String?;
+    final matchedPreapprovalId =
+        quickDecision['matchedPreapprovalId'] as String?;
     final visitorKey = quickDecision['visitorKey'] as String?;
     final notifyResident = (quickDecision['notifyResident'] as bool?) ?? true;
-    final isAutoApprovedSubmit =
-        initialStatus == 'APPROVED' &&
+    final isAutoApprovedSubmit = initialStatus == 'APPROVED' &&
         (approvedBy == 'AUTO_FAVOURITE' || approvedBy == 'AUTO_PREAPPROVAL');
 
     final result = (_visitorPhoto != null)
@@ -740,7 +760,10 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         _loadingStartedAt = null;
         _uploadProgress = null;
       });
-      final err = result.error ?? AppError(userMessage: 'Failed to create visitor', technicalMessage: 'Unknown');
+      final err = result.error ??
+          AppError(
+              userMessage: 'Failed to create visitor',
+              technicalMessage: 'Unknown');
       AppLogger.e('Visitor creation failed', error: err.technicalMessage);
       _showError(userFriendlyMessageFromError(err));
     }
@@ -749,7 +772,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content:
+            Text(message, style: const TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Theme.of(context).colorScheme.error,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -812,7 +836,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     }
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           // If we're in a tab navigation (IndexedStack), switch to dashboard
           if (widget.onBackPressed != null) {
@@ -839,33 +863,41 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               }
             },
           ),
-        title: Text('New Entry', style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w900, fontSize: 22)),
-        centerTitle: true,
-      ),
-      body: Stack(
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 120), // Responsive bottom padding
-            child: Form(
-              key: _formKey,
-              child: Column(
-                children: [
-                  if (_createdVisitor != null) _buildSuccessCard() else _buildEntryForm(),
-                ],
+          title: Text('New Entry',
+              style: TextStyle(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 22)),
+          centerTitle: true,
+        ),
+        body: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(
+                  20, 10, 20, 120), // Responsive bottom padding
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    if (_createdVisitor != null)
+                      _buildSuccessCard()
+                    else
+                      _buildEntryForm(),
+                  ],
+                ),
               ),
             ),
-          ),
-          AppLoader.overlay(
-            show: _isLoading,
-            startedAt: _loadingStartedAt,
-            showAfter: const Duration(milliseconds: 300),
-            progress: _uploadProgress,
-            message: _uploadProgress != null
-                ? "Uploading visitor photo..."
-                : "Syncing with residents...",
-          ),
-        ],
-      ),
+            AppLoader.overlay(
+              show: _isLoading,
+              startedAt: _loadingStartedAt,
+              showAfter: const Duration(milliseconds: 300),
+              progress: _uploadProgress,
+              message: _uploadProgress != null
+                  ? "Uploading visitor photo..."
+                  : "Syncing with residents...",
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -889,7 +921,12 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: theme.dividerColor),
-        boxShadow: [BoxShadow(color: theme.colorScheme.onSurface.withOpacity(0.04), blurRadius: 20, offset: const Offset(0, 8))],
+        boxShadow: [
+          BoxShadow(
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.04),
+              blurRadius: 20,
+              offset: const Offset(0, 8))
+        ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
@@ -899,9 +936,16 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(AppIcons.camera, size: 40, color: theme.colorScheme.primary.withOpacity(0.5)),
+                    Icon(AppIcons.camera,
+                        size: 40,
+                        color:
+                            theme.colorScheme.primary.withValues(alpha: 0.5)),
                     const SizedBox(height: 12),
-                    Text("Capture Visitor Photo", style: TextStyle(fontWeight: FontWeight.bold, color: theme.colorScheme.onSurface.withOpacity(0.7))),
+                    Text("Capture Visitor Photo",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.7))),
                   ],
                 ),
               )
@@ -910,10 +954,13 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                 children: [
                   Image.file(_visitorPhoto!, fit: BoxFit.cover),
                   Positioned(
-                    top: 12, right: 12,
+                    top: 12,
+                    right: 12,
                     child: CircleAvatar(
                       backgroundColor: Colors.black54,
-                      child: IconButton(icon: const Icon(Icons.refresh, color: Colors.white), onPressed: _takePhoto),
+                      child: IconButton(
+                          icon: const Icon(Icons.refresh, color: Colors.white),
+                          onPressed: _takePhoto),
                     ),
                   ),
                 ],
@@ -941,7 +988,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                         label: opt,
                         icon: g.icon,
                         selected: _getSelection(g) == opt,
-                        onTap: () => _setSelection(g, _getSelection(g) == opt ? null : opt),
+                        onTap: () => _setSelection(
+                            g, _getSelection(g) == opt ? null : opt),
                       ),
                     ))
                 .toList(),
@@ -959,9 +1007,14 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     required VoidCallback onTap,
   }) {
     final theme = Theme.of(context);
-    final bgColor = selected ? SentinelColors.accentSurface(0.04) : theme.colorScheme.surface;
-    final borderColor = selected ? SentinelColors.accentBorder : theme.dividerColor;
-    final fgColor = selected ? SentinelColors.accent : theme.colorScheme.onSurface.withOpacity(0.7);
+    final bgColor = selected
+        ? SentinelColors.accentSurface(0.04)
+        : theme.colorScheme.surface;
+    final borderColor =
+        selected ? SentinelColors.accentBorder : theme.dividerColor;
+    final fgColor = selected
+        ? SentinelColors.accent
+        : theme.colorScheme.onSurface.withValues(alpha: 0.7);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -978,7 +1031,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             const SizedBox(width: 8),
             Text(
               label,
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: fgColor),
+              style: TextStyle(
+                  fontSize: 13, fontWeight: FontWeight.w700, color: fgColor),
             ),
           ],
         ),
@@ -1020,12 +1074,12 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
                 color: _isFavoriteForUnit
-                    ? theme.colorScheme.primary.withOpacity(0.10)
+                    ? theme.colorScheme.primary.withValues(alpha: 0.10)
                     : theme.colorScheme.surface,
                 borderRadius: BorderRadius.circular(999),
                 border: Border.all(
                   color: _isFavoriteForUnit
-                      ? theme.colorScheme.primary.withOpacity(0.28)
+                      ? theme.colorScheme.primary.withValues(alpha: 0.28)
                       : theme.dividerColor,
                 ),
               ),
@@ -1047,7 +1101,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                        color:
+                            theme.colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ] else ...[
@@ -1084,7 +1139,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
           _buildFieldLabel("Flat / Unit"),
           _flatsLoading
               ? Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(14),
@@ -1092,36 +1148,55 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                   ),
                   child: Row(
                     children: [
-                      SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: theme.colorScheme.primary)),
+                      SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: theme.colorScheme.primary)),
                       const SizedBox(width: 12),
-                      Text("Loading units...", style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w600)),
+                      Text("Loading units...",
+                          style: TextStyle(
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.7),
+                              fontWeight: FontWeight.w600)),
                     ],
                   ),
                 )
               : _flats.isEmpty
                   ? Container(
-                      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 14, horizontal: 16),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.surface,
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(color: theme.dividerColor),
                       ),
-                      child: Text("No units configured for this society.", style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w600)),
+                      child: Text("No units configured for this society.",
+                          style: TextStyle(
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.7),
+                              fontWeight: FontWeight.w600)),
                     )
                   : DropdownButtonFormField<String>(
-                      value: _isFlatOptionAvailable(_selectedFlatNo)
+                      initialValue: _isFlatOptionAvailable(_selectedFlatNo)
                           ? _selectedFlatNo
                           : null,
                       decoration: InputDecoration(
-                        prefixIcon: Icon(AppIcons.flat, color: theme.colorScheme.primary.withOpacity(0.8)),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        prefixIcon: Icon(AppIcons.flat,
+                            color: theme.colorScheme.primary
+                                .withValues(alpha: 0.8)),
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14)),
                         filled: true,
                         fillColor: theme.colorScheme.surface,
                       ),
                       hint: const Text("Select unit / villa / flat"),
                       items: _flats.map((f) {
-                        final flatNo = (f['flatNo'] as String?) ?? f['id'] as String;
-                        return DropdownMenuItem<String>(value: flatNo, child: Text(flatNo));
+                        final flatNo =
+                            (f['flatNo'] as String?) ?? f['id'] as String;
+                        return DropdownMenuItem<String>(
+                            value: flatNo, child: Text(flatNo));
                       }).toList(),
                       onChanged: _onFlatSelected,
                     ),
@@ -1147,7 +1222,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                   "Top 5 for selected unit",
                   style: TextStyle(
                     fontSize: 12,
-                    color: theme.colorScheme.onSurface.withOpacity(0.6),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -1175,7 +1250,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
-                              color: theme.colorScheme.onSurface.withOpacity(0.7),
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -1191,7 +1267,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: theme.colorScheme.onSurface.withOpacity(0.65),
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.65),
                           ),
                         ),
                       ),
@@ -1203,7 +1280,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                       final displayPhone = phone.isEmpty ? "No phone" : phone;
                       return ListTile(
                         dense: true,
-                        leading: Icon(
+                        leading: const Icon(
                           Icons.star_rounded,
                           size: 18,
                           color: _favoriteGold,
@@ -1218,7 +1295,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                         subtitle: Text(
                           displayPhone,
                           style: TextStyle(
-                            color: theme.colorScheme.onSurface.withOpacity(0.65),
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.65),
                             fontSize: 12,
                           ),
                         ),
@@ -1250,9 +1328,18 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                 final t = Theme.of(context);
                 return Row(
                   children: [
-                    SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: t.colorScheme.primary)),
+                    SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: t.colorScheme.primary)),
                     const SizedBox(width: 10),
-                    Text("Finding flat owner...", style: TextStyle(fontSize: 12, color: t.colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w600)),
+                    Text("Finding flat owner...",
+                        style: TextStyle(
+                            fontSize: 12,
+                            color:
+                                t.colorScheme.onSurface.withValues(alpha: 0.7),
+                            fontWeight: FontWeight.w600)),
                   ],
                 );
               },
@@ -1262,48 +1349,73 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.08),
+                color: AppColors.success.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.success.withOpacity(0.25)),
+                border: Border.all(
+                    color: AppColors.success.withValues(alpha: 0.25)),
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.person_rounded, size: 20, color: AppColors.success),
+                  const Icon(Icons.person_rounded,
+                      size: 20, color: AppColors.success),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text("Flat owner", style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.w600)),
+                        Text("Flat owner",
+                            style: TextStyle(
+                                fontSize: 11,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.7),
+                                fontWeight: FontWeight.w600)),
                         const SizedBox(height: 2),
                         Text(
                           _flatOwnerName ?? '—',
-                          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface),
+                          style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              color: Theme.of(context).colorScheme.onSurface),
                         ),
-                        if (_flatOwnerPhone != null && _flatOwnerPhone!.isNotEmpty) ...[
+                        if (_flatOwnerPhone != null &&
+                            _flatOwnerPhone!.isNotEmpty) ...[
                           const SizedBox(height: 2),
                           Text(
                             _flatOwnerPhone!,
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.primary),
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Theme.of(context).colorScheme.primary),
                           ),
                         ],
                       ],
                     ),
                   ),
-                  if (_flatOwnerPhone != null && _flatOwnerPhone!.trim().isNotEmpty)
+                  if (_flatOwnerPhone != null &&
+                      _flatOwnerPhone!.trim().isNotEmpty)
                     IconButton(
                       onPressed: () => _launchCall(_flatOwnerPhone!),
-                      icon: const Icon(Icons.call_rounded, color: AppColors.success, size: 24),
+                      icon: const Icon(Icons.call_rounded,
+                          color: AppColors.success, size: 24),
                       tooltip: 'Call flat owner',
                     ),
                 ],
               ),
             ),
-          ] else if (_selectedFlatNo != null && _selectedFlatNo!.trim().isNotEmpty) ...[
+          ] else if (_selectedFlatNo != null &&
+              _selectedFlatNo!.trim().isNotEmpty) ...[
             const SizedBox(height: 10),
             Text(
               "No resident found for this flat.",
-              style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.6),
+                  fontWeight: FontWeight.w600),
             ),
           ],
           const SizedBox(height: 18),
@@ -1320,7 +1432,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
           ),
           ...visitorChipGroups.map((g) => _buildChipGroup(context, g)),
           if (_selectedVisitorType == 'DELIVERY' &&
-              _getSelection(visitorChipGroups.firstWhere((c) => c.visitorType == 'DELIVERY')) == 'Other') ...[
+              _getSelection(visitorChipGroups
+                      .firstWhere((c) => c.visitorType == 'DELIVERY')) ==
+                  'Other') ...[
             const SizedBox(height: 12),
             _buildOptionalTextField(
               controller: _deliveryPartnerOtherController,
@@ -1333,7 +1447,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             behavior: HitTestBehavior.translucent,
             onPointerDown: (_) => setState(() => _submitButtonPressed = true),
             onPointerUp: (_) => setState(() => _submitButtonPressed = false),
-            onPointerCancel: (_) => setState(() => _submitButtonPressed = false),
+            onPointerCancel: (_) =>
+                setState(() => _submitButtonPressed = false),
             child: AnimatedScale(
               scale: _submitButtonPressed ? 0.98 : 1.0,
               duration: const Duration(milliseconds: 140),
@@ -1345,7 +1460,8 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
                   onPressed: _isLoading ? null : _handleSubmit,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)),
                     elevation: 0,
                   ),
                   child: Text(
@@ -1367,19 +1483,30 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     );
   }
 
-  Widget _buildTextField({required TextEditingController controller, required String hint, required IconData icon, bool isPhone = false}) {
+  Widget _buildTextField(
+      {required TextEditingController controller,
+      required String hint,
+      required IconData icon,
+      bool isPhone = false}) {
     final theme = Theme.of(context);
     return TextFormField(
       controller: controller,
       keyboardType: isPhone ? TextInputType.phone : TextInputType.text,
-      inputFormatters: isPhone ? [FilteringTextInputFormatter.digitsOnly, LengthLimitingTextInputFormatter(10)] : [],
+      inputFormatters: isPhone
+          ? [
+              FilteringTextInputFormatter.digitsOnly,
+              LengthLimitingTextInputFormatter(10)
+            ]
+          : [],
       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Icon(icon, color: theme.colorScheme.primary, size: 20),
         filled: true,
         fillColor: theme.scaffoldBackgroundColor,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none),
       ),
       validator: (v) => v!.isEmpty ? "Required" : null,
     );
@@ -1400,7 +1527,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         prefixIcon: Icon(icon, color: theme.colorScheme.primary, size: 20),
         filled: true,
         fillColor: theme.scaffoldBackgroundColor,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(14),
+            borderSide: BorderSide.none),
       ),
     );
   }
@@ -1408,7 +1537,11 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   Widget _buildFieldLabel(String label) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8, left: 4),
-      child: Text(label, style: TextStyle(fontWeight: FontWeight.w800, color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
+      child: Text(label,
+          style: TextStyle(
+              fontWeight: FontWeight.w800,
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 13)),
     );
   }
 
@@ -1420,7 +1553,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         onTap: () => setState(() {
           _selectedVisitorType = type;
           for (final g in visitorChipGroups) {
-            if (g.visitorType != type) _chipSelections.remove(visitorChipSelectionKey(g));
+            if (g.visitorType != type) {
+              _chipSelections.remove(visitorChipSelectionKey(g));
+            }
           }
           if (type != 'DELIVERY') _deliveryPartnerOtherController.clear();
           _scheduleFavoriteCheck();
@@ -1428,14 +1563,27 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: isSelected ? theme.colorScheme.primary : theme.scaffoldBackgroundColor,
+            color: isSelected
+                ? theme.colorScheme.primary
+                : theme.scaffoldBackgroundColor,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             children: [
-              Icon(icon, size: 20, color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withOpacity(0.7)),
+              Icon(icon,
+                  size: 20,
+                  color: isSelected
+                      ? theme.colorScheme.onPrimary
+                      : theme.colorScheme.onSurface.withValues(alpha: 0.7)),
               const SizedBox(height: 4),
-              Text(type, style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isSelected ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface.withOpacity(0.7))),
+              Text(type,
+                  style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: isSelected
+                          ? theme.colorScheme.onPrimary
+                          : theme.colorScheme.onSurface
+                              .withValues(alpha: 0.7))),
             ],
           ),
         ),
@@ -1448,18 +1596,28 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     final v = _createdVisitor!;
     return Container(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(color: theme.colorScheme.surface, borderRadius: BorderRadius.circular(24), border: Border.all(color: AppColors.success.withOpacity(0.3))),
+      decoration: BoxDecoration(
+          color: theme.colorScheme.surface,
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(color: AppColors.success.withValues(alpha: 0.3))),
       child: Column(
         children: [
-          const CircleAvatar(backgroundColor: AppColors.success, radius: 30, child: Icon(Icons.check, color: Colors.white, size: 35)),
+          const CircleAvatar(
+              backgroundColor: AppColors.success,
+              radius: 30,
+              child: Icon(Icons.check, color: Colors.white, size: 35)),
           const SizedBox(height: 16),
-          const Text("Notification Sent!", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
-          Text("Resident has been alerted.", style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7))),
+          const Text("Notification Sent!",
+              style: TextStyle(fontWeight: FontWeight.w900, fontSize: 20)),
+          Text("Resident has been alerted.",
+              style: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7))),
           const Divider(height: 32),
           _buildInfoRow("Flat Number", v.flatNo),
           _buildInfoRow("Category", v.visitorType),
           _buildInfoRow("Status", v.status, isStatus: true),
-          if (v.residentPhone != null && v.residentPhone!.trim().isNotEmpty) ...[
+          if (v.residentPhone != null &&
+              v.residentPhone!.trim().isNotEmpty) ...[
             const SizedBox(height: 6),
             _buildResidentPhoneRow(v.residentPhone!),
           ],
@@ -1469,8 +1627,12 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
             height: 50,
             child: OutlinedButton(
               onPressed: _clearForm,
-              style: OutlinedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)), side: BorderSide(color: theme.colorScheme.primary)),
-              child: const Text("NEW ENTRY", style: TextStyle(fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  side: BorderSide(color: theme.colorScheme.primary)),
+              child: const Text("NEW ENTRY",
+                  style: TextStyle(fontWeight: FontWeight.bold)),
             ),
           ),
         ],
@@ -1485,14 +1647,27 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.bold)),
-          isStatus 
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(color: AppColors.statusChipBg(value), borderRadius: BorderRadius.circular(8)),
-                child: Text(value, style: TextStyle(color: AppColors.statusChipFg(value), fontWeight: FontWeight.bold, fontSize: 12)),
-              )
-            : Text(value, style: TextStyle(fontWeight: FontWeight.w900, color: theme.colorScheme.onSurface)),
+          Text(label,
+              style: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.bold)),
+          isStatus
+              ? Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                      color: AppColors.statusChipBg(value),
+                      borderRadius: BorderRadius.circular(8)),
+                  child: Text(value,
+                      style: TextStyle(
+                          color: AppColors.statusChipFg(value),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12)),
+                )
+              : Text(value,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: theme.colorScheme.onSurface)),
         ],
       ),
     );
@@ -1505,15 +1680,22 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text("Resident phone", style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontWeight: FontWeight.bold)),
+          Text("Resident phone",
+              style: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.bold)),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(phone, style: TextStyle(fontWeight: FontWeight.w900, color: theme.colorScheme.onSurface)),
+              Text(phone,
+                  style: TextStyle(
+                      fontWeight: FontWeight.w900,
+                      color: theme.colorScheme.onSurface)),
               const SizedBox(width: 8),
               IconButton(
                 onPressed: () => _launchCall(phone),
-                icon: const Icon(Icons.call_rounded, color: AppColors.success, size: 22),
+                icon: const Icon(Icons.call_rounded,
+                    color: AppColors.success, size: 22),
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 tooltip: 'Call resident',

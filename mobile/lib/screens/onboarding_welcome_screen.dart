@@ -118,7 +118,7 @@ class _OnboardingWelcomeScreenState extends State<OnboardingWelcomeScreen> {
                             style: GoogleFonts.outfit(
                               fontSize: 13,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.text2.withOpacity(0.85),
+                              color: AppColors.text2.withValues(alpha: 0.85),
                               letterSpacing: 0.25,
                             ),
                           ),
@@ -150,11 +150,11 @@ class _TrustStrip extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: AppColors.primary.withOpacity(0.12),
+            color: AppColors.primary.withValues(alpha: 0.12),
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -365,17 +365,17 @@ class _SentiCloudBubble extends StatelessWidget {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(32),
                 border: Border.all(
-                  color: AppColors.primary.withOpacity(0.08),
+                  color: AppColors.primary.withValues(alpha: 0.08),
                   width: 1,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.05),
+                    color: Colors.black.withValues(alpha: 0.05),
                     blurRadius: 20,
                     offset: const Offset(0, 7),
                   ),
                   BoxShadow(
-                    color: AppColors.primary.withOpacity(0.05),
+                    color: AppColors.primary.withValues(alpha: 0.05),
                     blurRadius: 14,
                     offset: const Offset(0, 2),
                   ),
@@ -464,11 +464,11 @@ class _SentiCloudBubble extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         shape: BoxShape.circle,
-        border:
-            Border.all(color: AppColors.primary.withOpacity(0.08), width: 1),
+        border: Border.all(
+            color: AppColors.primary.withValues(alpha: 0.08), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 6,
             offset: const Offset(0, 2),
           ),
@@ -500,13 +500,13 @@ class _IllustrationPlaceholder extends StatelessWidget {
           fit: BoxFit.contain,
           errorBuilder: (_, __, ___) => Container(
             decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.08),
+              color: AppColors.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(24),
             ),
             child: Icon(
               Icons.person_rounded,
               size: 100,
-              color: AppColors.primary.withOpacity(0.4),
+              color: AppColors.primary.withValues(alpha: 0.4),
             ),
           ),
         ),

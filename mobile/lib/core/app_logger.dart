@@ -12,7 +12,7 @@ class AppLogger {
       lineLength: 120,
       colors: true,
       printEmojis: true,
-      printTime: false,
+      dateTimeFormat: DateTimeFormat.none,
     ),
   );
 
@@ -24,11 +24,13 @@ class AppLogger {
     _logger.i(_format(message, data));
   }
 
-  static void w(String message, {Object? error, StackTrace? stackTrace, Map<String, dynamic>? data}) {
+  static void w(String message,
+      {Object? error, StackTrace? stackTrace, Map<String, dynamic>? data}) {
     _logger.w(_format(message, data), error: error, stackTrace: stackTrace);
   }
 
-  static void e(String message, {Object? error, StackTrace? stackTrace, Map<String, dynamic>? data}) {
+  static void e(String message,
+      {Object? error, StackTrace? stackTrace, Map<String, dynamic>? data}) {
     _logger.e(_format(message, data), error: error, stackTrace: stackTrace);
   }
 

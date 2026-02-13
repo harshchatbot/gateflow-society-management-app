@@ -41,11 +41,13 @@ class AdminSignupService {
         if (!normalizedPhone.startsWith('+')) {
           final digits = normalizedPhone.replaceAll(RegExp(r'[^\d]'), '');
           if (digits.length == 10) {
-            normalizedPhone = FirebaseAuthService.normalizePhoneForIndia(digits);
+            normalizedPhone =
+                FirebaseAuthService.normalizePhoneForIndia(digits);
           }
         } else {
           // If already in + format, still normalize via helper (safe)
-          normalizedPhone = FirebaseAuthService.normalizePhoneForIndia(normalizedPhone);
+          normalizedPhone =
+              FirebaseAuthService.normalizePhoneForIndia(normalizedPhone);
         }
       }
 
@@ -81,10 +83,8 @@ class AdminSignupService {
       }
 
       // 1. Resolve societyId from societyCodes/{CODE}
-      final codeSnap = await _firestore
-          .collection('societyCodes')
-          .doc(normalizedCode)
-          .get();
+      final codeSnap =
+          await _firestore.collection('societyCodes').doc(normalizedCode).get();
 
       if (!codeSnap.exists) {
         return Result.failure(AppError(
@@ -99,7 +99,8 @@ class AdminSignupService {
 
       if (societyId == null || societyId.trim().isEmpty || !isActive) {
         return Result.failure(AppError(
-          userMessage: "Society is inactive or invalid. Please contact support.",
+          userMessage:
+              "Society is inactive or invalid. Please contact support.",
           technicalMessage:
               "societyId missing or inactive for code=$normalizedCode",
         ));
@@ -155,7 +156,8 @@ class AdminSignupService {
       if (normalizedPhone.isEmpty) {
         final authPhone = _auth.currentUser?.phoneNumber;
         if (authPhone != null && authPhone.isNotEmpty) {
-          normalizedPhone = FirebaseAuthService.normalizePhoneForIndia(authPhone);
+          normalizedPhone =
+              FirebaseAuthService.normalizePhoneForIndia(authPhone);
         }
       }
 
@@ -223,7 +225,8 @@ class AdminSignupService {
           });
         }
       } catch (e, st) {
-        AppLogger.e("Failed to create member document", error: e, stackTrace: st);
+        AppLogger.e("Failed to create member document",
+            error: e, stackTrace: st);
         rethrow;
       }
 
@@ -410,7 +413,8 @@ class AdminSignupService {
       });
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("approveSignup FirebaseException", error: err.technicalMessage);
+      AppLogger.e("approveSignup FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, stackTrace) {
       final err = AppError(
@@ -461,10 +465,12 @@ class AdminSignupService {
         try {
           // This relies on FirestoreService internal hashing; so we just "re-set" on cleanup is not possible here.
           // If you want hard cleanup, we can add a helper in FirestoreService to remove mapping safely.
-          AppLogger.i("Reject cleanup: phone was present (unique_phones may remain)", data: {
-            "uid": uid,
-            "phone": phone,
-          });
+          AppLogger.i(
+              "Reject cleanup: phone was present (unique_phones may remain)",
+              data: {
+                "uid": uid,
+                "phone": phone,
+              });
         } catch (_) {
           // ignore
         }
@@ -478,7 +484,8 @@ class AdminSignupService {
       return Result.success(null);
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("rejectSignup FirebaseException", error: err.technicalMessage);
+      AppLogger.e("rejectSignup FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, stackTrace) {
       final err = AppError(

@@ -23,7 +23,8 @@ class ApiResult<T> {
 class ResidentService {
   // ✅ Change this if you already have a baseUrl in dotenv/service
   final String baseUrl;
-  final FirebaseVisitorService _firebaseVisitorService = FirebaseVisitorService();
+  final FirebaseVisitorService _firebaseVisitorService =
+      FirebaseVisitorService();
 
   ResidentService({required this.baseUrl});
 
@@ -56,23 +57,29 @@ class ResidentService {
         },
       );
 
-      debugPrint("ResidentService.getProfile: Response status ${res.statusCode}, body: ${res.body}");
+      debugPrint(
+          "ResidentService.getProfile: Response status ${res.statusCode}, body: ${res.body}");
 
       if (res.statusCode == 200) {
         return ApiResult.success(jsonDecode(res.body) as Map<String, dynamic>);
       } else if (res.statusCode == 404) {
-        return ApiResult.failure("Resident not found. Please check Society ID and Flat No.");
+        return ApiResult.failure(
+            "Resident not found. Please check Society ID and Flat No.");
       } else if (res.statusCode == 401) {
-        return ApiResult.failure("Unauthorized. Please check your phone number.");
+        return ApiResult.failure(
+            "Unauthorized. Please check your phone number.");
       } else {
-        return ApiResult.failure("Profile failed: ${res.statusCode} ${res.body}");
+        return ApiResult.failure(
+            "Profile failed: ${res.statusCode} ${res.body}");
       }
     } on TimeoutException catch (e) {
       debugPrint("getProfile timeout error: $e");
-      return ApiResult.failure("Request timeout. Please check your connection and try again.");
+      return ApiResult.failure(
+          "Request timeout. Please check your connection and try again.");
     } on SocketException catch (e) {
       debugPrint("getProfile socket error: $e");
-      return ApiResult.failure("Cannot connect to server. Please check your network connection.");
+      return ApiResult.failure(
+          "Cannot connect to server. Please check your network connection.");
     } catch (e) {
       debugPrint("getProfile error: $e");
       return ApiResult.failure("Connection error: ${e.toString()}");
@@ -89,11 +96,12 @@ class ResidentService {
         societyId: societyId,
         flatNo: flatNo,
       );
-      
+
       if (result.isSuccess && result.data != null) {
         return ApiResult.success(result.data!);
       } else {
-        return ApiResult.failure(result.error?.userMessage ?? "Failed to load approvals");
+        return ApiResult.failure(
+            result.error?.userMessage ?? "Failed to load approvals");
       }
     } catch (e) {
       debugPrint("getApprovals error: $e");
@@ -119,7 +127,8 @@ class ResidentService {
         final list = result.data!['visitors'] as List<dynamic>? ?? [];
         return ApiResult.success(list);
       }
-      return ApiResult.failure(result.error?.userMessage ?? "Failed to load history");
+      return ApiResult.failure(
+          result.error?.userMessage ?? "Failed to load history");
     } catch (e) {
       debugPrint("getHistory error: $e");
       return ApiResult.failure("Connection error: ${e.toString()}");
@@ -144,7 +153,8 @@ class ResidentService {
       if (result.isSuccess && result.data != null) {
         return ApiResult.success(result.data!);
       }
-      return ApiResult.failure(result.error?.userMessage ?? "Failed to load history");
+      return ApiResult.failure(
+          result.error?.userMessage ?? "Failed to load history");
     } catch (e) {
       debugPrint("getHistoryPage error: $e");
       return ApiResult.failure("Connection error: ${e.toString()}");
@@ -168,7 +178,7 @@ class ResidentService {
         residentId: residentId,
         note: note,
       );
-      
+
       if (result.isSuccess && result.data != null) {
         // Best-effort: notify society staff (guards/admins) about approval decision.
         // Decision should not fail even if push call fails.
@@ -183,7 +193,8 @@ class ResidentService {
         }
         return ApiResult.success(result.data!);
       } else {
-        return ApiResult.failure(result.error?.userMessage ?? "Failed to process decision");
+        return ApiResult.failure(
+            result.error?.userMessage ?? "Failed to process decision");
       }
     } catch (e) {
       debugPrint("decide error: $e");
@@ -325,8 +336,7 @@ class ResidentService {
         "resident_name": residentName,
         if (residentPhone != null && residentPhone.trim().isNotEmpty)
           "resident_phone": residentPhone.trim(),
-        if (sosId != null && sosId.trim().isNotEmpty)
-          "sos_id": sosId.trim(),
+        if (sosId != null && sosId.trim().isNotEmpty) "sos_id": sosId.trim(),
       });
 
       final res = await _postJsonWithRetry(
@@ -337,13 +347,16 @@ class ResidentService {
       if (res.statusCode == 200) {
         return ApiResult.success(null);
       }
-      return ApiResult.failure("SOS notify failed: ${res.statusCode} ${res.body}");
+      return ApiResult.failure(
+          "SOS notify failed: ${res.statusCode} ${res.body}");
     } on TimeoutException catch (e) {
       debugPrint("sendSosAlert timeout error: $e");
-      return ApiResult.failure("Request timeout. Please check your connection and try again.");
+      return ApiResult.failure(
+          "Request timeout. Please check your connection and try again.");
     } on SocketException catch (e) {
       debugPrint("sendSosAlert socket error: $e");
-      return ApiResult.failure("Cannot connect to server. Please check your network connection.");
+      return ApiResult.failure(
+          "Cannot connect to server. Please check your network connection.");
     } catch (e) {
       debugPrint("sendSosAlert error: $e");
       return ApiResult.failure("Connection error: ${e.toString()}");

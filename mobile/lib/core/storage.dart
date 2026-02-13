@@ -370,8 +370,9 @@ class Storage {
     if (r.isEmpty) return '';
 
     // normalize super admin variants
-    if (r == 'super_admin' || r == 'super admin' || r == 'superadmin')
+    if (r == 'super_admin' || r == 'super admin' || r == 'superadmin') {
       return 'super_admin';
+    }
 
     // keep admin/guard/resident as-is
     if (r == 'admin' || r == 'guard' || r == 'resident') return r;

@@ -84,9 +84,11 @@ class _GuardResidentsDirectoryScreenState
         _filteredResidents = _residents;
         _isLoading = false;
       });
-      AppLogger.i('Guard residents directory loaded', data: {'count': _residents.length});
+      AppLogger.i('Guard residents directory loaded',
+          data: {'count': _residents.length});
     } catch (e, st) {
-      AppLogger.e('Guard residents directory load error', error: e, stackTrace: st);
+      AppLogger.e('Guard residents directory load error',
+          error: e, stackTrace: st);
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -137,15 +139,15 @@ class _GuardResidentsDirectoryScreenState
                   decoration: InputDecoration(
                     hintText: 'Search by name, flat or phone',
                     hintStyle: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                       fontWeight: FontWeight.w600,
                     ),
                     prefixIcon: Icon(
                       Icons.search_rounded,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Colors.white.withValues(alpha: 0.9),
                     ),
                     filled: true,
-                    fillColor: Colors.white.withOpacity(0.2),
+                    fillColor: Colors.white.withValues(alpha: 0.2),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: BorderSide.none,
@@ -155,7 +157,8 @@ class _GuardResidentsDirectoryScreenState
                       vertical: 12,
                     ),
                   ),
-                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      color: Colors.white, fontWeight: FontWeight.w600),
                 ),
               ),
               Expanded(
@@ -163,7 +166,11 @@ class _GuardResidentsDirectoryScreenState
               ),
             ],
           ),
-          if (_isLoading) AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: true, message: 'Loading residents...'),
+          if (_isLoading)
+            AppLoader.overlay(
+                showAfter: const Duration(milliseconds: 300),
+                show: true,
+                message: 'Loading residents...'),
         ],
       ),
     );
@@ -177,7 +184,8 @@ class _GuardResidentsDirectoryScreenState
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline_rounded, size: 48, color: AppColors.error),
+              const Icon(Icons.error_outline_rounded,
+                  size: 48, color: AppColors.error),
               const SizedBox(height: 16),
               Text(
                 _error!,
@@ -248,7 +256,8 @@ class _GuardResidentsDirectoryScreenState
     final flat = (resident['flat_no'] ?? '—').toString();
     final phone =
         (resident['resident_phone'] ?? resident['phone'] ?? '').toString();
-    final photoUrl = (resident['photoUrl'] ?? resident['photo_url'] ?? '').toString().trim();
+    final photoUrl =
+        (resident['photoUrl'] ?? resident['photo_url'] ?? '').toString().trim();
     final hasPhoto = photoUrl.isNotEmpty;
     final canCall = phone.replaceAll(RegExp(r'[^\d+]'), '').isNotEmpty;
 
@@ -260,7 +269,7 @@ class _GuardResidentsDirectoryScreenState
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -279,7 +288,7 @@ class _GuardResidentsDirectoryScreenState
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.12),
+                    color: AppColors.primary.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: ClipOval(
@@ -291,7 +300,9 @@ class _GuardResidentsDirectoryScreenState
                             fit: BoxFit.cover,
                             placeholder: (context, url) => Container(
                               color: Colors.grey.shade300,
-                              child: const Center(child: Icon(Icons.person_rounded, color: AppColors.primary, size: 22)),
+                              child: const Center(
+                                  child: Icon(Icons.person_rounded,
+                                      color: AppColors.primary, size: 22)),
                             ),
                             errorWidget: (context, url, error) => const Icon(
                               Icons.person_rounded,
@@ -348,7 +359,7 @@ class _GuardResidentsDirectoryScreenState
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.12),
+                      color: AppColors.success.withValues(alpha: 0.12),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(

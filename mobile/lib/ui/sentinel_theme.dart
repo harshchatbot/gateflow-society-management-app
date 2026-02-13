@@ -20,24 +20,29 @@ class SentinelColors {
   static const Color textSecondary = Color(0xFF7D6B5B);
 
   // Brand (premium neutral-first)
-  static const Color primary = Color(0xFF8D5E3C);      // Warm brown
-  static const Color primaryDark = Color(0xFF5B3B28);  // Deep espresso brown
-  static const Color error = Color(0xFFB85A49);        // Soft brick red
+  static const Color primary = Color(0xFF8D5E3C); // Warm brown
+  static const Color primaryDark = Color(0xFF5B3B28); // Deep espresso brown
+  static const Color error = Color(0xFFB85A49); // Soft brick red
 
   // Accent family (subtle amber/green)
   static const Color yellow = Color(0xFFD8B25A);
   static const Color amber = Color(0xFFC58A3A);
   static const Color sentinelAccent = amber;
-  static const Color success = Color(0xFF6E8A5E);      // Muted olive green
+  static const Color success = Color(0xFF6E8A5E); // Muted olive green
   static const Color redSoft = Color(0xFFF7ECE8);
   static const Color successSoft = Color(0xFFEEF4EA);
-  static Color get sentinelAccentSurface => sentinelAccent.withOpacity(0.04);
-  static Color get sentinelAccentBorder => sentinelAccent.withOpacity(0.06);
+  static Color get sentinelAccentSurface =>
+      sentinelAccent.withValues(alpha: 0.04);
+  static Color get sentinelAccentBorder =>
+      sentinelAccent.withValues(alpha: 0.06);
 
   /// Canonical accent for resident UI. Use theme.colorScheme.primary for admin/guard.
   static Color get accent => sentinelAccent;
+
   /// Optional opacity (default 0.04). For surfaces/tints.
-  static Color accentSurface([double opacity = 0.04]) => sentinelAccent.withOpacity(opacity);
+  static Color accentSurface([double opacity = 0.04]) =>
+      sentinelAccent.withValues(alpha: opacity);
+
   /// Border tint for accent areas.
   static Color get accentBorder => sentinelAccentBorder;
 
@@ -50,15 +55,16 @@ class SentinelColors {
 class NoticeCategoryPalette {
   NoticeCategoryPalette._();
 
-  static const Color event = Color(0xFF6E8A5E);       // muted olive
-  static const Color alert = Color(0xFFC58A3A);       // muted amber
+  static const Color event = Color(0xFF6E8A5E); // muted olive
+  static const Color alert = Color(0xFFC58A3A); // muted amber
   static const Color maintenance = Color(0xFF8A7B6E); // warm taupe
-  static const Color policy = Color(0xFF6E5A4A);      // deep brown-neutral
+  static const Color policy = Color(0xFF6E5A4A); // deep brown-neutral
 
   /// Soft surface for chip/card background (10% opacity).
-  static Color bg(Color c) => c.withOpacity(0.10);
+  static Color bg(Color c) => c.withValues(alpha: 0.10);
+
   /// Icon tint (90% opacity).
-  static Color icon(Color c) => c.withOpacity(0.90);
+  static Color icon(Color c) => c.withValues(alpha: 0.90);
 }
 
 /// Semantic status colors for chips/badges (success, warning, error, info).
@@ -66,17 +72,19 @@ class NoticeCategoryPalette {
 class SentinelStatusPalette {
   SentinelStatusPalette._();
 
-  static const Color success = Color(0xFF6E8A5E);      // Muted olive green
-  static const Color warning = Color(0xFFC58A3A);   // muted amber
-  static const Color error = Color(0xFFB85A49);     // soft brick red
-  static const Color info = Color(0xFF8A7B6E);      // warm taupe
+  static const Color success = Color(0xFF6E8A5E); // Muted olive green
+  static const Color warning = Color(0xFFC58A3A); // muted amber
+  static const Color error = Color(0xFFB85A49); // soft brick red
+  static const Color info = Color(0xFF8A7B6E); // warm taupe
 
   /// Chip background (10% opacity).
-  static Color bg(Color c) => c.withOpacity(0.10);
+  static Color bg(Color c) => c.withValues(alpha: 0.10);
+
   /// Chip border (18% opacity).
-  static Color border(Color c) => c.withOpacity(0.18);
+  static Color border(Color c) => c.withValues(alpha: 0.18);
+
   /// Chip text/icon (90% opacity).
-  static Color fg(Color c) => c.withOpacity(0.90);
+  static Color fg(Color c) => c.withValues(alpha: 0.90);
 }
 
 /// Premium light theme for Sentinel (Material 3).
@@ -152,7 +160,7 @@ class SentinelTheme {
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
-              return SentinelColors.primary.withOpacity(0.45);
+              return SentinelColors.primary.withValues(alpha: 0.45);
             }
             if (states.contains(WidgetState.pressed) ||
                 states.contains(WidgetState.focused) ||
@@ -183,7 +191,7 @@ class SentinelTheme {
         style: ButtonStyle(
           backgroundColor: WidgetStateProperty.resolveWith((states) {
             if (states.contains(WidgetState.disabled)) {
-              return SentinelColors.primary.withOpacity(0.45);
+              return SentinelColors.primary.withValues(alpha: 0.45);
             }
             if (states.contains(WidgetState.pressed) ||
                 states.contains(WidgetState.focused) ||

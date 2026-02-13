@@ -7,7 +7,6 @@ import '../services/firestore_service.dart';
 import '../ui/app_loader.dart';
 import 'resident_login_screen.dart';
 
-
 class ResidentSignupScreen extends StatefulWidget {
   const ResidentSignupScreen({super.key});
 
@@ -27,7 +26,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
 
   final ResidentSignupService _signupService = ResidentSignupService();
   final FirestoreService _firestoreService = FirestoreService();
-  
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
@@ -58,16 +57,17 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
       }
 
       setState(() => _isLoading = true);
-      final resolvedSocietyId = await _firestoreService.getSocietyByCode(societyCode);
+      final resolvedSocietyId =
+          await _firestoreService.getSocietyByCode(societyCode);
       debugPrint("Resolved society id: $resolvedSocietyId");
       if (!mounted) return;
-      
+
       if (resolvedSocietyId == null) {
         setState(() => _isLoading = false);
         _showError("Invalid society code. Please check and try again.");
         return;
       }
-      
+
       setState(() {
         _societyId = resolvedSocietyId;
         _isLoading = false;
@@ -86,7 +86,6 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
         password: _passwordController.text,
       );
 
-
       if (!mounted) return;
 
       if (result.isSuccess) {
@@ -97,7 +96,8 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
         AppLogger.i("Signup request created successfully");
       } else {
         setState(() => _isLoading = false);
-        _showError(result.error?.userMessage ?? "Failed to create signup request");
+        _showError(
+            result.error?.userMessage ?? "Failed to create signup request");
       }
     } catch (e, stackTrace) {
       AppLogger.e("Signup exception", error: e, stackTrace: stackTrace);
@@ -134,11 +134,11 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: cs.surface.withOpacity(0.92),
+              color: cs.surface.withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: cs.onSurface.withOpacity(0.08),
+                  color: cs.onSurface.withValues(alpha: 0.08),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -171,7 +171,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    cs.primary.withOpacity(0.12),
+                    cs.primary.withValues(alpha: 0.12),
                     theme.scaffoldBackgroundColor,
                     theme.scaffoldBackgroundColor,
                   ],
@@ -196,7 +196,10 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Creating Account…"),
+          AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
+              show: _isLoading,
+              message: "Creating Account…"),
         ],
       ),
     );
@@ -214,7 +217,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => Container(
               decoration: BoxDecoration(
-                color: cs.primary.withOpacity(0.1),
+                color: cs.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(
@@ -239,7 +242,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
         Text(
           "Create your account",
           style: TextStyle(
-            color: cs.onSurface.withOpacity(0.7),
+            color: cs.onSurface.withValues(alpha: 0.7),
             fontWeight: FontWeight.w600,
             fontSize: 15,
           ),
@@ -255,10 +258,10 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
       decoration: BoxDecoration(
         color: cs.surface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.75)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.75)),
         boxShadow: [
           BoxShadow(
-            color: cs.onSurface.withOpacity(0.06),
+            color: cs.onSurface.withValues(alpha: 0.06),
             blurRadius: 30,
             offset: const Offset(0, 15),
           ),
@@ -274,7 +277,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: cs.onSurface.withOpacity(0.7),
+                color: cs.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -353,7 +356,8 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
               textInputAction: TextInputAction.next,
               enabled: _societyId == null,
               validator: (value) {
-                if (_societyId == null && (value == null || value.trim().isEmpty)) {
+                if (_societyId == null &&
+                    (value == null || value.trim().isEmpty)) {
                   return "Please enter your society code";
                 }
                 return null;
@@ -369,8 +373,10 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
               textInputAction: TextInputAction.next,
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  color: cs.onSurface.withOpacity(0.65),
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: cs.onSurface.withValues(alpha: 0.65),
                   size: 20,
                 ),
                 onPressed: () {
@@ -398,12 +404,15 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
               onSubmitted: (_) => _handleSignup(),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscureConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  color: cs.onSurface.withOpacity(0.65),
+                  _obscureConfirmPassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: cs.onSurface.withValues(alpha: 0.65),
                   size: 20,
                 ),
                 onPressed: () {
-                  setState(() => _obscureConfirmPassword = !_obscureConfirmPassword);
+                  setState(
+                      () => _obscureConfirmPassword = !_obscureConfirmPassword);
                 },
               ),
               validator: (value) {
@@ -447,14 +456,15 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
                 Text(
                   "Already have an account? ",
                   style: TextStyle(
-                    color: cs.onSurface.withOpacity(0.75),
+                    color: cs.onSurface.withValues(alpha: 0.75),
                     fontSize: 14,
                   ),
                 ),
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
+                      MaterialPageRoute(
+                          builder: (_) => const ResidentLoginScreen()),
                     );
                   },
                   child: Text(
@@ -481,10 +491,10 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
       decoration: BoxDecoration(
         color: cs.surface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: cs.primary.withOpacity(0.22)),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.22)),
         boxShadow: [
           BoxShadow(
-            color: cs.onSurface.withOpacity(0.06),
+            color: cs.onSurface.withValues(alpha: 0.06),
             blurRadius: 30,
             offset: const Offset(0, 15),
           ),
@@ -496,7 +506,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: cs.primary.withOpacity(0.14),
+              color: cs.primary.withValues(alpha: 0.14),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -520,7 +530,7 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
             "Your signup request has been sent to the admin for approval. You will be able to login once your request is approved.",
             style: TextStyle(
               fontSize: 15,
-              color: cs.onSurface.withOpacity(0.72),
+              color: cs.onSurface.withValues(alpha: 0.72),
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -532,11 +542,12 @@ class _ResidentSignupScreenState extends State<ResidentSignupScreen> {
             child: ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pushReplacement(
-                  MaterialPageRoute(builder: (_) => const ResidentLoginScreen()),
+                  MaterialPageRoute(
+                      builder: (_) => const ResidentLoginScreen()),
                 );
               },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: cs.primary,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: cs.primary,
                 foregroundColor: cs.onPrimary,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
@@ -604,7 +615,7 @@ class _PremiumField extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            color: cs.onSurface.withOpacity(0.75),
+            color: cs.onSurface.withValues(alpha: 0.75),
             letterSpacing: 0.2,
           ),
         ),
@@ -616,7 +627,7 @@ class _PremiumField extends StatelessWidget {
             border: Border.all(color: theme.dividerColor),
             boxShadow: [
               BoxShadow(
-                color: cs.onSurface.withOpacity(0.03),
+                color: cs.onSurface.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -642,7 +653,7 @@ class _PremiumField extends StatelessWidget {
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: cs.primary.withOpacity(0.12),
+                  color: cs.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: cs.primary, size: 20),
@@ -650,7 +661,7 @@ class _PremiumField extends StatelessWidget {
               suffixIcon: suffixIcon,
               hintText: hint,
               hintStyle: TextStyle(
-                color: cs.onSurface.withOpacity(0.55),
+                color: cs.onSurface.withValues(alpha: 0.55),
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),

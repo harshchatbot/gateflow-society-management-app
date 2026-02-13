@@ -61,7 +61,8 @@ class InviteClaimService {
       return InviteClaimResult(claimed: false);
     }
 
-    final systemRole = (invite['systemRole'] ?? '').toString(); // guard/resident
+    final systemRole =
+        (invite['systemRole'] ?? '').toString(); // guard/resident
     final societyRole = invite['societyRole']; // nullable
     final flatNo = invite['flatNo']; // nullable
 
@@ -114,7 +115,7 @@ class InviteClaimService {
     );
   }
 
-    /// Auto-claim across societies (no societyId needed).
+  /// Auto-claim across societies (no societyId needed).
   /// Uses collectionGroup('invites') and finds email match.
   Future<InviteClaimResult> claimInviteAuto() async {
     final user = _auth.currentUser;
@@ -160,7 +161,4 @@ class InviteClaimService {
 
     return await claimInviteForSociety(societyId: societyId);
   }
-
-
-
 }

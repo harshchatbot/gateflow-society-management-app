@@ -58,7 +58,8 @@ class _JoinSocietyScreenState extends State<JoinSocietyScreen> {
 
       // 2) Claim invite (batch: member + pointer + invite update)
       final claimService = InviteClaimService();
-      final result = await claimService.claimInviteForSociety(societyId: societyId);
+      final result =
+          await claimService.claimInviteForSociety(societyId: societyId);
 
       if (!result.claimed) {
         throw Exception(
@@ -81,6 +82,7 @@ class _JoinSocietyScreenState extends State<JoinSocietyScreen> {
         final member = memberSnap.data() ?? {};
         final guardName = (member['name'] ?? 'Guard').toString();
 
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => GuardShellScreen(
@@ -95,7 +97,8 @@ class _JoinSocietyScreenState extends State<JoinSocietyScreen> {
 
       // TODO: ResidentShellScreen route later
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Joined as ${result.systemRole}. UI not yet wired.")),
+        SnackBar(
+            content: Text("Joined as ${result.systemRole}. UI not yet wired.")),
       );
     } catch (e) {
       setState(() => _error = e.toString());

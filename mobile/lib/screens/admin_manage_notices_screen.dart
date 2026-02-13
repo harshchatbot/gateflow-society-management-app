@@ -9,7 +9,7 @@ import '../widgets/loading_skeletons.dart';
 import 'admin_create_notice_screen.dart';
 
 /// Admin Manage Notices Screen
-/// 
+///
 /// Allows admins to view and manage all notices
 /// Theme: Purple/Admin theme
 class AdminManageNoticesScreen extends StatefulWidget {
@@ -27,7 +27,8 @@ class AdminManageNoticesScreen extends StatefulWidget {
   });
 
   @override
-  State<AdminManageNoticesScreen> createState() => _AdminManageNoticesScreenState();
+  State<AdminManageNoticesScreen> createState() =>
+      _AdminManageNoticesScreenState();
 }
 
 class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
@@ -93,16 +94,19 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
           "Delete Notice?",
           style: TextStyle(fontWeight: FontWeight.w900),
         ),
-        content: const Text("This will permanently delete the notice from the system. This action cannot be undone."),
+        content: const Text(
+            "This will permanently delete the notice from the system. This action cannot be undone."),
         actions: [
           OutlinedButton(
             onPressed: () => Navigator.pop(context, false),
             style: OutlinedButton.styleFrom(
               side: const BorderSide(color: AppColors.border),
               foregroundColor: AppColors.text,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text("Cancel", style: TextStyle(fontWeight: FontWeight.w700)),
+            child: const Text("Cancel",
+                style: TextStyle(fontWeight: FontWeight.w700)),
           ),
           const SizedBox(width: 8),
           ElevatedButton(
@@ -110,9 +114,11 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.error,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
-            child: const Text("Delete", style: TextStyle(fontWeight: FontWeight.w900)),
+            child: const Text("Delete",
+                style: TextStyle(fontWeight: FontWeight.w900)),
           ),
         ],
       ),
@@ -141,7 +147,8 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -201,10 +208,11 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.admin.withOpacity(0.15),
+                color: AppColors.admin.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.add_rounded, color: AppColors.admin, size: 24),
+              child: const Icon(Icons.add_rounded,
+                  color: AppColors.admin, size: 24),
             ),
             onPressed: () async {
               final result = await Navigator.push(
@@ -226,10 +234,11 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.admin.withOpacity(0.15),
+                color: AppColors.admin.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.refresh_rounded, color: AppColors.admin, size: 20),
+              child: const Icon(Icons.refresh_rounded,
+                  color: AppColors.admin, size: 20),
             ),
             onPressed: _isLoading ? null : _loadNotices,
           ),
@@ -257,10 +266,11 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.error.withOpacity(0.1),
+                color: AppColors.error.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.error_outline, size: 64, color: AppColors.error),
+              child: const Icon(Icons.error_outline,
+                  size: 64, color: AppColors.error),
             ),
             const SizedBox(height: 16),
             Text(
@@ -280,7 +290,8 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.admin,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -296,7 +307,7 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.admin.withOpacity(0.1),
+                color: AppColors.admin.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -346,7 +357,8 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.admin,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -372,15 +384,19 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
     final content = (notice['content'] ?? '').toString();
     final noticeType = (notice['notice_type'] ?? 'GENERAL').toString();
     final priority = (notice['priority'] ?? 'NORMAL').toString();
-    final isActive = (notice['is_active'] ?? 'TRUE').toString().toUpperCase() == 'TRUE';
+    final isActive =
+        (notice['is_active'] ?? 'TRUE').toString().toUpperCase() == 'TRUE';
     final createdAt = notice['created_at']?.toString() ?? '';
     final noticeId = (notice['notice_id'] ?? '').toString();
 
     Color priorityColor = AppColors.admin;
     if (priority == "URGENT") {
       priorityColor = AppColors.error;
-    } else if (priority == "HIGH") priorityColor = AppColors.warning;
-    else if (priority == "LOW") priorityColor = AppColors.text2;
+    } else if (priority == "HIGH") {
+      priorityColor = AppColors.warning;
+    } else if (priority == "LOW") {
+      priorityColor = AppColors.text2;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -389,13 +405,13 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: isActive
-              ? priorityColor.withOpacity(0.3)
-              : AppColors.border.withOpacity(0.5),
+              ? priorityColor.withValues(alpha: 0.3)
+              : AppColors.border.withValues(alpha: 0.5),
           width: isActive ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -418,9 +434,10 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: AppColors.admin.withOpacity(0.15),
+                            color: AppColors.admin.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -434,9 +451,10 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
                         ),
                         const SizedBox(width: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: priorityColor.withOpacity(0.15),
+                            color: priorityColor.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -451,11 +469,12 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
                       ],
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: isActive
-                            ? AppColors.success.withOpacity(0.15)
-                            : AppColors.text2.withOpacity(0.15),
+                            ? AppColors.success.withValues(alpha: 0.15)
+                            : AppColors.text2.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -507,7 +526,7 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: AppColors.admin.withOpacity(0.1),
+                            color: AppColors.admin.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: const Icon(
@@ -547,15 +566,10 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
     final content = (notice['content'] ?? '').toString();
     final noticeType = (notice['notice_type'] ?? 'GENERAL').toString();
     final priority = (notice['priority'] ?? 'NORMAL').toString();
-    final isActive = (notice['is_active'] ?? 'TRUE').toString().toUpperCase() == 'TRUE';
+    final isActive =
+        (notice['is_active'] ?? 'TRUE').toString().toUpperCase() == 'TRUE';
     final createdAt = notice['created_at']?.toString() ?? '';
     final adminName = (notice['admin_name'] ?? 'Unknown').toString();
-
-    Color priorityColor = AppColors.admin;
-    if (priority == "URGENT") {
-      priorityColor = AppColors.error;
-    } else if (priority == "HIGH") priorityColor = AppColors.warning;
-    else if (priority == "LOW") priorityColor = AppColors.text2;
 
     showModalBottomSheet(
       context: context,
@@ -592,10 +606,11 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.admin.withOpacity(0.15),
+                      color: AppColors.admin.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.notifications_rounded, color: AppColors.admin, size: 24),
+                    child: const Icon(Icons.notifications_rounded,
+                        color: AppColors.admin, size: 24),
                   ),
                   const SizedBox(width: 12),
                   const Text(
@@ -654,7 +669,8 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
   String _formatDateTime(String dateTimeStr) {
     if (dateTimeStr.isEmpty) return "Unknown";
     try {
-      final dt = DateTime.parse(dateTimeStr.replaceAll("Z", "+00:00")).toLocal();
+      final dt =
+          DateTime.parse(dateTimeStr.replaceAll("Z", "+00:00")).toLocal();
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final yesterday = DateTime(now.year, now.month, now.day - 1);
@@ -668,7 +684,8 @@ class _AdminManageNoticesScreenState extends State<AdminManageNoticesScreen> {
         return "${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
       }
     } catch (e) {
-      AppLogger.e("Error formatting date time", error: e, data: {"dateTimeStr": dateTimeStr});
+      AppLogger.e("Error formatting date time",
+          error: e, data: {"dateTimeStr": dateTimeStr});
       return dateTimeStr;
     }
   }

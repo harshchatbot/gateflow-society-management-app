@@ -77,7 +77,7 @@ class DashboardHero extends StatelessWidget {
                       Text(
                         greeting,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontWeight: FontWeight.w600,
                           fontSize: 14,
                         ),
@@ -111,7 +111,7 @@ class DashboardHero extends StatelessWidget {
                   Text(
                     statusMessage,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.95),
+                      color: Colors.white.withValues(alpha: 0.95),
                       fontWeight: FontWeight.w700,
                       fontSize: 15,
                     ),
@@ -135,7 +135,8 @@ class DashboardHero extends StatelessWidget {
       height: 44,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        border: Border.all(color: Colors.white.withOpacity(0.8), width: 2),
+        border:
+            Border.all(color: Colors.white.withValues(alpha: 0.8), width: 2),
       ),
       child: avatar ??
           const CircleAvatar(

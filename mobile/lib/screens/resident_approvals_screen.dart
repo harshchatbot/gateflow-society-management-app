@@ -185,7 +185,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
     }
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           // If we're in a tab navigation, switch to dashboard
           if (widget.onBackPressed != null) {
@@ -234,7 +234,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
               icon: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.1),
+                  color: AppColors.success.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(Icons.refresh_rounded,
@@ -266,13 +266,13 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                       color: Theme.of(context)
                           .colorScheme
                           .primary
-                          .withOpacity(0.04),
+                          .withValues(alpha: 0.04),
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: Theme.of(context)
                             .colorScheme
                             .primary
-                            .withOpacity(0.05),
+                            .withValues(alpha: 0.05),
                       ),
                     ),
                     child: Column(
@@ -282,7 +282,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.1),
+                            color: AppColors.success.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -308,7 +308,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withOpacity(0.7),
+                                .withValues(alpha: 0.7),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -320,7 +320,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                             color: Theme.of(context)
                                 .colorScheme
                                 .onSurface
-                                .withOpacity(0.7),
+                                .withValues(alpha: 0.7),
                           ),
                         ),
                       ],
@@ -344,7 +344,10 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                   },
                 ),
               ),
-            AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Processing…"),
+            AppLoader.overlay(
+                showAfter: const Duration(milliseconds: 300),
+                show: _isLoading,
+                message: "Processing…"),
           ],
         ),
       ),
@@ -403,12 +406,12 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: Theme.of(context).dividerColor.withOpacity(0.5),
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
           width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -424,7 +427,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.success.withOpacity(0.12),
+                  color: AppColors.success.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Row(
@@ -453,9 +456,10 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.12),
+                    color: Colors.orange.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                    border:
+                        Border.all(color: Colors.orange.withValues(alpha: 0.3)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -488,11 +492,16 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.10),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.10),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color:
-                      Theme.of(context).colorScheme.primary.withOpacity(0.25),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.25),
                 ),
               ),
               child: Row(
@@ -625,7 +634,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
 
   Widget _buildVisitorThumbnail(String? photoUrl, bool hasPhoto) {
     final radius = BorderRadius.circular(14);
-    final borderColor = AppColors.success.withOpacity(0.2);
+    final borderColor = AppColors.success.withValues(alpha: 0.2);
     return InkWell(
       onTap: hasPhoto ? () => _openImagePreview(photoUrl!) : null,
       borderRadius: radius,
@@ -654,7 +663,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                         ),
                       ),
                       errorWidget: (context, url, error) => Container(
-                        color: AppColors.success.withOpacity(0.08),
+                        color: AppColors.success.withValues(alpha: 0.08),
                         child: const Center(
                           child: Icon(Icons.broken_image_rounded,
                               color: AppColors.success, size: 26),
@@ -667,7 +676,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.6),
+                          color: Colors.black.withValues(alpha: 0.6),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(Icons.open_in_full_rounded,
@@ -677,7 +686,7 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
                   ],
                 )
               : Container(
-                  color: AppColors.success.withOpacity(0.08),
+                  color: AppColors.success.withValues(alpha: 0.08),
                   child: const Center(
                     child: Icon(Icons.person_rounded,
                         color: AppColors.success, size: 34),
@@ -732,7 +741,10 @@ class _ResidentApprovalsScreenState extends State<ResidentApprovalsScreen> {
           ),
           child: Icon(icon,
               size: 14,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7)),
         ),
         const SizedBox(width: 8),
         Expanded(

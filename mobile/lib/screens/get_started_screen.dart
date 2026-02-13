@@ -149,7 +149,7 @@ class GetStartedScreen extends StatelessWidget {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: roleColor.withOpacity(0.12),
+                      color: roleColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(_roleIcon(), color: roleColor, size: 22),
@@ -198,7 +198,7 @@ class GetStartedScreen extends StatelessWidget {
                           width: 30,
                           height: 30,
                           decoration: BoxDecoration(
-                            color: roleColor.withOpacity(0.12),
+                            color: roleColor.withValues(alpha: 0.12),
                             borderRadius: BorderRadius.circular(9),
                           ),
                           child: Center(

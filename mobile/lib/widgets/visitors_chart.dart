@@ -20,7 +20,8 @@ class VisitorsChart extends StatelessWidget {
     final color = barColor ?? Theme.of(context).colorScheme.primary;
     final maxY = countsByDay.isEmpty
         ? 1.0
-        : (countsByDay.reduce((a, b) => a > b ? a : b).toDouble() + 1).clamp(1.0, double.infinity);
+        : (countsByDay.reduce((a, b) => a > b ? a : b).toDouble() + 1)
+            .clamp(1.0, double.infinity);
 
     final barGroups = List.generate(7, (i) {
       final value = (i < countsByDay.length ? countsByDay[i] : 0).toDouble();
@@ -50,10 +51,11 @@ class VisitorsChart extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.5)),
+        border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -124,15 +126,18 @@ class VisitorsChart extends StatelessWidget {
                       interval: maxY > 5 ? (maxY / 5).ceilToDouble() : 1,
                     ),
                   ),
-                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(
+                      sideTitles: SideTitles(showTitles: false)),
                 ),
                 gridData: FlGridData(
                   show: true,
                   drawVerticalLine: false,
                   horizontalInterval: maxY > 5 ? (maxY / 5) : 1,
                   getDrawingHorizontalLine: (value) => FlLine(
-                    color: Theme.of(context).dividerColor.withOpacity(0.3),
+                    color:
+                        Theme.of(context).dividerColor.withValues(alpha: 0.3),
                     strokeWidth: 1,
                   ),
                 ),
@@ -140,7 +145,7 @@ class VisitorsChart extends StatelessWidget {
                 barTouchData: BarTouchData(
                   enabled: true,
                   touchTooltipData: BarTouchTooltipData(
-                    getTooltipColor: (_) => color.withOpacity(0.9),
+                    getTooltipColor: (_) => color.withValues(alpha: 0.9),
                     tooltipRoundedRadius: 6,
                     getTooltipItem: (group, groupIndex, rod, rodIndex) {
                       final i = group.x;

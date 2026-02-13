@@ -74,7 +74,8 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
           content: Text('SOS marked $status'),
           backgroundColor: AppColors.success,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -86,7 +87,8 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
           content: const Text('Failed to update SOS status'),
           backgroundColor: AppColors.error,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -129,7 +131,8 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
           : Padding(
               padding: const EdgeInsets.all(16),
               child: Card(
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
                 elevation: 3,
                 child: Padding(
                   padding: const EdgeInsets.all(20),
@@ -142,10 +145,11 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
                           Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: AppColors.error.withOpacity(0.1),
+                              color: AppColors.error.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.sos_rounded, color: AppColors.error),
+                            child: const Icon(Icons.sos_rounded,
+                                color: AppColors.error),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -173,9 +177,10 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
                             ),
                           ),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: AppColors.error.withOpacity(0.08),
+                              color: AppColors.error.withValues(alpha: 0.08),
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
@@ -193,7 +198,8 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
                       if (phone != null && phone.isNotEmpty)
                         Row(
                           children: [
-                            const Icon(Icons.phone_rounded, size: 18, color: AppColors.text2),
+                            const Icon(Icons.phone_rounded,
+                                size: 18, color: AppColors.text2),
                             const SizedBox(width: 8),
                             Text(
                               phone,
@@ -209,7 +215,8 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
                         const SizedBox(height: 8),
                         Row(
                           children: [
-                            const Icon(Icons.access_time_rounded, size: 18, color: AppColors.text2),
+                            const Icon(Icons.access_time_rounded,
+                                size: 18, color: AppColors.text2),
                             const SizedBox(width: 8),
                             Text(
                               created.toLocal().toString(),
@@ -273,9 +280,12 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
                         children: [
                           Expanded(
                             child: OutlinedButton.icon(
-                              icon: const Icon(Icons.check_circle_outline_rounded),
+                              icon: const Icon(
+                                  Icons.check_circle_outline_rounded),
                               label: const Text('Mark Acknowledged'),
-                              onPressed: status == 'RESOLVED' ? null : () => _updateStatus('ACKNOWLEDGED'),
+                              onPressed: status == 'RESOLVED'
+                                  ? null
+                                  : () => _updateStatus('ACKNOWLEDGED'),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -287,7 +297,9 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
                                 backgroundColor: AppColors.success,
                                 foregroundColor: Colors.white,
                               ),
-                              onPressed: status == 'RESOLVED' ? null : () => _updateStatus('RESOLVED'),
+                              onPressed: status == 'RESOLVED'
+                                  ? null
+                                  : () => _updateStatus('RESOLVED'),
                             ),
                           ),
                         ],
@@ -296,8 +308,7 @@ class _SosDetailScreenState extends State<SosDetailScreen> {
                   ),
                 ),
               ),
-      ),
+            ),
     );
   }
 }
-

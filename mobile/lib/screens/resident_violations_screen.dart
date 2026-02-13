@@ -26,7 +26,8 @@ class ResidentViolationsScreen extends StatefulWidget {
   });
 
   @override
-  State<ResidentViolationsScreen> createState() => _ResidentViolationsScreenState();
+  State<ResidentViolationsScreen> createState() =>
+      _ResidentViolationsScreenState();
 }
 
 class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
@@ -116,7 +117,8 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
         ),
         title: const Text(
           'My Violations',
-          style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 20),
+          style: TextStyle(
+              color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 20),
         ),
         centerTitle: true,
         actions: [
@@ -124,10 +126,11 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.15),
+                color: AppColors.success.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.refresh_rounded, color: AppColors.success, size: 20),
+              child: const Icon(Icons.refresh_rounded,
+                  color: AppColors.success, size: 20),
             ),
             onPressed: _isLoading ? null : _loadViolations,
           ),
@@ -142,20 +145,26 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
               // Privacy note
               Container(
                 margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: AppColors.primarySoft,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3)),
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.lock_rounded, color: AppColors.primary, size: 20),
+                    Icon(Icons.lock_rounded,
+                        color: AppColors.primary, size: 20),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Violations are private. You see only reports for your flat. No names are publicised.',
-                        style: TextStyle(fontSize: 12, color: AppColors.text2, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.text2,
+                            fontWeight: FontWeight.w500),
                       ),
                     ),
                   ],
@@ -166,7 +175,10 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
               ),
             ],
           ),
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: 'Loading…'),
+          AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
+              show: _isLoading,
+              message: 'Loading…'),
         ],
       ),
     );
@@ -180,7 +192,9 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
           children: [
             const Icon(Icons.error_outline, size: 64, color: AppColors.error),
             const SizedBox(height: 16),
-            Text(_error!, style: const TextStyle(color: AppColors.text2, fontSize: 16), textAlign: TextAlign.center),
+            Text(_error!,
+                style: const TextStyle(color: AppColors.text2, fontSize: 16),
+                textAlign: TextAlign.center),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _loadViolations,
@@ -189,7 +203,8 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.success,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -202,11 +217,15 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.directions_car_outlined, size: 64, color: AppColors.textMuted),
+            const Icon(Icons.directions_car_outlined,
+                size: 64, color: AppColors.textMuted),
             const SizedBox(height: 16),
             const Text(
               'No violations for your flat',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.text),
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.text),
             ),
             const SizedBox(height: 8),
             Text(
@@ -253,10 +272,11 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.15),
+                color: AppColors.warning.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(_violationTypeIcon(type), color: AppColors.warning, size: 24),
+              child: Icon(_violationTypeIcon(type),
+                  color: AppColors.warning, size: 24),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -265,13 +285,19 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
                 children: [
                   Text(
                     _violationTypeLabel(type),
-                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.text),
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: AppColors.text),
                   ),
                   const SizedBox(height: 2),
                   if (createdAt != null && createdAt.isNotEmpty)
                     Text(
-                      createdAt.length >= 10 ? createdAt.substring(0, 10) : createdAt,
-                      style: const TextStyle(fontSize: 12, color: AppColors.textMuted),
+                      createdAt.length >= 10
+                          ? createdAt.substring(0, 10)
+                          : createdAt,
+                      style: const TextStyle(
+                          fontSize: 12, color: AppColors.textMuted),
                     ),
                   if (note != null && note.isNotEmpty)
                     Padding(
@@ -280,14 +306,18 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
                         note,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 12, color: AppColors.text2),
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.text2),
                       ),
                     ),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: status == 'RESOLVED' ? AppColors.success.withOpacity(0.15) : AppColors.warning.withOpacity(0.15),
+                      color: status == 'RESOLVED'
+                          ? AppColors.success.withValues(alpha: 0.15)
+                          : AppColors.warning.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -295,7 +325,9 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: status == 'RESOLVED' ? AppColors.success : AppColors.warning,
+                        color: status == 'RESOLVED'
+                            ? AppColors.success
+                            : AppColors.warning,
                       ),
                     ),
                   ),
@@ -310,8 +342,10 @@ class _ResidentViolationsScreenState extends State<ResidentViolationsScreen> {
                   width: 48,
                   height: 48,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(width: 48, height: 48, color: Colors.grey.shade300),
-                  errorWidget: (context, url, error) => const SizedBox(width: 48, height: 48),
+                  placeholder: (context, url) => Container(
+                      width: 48, height: 48, color: Colors.grey.shade300),
+                  errorWidget: (context, url, error) =>
+                      const SizedBox(width: 48, height: 48),
                 ),
               ),
           ],

@@ -236,13 +236,13 @@ class _SentinelAliveMascotState extends State<SentinelAliveMascot>
                   width: widget.size,
                   height: widget.size,
                   decoration: BoxDecoration(
-                    color: AppColors.primary.withOpacity(0.1),
+                    color: AppColors.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Icon(
                     Icons.pets_rounded,
                     size: widget.size * 0.45,
-                    color: AppColors.primary.withOpacity(0.75),
+                    color: AppColors.primary.withValues(alpha: 0.75),
                   ),
                 ),
               ),
@@ -272,12 +272,12 @@ class _NudgeBubble extends StatelessWidget {
       curve: Curves.easeOutCubic,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.92),
+        color: Colors.white.withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.primary.withOpacity(0.18)),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.18)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
+            color: Colors.black.withValues(alpha: 0.08),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),

@@ -16,13 +16,13 @@ import 'resident_edit_account_screen.dart';
 import 'get_started_screen.dart';
 
 /// Resident Profile Screen
-/// 
+///
 /// Purpose: Display resident information and account settings
 /// - Shows resident details (name, flat, society)
 /// - Account information section
 /// - Settings section with navigation
 /// - Logout functionality
-/// 
+///
 /// Theme: Unified primary (blue/indigo); no role-specific colors.
 class ResidentProfileScreen extends StatefulWidget {
   final String residentId;
@@ -70,7 +70,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         _phone = membership['phone'] as String?;
       });
     } catch (e, st) {
-      AppLogger.e("Error loading resident profile photo", error: e, stackTrace: st);
+      AppLogger.e("Error loading resident profile photo",
+          error: e, stackTrace: st);
     }
   }
 
@@ -82,7 +83,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
-            Icon(Icons.warning_rounded, color: Theme.of(context).colorScheme.error, size: 28),
+            Icon(Icons.warning_rounded,
+                color: Theme.of(context).colorScheme.error, size: 28),
             const SizedBox(width: 12),
             const Text(
               "Deactivate Account",
@@ -107,7 +109,9 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             const SizedBox(height: 12),
             Text(
               "Are you sure you want to continue?",
-              style: TextStyle(fontWeight: FontWeight.w700, color: Theme.of(context).colorScheme.error),
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: Theme.of(context).colorScheme.error),
             ),
           ],
         ),
@@ -117,7 +121,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: Theme.of(context).dividerColor),
               foregroundColor: Theme.of(context).colorScheme.onSurface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text(
               "Cancel",
@@ -130,7 +135,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Theme.of(context).colorScheme.onError,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text(
               "Deactivate",
@@ -179,7 +185,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             ),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -203,7 +210,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             style: OutlinedButton.styleFrom(
               side: BorderSide(color: Theme.of(context).dividerColor),
               foregroundColor: Theme.of(context).colorScheme.onSurface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text(
               "Cancel",
@@ -216,7 +224,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Theme.of(context).colorScheme.onError,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text(
               "Logout",
@@ -234,10 +243,10 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
     try {
       // 1. Sign out from Firebase Auth
       await FirebaseAuth.instance.signOut();
-      
+
       // 2. Clear resident session
       await Storage.clearResidentSession();
-      
+
       // 3. Clear Firebase session storage
       await Storage.clearFirebaseSession();
       SocietyModules.clear();
@@ -263,7 +272,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             ),
             backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
         );
       }
@@ -274,7 +284,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           // If we're in a tab navigation, switch to dashboard
           if (widget.onBackPressed != null) {
@@ -295,7 +305,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               backgroundColor: Theme.of(context).colorScheme.primary,
               automaticallyImplyLeading: true,
               leading: IconButton(
-                icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onPrimary),
+                icon: Icon(Icons.arrow_back_rounded,
+                    color: Theme.of(context).colorScheme.onPrimary),
                 onPressed: () {
                   // If we're in a tab navigation, switch to dashboard
                   if (widget.onBackPressed != null) {
@@ -307,105 +318,121 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               ),
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.primary.withOpacity(0.85),
-                    ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).colorScheme.primary,
+                        Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.85),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
                   ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const SizedBox(height: 40),
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Theme.of(context).colorScheme.onPrimary, width: 3),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                            blurRadius: 20,
-                            offset: const Offset(0, 8),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 40),
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              width: 3),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.3),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: GestureDetector(
+                          onTap: (_photoUrl != null && _photoUrl!.isNotEmpty)
+                              ? () => _openResidentPhotoPreview(_photoUrl!)
+                              : null,
+                          child: CircleAvatar(
+                            radius: 45,
+                            backgroundColor: Theme.of(context)
+                                .colorScheme
+                                .onPrimary
+                                .withValues(alpha: 0.24),
+                            backgroundImage:
+                                (_photoUrl != null && _photoUrl!.isNotEmpty)
+                                    ? CachedNetworkImageProvider(_photoUrl!)
+                                    : null,
+                            child: (_photoUrl == null || _photoUrl!.isEmpty)
+                                ? Icon(
+                                    Icons.person_rounded,
+                                    size: 50,
+                                    color:
+                                        Theme.of(context).colorScheme.onPrimary,
+                                  )
+                                : null,
                           ),
-                        ],
-                      ),
-                      child: GestureDetector(
-                        onTap: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                            ? () => _openResidentPhotoPreview(_photoUrl!)
-                            : null,
-                        child: CircleAvatar(
-                          radius: 45,
-                          backgroundColor: Theme.of(context).colorScheme.onPrimary.withOpacity(0.24),
-                          backgroundImage: (_photoUrl != null && _photoUrl!.isNotEmpty)
-                              ? CachedNetworkImageProvider(_photoUrl!)
-                              : null,
-                          child: (_photoUrl == null || _photoUrl!.isEmpty)
-                              ? Icon(
-                                  Icons.person_rounded,
-                                  size: 50,
-                                  color: Theme.of(context).colorScheme.onPrimary,
-                                )
-                              : null,
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      widget.residentName,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w900,
+                      const SizedBox(height: 12),
+                      Text(
+                        widget.residentName,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w900,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "Flat ${widget.flatNo}",
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary.withOpacity(0.9),
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                      const SizedBox(height: 4),
+                      Text(
+                        "Flat ${widget.flatNo}",
+                        style: TextStyle(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onPrimary
+                              .withValues(alpha: 0.9),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  children: [
+                    // Account Information Section
+                    _buildAccountInfoSection(),
+                    const SizedBox(height: 20),
+
+                    // Login options: Add phone / Add email (optional)
+                    _buildLoginOptionsSection(),
+                    const SizedBox(height: 20),
+
+                    // Settings Section
+                    _buildSettingsSection(),
+                    const SizedBox(height: 30),
+
+                    // Deactivate Account Button
+                    _buildDeactivateButton(),
+                    const SizedBox(height: 16),
+
+                    // Logout Button
+                    _buildLogoutButton(),
+                    const SizedBox(height: 120), // Bottom nav spacer
                   ],
                 ),
               ),
-              ),
             ),
-
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  // Account Information Section
-                  _buildAccountInfoSection(),
-                  const SizedBox(height: 20),
-
-                  // Login options: Add phone / Add email (optional)
-                  _buildLoginOptionsSection(),
-                  const SizedBox(height: 20),
-
-                  // Settings Section
-                  _buildSettingsSection(),
-                  const SizedBox(height: 30),
-
-                  // Deactivate Account Button
-                  _buildDeactivateButton(),
-                  const SizedBox(height: 16),
-
-                  // Logout Button
-                  _buildLogoutButton(),
-                  const SizedBox(height: 120), // Bottom nav spacer
-                ],
-              ),
-            ),
-          ),
-        ], // closes slivers
+          ], // closes slivers
         ), // closes CustomScrollView
       ), // closes Scaffold
     ); // closes PopScope
@@ -421,7 +448,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.onSurface.withOpacity(0.04),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -435,7 +462,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.12),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -503,19 +530,26 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("Login options", style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: theme.colorScheme.onSurface)),
+          Text("Login options",
+              style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: theme.colorScheme.onSurface)),
           const SizedBox(height: 12),
           if (!hasPhone)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.phone_android_rounded, color: theme.colorScheme.primary),
-              title: const Text("Add phone number", style: TextStyle(fontWeight: FontWeight.w700)),
+              leading: Icon(Icons.phone_android_rounded,
+                  color: theme.colorScheme.primary),
+              title: const Text("Add phone number",
+                  style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle: const Text("Recommended for easier login"),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () async {
                 final added = await Navigator.of(context).push<bool>(
                   MaterialPageRoute(
-                    builder: (_) => ProfileLinkPhoneScreen(societyId: widget.societyId, uid: widget.residentId),
+                    builder: (_) => ProfileLinkPhoneScreen(
+                        societyId: widget.societyId, uid: widget.residentId),
                   ),
                 );
                 if (added == true) _loadProfilePhoto();
@@ -525,8 +559,10 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
           if (!hasRealEmail)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.email_outlined, color: theme.colorScheme.primary),
-              title: const Text("Add email (optional)", style: TextStyle(fontWeight: FontWeight.w700)),
+              leading:
+                  Icon(Icons.email_outlined, color: theme.colorScheme.primary),
+              title: const Text("Add email (optional)",
+                  style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle: const Text("For recovery and optional login"),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: _showAddEmailDialog,
@@ -545,7 +581,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Add email (optional)", style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text("Add email (optional)",
+            style: TextStyle(fontWeight: FontWeight.w900)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -553,36 +590,50 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: "Email", hintText: "you@example.com"),
+                decoration: const InputDecoration(
+                    labelText: "Email", hintText: "you@example.com"),
               ),
               const SizedBox(height: 12),
-              TextField(controller: passwordController, obscureText: true, decoration: const InputDecoration(labelText: "Password")),
+              TextField(
+                  controller: passwordController,
+                  obscureText: true,
+                  decoration: const InputDecoration(labelText: "Password")),
               const SizedBox(height: 12),
-              TextField(controller: confirmController, obscureText: true, decoration: const InputDecoration(labelText: "Confirm password")),
+              TextField(
+                  controller: confirmController,
+                  obscureText: true,
+                  decoration:
+                      const InputDecoration(labelText: "Confirm password")),
             ],
           ),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text("Cancel")),
           FilledButton(
             onPressed: () async {
               final email = emailController.text.trim();
               final pass = passwordController.text;
               final confirm = confirmController.text;
               if (email.isEmpty || !email.contains('@')) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Enter a valid email")));
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Enter a valid email")));
                 return;
               }
               if (pass.length < 6) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Password must be at least 6 characters")));
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text("Password must be at least 6 characters")));
                 return;
               }
               if (pass != confirm) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Passwords do not match")));
+                ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Passwords do not match")));
                 return;
               }
               try {
-                await authService.linkWithEmailCredential(email: email, password: pass);
+                await authService.linkWithEmailCredential(
+                    email: email, password: pass);
                 if (!context.mounted) return;
                 Navigator.of(context).pop(true);
               } catch (e) {
@@ -590,7 +641,9 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(e is FirebaseAuthException
-                        ? (e.code == 'email-already-in-use' ? "This email is already in use." : "Could not add email.")
+                        ? (e.code == 'email-already-in-use'
+                            ? "This email is already in use."
+                            : "Could not add email.")
                         : "Something went wrong."),
                   ),
                 );
@@ -623,7 +676,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.12),
+            color: theme.colorScheme.primary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, size: 20, color: theme.colorScheme.primary),
@@ -637,7 +690,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -667,7 +720,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.onSurface.withOpacity(0.04),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.04),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -681,7 +734,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.12),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -821,15 +874,19 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
           borderRadius: BorderRadius.circular(12),
           color: Colors.transparent,
         ),
-      child: Row(
-        children: [
+        child: Row(
+          children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 22),
+              child: Icon(icon,
+                  color: Theme.of(context).colorScheme.primary, size: 22),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -849,7 +906,10 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                     subtitle,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -859,7 +919,10 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
             Icon(
               Icons.arrow_forward_ios_rounded,
               size: 16,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
             ),
           ],
         ),
@@ -871,7 +934,7 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
     if (!mounted) return;
     await showDialog<void>(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.9),
+      barrierColor: Colors.black.withValues(alpha: 0.9),
       builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,
@@ -937,7 +1000,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
         ),
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: theme.colorScheme.error, width: 2),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         ),
       ),
     );
@@ -955,7 +1019,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
                 height: 20,
                 child: AppLoader.inline(size: 20),
               )
-            : Icon(Icons.logout_rounded, color: Theme.of(context).colorScheme.error),
+            : Icon(Icons.logout_rounded,
+                color: Theme.of(context).colorScheme.error),
         label: Text(
           _isLoggingOut ? "Logging out..." : "LOGOUT",
           style: TextStyle(
@@ -965,7 +1030,8 @@ class _ResidentProfileScreenState extends State<ResidentProfileScreen> {
           ),
         ),
         style: OutlinedButton.styleFrom(
-          side: BorderSide(color: Theme.of(context).colorScheme.error, width: 2),
+          side:
+              BorderSide(color: Theme.of(context).colorScheme.error, width: 2),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),

@@ -11,7 +11,8 @@ class PhoneVerificationResult {
   final String verificationId;
   final int? resendToken;
 
-  const PhoneVerificationResult({required this.verificationId, this.resendToken});
+  const PhoneVerificationResult(
+      {required this.verificationId, this.resendToken});
 }
 
 /// FirebaseAuthService - Wrapper for Firebase Authentication
@@ -66,7 +67,8 @@ class FirebaseAuthService {
       verificationCompleted: (PhoneAuthCredential credential) {
         if (!completer.isCompleted) {
           completer.completeError(
-            StateError('verificationCompleted called; use signInWithCredential(credential)'),
+            StateError(
+                'verificationCompleted called; use signInWithCredential(credential)'),
           );
         }
       },
@@ -149,7 +151,8 @@ class FirebaseAuthService {
       AppLogger.i('Admin account created', data: {'uid': credential.user?.uid});
       return credential;
     } catch (e, stackTrace) {
-      AppLogger.e('Error creating admin account', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error creating admin account',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -180,7 +183,8 @@ class FirebaseAuthService {
       await _auth.sendPasswordResetEmail(email: email);
       AppLogger.i('Password reset email sent');
     } catch (e, stackTrace) {
-      AppLogger.e('Error sending password reset email', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error sending password reset email',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -224,7 +228,8 @@ class FirebaseAuthService {
   }) async {
     try {
       final email = getGuardEmail(societyId: societyId, guardId: guardId);
-      AppLogger.i('Creating guard account', data: {'societyId': societyId, 'guardId': guardId});
+      AppLogger.i('Creating guard account',
+          data: {'societyId': societyId, 'guardId': guardId});
       final password = _derivePasswordFromPin(
         context: 'guard:$societyId:$guardId',
         pin: pin,
@@ -236,7 +241,8 @@ class FirebaseAuthService {
       AppLogger.i('Guard account created', data: {'uid': credential.user?.uid});
       return credential;
     } catch (e, stackTrace) {
-      AppLogger.e('Error creating guard account', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error creating guard account',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -253,13 +259,16 @@ class FirebaseAuthService {
         email: email,
         password: pin,
       );
-      AppLogger.i('Guard account created (username)', data: {'uid': credential.user?.uid});
+      AppLogger.i('Guard account created (username)',
+          data: {'uid': credential.user?.uid});
       return credential;
     } on FirebaseAuthException catch (e, st) {
-      AppLogger.e('Error creating guard account (username)', error: e, stackTrace: st);
+      AppLogger.e('Error creating guard account (username)',
+          error: e, stackTrace: st);
       rethrow;
     } catch (e, st) {
-      AppLogger.e('Unknown error creating guard account (username)', error: e, stackTrace: st);
+      AppLogger.e('Unknown error creating guard account (username)',
+          error: e, stackTrace: st);
       rethrow;
     }
   }
@@ -272,7 +281,8 @@ class FirebaseAuthService {
   }) async {
     try {
       final email = getGuardEmail(societyId: societyId, guardId: guardId);
-      AppLogger.i('Signing in guard', data: {'societyId': societyId, 'guardId': guardId});
+      AppLogger.i('Signing in guard',
+          data: {'societyId': societyId, 'guardId': guardId});
       final password = _derivePasswordFromPin(
         context: 'guard:$societyId:$guardId',
         pin: pin,
@@ -287,18 +297,22 @@ class FirebaseAuthService {
       } on FirebaseAuthException catch (e) {
         // Backward compatibility: try plain PIN, then migrate password
         if (e.code == 'wrong-password') {
-          AppLogger.w('Guard hashed password sign-in failed, trying legacy PIN', error: e);
+          AppLogger.w('Guard hashed password sign-in failed, trying legacy PIN',
+              error: e);
           final legacyCredential = await _auth.signInWithEmailAndPassword(
             email: email,
             password: pin,
           );
-          AppLogger.i('Guard signed in with legacy PIN, migrating to hashed password', data: {
-            'uid': legacyCredential.user?.uid,
-          });
+          AppLogger.i(
+              'Guard signed in with legacy PIN, migrating to hashed password',
+              data: {
+                'uid': legacyCredential.user?.uid,
+              });
           try {
             await legacyCredential.user?.updatePassword(password);
           } catch (updateError, st) {
-            AppLogger.e('Failed to migrate guard password to hashed', error: updateError, stackTrace: st);
+            AppLogger.e('Failed to migrate guard password to hashed',
+                error: updateError, stackTrace: st);
           }
           return legacyCredential;
         }
@@ -322,10 +336,12 @@ class FirebaseAuthService {
         email: email,
         password: pin,
       );
-      AppLogger.i('Guard signed in (username)', data: {'uid': credential.user?.uid});
+      AppLogger.i('Guard signed in (username)',
+          data: {'uid': credential.user?.uid});
       return credential;
     } catch (e, stackTrace) {
-      AppLogger.e('Error signing in guard (username)', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error signing in guard (username)',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -338,8 +354,10 @@ class FirebaseAuthService {
     required String pin,
   }) async {
     try {
-      final email = getResidentEmail(societyId: societyId, flatNo: flatNo, phone: phone);
-      AppLogger.i('Creating resident account', data: {'societyId': societyId, 'flatNo': flatNo});
+      final email =
+          getResidentEmail(societyId: societyId, flatNo: flatNo, phone: phone);
+      AppLogger.i('Creating resident account',
+          data: {'societyId': societyId, 'flatNo': flatNo});
       final password = _derivePasswordFromPin(
         context: 'resident:$societyId:$flatNo:$phone',
         pin: pin,
@@ -348,10 +366,12 @@ class FirebaseAuthService {
         email: email,
         password: password,
       );
-      AppLogger.i('Resident account created', data: {'uid': credential.user?.uid});
+      AppLogger.i('Resident account created',
+          data: {'uid': credential.user?.uid});
       return credential;
     } catch (e, stackTrace) {
-      AppLogger.e('Error creating resident account', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error creating resident account',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -364,8 +384,10 @@ class FirebaseAuthService {
     required String pin,
   }) async {
     try {
-      final email = getResidentEmail(societyId: societyId, flatNo: flatNo, phone: phone);
-      AppLogger.i('Signing in resident', data: {'societyId': societyId, 'flatNo': flatNo});
+      final email =
+          getResidentEmail(societyId: societyId, flatNo: flatNo, phone: phone);
+      AppLogger.i('Signing in resident',
+          data: {'societyId': societyId, 'flatNo': flatNo});
       final password = _derivePasswordFromPin(
         context: 'resident:$societyId:$flatNo:$phone',
         pin: pin,
@@ -380,25 +402,31 @@ class FirebaseAuthService {
       } on FirebaseAuthException catch (e) {
         // Backward compatibility: try plain PIN, then migrate password
         if (e.code == 'wrong-password') {
-          AppLogger.w('Resident hashed password sign-in failed, trying legacy PIN', error: e);
+          AppLogger.w(
+              'Resident hashed password sign-in failed, trying legacy PIN',
+              error: e);
           final legacyCredential = await _auth.signInWithEmailAndPassword(
             email: email,
             password: pin,
           );
-          AppLogger.i('Resident signed in with legacy PIN, migrating to hashed password', data: {
-            'uid': legacyCredential.user?.uid,
-          });
+          AppLogger.i(
+              'Resident signed in with legacy PIN, migrating to hashed password',
+              data: {
+                'uid': legacyCredential.user?.uid,
+              });
           try {
             await legacyCredential.user?.updatePassword(password);
           } catch (updateError, st) {
-            AppLogger.e('Failed to migrate resident password to hashed', error: updateError, stackTrace: st);
+            AppLogger.e('Failed to migrate resident password to hashed',
+                error: updateError, stackTrace: st);
           }
           return legacyCredential;
         }
         rethrow;
       }
     } catch (e, stackTrace) {
-      AppLogger.e('Error signing in resident', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error signing in resident',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }
@@ -417,7 +445,8 @@ class FirebaseAuthService {
       AppLogger.i('Resident signed in', data: {'uid': credential.user?.uid});
       return credential;
     } catch (e, stackTrace) {
-      AppLogger.e('Error signing in resident', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error signing in resident',
+          error: e, stackTrace: stackTrace);
       rethrow;
     }
   }

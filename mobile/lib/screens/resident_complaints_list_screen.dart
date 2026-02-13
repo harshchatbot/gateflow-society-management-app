@@ -10,7 +10,7 @@ import '../widgets/module_disabled_placeholder.dart';
 import '../widgets/loading_skeletons.dart';
 
 /// Resident Complaints List Screen
-/// 
+///
 /// Allows residents to view all their current and past complaints
 /// Theme: Green/Resident theme
 class ResidentComplaintsListScreen extends StatefulWidget {
@@ -28,10 +28,12 @@ class ResidentComplaintsListScreen extends StatefulWidget {
   });
 
   @override
-  State<ResidentComplaintsListScreen> createState() => _ResidentComplaintsListScreenState();
+  State<ResidentComplaintsListScreen> createState() =>
+      _ResidentComplaintsListScreenState();
 }
 
-class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScreen> {
+class _ResidentComplaintsListScreenState
+    extends State<ResidentComplaintsListScreen> {
   late final ComplaintService _service = ComplaintService(
     baseUrl: Env.apiBaseUrl,
   );
@@ -40,7 +42,8 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
   List<dynamic> _filteredComplaints = [];
   bool _isLoading = false;
   String? _error;
-  String _selectedFilter = "ALL"; // ALL, PENDING, IN_PROGRESS, RESOLVED, REJECTED
+  String _selectedFilter =
+      "ALL"; // ALL, PENDING, IN_PROGRESS, RESOLVED, REJECTED
 
   @override
   void initState() {
@@ -118,7 +121,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
     }
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           // If we're in a tab navigation, switch to dashboard
           if (widget.onBackPressed != null) {
@@ -135,7 +138,8 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
           elevation: 0,
           automaticallyImplyLeading: true,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
+            icon: Icon(Icons.arrow_back_rounded,
+                color: Theme.of(context).colorScheme.onSurface),
             onPressed: () {
               // If we're in a tab navigation, switch to dashboard
               if (widget.onBackPressed != null) {
@@ -145,82 +149,88 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
               }
             },
           ),
-        title: Text(
-          "My Complaints",
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w900,
-            fontSize: 20,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(Icons.refresh_rounded, color: AppColors.success, size: 20),
+          title: Text(
+            "My Complaints",
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontWeight: FontWeight.w900,
+              fontSize: 20,
             ),
-            onPressed: _isLoading ? null : _loadComplaints,
           ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Stack(
-        children: [
-          Column(
-            children: [
-              // Filter Chips
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                color: Theme.of(context).scaffoldBackgroundColor,
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _buildFilterChip("ALL", "All"),
-                      const SizedBox(width: 8),
-                      _buildFilterChip("PENDING", "Pending"),
-                      const SizedBox(width: 8),
-                      _buildFilterChip("IN_PROGRESS", "In Progress"),
-                      const SizedBox(width: 8),
-                      _buildFilterChip("RESOLVED", "Resolved"),
-                      const SizedBox(width: 8),
-                      _buildFilterChip("REJECTED", "Rejected"),
-                    ],
-                  ),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppColors.success.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
+                child: const Icon(Icons.refresh_rounded,
+                    color: AppColors.success, size: 20),
               ),
-
-              // Results Count
-              if (_filteredComplaints.isNotEmpty)
+              onPressed: _isLoading ? null : _loadComplaints,
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: Stack(
+          children: [
+            Column(
+              children: [
+                // Filter Chips
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    children: [
-                      Text(
-                        "${_filteredComplaints.length} complaint${_filteredComplaints.length != 1 ? 's' : ''}",
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  color: Theme.of(context).scaffoldBackgroundColor,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        _buildFilterChip("ALL", "All"),
+                        const SizedBox(width: 8),
+                        _buildFilterChip("PENDING", "Pending"),
+                        const SizedBox(width: 8),
+                        _buildFilterChip("IN_PROGRESS", "In Progress"),
+                        const SizedBox(width: 8),
+                        _buildFilterChip("RESOLVED", "Resolved"),
+                        const SizedBox(width: 8),
+                        _buildFilterChip("REJECTED", "Rejected"),
+                      ],
+                    ),
                   ),
                 ),
 
-              // List
-              Expanded(
-                child: _buildContent(),
-              ),
-            ],
-          ),
-        ],
-      ),
+                // Results Count
+                if (_filteredComplaints.isNotEmpty)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          "${_filteredComplaints.length} complaint${_filteredComplaints.length != 1 ? 's' : ''}",
+                          style: TextStyle(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // List
+                Expanded(
+                  child: _buildContent(),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -234,7 +244,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppColors.success.withOpacity(0.15)
+              ? AppColors.success.withValues(alpha: 0.15)
               : theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
@@ -247,7 +257,9 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: isSelected ? AppColors.success : theme.colorScheme.onSurface.withOpacity(0.7),
+            color: isSelected
+                ? AppColors.success
+                : theme.colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
       ),
@@ -268,16 +280,17 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: theme.colorScheme.error.withOpacity(0.1),
+                color: theme.colorScheme.error.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+              child: Icon(Icons.error_outline,
+                  size: 64, color: theme.colorScheme.error),
             ),
             const SizedBox(height: 16),
             Text(
               _error!,
               style: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -291,7 +304,8 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -307,7 +321,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppColors.success.withOpacity(0.1),
+                color: AppColors.success.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
@@ -318,7 +332,9 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
             ),
             const SizedBox(height: 16),
             Text(
-              _selectedFilter == "ALL" ? "No complaints yet" : "No ${_selectedFilter.toLowerCase()} complaints",
+              _selectedFilter == "ALL"
+                  ? "No complaints yet"
+                  : "No ${_selectedFilter.toLowerCase()} complaints",
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
@@ -332,7 +348,10 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                   : "Try selecting a different filter",
               style: TextStyle(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
@@ -360,23 +379,24 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
     final description = (complaint['description'] ?? '').toString();
     final category = (complaint['category'] ?? 'GENERAL').toString();
     final status = (complaint['status'] ?? 'PENDING').toString();
-    final visibility = (complaint['visibility'] ?? 'general').toString().toLowerCase();
+    final visibility =
+        (complaint['visibility'] ?? 'general').toString().toLowerCase();
     final isPersonal = visibility == 'personal';
-    final photoUrl = (complaint['photoUrl'] ?? complaint['photo_url'] ?? '').toString().trim();
+    final photoUrl = (complaint['photoUrl'] ?? complaint['photo_url'] ?? '')
+        .toString()
+        .trim();
     final hasPhoto = photoUrl.isNotEmpty;
     final createdAt = complaint['created_at']?.toString() ?? '';
-    final resolvedAt = complaint['resolved_at']?.toString();
-    final adminResponse = complaint['admin_response']?.toString();
-
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.5)),
+        border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -402,9 +422,10 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.15),
+                            color: AppColors.success.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -419,22 +440,34 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                         if (isPersonal) ...[
                           const SizedBox(width: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.15),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Icon(Icons.lock_rounded, size: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                                Icon(Icons.lock_rounded,
+                                    size: 12,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6)),
                                 const SizedBox(width: 4),
                                 Text(
                                   "Personal",
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.w700,
-                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface
+                                        .withValues(alpha: 0.6),
                                   ),
                                 ),
                               ],
@@ -458,13 +491,24 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                       placeholder: (context, url) => Container(
                         height: 140,
                         color: Colors.grey.shade300,
-                        child: Center(child: Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 40)),
+                        child: Center(
+                            child: Icon(Icons.image_outlined,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.5),
+                                size: 40)),
                       ),
                       errorWidget: (context, url, error) => Container(
                         height: 140,
                         color: Theme.of(context).scaffoldBackgroundColor,
                         child: Center(
-                          child: Icon(Icons.broken_image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 40),
+                          child: Icon(Icons.broken_image_outlined,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.5),
+                              size: 40),
                         ),
                       ),
                     ),
@@ -491,7 +535,10 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                     description,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                       fontWeight: FontWeight.w500,
                     ),
                     maxLines: 2,
@@ -505,7 +552,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: AppColors.success.withOpacity(0.1),
+                        color: AppColors.success.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Icon(
@@ -519,7 +566,10 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                       _formatDateTime(createdAt),
                       style: TextStyle(
                         fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -538,7 +588,9 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
     final description = (complaint['description'] ?? '').toString();
     final category = (complaint['category'] ?? 'GENERAL').toString();
     final status = (complaint['status'] ?? 'PENDING').toString();
-    final photoUrl = (complaint['photoUrl'] ?? complaint['photo_url'] ?? '').toString().trim();
+    final photoUrl = (complaint['photoUrl'] ?? complaint['photo_url'] ?? '')
+        .toString()
+        .trim();
     final hasPhoto = photoUrl.isNotEmpty;
     final createdAt = complaint['created_at']?.toString() ?? '';
     final resolvedAt = complaint['resolved_at']?.toString();
@@ -580,10 +632,11 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withOpacity(0.15),
+                      color: AppColors.success.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.report_problem_rounded, color: AppColors.success, size: 24),
+                    child: const Icon(Icons.report_problem_rounded,
+                        color: AppColors.success, size: 24),
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -608,13 +661,24 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                     placeholder: (context, url) => Container(
                       height: 200,
                       color: Colors.grey.shade300,
-                      child: Center(child: Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 48)),
+                      child: Center(
+                          child: Icon(Icons.image_outlined,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.5),
+                              size: 48)),
                     ),
                     errorWidget: (context, url, error) => Container(
                       height: 200,
                       color: Theme.of(context).scaffoldBackgroundColor,
                       child: Center(
-                        child: Icon(Icons.broken_image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5), size: 48),
+                        child: Icon(Icons.broken_image_outlined,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5),
+                            size: 48),
                       ),
                     ),
                   ),
@@ -636,16 +700,18 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: AppColors.success.withOpacity(0.1),
+                    color: AppColors.success.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.success.withOpacity(0.3)),
+                    border: Border.all(
+                        color: AppColors.success.withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.admin_panel_settings_rounded, color: AppColors.success, size: 18),
+                          Icon(Icons.admin_panel_settings_rounded,
+                              color: AppColors.success, size: 18),
                           SizedBox(width: 8),
                           Text(
                             "Admin Response",
@@ -689,7 +755,7 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
             label,
             style: TextStyle(
               fontSize: 12,
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -710,7 +776,8 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
   String _formatDateTime(String dateTimeStr) {
     if (dateTimeStr.isEmpty) return "Unknown";
     try {
-      final dt = DateTime.parse(dateTimeStr.replaceAll("Z", "+00:00")).toLocal();
+      final dt =
+          DateTime.parse(dateTimeStr.replaceAll("Z", "+00:00")).toLocal();
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final yesterday = DateTime(now.year, now.month, now.day - 1);
@@ -724,7 +791,8 @@ class _ResidentComplaintsListScreenState extends State<ResidentComplaintsListScr
         return "${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
       }
     } catch (e) {
-      AppLogger.e("Error formatting date time", error: e, data: {"dateTimeStr": dateTimeStr});
+      AppLogger.e("Error formatting date time",
+          error: e, data: {"dateTimeStr": dateTimeStr});
       return dateTimeStr;
     }
   }

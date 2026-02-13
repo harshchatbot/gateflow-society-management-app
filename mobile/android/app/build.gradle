@@ -33,11 +33,11 @@ if (flutterVersionName == null) {
 android {
     namespace = "com.gateflow.app"
 
-    // Keep your SDKs as-is (35 is fine). The 16KB page size issue is typically NDK-related.
-    compileSdk = 35
+    // Keep SDK aligned with latest target requirements.
+    compileSdk = 36
 
-    // ✅ Updated NDK to r26+ to support 16 KB page sizes on newer Android devices.
-    ndkVersion "26.1.10909125"
+    // Keep NDK on a modern version for 16 KB page-size compatibility.
+    ndkVersion "28.1.13356709"
 
     compileOptions {
         coreLibraryDesugaringEnabled true
@@ -52,7 +52,7 @@ android {
     defaultConfig {
         applicationId = "com.gateflow.app"
         minSdkVersion = flutter.minSdkVersion
-        targetSdk = 35
+        targetSdk = 36
         versionCode = flutterVersionCode.toInteger()
         versionName = flutterVersionName
     }

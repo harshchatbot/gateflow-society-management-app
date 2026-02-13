@@ -12,7 +12,7 @@ import '../widgets/module_disabled_placeholder.dart';
 import '../core/env.dart';
 
 /// Resident Complaint Screen
-/// 
+///
 /// Allows residents to raise complaints
 /// Theme: Green/Resident theme
 class ResidentComplaintScreen extends StatefulWidget {
@@ -30,7 +30,8 @@ class ResidentComplaintScreen extends StatefulWidget {
   });
 
   @override
-  State<ResidentComplaintScreen> createState() => _ResidentComplaintScreenState();
+  State<ResidentComplaintScreen> createState() =>
+      _ResidentComplaintScreenState();
 }
 
 class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
@@ -42,6 +43,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
   );
 
   String _selectedCategory = "GENERAL";
+
   /// 'general' = visible to everyone; 'personal' = visible to admins & guards only
   String _visibility = "general";
   bool _isLoading = false;
@@ -119,7 +121,8 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -258,7 +261,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppColors.success.withOpacity(0.12),
+                          color: AppColors.success.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
@@ -321,11 +324,17 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                           ? Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.add_photo_alternate_rounded, size: 40, color: AppColors.success.withOpacity(0.6)),
+                                Icon(Icons.add_photo_alternate_rounded,
+                                    size: 40,
+                                    color: AppColors.success
+                                        .withValues(alpha: 0.6)),
                                 const SizedBox(height: 8),
                                 const Text(
                                   "Tap to add a photo",
-                                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMuted),
+                                  style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.textMuted),
                                 ),
                               ],
                             )
@@ -334,14 +343,17 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                               children: [
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(16),
-                                  child: Image.file(_complaintImage!, fit: BoxFit.cover),
+                                  child: Image.file(_complaintImage!,
+                                      fit: BoxFit.cover),
                                 ),
                                 Positioned(
                                   top: 8,
                                   right: 8,
                                   child: IconButton(
-                                    onPressed: () => setState(() => _complaintImage = null),
-                                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                                    onPressed: () =>
+                                        setState(() => _complaintImage = null),
+                                    icon: const Icon(Icons.close_rounded,
+                                        color: Colors.white),
                                     style: IconButton.styleFrom(
                                       backgroundColor: Colors.black54,
                                     ),
@@ -374,10 +386,11 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                           setState(() => _selectedCategory = cat["value"]!);
                         },
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? AppColors.success.withOpacity(0.15)
+                                ? AppColors.success.withValues(alpha: 0.15)
                                 : AppColors.surface,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
@@ -421,7 +434,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                       border: Border.all(color: AppColors.border),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
+                          color: Colors.black.withValues(alpha: 0.02),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
@@ -445,10 +458,11 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                           margin: const EdgeInsets.all(12),
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.15),
+                            color: AppColors.success.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.title_rounded, color: AppColors.success, size: 20),
+                          child: const Icon(Icons.title_rounded,
+                              color: AppColors.success, size: 20),
                         ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
@@ -490,7 +504,7 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                       border: Border.all(color: AppColors.border),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.02),
+                          color: Colors.black.withValues(alpha: 0.02),
                           blurRadius: 10,
                           offset: const Offset(0, 2),
                         ),
@@ -505,7 +519,8 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                         color: AppColors.text,
                       ),
                       decoration: InputDecoration(
-                        hintText: "Provide detailed information about your complaint...",
+                        hintText:
+                            "Provide detailed information about your complaint...",
                         hintStyle: const TextStyle(
                           color: AppColors.textMuted,
                           fontSize: 15,
@@ -515,10 +530,11 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                           margin: const EdgeInsets.all(12),
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: AppColors.success.withOpacity(0.15),
+                            color: AppColors.success.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(10),
                           ),
-                          child: const Icon(Icons.description_rounded, color: AppColors.success, size: 20),
+                          child: const Icon(Icons.description_rounded,
+                              color: AppColors.success, size: 20),
                         ),
                         border: InputBorder.none,
                         contentPadding: const EdgeInsets.symmetric(
@@ -559,10 +575,11 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                         child: GestureDetector(
                           onTap: () => setState(() => _visibility = "general"),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 14),
                             decoration: BoxDecoration(
                               color: _visibility == "general"
-                                  ? AppColors.success.withOpacity(0.15)
+                                  ? AppColors.success.withValues(alpha: 0.15)
                                   : AppColors.surface,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
@@ -616,10 +633,11 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                         child: GestureDetector(
                           onTap: () => setState(() => _visibility = "personal"),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 14),
                             decoration: BoxDecoration(
                               color: _visibility == "personal"
-                                  ? AppColors.success.withOpacity(0.15)
+                                  ? AppColors.success.withValues(alpha: 0.15)
                                   : AppColors.surface,
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
@@ -677,7 +695,8 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
                     width: double.infinity,
                     height: 56,
                     child: ElevatedButton.icon(
-                      onPressed: _isLoading || _isSuccess ? null : _submitComplaint,
+                      onPressed:
+                          _isLoading || _isSuccess ? null : _submitComplaint,
                       icon: _isLoading
                           ? SizedBox(
                               width: 20,
@@ -711,7 +730,10 @@ class _ResidentComplaintScreenState extends State<ResidentComplaintScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Submitting complaint…"),
+          AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
+              show: _isLoading,
+              message: "Submitting complaint…"),
         ],
       ),
     );

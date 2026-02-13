@@ -32,11 +32,13 @@ class SocietyRequestsService {
         queryParameters: {'limit': limit},
       );
       final payload = response.data;
-      final items = (payload is Map<String, dynamic> && payload['items'] is List)
-          ? List<Map<String, dynamic>>.from(
-              (payload['items'] as List).map((e) => Map<String, dynamic>.from(e as Map)),
-            )
-          : <Map<String, dynamic>>[];
+      final items =
+          (payload is Map<String, dynamic> && payload['items'] is List)
+              ? List<Map<String, dynamic>>.from(
+                  (payload['items'] as List)
+                      .map((e) => Map<String, dynamic>.from(e as Map)),
+                )
+              : <Map<String, dynamic>>[];
       return Result.success(items);
     } catch (e) {
       if (e is AppError) return Result.failure(e);

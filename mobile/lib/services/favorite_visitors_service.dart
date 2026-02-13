@@ -141,9 +141,10 @@ class FavoriteVisitorsService {
     if (resolvedUnit.isEmpty) return <String>{};
 
     try {
-      final snap = await _favoritesRef(societyId: societyId, unitId: resolvedUnit)
-          .limit(limit)
-          .get();
+      final snap =
+          await _favoritesRef(societyId: societyId, unitId: resolvedUnit)
+              .limit(limit)
+              .get();
       return snap.docs
           .map((d) => (d.data()['name'] ?? '').toString())
           .where((name) => name.trim().isNotEmpty)
@@ -191,22 +192,29 @@ class FavoriteVisitorsService {
     final normalizedPhone = _normalizePhoneOrNull(visitorPhone);
     final normalizedPurpose = (purpose ?? '').trim();
     final key = buildVisitorKey(
-      name: normalizedName.isEmpty ? (normalizedPhone ?? 'visitor') : normalizedName,
+      name: normalizedName.isEmpty
+          ? (normalizedPhone ?? 'visitor')
+          : normalizedName,
       phone: normalizedPhone,
       purpose: normalizedPurpose,
     );
 
-    final ref = _favoritesRef(societyId: societyId, unitId: resolvedUnitId).doc(key);
+    final ref =
+        _favoritesRef(societyId: societyId, unitId: resolvedUnitId).doc(key);
     final existing = await ref.get();
 
     if (existing.exists) {
       await ref.delete();
     } else {
       await ref.set({
-        'name': normalizedName.isNotEmpty ? normalizedName : (normalizedPhone ?? 'Visitor'),
+        'name': normalizedName.isNotEmpty
+            ? normalizedName
+            : (normalizedPhone ?? 'Visitor'),
         'phone': normalizedPhone,
         'purpose': normalizedPurpose.isEmpty ? null : normalizedPurpose,
-        'photoUrl': (photoUrl == null || photoUrl.trim().isEmpty) ? null : photoUrl.trim(),
+        'photoUrl': (photoUrl == null || photoUrl.trim().isEmpty)
+            ? null
+            : photoUrl.trim(),
         'visitorKey': key,
         'isPreApproved': false,
         'notifyResidentOnEntry': true,
@@ -259,18 +267,21 @@ class FavoriteVisitorsService {
         unitId: resolvedUnit,
       ).orderBy('createdAt', descending: true).limit(limit).get();
 
-      final mapped = snap.docs.map((d) {
-        final data = d.data();
-        return <String, dynamic>{
-          'visitorKey': d.id,
-          'name': (data['name'] ?? '').toString(),
-          'phone': data['phone']?.toString(),
-          'purpose': data['purpose']?.toString(),
-          'photoUrl': data['photoUrl']?.toString(),
-          'isPreApproved': data['isPreApproved'] == true,
-          'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
-        };
-      }).where((m) => (m['name'] as String).trim().isNotEmpty).toList();
+      final mapped = snap.docs
+          .map((d) {
+            final data = d.data();
+            return <String, dynamic>{
+              'visitorKey': d.id,
+              'name': (data['name'] ?? '').toString(),
+              'phone': data['phone']?.toString(),
+              'purpose': data['purpose']?.toString(),
+              'photoUrl': data['photoUrl']?.toString(),
+              'isPreApproved': data['isPreApproved'] == true,
+              'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
+            };
+          })
+          .where((m) => (m['name'] as String).trim().isNotEmpty)
+          .toList();
 
       if (mapped.isNotEmpty) return mapped;
     } catch (_) {
@@ -282,18 +293,21 @@ class FavoriteVisitorsService {
         societyId: societyId,
         unitId: resolvedUnit,
       ).limit(limit).get();
-      return legacy.docs.map((d) {
-        final data = d.data();
-        return <String, dynamic>{
-          'visitorKey': d.id,
-          'name': (data['name'] ?? '').toString(),
-          'phone': data['phone']?.toString(),
-          'purpose': data['purpose']?.toString(),
-          'photoUrl': data['photoUrl']?.toString(),
-          'isPreApproved': data['isPreApproved'] == true,
-          'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
-        };
-      }).where((m) => (m['name'] as String).trim().isNotEmpty).toList();
+      return legacy.docs
+          .map((d) {
+            final data = d.data();
+            return <String, dynamic>{
+              'visitorKey': d.id,
+              'name': (data['name'] ?? '').toString(),
+              'phone': data['phone']?.toString(),
+              'purpose': data['purpose']?.toString(),
+              'photoUrl': data['photoUrl']?.toString(),
+              'isPreApproved': data['isPreApproved'] == true,
+              'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
+            };
+          })
+          .where((m) => (m['name'] as String).trim().isNotEmpty)
+          .toList();
     } catch (_) {
       return <Map<String, dynamic>>[];
     }
@@ -327,8 +341,7 @@ class FavoriteVisitorsService {
   Future<void> setAutoApproveEnabled(
     String societyId,
     String residentId,
-    bool enabled,
-    {
+    bool enabled, {
     String? unitId,
   }) async {
     final resolvedUnit = (unitId ?? '').trim();
@@ -452,7 +465,9 @@ class FavoriteVisitorsService {
       final nowMinutes = now.hour * 60 + now.minute;
       for (final d in snap.docs) {
         final data = d.data();
-        if ((data['visitorKey'] ?? '').toString().trim() != visitorKey) continue;
+        if ((data['visitorKey'] ?? '').toString().trim() != visitorKey) {
+          continue;
+        }
         final validFromTs = data['validFrom'];
         final validToTs = data['validTo'];
         if (validFromTs is! Timestamp || validToTs is! Timestamp) continue;
@@ -462,7 +477,10 @@ class FavoriteVisitorsService {
 
         final days = data['daysOfWeek'];
         if (days is List && days.isNotEmpty) {
-          final parsedDays = days.map((e) => int.tryParse(e.toString())).whereType<int>().toSet();
+          final parsedDays = days
+              .map((e) => int.tryParse(e.toString()))
+              .whereType<int>()
+              .toSet();
           if (!parsedDays.contains(weekday)) continue;
         }
 
@@ -473,7 +491,8 @@ class FavoriteVisitorsService {
         }
 
         final maxEntries = int.tryParse((data['maxEntries'] ?? '').toString());
-        final usedEntries = int.tryParse((data['usedEntries'] ?? '').toString()) ?? 0;
+        final usedEntries =
+            int.tryParse((data['usedEntries'] ?? '').toString()) ?? 0;
         if (maxEntries != null && usedEntries >= maxEntries) continue;
 
         return <String, dynamic>{
@@ -517,7 +536,8 @@ class FavoriteVisitorsService {
           'timeFromMins': int.tryParse((data['timeFromMins'] ?? '').toString()),
           'timeToMins': int.tryParse((data['timeToMins'] ?? '').toString()),
           'maxEntries': int.tryParse((data['maxEntries'] ?? '').toString()),
-          'usedEntries': int.tryParse((data['usedEntries'] ?? '').toString()) ?? 0,
+          'usedEntries':
+              int.tryParse((data['usedEntries'] ?? '').toString()) ?? 0,
           'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
         };
       }).toList();

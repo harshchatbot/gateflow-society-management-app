@@ -90,7 +90,10 @@ class _VisitorListScreenState extends State<VisitorListScreen>
       return;
     }
 
-    setState(() { _loading = true; _error = null; });
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     try {
       // Get today's visitors from Firestore
@@ -98,10 +101,8 @@ class _VisitorListScreenState extends State<VisitorListScreen>
       final startOfDay = DateTime(today.year, today.month, today.day);
       final endOfDay = startOfDay.add(const Duration(days: 1));
 
-      final visitorsRef = _db
-          .collection('societies')
-          .doc(_societyId!)
-          .collection('visitors');
+      final visitorsRef =
+          _db.collection('societies').doc(_societyId!).collection('visitors');
 
       QuerySnapshot querySnapshot;
       try {
@@ -119,25 +120,30 @@ class _VisitorListScreenState extends State<VisitorListScreen>
       }
 
       // Filter by today's date in memory and convert to Visitor objects
-      final todayVisitors = querySnapshot.docs.where((doc) {
-        final data = doc.data() as Map<String, dynamic>?;
-        if (data == null) return false;
-        
-        final createdAt = data['createdAt'];
-        if (createdAt == null) return false;
-        
-        DateTime createdDate;
-        if (createdAt is Timestamp) {
-          createdDate = createdAt.toDate();
-        } else if (createdAt is DateTime) {
-          createdDate = createdAt;
-        } else {
-          return false;
-        }
-        
-        return createdDate.isAfter(startOfDay.subtract(const Duration(seconds: 1))) &&
-               createdDate.isBefore(endOfDay);
-      }).map((doc) => _mapToVisitor(doc.data() as Map<String, dynamic>, doc.id)).toList();
+      final todayVisitors = querySnapshot.docs
+          .where((doc) {
+            final data = doc.data() as Map<String, dynamic>?;
+            if (data == null) return false;
+
+            final createdAt = data['createdAt'];
+            if (createdAt == null) return false;
+
+            DateTime createdDate;
+            if (createdAt is Timestamp) {
+              createdDate = createdAt.toDate();
+            } else if (createdAt is DateTime) {
+              createdDate = createdAt;
+            } else {
+              return false;
+            }
+
+            return createdDate
+                    .isAfter(startOfDay.subtract(const Duration(seconds: 1))) &&
+                createdDate.isBefore(endOfDay);
+          })
+          .map((doc) =>
+              _mapToVisitor(doc.data() as Map<String, dynamic>, doc.id))
+          .toList();
 
       // Sort by createdAt descending
       todayVisitors.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -155,7 +161,8 @@ class _VisitorListScreenState extends State<VisitorListScreen>
         "societyId": _societyId,
       });
     } catch (e, stackTrace) {
-      AppLogger.e("Error loading today's visitors", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error loading today's visitors",
+          error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() {
           _loading = false;
@@ -168,14 +175,15 @@ class _VisitorListScreenState extends State<VisitorListScreen>
   Future<void> _loadByFlat() async {
     final flatNo = _flatController.text.trim().toUpperCase();
     if (flatNo.isEmpty || _societyId == null || _societyId!.isEmpty) return;
-    
-    setState(() { _loading = true; _error = null; });
+
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
 
     try {
-      final visitorsRef = _db
-          .collection('societies')
-          .doc(_societyId!)
-          .collection('visitors');
+      final visitorsRef =
+          _db.collection('societies').doc(_societyId!).collection('visitors');
 
       QuerySnapshot querySnapshot;
       try {
@@ -198,7 +206,8 @@ class _VisitorListScreenState extends State<VisitorListScreen>
       }
 
       final visitors = querySnapshot.docs
-          .map((doc) => _mapToVisitor(doc.data() as Map<String, dynamic>, doc.id))
+          .map((doc) =>
+              _mapToVisitor(doc.data() as Map<String, dynamic>, doc.id))
           .toList();
 
       // Sort by createdAt descending
@@ -212,7 +221,8 @@ class _VisitorListScreenState extends State<VisitorListScreen>
         });
       }
     } catch (e, stackTrace) {
-      AppLogger.e("Error loading visitors by flat", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error loading visitors by flat",
+          error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() {
           _loading = false;
@@ -250,19 +260,28 @@ class _VisitorListScreenState extends State<VisitorListScreen>
       societyId: data['society_id']?.toString() ?? _societyId ?? '',
       flatId: data['flat_id']?.toString() ?? data['flat_no']?.toString() ?? '',
       flatNo: (data['flat_no'] ?? data['flatNo'] ?? '').toString(),
-      visitorType: (data['visitor_type'] ?? data['visitorType'] ?? 'GUEST').toString(),
-      visitorPhone: (data['visitor_phone'] ?? data['visitorPhone'] ?? '').toString(),
+      visitorType:
+          (data['visitor_type'] ?? data['visitorType'] ?? 'GUEST').toString(),
+      visitorPhone:
+          (data['visitor_phone'] ?? data['visitorPhone'] ?? '').toString(),
       status: (data['status'] ?? 'PENDING').toString(),
       createdAt: createdAt,
       approvedAt: approvedAt,
-      approvedBy: data['approved_by']?.toString() ?? data['approvedBy']?.toString(),
-      guardId: data['guard_uid']?.toString() ?? data['guard_id']?.toString() ?? widget.guardId,
+      approvedBy:
+          data['approved_by']?.toString() ?? data['approvedBy']?.toString(),
+      guardId: data['guard_uid']?.toString() ??
+          data['guard_id']?.toString() ??
+          widget.guardId,
       photoPath: data['photo_path']?.toString(),
       photoUrl: data['photo_url']?.toString() ?? data['photoUrl']?.toString(),
       note: data['note']?.toString(),
       residentPhone: data['resident_phone']?.toString(),
-      cab: data['cab'] is Map ? Map<String, dynamic>.from(data['cab'] as Map) : null,
-      delivery: data['delivery'] is Map ? Map<String, dynamic>.from(data['delivery'] as Map) : null,
+      cab: data['cab'] is Map
+          ? Map<String, dynamic>.from(data['cab'] as Map)
+          : null,
+      delivery: data['delivery'] is Map
+          ? Map<String, dynamic>.from(data['delivery'] as Map)
+          : null,
     );
   }
 
@@ -287,7 +306,9 @@ class _VisitorListScreenState extends State<VisitorListScreen>
       final p = v.cab!['provider'].toString().trim();
       return p.isEmpty ? null : p;
     }
-    if (t == 'DELIVERY' && v.delivery != null && v.delivery!['provider'] != null) {
+    if (t == 'DELIVERY' &&
+        v.delivery != null &&
+        v.delivery!['provider'] != null) {
       final p = v.delivery!['provider'].toString().trim();
       return p.isEmpty ? null : p;
     }
@@ -305,13 +326,15 @@ class _VisitorListScreenState extends State<VisitorListScreen>
 
   Widget _buildCompactVisitorCard(Visitor v) {
     final theme = Theme.of(context);
-    final hasResidentPhone = v.residentPhone != null && v.residentPhone!.trim().isNotEmpty;
+    final hasResidentPhone =
+        v.residentPhone != null && v.residentPhone!.trim().isNotEmpty;
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4), // Reduced vertical margin
+      margin: const EdgeInsets.symmetric(
+          horizontal: 16, vertical: 4), // Reduced vertical margin
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.6)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.6)),
       ),
       child: InkWell(
         onTap: () async {
@@ -319,7 +342,8 @@ class _VisitorListScreenState extends State<VisitorListScreen>
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => VisitorDetailsScreen(visitor: v, guardId: widget.guardId),
+              builder: (_) =>
+                  VisitorDetailsScreen(visitor: v, guardId: widget.guardId),
             ),
           );
           if (mounted) {
@@ -333,12 +357,14 @@ class _VisitorListScreenState extends State<VisitorListScreen>
             children: [
               CircleAvatar(
                 radius: 20,
-                backgroundColor: theme.colorScheme.primary.withOpacity(0.15),
+                backgroundColor:
+                    theme.colorScheme.primary.withValues(alpha: 0.15),
                 backgroundImage: (v.photoUrl != null && v.photoUrl!.isNotEmpty)
                     ? CachedNetworkImageProvider(v.photoUrl!)
                     : null,
                 child: (v.photoUrl == null || v.photoUrl!.isEmpty)
-                    ? Icon(Icons.person, size: 20, color: theme.colorScheme.primary)
+                    ? Icon(Icons.person,
+                        size: 20, color: theme.colorScheme.primary)
                     : null,
               ),
               const SizedBox(width: 12),
@@ -357,11 +383,22 @@ class _VisitorListScreenState extends State<VisitorListScreen>
                     ),
                     Row(
                       children: [
-                        Icon(_getVisitorTypeIcon(v.visitorType), size: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                        Icon(_getVisitorTypeIcon(v.visitorType),
+                            size: 12,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6)),
                         const SizedBox(width: 4),
                         Text(
-                          [v.visitorPhone.isEmpty ? "No phone" : v.visitorPhone, _getProviderLabel(v)].whereType<String>().join(" • "),
-                          style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+                          [
+                            v.visitorPhone.isEmpty
+                                ? "No phone"
+                                : v.visitorPhone,
+                            _getProviderLabel(v)
+                          ].whereType<String>().join(" • "),
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: theme.colorScheme.onSurface
+                                  .withValues(alpha: 0.6)),
                         ),
                       ],
                     ),
@@ -372,7 +409,8 @@ class _VisitorListScreenState extends State<VisitorListScreen>
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            const Icon(Icons.call_rounded, size: 12, color: AppColors.success),
+                            const Icon(Icons.call_rounded,
+                                size: 12, color: AppColors.success),
                             const SizedBox(width: 4),
                             Text(
                               "Resident: ${v.residentPhone}",
@@ -419,7 +457,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
     }
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           // If we're in a tab navigation (IndexedStack), switch to dashboard
           if (widget.onBackPressed != null) {
@@ -445,97 +483,112 @@ class _VisitorListScreenState extends State<VisitorListScreen>
               }
             },
           ),
-        title: Text("Visitor Logs", style: TextStyle(color: theme.colorScheme.onSurface, fontWeight: FontWeight.w900)),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.sync_rounded, color: theme.colorScheme.primary),
-            onPressed: () => _tabController.index == 0 ? _loadToday() : _loadByFlat(),
-          )
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(50),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: theme.colorScheme.primary,
-              indicatorWeight: 3,
-              labelColor: theme.colorScheme.primary,
-              unselectedLabelColor: theme.colorScheme.onSurface.withOpacity(0.6),
-              labelStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
-              tabs: const [Tab(text: "Today's List"), Tab(text: "Search by Flat")],
+          title: Text("Visitor Logs",
+              style: TextStyle(
+                  color: theme.colorScheme.onSurface,
+                  fontWeight: FontWeight.w900)),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: Icon(Icons.sync_rounded, color: theme.colorScheme.primary),
+              onPressed: () =>
+                  _tabController.index == 0 ? _loadToday() : _loadByFlat(),
+            )
+          ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(50),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: TabBar(
+                controller: _tabController,
+                indicatorColor: theme.colorScheme.primary,
+                indicatorWeight: 3,
+                labelColor: theme.colorScheme.primary,
+                unselectedLabelColor:
+                    theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                labelStyle:
+                    const TextStyle(fontWeight: FontWeight.w900, fontSize: 14),
+                tabs: const [
+                  Tab(text: "Today's List"),
+                  Tab(text: "Search by Flat")
+                ],
+              ),
             ),
           ),
         ),
-      ),
-      body: Stack(
-        children: [
-          TabBarView(
-          controller: _tabController,
+        body: Stack(
           children: [
-              // Tab 1: Today with Pull-to-Refresh
-              RefreshIndicator(
-                onRefresh: _loadToday,
-                color: theme.colorScheme.primary,
-                child: _error != null
-                  ? ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.only(top: 48, bottom: 120),
-                      children: [
-                        Center(
-                          child: ErrorRetryWidget(
-                            errorMessage: _error!,
-                            onRetry: () {
-                              setState(() => _error = null);
-                              _loadToday();
-                            },
-                            retryLabel: errorActionLabelFromError(_error),
-                          ),
-                        ),
-                      ],
-                    )
-                  : _today.isEmpty
-                  ? _buildEmptyState()
-                  : ListView.builder(
-                      padding: const EdgeInsets.only(top: 12, bottom: 120),
-                      itemCount: _today.length,
-                      itemBuilder: (context, index) => _buildCompactVisitorCard(_today[index]),
-                    ),
-              ),
-              // Tab 2: Search
-              Column(
-                children: [
-                  _buildCompactSearchBar(),
-                  Expanded(
-                    child: _error != null
-                      ? Center(
-                          child: SingleChildScrollView(
-                            child: ErrorRetryWidget(
-                              errorMessage: _error!,
-                              onRetry: () {
-                                setState(() => _error = null);
-                                _loadByFlat();
-                              },
-                              retryLabel: errorActionLabelFromError(_error),
+            TabBarView(
+              controller: _tabController,
+              children: [
+                // Tab 1: Today with Pull-to-Refresh
+                RefreshIndicator(
+                  onRefresh: _loadToday,
+                  color: theme.colorScheme.primary,
+                  child: _error != null
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.only(top: 48, bottom: 120),
+                          children: [
+                            Center(
+                              child: ErrorRetryWidget(
+                                errorMessage: _error!,
+                                onRetry: () {
+                                  setState(() => _error = null);
+                                  _loadToday();
+                                },
+                                retryLabel: errorActionLabelFromError(_error),
+                              ),
                             ),
-                          ),
+                          ],
                         )
-                      : _byFlat.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.builder(
-                          padding: const EdgeInsets.only(bottom: 120),
-                          itemCount: _byFlat.length,
-                          itemBuilder: (context, index) => _buildCompactVisitorCard(_byFlat[index]),
-                        ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _loading, message: "Updating logs..."),
-        ],
-      ),
+                      : _today.isEmpty
+                          ? _buildEmptyState()
+                          : ListView.builder(
+                              padding:
+                                  const EdgeInsets.only(top: 12, bottom: 120),
+                              itemCount: _today.length,
+                              itemBuilder: (context, index) =>
+                                  _buildCompactVisitorCard(_today[index]),
+                            ),
+                ),
+                // Tab 2: Search
+                Column(
+                  children: [
+                    _buildCompactSearchBar(),
+                    Expanded(
+                      child: _error != null
+                          ? Center(
+                              child: SingleChildScrollView(
+                                child: ErrorRetryWidget(
+                                  errorMessage: _error!,
+                                  onRetry: () {
+                                    setState(() => _error = null);
+                                    _loadByFlat();
+                                  },
+                                  retryLabel: errorActionLabelFromError(_error),
+                                ),
+                              ),
+                            )
+                          : _byFlat.isEmpty
+                              ? _buildEmptyState()
+                              : ListView.builder(
+                                  padding: const EdgeInsets.only(bottom: 120),
+                                  itemCount: _byFlat.length,
+                                  itemBuilder: (context, index) =>
+                                      _buildCompactVisitorCard(_byFlat[index]),
+                                ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            AppLoader.overlay(
+                showAfter: const Duration(milliseconds: 300),
+                show: _loading,
+                message: "Updating logs..."),
+          ],
+        ),
       ),
     );
   }
@@ -555,7 +608,9 @@ class _VisitorListScreenState extends State<VisitorListScreen>
         onSubmitted: (_) => _loadByFlat(),
         decoration: InputDecoration(
           hintText: "Enter Flat No (e.g. A-101)",
-          hintStyle: TextStyle(fontSize: 14, color: theme.colorScheme.onSurface.withOpacity(0.6)),
+          hintStyle: TextStyle(
+              fontSize: 14,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
           border: InputBorder.none,
           suffixIcon: IconButton(
             icon: Icon(Icons.search, color: theme.colorScheme.primary),
@@ -575,9 +630,10 @@ class _VisitorListScreenState extends State<VisitorListScreen>
           margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.04),
+            color: theme.colorScheme.primary.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: theme.colorScheme.primary.withOpacity(0.06)),
+            border: Border.all(
+                color: theme.colorScheme.primary.withValues(alpha: 0.06)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -598,7 +654,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   fontWeight: FontWeight.w500,
                 ),
               ),

@@ -13,7 +13,7 @@ class AppLoader extends StatelessWidget {
   final double? progress;
   final DateTime? startedAt;
   final Duration showAfter;
-  final _AppLoaderKind kind;
+  final AppLoaderKind kind;
 
   const AppLoader._({
     super.key,
@@ -28,7 +28,7 @@ class AppLoader extends StatelessWidget {
 
   /// Small spinner for buttons / inline areas. Use inside a button or row.
   static Widget inline({Key? key, double size = 20}) {
-    return AppLoader._(key: key, size: size, kind: _AppLoaderKind.inline);
+    return AppLoader._(key: key, size: size, kind: AppLoaderKind.inline);
   }
 
   /// Semi-transparent overlay + centered loader + optional one-line message.
@@ -48,7 +48,7 @@ class AppLoader extends StatelessWidget {
       progress: progress,
       startedAt: startedAt,
       showAfter: showAfter,
-      kind: _AppLoaderKind.overlay,
+      kind: AppLoaderKind.overlay,
     );
   }
 
@@ -63,24 +63,25 @@ class AppLoader extends StatelessWidget {
       key: key,
       show: show,
       message: message,
-      kind: _AppLoaderKind.fullscreen,
+      kind: AppLoaderKind.fullscreen,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     switch (kind) {
-      case _AppLoaderKind.inline:
+      case AppLoaderKind.inline:
         return SizedBox(
           width: size,
           height: size,
           child: _LoaderRing(size: size),
         );
-      case _AppLoaderKind.overlay:
+      case AppLoaderKind.overlay:
         if (!show) return const SizedBox.shrink();
         final overlayChild = Positioned.fill(
           child: Container(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.08),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08),
             child: Center(
               child: _OverlayCard(message: message, progress: progress),
             ),
@@ -94,7 +95,7 @@ class AppLoader extends StatelessWidget {
           return _DelayedOverlay(showAfter: showAfter, child: overlayChild);
         }
         return overlayChild;
-      case _AppLoaderKind.fullscreen:
+      case AppLoaderKind.fullscreen:
         if (!show) return const SizedBox.shrink();
         return Container(
           width: double.infinity,
@@ -115,7 +116,10 @@ class AppLoader extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -130,7 +134,7 @@ class AppLoader extends StatelessWidget {
   }
 }
 
-enum _AppLoaderKind { inline, overlay, fullscreen }
+enum AppLoaderKind { inline, overlay, fullscreen }
 
 class _DelayedOverlay extends StatefulWidget {
   final Duration showAfter;
@@ -188,7 +192,7 @@ class _OverlayCard extends StatelessWidget {
         border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
-            color: theme.colorScheme.onSurface.withOpacity(0.06),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.06),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -231,7 +235,8 @@ class _OverlayCard extends StatelessWidget {
                 value: progress!.clamp(0.0, 1.0),
                 minHeight: 6,
                 borderRadius: BorderRadius.circular(999),
-                backgroundColor: theme.colorScheme.primary.withOpacity(0.18),
+                backgroundColor:
+                    theme.colorScheme.primary.withValues(alpha: 0.18),
                 valueColor:
                     AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
               ),
@@ -242,7 +247,7 @@ class _OverlayCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurface.withOpacity(0.75),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.75),
               ),
             ),
           ],

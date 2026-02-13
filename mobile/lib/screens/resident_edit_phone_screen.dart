@@ -8,7 +8,7 @@ import '../widgets/app_text_field.dart';
 import '../ui/app_loader.dart';
 
 /// Edit Phone Number Screen
-/// 
+///
 /// Allows residents to update their phone number.
 /// Theme: Green/Success theme (matching resident login and dashboard)
 class ResidentEditPhoneScreen extends StatefulWidget {
@@ -26,7 +26,8 @@ class ResidentEditPhoneScreen extends StatefulWidget {
   });
 
   @override
-  State<ResidentEditPhoneScreen> createState() => _ResidentEditPhoneScreenState();
+  State<ResidentEditPhoneScreen> createState() =>
+      _ResidentEditPhoneScreenState();
 }
 
 class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
@@ -85,7 +86,8 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
               ),
               backgroundColor: AppColors.error,
               behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
               margin: const EdgeInsets.all(16),
               duration: const Duration(seconds: 4),
             ),
@@ -119,7 +121,8 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -134,7 +137,8 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -150,7 +154,8 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
             ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -207,7 +212,7 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: AppColors.success.withOpacity(0.12),
+                          color: AppColors.success.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: const Icon(
@@ -244,7 +249,7 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
                     ],
                   ),
                   const SizedBox(height: 28),
-                  
+
                   // Phone Input
                   AppTextField(
                     controller: _phoneController,
@@ -254,9 +259,9 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
                     keyboardType: TextInputType.phone,
                     validator: _validatePhone,
                   ),
-                  
+
                   const SizedBox(height: 32),
-                  
+
                   // Update Button
                   SizedBox(
                     width: double.infinity,
@@ -292,7 +297,9 @@ class _ResidentEditPhoneScreenState extends State<ResidentEditPhoneScreen> {
               ),
             ),
           ),
-          if (_isLoading) AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: true),
+          if (_isLoading)
+            AppLoader.overlay(
+                showAfter: const Duration(milliseconds: 300), show: true),
         ],
       ),
     );

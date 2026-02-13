@@ -117,7 +117,8 @@ class HowSentinelWorksScreen extends StatelessWidget {
               ),
               child: Row(
                 children: [
-                  const Icon(Icons.sos_rounded, color: AppColors.error, size: 28),
+                  const Icon(Icons.sos_rounded,
+                      color: AppColors.error, size: 28),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -187,7 +188,7 @@ class _StepCard extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.08),
+              color: theme.colorScheme.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Center(
@@ -245,7 +246,7 @@ class _TagChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withOpacity(0.08),
+        color: theme.colorScheme.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(

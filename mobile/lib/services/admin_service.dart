@@ -40,22 +40,24 @@ class AdminService {
         "pin": pin,
       });
 
-      AppLogger.i("Admin login request", data: {"society_id": societyId, "admin_id": adminId});
+      AppLogger.i("Admin login request",
+          data: {"society_id": societyId, "admin_id": adminId});
 
       final res = await http
           .post(
-            _uri("/api/admins/login"),
-            headers: {"Content-Type": "application/json"},
-            body: body,
-          )
+        _uri("/api/admins/login"),
+        headers: {"Content-Type": "application/json"},
+        body: body,
+      )
           .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              throw TimeoutException("Request timeout after 10 seconds");
-            },
-          );
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException("Request timeout after 10 seconds");
+        },
+      );
 
-      AppLogger.i("Admin login response", data: {"status": res.statusCode, "body": res.body});
+      AppLogger.i("Admin login response",
+          data: {"status": res.statusCode, "body": res.body});
 
       if (res.statusCode == 200) {
         return ApiResult.success(jsonDecode(res.body) as Map<String, dynamic>);
@@ -63,10 +65,12 @@ class AdminService {
       return ApiResult.failure("Login failed: ${res.statusCode} ${res.body}");
     } on TimeoutException catch (e) {
       AppLogger.e("Admin login timeout error", error: e);
-      return ApiResult.failure("Request timeout. Please check your connection and try again.");
+      return ApiResult.failure(
+          "Request timeout. Please check your connection and try again.");
     } on SocketException catch (e) {
       AppLogger.e("Admin login socket error", error: e);
-      return ApiResult.failure("Cannot connect to server. Please check your network connection.");
+      return ApiResult.failure(
+          "Cannot connect to server. Please check your network connection.");
     } catch (e) {
       AppLogger.e("Admin login error", error: e);
       return ApiResult.failure("Connection error: ${e.toString()}");
@@ -80,7 +84,7 @@ class AdminService {
       // Use Firestore for stats
       final firestore = FirestoreService();
       final stats = await firestore.getAdminStats(societyId: societyId);
-      
+
       AppLogger.i("Admin stats fetched from Firestore", data: stats);
       return ApiResult.success(stats);
     } catch (e, stackTrace) {
@@ -94,30 +98,36 @@ class AdminService {
   }) async {
     try {
       final uri = _uri("/api/admins/residents", {"society_id": societyId});
-      AppLogger.i("Admin getResidents request", data: {"society_id": societyId, "uri": uri.toString()});
-      
-      final res = await http.get(uri).timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              throw TimeoutException("Request timeout after 10 seconds");
-            },
-          );
+      AppLogger.i("Admin getResidents request",
+          data: {"society_id": societyId, "uri": uri.toString()});
 
-      AppLogger.i("Admin getResidents response", data: {"status": res.statusCode, "body_length": res.body.length});
+      final res = await http.get(uri).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException("Request timeout after 10 seconds");
+        },
+      );
+
+      AppLogger.i("Admin getResidents response",
+          data: {"status": res.statusCode, "body_length": res.body.length});
 
       if (res.statusCode == 200) {
         return ApiResult.success(jsonDecode(res.body) as List<dynamic>);
       }
-      
+
       // Log the full error response for debugging
-      AppLogger.e("Admin getResidents failed", data: {"status": res.statusCode, "body": res.body});
-      return ApiResult.failure("Failed to load residents: ${res.statusCode} ${res.body.length > 100 ? res.body.substring(0, 100) : res.body}");
+      AppLogger.e("Admin getResidents failed",
+          data: {"status": res.statusCode, "body": res.body});
+      return ApiResult.failure(
+          "Failed to load residents: ${res.statusCode} ${res.body.length > 100 ? res.body.substring(0, 100) : res.body}");
     } on TimeoutException catch (e) {
       AppLogger.e("Admin getResidents timeout error", error: e);
-      return ApiResult.failure("Request timeout. Please check your connection and try again.");
+      return ApiResult.failure(
+          "Request timeout. Please check your connection and try again.");
     } on SocketException catch (e) {
       AppLogger.e("Admin getResidents socket error", error: e);
-      return ApiResult.failure("Cannot connect to server. Please check your network connection.");
+      return ApiResult.failure(
+          "Cannot connect to server. Please check your network connection.");
     } catch (e) {
       AppLogger.e("Admin getResidents error", error: e);
       return ApiResult.failure("Connection error: ${e.toString()}");
@@ -129,30 +139,36 @@ class AdminService {
   }) async {
     try {
       final uri = _uri("/api/admins/guards", {"society_id": societyId});
-      AppLogger.i("Admin getGuards request", data: {"society_id": societyId, "uri": uri.toString()});
-      
-      final res = await http.get(uri).timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              throw TimeoutException("Request timeout after 10 seconds");
-            },
-          );
+      AppLogger.i("Admin getGuards request",
+          data: {"society_id": societyId, "uri": uri.toString()});
 
-      AppLogger.i("Admin getGuards response", data: {"status": res.statusCode, "body_length": res.body.length});
+      final res = await http.get(uri).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException("Request timeout after 10 seconds");
+        },
+      );
+
+      AppLogger.i("Admin getGuards response",
+          data: {"status": res.statusCode, "body_length": res.body.length});
 
       if (res.statusCode == 200) {
         return ApiResult.success(jsonDecode(res.body) as List<dynamic>);
       }
-      
+
       // Log the full error response for debugging
-      AppLogger.e("Admin getGuards failed", data: {"status": res.statusCode, "body": res.body});
-      return ApiResult.failure("Failed to load guards: ${res.statusCode} ${res.body.length > 100 ? res.body.substring(0, 100) : res.body}");
+      AppLogger.e("Admin getGuards failed",
+          data: {"status": res.statusCode, "body": res.body});
+      return ApiResult.failure(
+          "Failed to load guards: ${res.statusCode} ${res.body.length > 100 ? res.body.substring(0, 100) : res.body}");
     } on TimeoutException catch (e) {
       AppLogger.e("Admin getGuards timeout error", error: e);
-      return ApiResult.failure("Request timeout. Please check your connection and try again.");
+      return ApiResult.failure(
+          "Request timeout. Please check your connection and try again.");
     } on SocketException catch (e) {
       AppLogger.e("Admin getGuards socket error", error: e);
-      return ApiResult.failure("Cannot connect to server. Please check your network connection.");
+      return ApiResult.failure(
+          "Cannot connect to server. Please check your network connection.");
     } catch (e) {
       AppLogger.e("Admin getGuards error", error: e);
       return ApiResult.failure("Connection error: ${e.toString()}");
@@ -251,29 +267,33 @@ class AdminService {
 
       final res = await http
           .post(
-            _uri("/api/admins/register"),
-            headers: {"Content-Type": "application/json"},
-            body: body,
-          )
+        _uri("/api/admins/register"),
+        headers: {"Content-Type": "application/json"},
+        body: body,
+      )
           .timeout(
-            const Duration(seconds: 10),
-            onTimeout: () {
-              throw TimeoutException("Request timeout after 10 seconds");
-            },
-          );
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw TimeoutException("Request timeout after 10 seconds");
+        },
+      );
 
-      AppLogger.i("Admin registration response", data: {"status": res.statusCode, "body": res.body});
+      AppLogger.i("Admin registration response",
+          data: {"status": res.statusCode, "body": res.body});
 
       if (res.statusCode == 200) {
         return ApiResult.success(jsonDecode(res.body) as Map<String, dynamic>);
       }
-      return ApiResult.failure("Registration failed: ${res.statusCode} ${res.body}");
+      return ApiResult.failure(
+          "Registration failed: ${res.statusCode} ${res.body}");
     } on TimeoutException catch (e) {
       AppLogger.e("Admin registration timeout error", error: e);
-      return ApiResult.failure("Request timeout. Please check your connection and try again.");
+      return ApiResult.failure(
+          "Request timeout. Please check your connection and try again.");
     } on SocketException catch (e) {
       AppLogger.e("Admin registration socket error", error: e);
-      return ApiResult.failure("Cannot connect to server. Please check your network connection.");
+      return ApiResult.failure(
+          "Cannot connect to server. Please check your network connection.");
     } catch (e) {
       AppLogger.e("Admin registration error", error: e);
       return ApiResult.failure("Connection error: ${e.toString()}");

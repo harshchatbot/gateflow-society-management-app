@@ -17,8 +17,10 @@ class _PoweredByFooterState extends State<PoweredByFooter> {
   @override
   void initState() {
     super.initState();
-    _techFiRecognizer = TapGestureRecognizer()..onTap = () => _launchURL('https://www.techfilabs.com/');
-    _ttfRecognizer = TapGestureRecognizer()..onTap = () => _launchURL('https://thetechnologyfiction.com/');
+    _techFiRecognizer = TapGestureRecognizer()
+      ..onTap = () => _launchURL('https://www.techfilabs.com/');
+    _ttfRecognizer = TapGestureRecognizer()
+      ..onTap = () => _launchURL('https://thetechnologyfiction.com/');
   }
 
   @override
@@ -32,7 +34,7 @@ class _PoweredByFooterState extends State<PoweredByFooter> {
     final Uri uri = Uri.parse(url);
     // Directly try to launch. often canLaunchUrl returns false on newer SDKs due to visibility
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
-       debugPrint('Could not launch $url');
+      debugPrint('Could not launch $url');
     }
   }
 
@@ -43,17 +45,18 @@ class _PoweredByFooterState extends State<PoweredByFooter> {
       mainAxisSize: MainAxisSize.min,
       children: [
         Divider(
-          color: onSurface.withOpacity(0.05),
+          color: onSurface.withValues(alpha: 0.05),
           indent: 50,
           endIndent: 50,
         ),
         Padding(
-          padding: const EdgeInsets.only(top: 8, bottom: 24, left: 20, right: 20),
+          padding:
+              const EdgeInsets.only(top: 8, bottom: 24, left: 20, right: 20),
           child: RichText(
             textAlign: TextAlign.center,
             text: TextSpan(
               style: TextStyle(
-                color: onSurface.withOpacity(0.5),
+                color: onSurface.withValues(alpha: 0.5),
                 fontSize: 10,
                 letterSpacing: 0.5,
               ),
@@ -63,7 +66,7 @@ class _PoweredByFooterState extends State<PoweredByFooter> {
                   text: 'TECHFI LABS',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: onSurface.withOpacity(0.8),
+                    color: onSurface.withValues(alpha: 0.8),
                     decoration: TextDecoration.underline,
                   ),
                   recognizer: _techFiRecognizer,
@@ -73,7 +76,7 @@ class _PoweredByFooterState extends State<PoweredByFooter> {
                   text: 'THE TECHNOLOGY FICTION',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: onSurface.withOpacity(0.8),
+                    color: onSurface.withValues(alpha: 0.8),
                     decoration: TextDecoration.underline,
                   ),
                   recognizer: _ttfRecognizer,
@@ -84,7 +87,6 @@ class _PoweredByFooterState extends State<PoweredByFooter> {
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-
               ],
             ),
           ),

@@ -1,6 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../core/app_logger.dart';
 import '../core/storage.dart';
@@ -9,7 +8,6 @@ import '../services/firestore_service.dart';
 import '../ui/app_loader.dart';
 import 'admin_login_screen.dart';
 import 'admin_pending_approval_screen.dart';
-import 'admin_onboarding_screen.dart';
 
 class AdminSignupScreen extends StatefulWidget {
   final String societyId;
@@ -168,11 +166,11 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surface.withOpacity(0.9),
+              color: theme.colorScheme.surface.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -204,7 +202,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    theme.colorScheme.primary.withOpacity(0.15),
+                    theme.colorScheme.primary.withValues(alpha: 0.15),
                     theme.scaffoldBackgroundColor,
                     theme.scaffoldBackgroundColor,
                   ],
@@ -228,7 +226,10 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Submitting request…"),
+          AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
+              show: _isLoading,
+              message: "Submitting request…"),
         ],
       ),
     );
@@ -246,7 +247,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => Container(
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.1),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(
@@ -272,7 +273,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
           "Super Admin will review and approve your request",
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             fontWeight: FontWeight.w600,
             fontSize: 15,
           ),
@@ -286,9 +287,10 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: t.colorScheme.primary.withOpacity(0.10),
+        color: t.colorScheme.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: t.colorScheme.primary.withOpacity(0.18)),
+        border:
+            Border.all(color: t.colorScheme.primary.withValues(alpha: 0.18)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -296,7 +298,9 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
           Icon(Icons.apartment_rounded, size: 16, color: t.colorScheme.primary),
           const SizedBox(width: 8),
           Text(
-            widget.societyName.isNotEmpty ? widget.societyName : widget.societyId,
+            widget.societyName.isNotEmpty
+                ? widget.societyName
+                : widget.societyId,
             style: TextStyle(
               color: t.colorScheme.primary,
               fontWeight: FontWeight.w900,
@@ -315,10 +319,10 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 30,
             offset: const Offset(0, 15),
           ),
@@ -334,7 +338,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -394,7 +398,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w800,
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 letterSpacing: 0.2,
               ),
             ),
@@ -407,10 +411,11 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
                 border: Border.all(color: theme.dividerColor),
               ),
               child: DropdownButtonFormField<String>(
-                value: _selectedRole,
+                initialValue: _selectedRole,
                 decoration: const InputDecoration(
                   border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
                 items: _roles
                     .map((role) => DropdownMenuItem<String>(
@@ -462,14 +467,11 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
               "We’ll notify you once Super Admin approves your access.",
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w600,
                 fontSize: 12,
               ),
             ),
-
-           
-            
           ],
         ),
       ),
@@ -483,10 +485,11 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.3)),
+        border:
+            Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.3)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 30,
             offset: const Offset(0, 15),
           ),
@@ -498,7 +501,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: theme.colorScheme.primary.withOpacity(0.15),
+              color: theme.colorScheme.primary.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(
@@ -522,7 +525,7 @@ class _AdminSignupScreenState extends State<AdminSignupScreen> {
             "Your request has been sent to the Super Admin for approval.",
             style: TextStyle(
               fontSize: 15,
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               height: 1.5,
             ),
             textAlign: TextAlign.center,
@@ -579,14 +582,9 @@ class _PremiumField extends StatelessWidget {
   final String label;
   final String hint;
   final IconData icon;
-  final bool obscureText;
   final TextInputAction textInputAction;
-  final ValueChanged<String>? onSubmitted;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
-  final Widget? suffixIcon;
-  final List<TextInputFormatter>? inputFormatters;
-  final int? maxLength;
   final bool enabled;
   final bool readOnly;
 
@@ -595,14 +593,9 @@ class _PremiumField extends StatelessWidget {
     required this.label,
     required this.hint,
     required this.icon,
-    this.obscureText = false,
     required this.textInputAction,
-    this.onSubmitted,
     this.keyboardType,
     this.validator,
-    this.suffixIcon,
-    this.inputFormatters,
-    this.maxLength,
     this.enabled = true,
     this.readOnly = false,
   });
@@ -618,7 +611,7 @@ class _PremiumField extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             letterSpacing: 0.2,
           ),
         ),
@@ -630,7 +623,7 @@ class _PremiumField extends StatelessWidget {
             border: Border.all(color: theme.dividerColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -638,13 +631,12 @@ class _PremiumField extends StatelessWidget {
           ),
           child: TextFormField(
             controller: controller,
-            obscureText: obscureText,
+            obscureText: false,
             keyboardType: keyboardType,
             textInputAction: textInputAction,
-            onFieldSubmitted: onSubmitted,
             validator: validator,
-            inputFormatters: inputFormatters,
-            maxLength: maxLength,
+            inputFormatters: null,
+            maxLength: null,
             enabled: enabled,
             readOnly: readOnly,
             style: TextStyle(
@@ -657,20 +649,21 @@ class _PremiumField extends StatelessWidget {
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.15),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: theme.colorScheme.primary, size: 20),
               ),
-              suffixIcon: suffixIcon,
+              suffixIcon: null,
               hintText: hint,
               hintStyle: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             ),
           ),
         ),

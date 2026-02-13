@@ -223,11 +223,11 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: cs.surface.withOpacity(0.92),
+              color: cs.surface.withValues(alpha: 0.92),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: cs.onSurface.withOpacity(0.08),
+                  color: cs.onSurface.withValues(alpha: 0.08),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -261,7 +261,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    cs.primary.withOpacity(0.12),
+                    cs.primary.withValues(alpha: 0.12),
                     theme.scaffoldBackgroundColor,
                     theme.scaffoldBackgroundColor,
                   ],
@@ -283,8 +283,10 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), 
-              show: _isLoading, message: "Verifying Credentials…"),
+          AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
+              show: _isLoading,
+              message: "Verifying Credentials…"),
         ],
       ),
     );
@@ -302,7 +304,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => Container(
               decoration: BoxDecoration(
-                color: cs.primary.withOpacity(0.1),
+                color: cs.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(
@@ -327,7 +329,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
         Text(
           "Secure Society Access",
           style: TextStyle(
-            color: cs.onSurface.withOpacity(0.7),
+            color: cs.onSurface.withValues(alpha: 0.7),
             fontWeight: FontWeight.w600,
             fontSize: 15,
           ),
@@ -343,10 +345,10 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
       decoration: BoxDecoration(
         color: cs.surface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.75)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.75)),
         boxShadow: [
           BoxShadow(
-            color: cs.onSurface.withOpacity(0.06),
+            color: cs.onSurface.withValues(alpha: 0.06),
             blurRadius: 30,
             offset: const Offset(0, 15),
           ),
@@ -362,7 +364,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: cs.onSurface.withOpacity(0.7),
+                color: cs.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -398,7 +400,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
                   _obscurePassword
                       ? Icons.visibility_outlined
                       : Icons.visibility_off_outlined,
-                  color: cs.onSurface.withOpacity(0.65),
+                  color: cs.onSurface.withValues(alpha: 0.65),
                   size: 20,
                 ),
                 onPressed: () {
@@ -471,7 +473,7 @@ class _ResidentLoginScreenState extends State<ResidentLoginScreen> {
                 Text(
                   "Don't have an account? ",
                   style: TextStyle(
-                    color: cs.onSurface.withOpacity(0.75),
+                    color: cs.onSurface.withValues(alpha: 0.75),
                     fontSize: 14,
                   ),
                 ),
@@ -573,7 +575,7 @@ class _PremiumField extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            color: cs.onSurface.withOpacity(0.75),
+            color: cs.onSurface.withValues(alpha: 0.75),
             letterSpacing: 0.2,
           ),
         ),
@@ -585,7 +587,7 @@ class _PremiumField extends StatelessWidget {
             border: Border.all(color: theme.dividerColor),
             boxShadow: [
               BoxShadow(
-                color: cs.onSurface.withOpacity(0.03),
+                color: cs.onSurface.withValues(alpha: 0.03),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -608,7 +610,7 @@ class _PremiumField extends StatelessWidget {
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: cs.primary.withOpacity(0.12),
+                  color: cs.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: cs.primary, size: 20),
@@ -616,7 +618,7 @@ class _PremiumField extends StatelessWidget {
               suffixIcon: suffixIcon,
               hintText: hint,
               hintStyle: TextStyle(
-                color: cs.onSurface.withOpacity(0.55),
+                color: cs.onSurface.withValues(alpha: 0.55),
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),

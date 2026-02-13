@@ -248,7 +248,6 @@ class FirestoreService {
       final effectiveCreatedByUid = authUid;
 
       final normalizedCode = code.trim().toUpperCase();
-      final nameLower = name.trim().toLowerCase();
 
       AppLogger.i('createSociety UID check', data: {
         'authUid': authUid,
@@ -280,18 +279,6 @@ class FirestoreService {
         'createdAt': now,
         'createdByUid': effectiveCreatedByUid,
         'modules': defaultSocietyModules,
-      };
-
-      final publicSocietyData = {
-        'name': name,
-        'nameLower': nameLower,
-        'code': normalizedCode,
-        'city': city,
-        'state': state,
-        'active': true,
-        'createdAt': now,
-        'updatedAt': now,
-        'createdByUid': effectiveCreatedByUid,
       };
 
       AppLogger.i('Writing societies doc',
@@ -334,7 +321,8 @@ class FirestoreService {
   }) async {
     try {
       final now = FieldValue.serverTimestamp();
-      final requestRef = _firestore.collection('society_creation_requests').doc();
+      final requestRef =
+          _firestore.collection('society_creation_requests').doc();
       final code = proposedCode.trim().toUpperCase();
       await requestRef.set({
         'requestId': requestRef.id,
@@ -377,7 +365,8 @@ class FirestoreService {
     final effectiveUid = uid ?? currentUid;
     if (effectiveUid == null || effectiveUid.isEmpty) return null;
     try {
-      final snap = await _firestore.collection('members').doc(effectiveUid).get();
+      final snap =
+          await _firestore.collection('members').doc(effectiveUid).get();
       if (!snap.exists) return null;
       final data = snap.data() ?? <String, dynamic>{};
       return {
@@ -385,7 +374,8 @@ class FirestoreService {
         ...data,
       };
     } catch (e, stackTrace) {
-      AppLogger.e('Error loading root member pointer', error: e, stackTrace: stackTrace);
+      AppLogger.e('Error loading root member pointer',
+          error: e, stackTrace: stackTrace);
       return null;
     }
   }
@@ -394,8 +384,10 @@ class FirestoreService {
     final effectiveUid = uid ?? currentUid;
     if (effectiveUid == null || effectiveUid.isEmpty) return null;
     try {
-      final snap =
-          await _firestore.collection('platform_admins').doc(effectiveUid).get();
+      final snap = await _firestore
+          .collection('platform_admins')
+          .doc(effectiveUid)
+          .get();
       if (!snap.exists) return null;
       final data = snap.data() ?? <String, dynamic>{};
       return {
@@ -417,14 +409,20 @@ class FirestoreService {
   }) async {
     try {
       final pointer = await getRootMemberPointer(uid: uid);
-      final requestId = pointer?['pendingSocietyRequestId']?.toString().trim() ?? '';
+      final requestId =
+          pointer?['pendingSocietyRequestId']?.toString().trim() ?? '';
       if (requestId.isEmpty) return null;
 
-      final snap = await _firestore.collection('society_creation_requests').doc(requestId).get();
+      final snap = await _firestore
+          .collection('society_creation_requests')
+          .doc(requestId)
+          .get();
       if (!snap.exists) return null;
       final data = snap.data() ?? <String, dynamic>{};
       if ((data['requestedByUid'] ?? '').toString() != uid) return null;
-      if ((data['status'] ?? '').toString().toUpperCase() != 'PENDING') return null;
+      if ((data['status'] ?? '').toString().toUpperCase() != 'PENDING') {
+        return null;
+      }
       return {
         'id': snap.id,
         ...data,
@@ -567,9 +565,8 @@ class FirestoreService {
           .collection('join_requests')
           .doc(uid);
 
-      final CollectionReference _joinRequestIndexRef =
-      FirebaseFirestore.instance.collection('join_request_index');
-    
+      final CollectionReference joinRequestIndexRef =
+          FirebaseFirestore.instance.collection('join_request_index');
 
       await ref.set({
         'uid': uid,
@@ -588,7 +585,7 @@ class FirestoreService {
       }, SetOptions(merge: true));
 
       // ✅ Write pointer for OTP login (resident self GET)
-      await _joinRequestIndexRef.doc(uid).set({
+      await joinRequestIndexRef.doc(uid).set({
         'uid': uid,
         'societyId': societyId,
         'requestedRole': 'resident',
@@ -597,7 +594,6 @@ class FirestoreService {
         'phone': phoneE164,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-
 
       AppLogger.i('Resident join request created', data: {
         'uid': uid,
@@ -1111,14 +1107,16 @@ class FirestoreService {
           await _firestore.collection('platform_admins').doc(uid).get();
       if (platformAdminDoc.exists) {
         final platform = platformAdminDoc.data() ?? <String, dynamic>{};
-        final role =
-            (platform['role'] ?? platform['systemRole'] ?? '').toString().toLowerCase();
+        final role = (platform['role'] ?? platform['systemRole'] ?? '')
+            .toString()
+            .toLowerCase();
         if (role == 'super_admin' && platform['active'] == true) {
           return {
             'uid': uid,
             'societyId': 'platform',
             'systemRole': 'super_admin',
-            'societyRole': (platform['societyRole'] ?? 'SUPER_ADMIN').toString(),
+            'societyRole':
+                (platform['societyRole'] ?? 'SUPER_ADMIN').toString(),
             'active': true,
             'name': (platform['name'] ?? 'Platform Admin').toString(),
             ...platform,
@@ -1136,7 +1134,8 @@ class FirestoreService {
 
       final pointer = pointerDoc.data() ?? {};
 
-      final pointerRole = (pointer['systemRole'] ?? '').toString().toLowerCase();
+      final pointerRole =
+          (pointer['systemRole'] ?? '').toString().toLowerCase();
       final pointerActive = pointer['active'] == true;
       final pointerSocietyId = pointer['societyId']?.toString();
 
@@ -1907,14 +1906,16 @@ class FirestoreService {
         final t = (d['violationType'] ?? 'OTHER').toString().toUpperCase();
         byType[t] = (byType[t] ?? 0) + 1;
         final flat = (d['flatNo'] ?? '').toString();
-        if (flat.isNotEmpty)
+        if (flat.isNotEmpty) {
           flatCountThisMonth[flat] = (flatCountThisMonth[flat] ?? 0) + 1;
+        }
       }
       for (final doc in prevSnapshot.docs) {
         final d = doc.data() as Map<String, dynamic>? ?? {};
         final flat = (d['flatNo'] ?? '').toString();
-        if (flat.isNotEmpty)
+        if (flat.isNotEmpty) {
           flatCountPrevMonth[flat] = (flatCountPrevMonth[flat] ?? 0) + 1;
+        }
       }
 
       final repeatedThis = flatCountThisMonth.values.where((c) => c > 1).length;
@@ -2070,7 +2071,9 @@ class FirestoreService {
         }
         final dayStart = DateTime(date.year, date.month, date.day);
         if (dayStart.isBefore(sevenDaysAgoStart) ||
-            dayStart.isAfter(todayStart)) continue;
+            dayStart.isAfter(todayStart)) {
+          continue;
+        }
         final index = dayStart.difference(sevenDaysAgoStart).inDays;
         if (index >= 0 && index < 7) {
           counts[index]++;
@@ -2592,7 +2595,8 @@ class FirestoreService {
     final existingData = existing.data() ?? <String, dynamic>{};
     final existingRole =
         (existingData['systemRole'] ?? '').toString().toLowerCase();
-    if (existingRole == 'super_admin' && systemRole.toLowerCase() != 'super_admin') {
+    if (existingRole == 'super_admin' &&
+        systemRole.toLowerCase() != 'super_admin') {
       // Never downgrade platform super admin from client-side pointer writes.
       return;
     }
@@ -2635,7 +2639,8 @@ class FirestoreService {
     final existingData = existing.data() ?? <String, dynamic>{};
     final existingRole =
         (existingData['systemRole'] ?? '').toString().toLowerCase();
-    if (existingRole == 'super_admin' && systemRole.toLowerCase() != 'super_admin') {
+    if (existingRole == 'super_admin' &&
+        systemRole.toLowerCase() != 'super_admin') {
       // Guard: don't overwrite platform super admin with recovered admin pointer.
       return;
     }
@@ -2760,7 +2765,8 @@ class FirestoreService {
   }
 
   Future<Map<String, dynamic>?> getJoinRequestIndex(String uid) async {
-    final doc = await _firestore.collection('join_request_index').doc(uid).get();
+    final doc =
+        await _firestore.collection('join_request_index').doc(uid).get();
     if (!doc.exists) return null;
     return Map<String, dynamic>.from(doc.data() as Map);
   }

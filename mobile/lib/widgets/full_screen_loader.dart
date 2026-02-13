@@ -9,7 +9,7 @@ class FullScreenLoader extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Container(
-      color: theme.scaffoldBackgroundColor.withOpacity(0.9),
+      color: theme.scaffoldBackgroundColor.withValues(alpha: 0.9),
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -19,7 +19,8 @@ class FullScreenLoader extends StatelessWidget {
               height: 40,
               child: CircularProgressIndicator(
                 strokeWidth: 3,
-                valueColor: AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
+                valueColor:
+                    AlwaysStoppedAnimation<Color>(theme.colorScheme.primary),
               ),
             ),
             if (message != null) ...[

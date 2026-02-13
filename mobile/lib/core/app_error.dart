@@ -18,7 +18,8 @@ class AppError implements Exception {
         e.type == DioExceptionType.sendTimeout ||
         e.type == DioExceptionType.receiveTimeout) {
       return AppError(
-        userMessage: 'Server took too long to respond. Check network and retry.',
+        userMessage:
+            'Server took too long to respond. Check network and retry.',
         technicalMessage: 'Timeout: ${e.message}',
       );
     }

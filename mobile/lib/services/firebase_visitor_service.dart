@@ -27,7 +27,10 @@ class FirebaseVisitorService {
   String? get currentUid => _auth.currentUser?.uid;
 
   CollectionReference _visitorsRef(String societyId) {
-    return _firestore.collection('societies').doc(societyId).collection('visitors');
+    return _firestore
+        .collection('societies')
+        .doc(societyId)
+        .collection('visitors');
   }
 
   Reference _visitorPhotoRef(String societyId, String visitorId) {
@@ -74,7 +77,8 @@ class FirebaseVisitorService {
         "flatNo": flatNo.trim().toUpperCase(),
         "error": e.toString(),
       });
-      AppLogger.d("Visitor notify stack", data: {"stack": stackTrace.toString()});
+      AppLogger.d("Visitor notify stack",
+          data: {"stack": stackTrace.toString()});
     }
   }
 
@@ -105,7 +109,8 @@ class FirebaseVisitorService {
           userMessage: "Please log in to create visitor entries",
           technicalMessage: "FirebaseAuth.currentUser is null",
         );
-        AppLogger.e("createVisitorWithPhoto: No authenticated user", error: err.technicalMessage);
+        AppLogger.e("createVisitorWithPhoto: No authenticated user",
+            error: err.technicalMessage);
         return Result.failure(err);
       }
 
@@ -194,16 +199,28 @@ class FirebaseVisitorService {
         if (visitorKey != null && visitorKey.trim().isNotEmpty)
           "visitor_key": visitorKey.trim(),
         if (isAutoApproved) "approvedAt": now,
-        if (isAutoApproved && approvedBy != null && approvedBy.trim().isNotEmpty)
+        if (isAutoApproved &&
+            approvedBy != null &&
+            approvedBy.trim().isNotEmpty)
           "approved_by": approvedBy.trim(),
-        if (isAutoApproved && matchedFavouriteId != null && matchedFavouriteId.trim().isNotEmpty)
+        if (isAutoApproved &&
+            matchedFavouriteId != null &&
+            matchedFavouriteId.trim().isNotEmpty)
           "matchedFavouriteId": matchedFavouriteId.trim(),
-        if (isAutoApproved && matchedPreapprovalId != null && matchedPreapprovalId.trim().isNotEmpty)
+        if (isAutoApproved &&
+            matchedPreapprovalId != null &&
+            matchedPreapprovalId.trim().isNotEmpty)
           "matchedPreapprovalId": matchedPreapprovalId.trim(),
-        if (visitorName != null && visitorName.isNotEmpty) "visitor_name": visitorName.trim(),
-        if (vehicleNumber != null && vehicleNumber.isNotEmpty) "vehicle_number": vehicleNumber.trim(),
-        if (isDelivery && deliveryPartner != null && deliveryPartner.isNotEmpty) "delivery_partner": deliveryPartner.trim(),
-        if (isDelivery && deliveryPartnerOther != null && deliveryPartnerOther.isNotEmpty) "delivery_partner_other": deliveryPartnerOther.trim(),
+        if (visitorName != null && visitorName.isNotEmpty)
+          "visitor_name": visitorName.trim(),
+        if (vehicleNumber != null && vehicleNumber.isNotEmpty)
+          "vehicle_number": vehicleNumber.trim(),
+        if (isDelivery && deliveryPartner != null && deliveryPartner.isNotEmpty)
+          "delivery_partner": deliveryPartner.trim(),
+        if (isDelivery &&
+            deliveryPartnerOther != null &&
+            deliveryPartnerOther.isNotEmpty)
+          "delivery_partner_other": deliveryPartnerOther.trim(),
       };
       if (typePayload != null && typePayload.isNotEmpty) {
         visitorData.addAll(typePayload);
@@ -248,22 +265,30 @@ class FirebaseVisitorService {
         createdAt: createdAt,
         guardId: uid,
         photoUrl: photoUrl,
-        residentPhone: residentPhone?.trim().isNotEmpty == true ? residentPhone!.trim() : null,
-        cab: createdData['cab'] is Map ? Map<String, dynamic>.from(createdData['cab'] as Map) : null,
-        delivery: createdData['delivery'] is Map ? Map<String, dynamic>.from(createdData['delivery'] as Map) : null,
+        residentPhone: residentPhone?.trim().isNotEmpty == true
+            ? residentPhone!.trim()
+            : null,
+        cab: createdData['cab'] is Map
+            ? Map<String, dynamic>.from(createdData['cab'] as Map)
+            : null,
+        delivery: createdData['delivery'] is Map
+            ? Map<String, dynamic>.from(createdData['delivery'] as Map)
+            : null,
       );
 
       return Result.success(visitor);
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("createVisitorWithPhoto FirebaseException", error: err.technicalMessage);
+      AppLogger.e("createVisitorWithPhoto FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, stackTrace) {
       final err = AppError(
         userMessage: "Failed to create visitor entry",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("createVisitorWithPhoto unknown error", error: err.technicalMessage, stackTrace: stackTrace);
+      AppLogger.e("createVisitorWithPhoto unknown error",
+          error: err.technicalMessage, stackTrace: stackTrace);
       return Result.failure(err);
     }
   }
@@ -293,7 +318,8 @@ class FirebaseVisitorService {
           userMessage: "Please log in to create visitor entries",
           technicalMessage: "FirebaseAuth.currentUser is null",
         );
-        AppLogger.e("createVisitor: No authenticated user", error: err.technicalMessage);
+        AppLogger.e("createVisitor: No authenticated user",
+            error: err.technicalMessage);
         return Result.failure(err);
       }
 
@@ -325,17 +351,30 @@ class FirebaseVisitorService {
         if (visitorKey != null && visitorKey.trim().isNotEmpty)
           "visitor_key": visitorKey.trim(),
         if (isAutoApproved) "approvedAt": now,
-        if (isAutoApproved && approvedBy != null && approvedBy.trim().isNotEmpty)
+        if (isAutoApproved &&
+            approvedBy != null &&
+            approvedBy.trim().isNotEmpty)
           "approved_by": approvedBy.trim(),
-        if (isAutoApproved && matchedFavouriteId != null && matchedFavouriteId.trim().isNotEmpty)
+        if (isAutoApproved &&
+            matchedFavouriteId != null &&
+            matchedFavouriteId.trim().isNotEmpty)
           "matchedFavouriteId": matchedFavouriteId.trim(),
-        if (isAutoApproved && matchedPreapprovalId != null && matchedPreapprovalId.trim().isNotEmpty)
+        if (isAutoApproved &&
+            matchedPreapprovalId != null &&
+            matchedPreapprovalId.trim().isNotEmpty)
           "matchedPreapprovalId": matchedPreapprovalId.trim(),
-        if (residentPhone != null && residentPhone.isNotEmpty) "resident_phone": residentPhone.trim(),
-        if (visitorName != null && visitorName.isNotEmpty) "visitor_name": visitorName.trim(),
-        if (vehicleNumber != null && vehicleNumber.isNotEmpty) "vehicle_number": vehicleNumber.trim(),
-        if (isDelivery && deliveryPartner != null && deliveryPartner.isNotEmpty) "delivery_partner": deliveryPartner.trim(),
-        if (isDelivery && deliveryPartnerOther != null && deliveryPartnerOther.isNotEmpty) "delivery_partner_other": deliveryPartnerOther.trim(),
+        if (residentPhone != null && residentPhone.isNotEmpty)
+          "resident_phone": residentPhone.trim(),
+        if (visitorName != null && visitorName.isNotEmpty)
+          "visitor_name": visitorName.trim(),
+        if (vehicleNumber != null && vehicleNumber.isNotEmpty)
+          "vehicle_number": vehicleNumber.trim(),
+        if (isDelivery && deliveryPartner != null && deliveryPartner.isNotEmpty)
+          "delivery_partner": deliveryPartner.trim(),
+        if (isDelivery &&
+            deliveryPartnerOther != null &&
+            deliveryPartnerOther.isNotEmpty)
+          "delivery_partner_other": deliveryPartnerOther.trim(),
       };
       if (typePayload != null && typePayload.isNotEmpty) {
         visitorData.addAll(typePayload);
@@ -379,22 +418,30 @@ class FirebaseVisitorService {
         status: normalizedStatus,
         createdAt: createdAt,
         guardId: uid,
-        residentPhone: residentPhone?.trim().isNotEmpty == true ? residentPhone!.trim() : null,
-        cab: createdData['cab'] is Map ? Map<String, dynamic>.from(createdData['cab'] as Map) : null,
-        delivery: createdData['delivery'] is Map ? Map<String, dynamic>.from(createdData['delivery'] as Map) : null,
+        residentPhone: residentPhone?.trim().isNotEmpty == true
+            ? residentPhone!.trim()
+            : null,
+        cab: createdData['cab'] is Map
+            ? Map<String, dynamic>.from(createdData['cab'] as Map)
+            : null,
+        delivery: createdData['delivery'] is Map
+            ? Map<String, dynamic>.from(createdData['delivery'] as Map)
+            : null,
       );
 
       return Result.success(visitor);
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("createVisitor FirebaseException", error: err.technicalMessage);
+      AppLogger.e("createVisitor FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, stackTrace) {
       final err = AppError(
         userMessage: "Failed to create visitor entry",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("createVisitor unknown error", error: err.technicalMessage, stackTrace: stackTrace);
+      AppLogger.e("createVisitor unknown error",
+          error: err.technicalMessage, stackTrace: stackTrace);
       return Result.failure(err);
     }
   }
@@ -428,7 +475,8 @@ class FirebaseVisitorService {
         userMessage = "Photo upload error. Please try again.";
         break;
       case 'storage/timeout':
-        userMessage = "Upload timed out. Please check your connection and try again.";
+        userMessage =
+            "Upload timed out. Please check your connection and try again.";
         break;
       case 'unavailable':
         userMessage = "Service unavailable. Please check your connection.";
@@ -455,7 +503,7 @@ class FirebaseVisitorService {
     try {
       final visitorsRef = _visitorsRef(societyId);
       final normalizedFlatNo = flatNo.trim().toUpperCase();
-      
+
       AppLogger.i("Fetching pending approvals", data: {
         "societyId": societyId,
         "flatNo": normalizedFlatNo,
@@ -469,10 +517,10 @@ class FirebaseVisitorService {
           .get();
 
       final List<Map<String, dynamic>> visitors = [];
-      
+
       for (var doc in querySnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
-        
+
         // Convert Firestore Timestamp to ISO string for compatibility
         DateTime createdAt;
         if (data['createdAt'] is Timestamp) {
@@ -480,7 +528,7 @@ class FirebaseVisitorService {
         } else {
           createdAt = DateTime.now();
         }
-        
+
         // Format data to match backend API response format
         visitors.add({
           'visitor_id': data['visitor_id'] ?? doc.id,
@@ -499,14 +547,16 @@ class FirebaseVisitorService {
       return Result.success(visitors);
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("getPendingApprovals FirebaseException", error: err.technicalMessage);
+      AppLogger.e("getPendingApprovals FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, stackTrace) {
       final err = AppError(
         userMessage: "Failed to load approvals",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("getPendingApprovals unknown error", error: err.technicalMessage, stackTrace: stackTrace);
+      AppLogger.e("getPendingApprovals unknown error",
+          error: err.technicalMessage, stackTrace: stackTrace);
       return Result.failure(err);
     }
   }
@@ -528,13 +578,14 @@ class FirebaseVisitorService {
       }
 
       final visitorRef = _visitorsRef(societyId).doc(visitorId);
-      
+
       // Check if visitor exists
       final visitorDoc = await visitorRef.get();
       if (!visitorDoc.exists) {
         return Result.failure(AppError(
           userMessage: "Visitor not found",
-          technicalMessage: "Visitor $visitorId not found in society $societyId",
+          technicalMessage:
+              "Visitor $visitorId not found in society $societyId",
         ));
       }
 
@@ -560,14 +611,16 @@ class FirebaseVisitorService {
       });
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("updateVisitorStatus FirebaseException", error: err.technicalMessage);
+      AppLogger.e("updateVisitorStatus FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, stackTrace) {
       final err = AppError(
         userMessage: "Failed to update visitor status",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("updateVisitorStatus unknown error", error: err.technicalMessage, stackTrace: stackTrace);
+      AppLogger.e("updateVisitorStatus unknown error",
+          error: err.technicalMessage, stackTrace: stackTrace);
       return Result.failure(err);
     }
   }
@@ -582,7 +635,7 @@ class FirebaseVisitorService {
     try {
       final visitorsRef = _visitorsRef(societyId);
       final normalizedFlatNo = flatNo.trim().toUpperCase();
-      
+
       AppLogger.i("Fetching visitor history", data: {
         "societyId": societyId,
         "flatNo": normalizedFlatNo,
@@ -594,9 +647,8 @@ class FirebaseVisitorService {
       // To avoid index requirement, we query without orderBy and sort in memory
       final querySnapshot = await visitorsRef
           .where('flat_no', isEqualTo: normalizedFlatNo)
-          .where('status', whereIn: ['APPROVED', 'REJECTED'])
-          .get();
-      
+          .where('status', whereIn: ['APPROVED', 'REJECTED']).get();
+
       // Sort in memory by createdAt descending and limit
       final sortedDocs = querySnapshot.docs.toList()
         ..sort((a, b) {
@@ -609,14 +661,14 @@ class FirebaseVisitorService {
           if (bTime == null) return -1;
           return bTime.compareTo(aTime); // Descending order
         });
-      
+
       final limitedDocs = sortedDocs.take(limit).toList();
 
       final List<Map<String, dynamic>> visitors = [];
-      
+
       for (var doc in limitedDocs) {
         final data = doc.data() as Map<String, dynamic>;
-        
+
         // Convert Firestore Timestamp to ISO string for compatibility
         DateTime createdAt;
         if (data['createdAt'] is Timestamp) {
@@ -629,7 +681,7 @@ class FirebaseVisitorService {
         if (data['approved_at'] is Timestamp) {
           approvedAt = (data['approved_at'] as Timestamp).toDate();
         }
-        
+
         // Format data to match backend API response format (include delivery/visitor name for resident UI)
         visitors.add({
           'visitor_id': data['visitor_id'] ?? doc.id,
@@ -647,8 +699,12 @@ class FirebaseVisitorService {
           'guard_id': data['guard_uid'] ?? '',
           'photo_url': data['photo_url'],
           'note': data['note'],
-          'cab': data['cab'] is Map ? Map<String, dynamic>.from(data['cab'] as Map) : null,
-          'delivery': data['delivery'] is Map ? Map<String, dynamic>.from(data['delivery'] as Map) : null,
+          'cab': data['cab'] is Map
+              ? Map<String, dynamic>.from(data['cab'] as Map)
+              : null,
+          'delivery': data['delivery'] is Map
+              ? Map<String, dynamic>.from(data['delivery'] as Map)
+              : null,
         });
       }
 
@@ -663,7 +719,8 @@ class FirebaseVisitorService {
         userMessage: "Failed to load history",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("getHistory unknown error", error: err.technicalMessage, stackTrace: stackTrace);
+      AppLogger.e("getHistory unknown error",
+          error: err.technicalMessage, stackTrace: stackTrace);
       return Result.failure(err);
     }
   }
@@ -721,14 +778,17 @@ class FirebaseVisitorService {
           'guard_id': data['guard_uid'] ?? '',
           'photo_url': data['photo_url'],
           'note': data['note'],
-          'cab': data['cab'] is Map ? Map<String, dynamic>.from(data['cab'] as Map) : null,
-          'delivery': data['delivery'] is Map ? Map<String, dynamic>.from(data['delivery'] as Map) : null,
+          'cab': data['cab'] is Map
+              ? Map<String, dynamic>.from(data['cab'] as Map)
+              : null,
+          'delivery': data['delivery'] is Map
+              ? Map<String, dynamic>.from(data['delivery'] as Map)
+              : null,
         });
       }
 
-      final DocumentSnapshot? lastDoc = querySnapshot.docs.isEmpty
-          ? null
-          : querySnapshot.docs.last;
+      final DocumentSnapshot? lastDoc =
+          querySnapshot.docs.isEmpty ? null : querySnapshot.docs.last;
 
       return Result.success({
         'visitors': visitors,
@@ -736,10 +796,12 @@ class FirebaseVisitorService {
       });
     } on FirebaseException catch (e) {
       final err = _mapFirebaseError(e);
-      AppLogger.e("getHistoryPage FirebaseException", error: err.technicalMessage);
+      AppLogger.e("getHistoryPage FirebaseException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e, stackTrace) {
-      AppLogger.e("getHistoryPage unknown error", error: e, stackTrace: stackTrace);
+      AppLogger.e("getHistoryPage unknown error",
+          error: e, stackTrace: stackTrace);
       return Result.failure(AppError(
         userMessage: "Failed to load history",
         technicalMessage: e.toString(),
@@ -756,7 +818,8 @@ class FirebaseVisitorService {
   }
 
   /// Total visitors created today (createdAt >= start of day). Safe for large collections (uses count aggregate).
-  Future<int> getVisitorCountToday(String societyId, {DateTime? referenceDate}) async {
+  Future<int> getVisitorCountToday(String societyId,
+      {DateTime? referenceDate}) async {
     try {
       final start = _startOfDay(referenceDate);
       final ts = Timestamp.fromDate(start);
@@ -775,7 +838,8 @@ class FirebaseVisitorService {
   }
 
   /// Pending visitors today (status == PENDING, createdAt >= start of day).
-  Future<int> getPendingVisitorCountToday(String societyId, {DateTime? referenceDate}) async {
+  Future<int> getPendingVisitorCountToday(String societyId,
+      {DateTime? referenceDate}) async {
     try {
       final start = _startOfDay(referenceDate);
       final ts = Timestamp.fromDate(start);
@@ -786,7 +850,8 @@ class FirebaseVisitorService {
           .get();
       return snapshot.count ?? 0;
     } on FirebaseException catch (e) {
-      AppLogger.e('getPendingVisitorCountToday FirebaseException', error: e.message);
+      AppLogger.e('getPendingVisitorCountToday FirebaseException',
+          error: e.message);
       return 0;
     } catch (e) {
       AppLogger.e('getPendingVisitorCountToday', error: e);
@@ -795,7 +860,8 @@ class FirebaseVisitorService {
   }
 
   /// Cab visitors today (visitor_type == CAB, createdAt >= start of day). Uses visitor_type for index-friendly query.
-  Future<int> getCabVisitorCountToday(String societyId, {DateTime? referenceDate}) async {
+  Future<int> getCabVisitorCountToday(String societyId,
+      {DateTime? referenceDate}) async {
     try {
       final start = _startOfDay(referenceDate);
       final ts = Timestamp.fromDate(start);
@@ -806,7 +872,8 @@ class FirebaseVisitorService {
           .get();
       return snapshot.count ?? 0;
     } on FirebaseException catch (e) {
-      AppLogger.e('getCabVisitorCountToday FirebaseException', error: e.message);
+      AppLogger.e('getCabVisitorCountToday FirebaseException',
+          error: e.message);
       return 0;
     } catch (e) {
       AppLogger.e('getCabVisitorCountToday', error: e);
@@ -815,7 +882,8 @@ class FirebaseVisitorService {
   }
 
   /// Delivery visitors today (visitor_type == DELIVERY, createdAt >= start of day). Uses visitor_type for index-friendly query.
-  Future<int> getDeliveryVisitorCountToday(String societyId, {DateTime? referenceDate}) async {
+  Future<int> getDeliveryVisitorCountToday(String societyId,
+      {DateTime? referenceDate}) async {
     try {
       final start = _startOfDay(referenceDate);
       final ts = Timestamp.fromDate(start);
@@ -826,7 +894,8 @@ class FirebaseVisitorService {
           .get();
       return snapshot.count ?? 0;
     } on FirebaseException catch (e) {
-      AppLogger.e('getDeliveryVisitorCountToday FirebaseException', error: e.message);
+      AppLogger.e('getDeliveryVisitorCountToday FirebaseException',
+          error: e.message);
       return 0;
     } catch (e) {
       AppLogger.e('getDeliveryVisitorCountToday', error: e);

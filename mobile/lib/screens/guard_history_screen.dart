@@ -12,7 +12,7 @@ import '../widgets/status_chip.dart';
 import 'visitor_details_screen.dart';
 
 /// Guard History Screen
-/// 
+///
 /// Displays all past visitor entries for the guard.
 /// Theme: Blue/Primary theme (matching guard login and dashboard)
 class GuardHistoryScreen extends StatefulWidget {
@@ -42,6 +42,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
   final TextEditingController _searchController = TextEditingController();
 
   List<Map<String, dynamic>> _visitors = [];
+
   /// Cursor for "Load more": last document from previous page (null = no more or not loaded).
   DocumentSnapshot? _lastDoc;
   bool _isLoading = false;
@@ -67,23 +68,25 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
     final date = _filterDate;
 
     return _visitors.where((v) {
-        if (date != null) {
-          DateTime? createdDt;
-          dynamic createdAt = v['createdAt'];
-          if (createdAt is Timestamp) {
-            createdDt = createdAt.toDate();
-          } else if (createdAt is DateTime) {
-            createdDt = createdAt;
-          }
-          DateTime? approvedDt;
-          final approvedAt = v['approvedAt'] ?? v['approved_at'];
-          if (approvedAt is Timestamp) {
-            approvedDt = approvedAt.toDate();
-          } else if (approvedAt is DateTime) {
-            approvedDt = approvedAt;
-          }
-        bool matchDate(DateTime d) => d.year == date.year && d.month == date.month && d.day == date.day;
-        final onDate = (createdDt != null && matchDate(createdDt)) || (approvedDt != null && matchDate(approvedDt));
+      if (date != null) {
+        DateTime? createdDt;
+        dynamic createdAt = v['createdAt'];
+        if (createdAt is Timestamp) {
+          createdDt = createdAt.toDate();
+        } else if (createdAt is DateTime) {
+          createdDt = createdAt;
+        }
+        DateTime? approvedDt;
+        final approvedAt = v['approvedAt'] ?? v['approved_at'];
+        if (approvedAt is Timestamp) {
+          approvedDt = approvedAt.toDate();
+        } else if (approvedAt is DateTime) {
+          approvedDt = approvedAt;
+        }
+        bool matchDate(DateTime d) =>
+            d.year == date.year && d.month == date.month && d.day == date.day;
+        final onDate = (createdDt != null && matchDate(createdDt)) ||
+            (approvedDt != null && matchDate(approvedDt));
         if (!onDate) return false;
       }
       if (query.isEmpty) return true;
@@ -94,8 +97,13 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
       final dp = (v['delivery_partner']?.toString() ?? '').toLowerCase();
       final dpo = (v['delivery_partner_other']?.toString() ?? '').toLowerCase();
       final status = (v['status']?.toString() ?? '').toLowerCase();
-      return name.contains(query) || phone.contains(query) || type.contains(query) ||
-          flat.contains(query) || dp.contains(query) || dpo.contains(query) || status.contains(query);
+      return name.contains(query) ||
+          phone.contains(query) ||
+          type.contains(query) ||
+          flat.contains(query) ||
+          dp.contains(query) ||
+          dpo.contains(query) ||
+          status.contains(query);
     }).toList();
   }
 
@@ -110,7 +118,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
     });
 
     try {
-      AppLogger.i("Loading guard history (first page)", data: {"guardId": widget.guardId});
+      AppLogger.i("Loading guard history (first page)",
+          data: {"guardId": widget.guardId});
 
       String? societyId = widget.societyId;
       if (societyId == null || societyId.isEmpty) {
@@ -121,10 +130,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
         throw Exception("Society ID not found");
       }
 
-      final visitorsRef = _db
-          .collection('societies')
-          .doc(societyId)
-          .collection('visitors');
+      final visitorsRef =
+          _db.collection('societies').doc(societyId).collection('visitors');
 
       // Paginated query: guard_uid + status in [APPROVED, REJECTED], orderBy createdAt desc, limit(kHistoryPageSize).
       // Requires composite index: guard_uid (==), status (in), createdAt (desc).
@@ -134,11 +141,11 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
           .orderBy('createdAt', descending: true)
           .limit(kHistoryPageSize);
 
-      QuerySnapshot<Map<String, dynamic>> querySnapshot = await query
-          .get()
-          .timeout(const Duration(seconds: 10));
+      QuerySnapshot<Map<String, dynamic>> querySnapshot =
+          await query.get().timeout(const Duration(seconds: 10));
 
-      final List<Map<String, dynamic>> allVisitors = querySnapshot.docs.map((doc) {
+      final List<Map<String, dynamic>> allVisitors =
+          querySnapshot.docs.map((doc) {
         final data = doc.data();
         return {
           'visitor_id': doc.id,
@@ -146,9 +153,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
         };
       }).toList();
 
-      DocumentSnapshot? lastDoc = querySnapshot.docs.isEmpty
-          ? null
-          : querySnapshot.docs.last;
+      DocumentSnapshot? lastDoc =
+          querySnapshot.docs.isEmpty ? null : querySnapshot.docs.last;
 
       if (mounted) {
         setState(() {
@@ -157,15 +163,19 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
           _isLoading = false;
           _error = null;
         });
-        AppLogger.i("Loaded ${_visitors.length} history visitors (first page)", data: {
-          "guardId": widget.guardId,
-          "societyId": societyId,
-        });
+        AppLogger.i("Loaded ${_visitors.length} history visitors (first page)",
+            data: {
+              "guardId": widget.guardId,
+              "societyId": societyId,
+            });
       }
     } catch (e, stackTrace) {
-      AppLogger.e("Error loading history", error: e, stackTrace: stackTrace, data: {
-        "guardId": widget.guardId,
-      });
+      AppLogger.e("Error loading history",
+          error: e,
+          stackTrace: stackTrace,
+          data: {
+            "guardId": widget.guardId,
+          });
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -196,10 +206,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
         return;
       }
 
-      final visitorsRef = _db
-          .collection('societies')
-          .doc(societyId)
-          .collection('visitors');
+      final visitorsRef =
+          _db.collection('societies').doc(societyId).collection('visitors');
 
       Query<Map<String, dynamic>> query = visitorsRef
           .where('guard_uid', isEqualTo: widget.guardId)
@@ -218,9 +226,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
         };
       }).toList();
 
-      DocumentSnapshot? newLastDoc = querySnapshot.docs.isEmpty
-          ? null
-          : querySnapshot.docs.last;
+      DocumentSnapshot? newLastDoc =
+          querySnapshot.docs.isEmpty ? null : querySnapshot.docs.last;
 
       if (mounted) {
         setState(() {
@@ -231,7 +238,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
         AppLogger.i("Loaded more: +${next.length} (total ${_visitors.length})");
       }
     } catch (e, stackTrace) {
-      AppLogger.e("Error loading more history", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error loading more history",
+          error: e, stackTrace: stackTrace);
       if (mounted) {
         setState(() => _isLoadingMore = false);
       }
@@ -247,7 +255,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
     }
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           // If we're in a tab navigation (IndexedStack), switch to dashboard
           if (widget.onBackPressed != null) {
@@ -273,164 +281,180 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
               }
             },
           ),
-        title: Text(
-          "Visitor History",
-          style: TextStyle(
-            color: cs.onSurface,
-            fontWeight: FontWeight.w900,
-            fontSize: 20,
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: cs.primary.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.refresh_rounded, color: cs.primary, size: 20),
+          title: Text(
+            "Visitor History",
+            style: TextStyle(
+              color: cs.onSurface,
+              fontWeight: FontWeight.w900,
+              fontSize: 20,
             ),
-            onPressed: _isLoading ? null : _loadHistory,
           ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Stack(
-        children: [
-          if (_error != null)
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: cs.error.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(Icons.error_outline, size: 64, color: cs.error),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    _error!,
-                    style: TextStyle(
-                      color: cs.onSurface.withOpacity(0.7),
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    onPressed: _loadHistory,
-                    icon: const Icon(Icons.refresh_rounded),
-                    label: const Text("Retry"),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: cs.primary,
-                      foregroundColor: cs.onPrimary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else if (_visitors.isEmpty && !_isLoading)
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: cs.primary.withOpacity(0.1),
-                      shape: BoxShape.circle,
-                    ),
-                    child: Icon(
-                      Icons.history_rounded,
-                      size: 64,
-                      color: cs.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    "No History Yet",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w900,
-                      color: cs.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Completed visitor entries will appear here",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: cs.onSurface.withOpacity(0.7),
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            )
-          else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildFilterBar(),
-                Expanded(
-                  child: _filteredVisitors.isEmpty
-                      ? (_isLoading && _visitors.isEmpty
-                          ? const HistorySkeletonList()
-                          : Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.filter_list_off_rounded, size: 56, color: cs.onSurface.withOpacity(0.7)),
-                              const SizedBox(height: 16),
-                              Text(
-                                "No entries match your filter",
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: cs.onSurface.withOpacity(0.7)),
-                                textAlign: TextAlign.center,
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                "Try a different search or date",
-                                style: TextStyle(fontSize: 14, color: cs.onSurface.withOpacity(0.6)),
-                              ),
-                              const SizedBox(height: 16),
-                              TextButton.icon(
-                                onPressed: () {
-                                  _searchController.clear();
-                                  setState(() => _filterDate = null);
-                                },
-                                icon: const Icon(Icons.clear_all_rounded, size: 20),
-                                label: const Text("Clear filters"),
-                              ),
-                            ],
-                          ),
-                        ))
-                      : RefreshIndicator(
-                          onRefresh: _loadHistory,
-                          color: cs.primary,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                            itemCount: _filteredVisitors.length + (_lastDoc != null ? 1 : 0),
-                            itemBuilder: (context, index) {
-                              if (index == _filteredVisitors.length) {
-                                return _buildLoadMoreRow();
-                              }
-                              return _buildVisitorCard(_filteredVisitors[index]);
-                            },
-                          ),
-                        ),
+          centerTitle: true,
+          actions: [
+            IconButton(
+              icon: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: cs.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              ],
+                child: Icon(Icons.refresh_rounded, color: cs.primary, size: 20),
+              ),
+              onPressed: _isLoading ? null : _loadHistory,
             ),
-        ],
-      ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: Stack(
+          children: [
+            if (_error != null)
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: cs.error.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child:
+                          Icon(Icons.error_outline, size: 64, color: cs.error),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _error!,
+                      style: TextStyle(
+                        color: cs.onSurface.withValues(alpha: 0.7),
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 24),
+                    ElevatedButton.icon(
+                      onPressed: _loadHistory,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text("Retry"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: cs.primary,
+                        foregroundColor: cs.onPrimary,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ],
+                ),
+              )
+            else if (_visitors.isEmpty && !_isLoading)
+              Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: cs.primary.withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.history_rounded,
+                        size: 64,
+                        color: cs.primary,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      "No History Yet",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: cs.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "Completed visitor entries will appear here",
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: cs.onSurface.withValues(alpha: 0.7),
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              )
+            else
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildFilterBar(),
+                  Expanded(
+                    child: _filteredVisitors.isEmpty
+                        ? (_isLoading && _visitors.isEmpty
+                            ? const HistorySkeletonList()
+                            : Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.filter_list_off_rounded,
+                                        size: 56,
+                                        color: cs.onSurface
+                                            .withValues(alpha: 0.7)),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      "No entries match your filter",
+                                      style: TextStyle(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w600,
+                                          color: cs.onSurface
+                                              .withValues(alpha: 0.7)),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "Try a different search or date",
+                                      style: TextStyle(
+                                          fontSize: 14,
+                                          color: cs.onSurface
+                                              .withValues(alpha: 0.6)),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    TextButton.icon(
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _filterDate = null);
+                                      },
+                                      icon: const Icon(Icons.clear_all_rounded,
+                                          size: 20),
+                                      label: const Text("Clear filters"),
+                                    ),
+                                  ],
+                                ),
+                              ))
+                        : RefreshIndicator(
+                            onRefresh: _loadHistory,
+                            color: cs.primary,
+                            child: ListView.builder(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                              itemCount: _filteredVisitors.length +
+                                  (_lastDoc != null ? 1 : 0),
+                              itemBuilder: (context, index) {
+                                if (index == _filteredVisitors.length) {
+                                  return _buildLoadMoreRow();
+                                }
+                                return _buildVisitorCard(
+                                    _filteredVisitors[index]);
+                              },
+                            ),
+                          ),
+                  ),
+                ],
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -448,11 +472,14 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
             controller: _searchController,
             decoration: InputDecoration(
               hintText: "Search by flat, phone, category, delivery…",
-              hintStyle: TextStyle(color: cs.onSurface.withOpacity(0.55), fontSize: 14),
-              prefixIcon: Icon(Icons.search_rounded, color: cs.primary, size: 22),
+              hintStyle: TextStyle(
+                  color: cs.onSurface.withValues(alpha: 0.55), fontSize: 14),
+              prefixIcon:
+                  Icon(Icons.search_rounded, color: cs.primary, size: 22),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
-                      icon: Icon(Icons.clear_rounded, size: 20, color: cs.onSurface.withOpacity(0.6)),
+                      icon: Icon(Icons.clear_rounded,
+                          size: 20, color: cs.onSurface.withValues(alpha: 0.6)),
                       onPressed: () => _searchController.clear(),
                     )
                   : null,
@@ -462,7 +489,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
             style: const TextStyle(fontSize: 15),
             onChanged: (_) => setState(() {}),
@@ -470,16 +498,25 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
           const SizedBox(height: 12),
           Row(
             children: [
-              Text("Date: ", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: cs.onSurface.withOpacity(0.7))),
+              Text("Date: ",
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: cs.onSurface.withValues(alpha: 0.7))),
               GestureDetector(
                 onTap: () => setState(() => _filterDate = null),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: _filterDate == null ? cs.primary.withOpacity(0.12) : cs.surface,
+                    color: _filterDate == null
+                        ? cs.primary.withValues(alpha: 0.12)
+                        : cs.surface,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: _filterDate == null ? cs.primary.withOpacity(0.3) : theme.dividerColor,
+                      color: _filterDate == null
+                          ? cs.primary.withValues(alpha: 0.3)
+                          : theme.dividerColor,
                     ),
                   ),
                   child: Text(
@@ -487,7 +524,9 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: _filterDate == null ? cs.primary : cs.onSurface.withOpacity(0.7),
+                      color: _filterDate == null
+                          ? cs.primary
+                          : cs.onSurface.withValues(alpha: 0.7),
                     ),
                   ),
                 ),
@@ -504,12 +543,17 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                   if (picked != null) setState(() => _filterDate = picked);
                 },
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: _filterDate != null ? cs.primary.withOpacity(0.12) : cs.surface,
+                    color: _filterDate != null
+                        ? cs.primary.withValues(alpha: 0.12)
+                        : cs.surface,
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                      color: _filterDate != null ? cs.primary.withOpacity(0.3) : theme.dividerColor,
+                      color: _filterDate != null
+                          ? cs.primary.withValues(alpha: 0.3)
+                          : theme.dividerColor,
                     ),
                   ),
                   child: Row(
@@ -518,7 +562,9 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                       Icon(
                         Icons.calendar_today_rounded,
                         size: 16,
-                        color: _filterDate != null ? cs.primary : cs.onSurface.withOpacity(0.7),
+                        color: _filterDate != null
+                            ? cs.primary
+                            : cs.onSurface.withValues(alpha: 0.7),
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -528,7 +574,9 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          color: _filterDate != null ? cs.primary : cs.onSurface.withOpacity(0.7),
+                          color: _filterDate != null
+                              ? cs.primary
+                              : cs.onSurface.withValues(alpha: 0.7),
                         ),
                       ),
                     ],
@@ -539,7 +587,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                 const SizedBox(width: 6),
                 GestureDetector(
                   onTap: () => setState(() => _filterDate = null),
-                  child: Icon(Icons.close_rounded, size: 20, color: cs.onSurface.withOpacity(0.7)),
+                  child: Icon(Icons.close_rounded,
+                      size: 20, color: cs.onSurface.withValues(alpha: 0.7)),
                 ),
               ],
             ],
@@ -548,7 +597,10 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
             const SizedBox(height: 6),
             Text(
               "Showing ${_filteredVisitors.length} of ${_visitors.length} entries",
-              style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.6), fontWeight: FontWeight.w500),
+              style: TextStyle(
+                  fontSize: 12,
+                  color: cs.onSurface.withValues(alpha: 0.6),
+                  fontWeight: FontWeight.w500),
             ),
           ],
         ],
@@ -578,7 +630,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                 label: const Text("Load more"),
                 style: TextButton.styleFrom(
                   foregroundColor: cs.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
               ),
       ),
@@ -613,35 +666,53 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
       societyId: data['society_id']?.toString() ?? widget.societyId ?? '',
       flatId: data['flat_id']?.toString() ?? data['flat_no']?.toString() ?? '',
       flatNo: (data['flat_no'] ?? data['flatNo'] ?? '').toString(),
-      visitorType: (data['visitor_type'] ?? data['visitorType'] ?? 'GUEST').toString(),
-      visitorPhone: (data['visitor_phone'] ?? data['visitorPhone'] ?? '').toString(),
+      visitorType:
+          (data['visitor_type'] ?? data['visitorType'] ?? 'GUEST').toString(),
+      visitorPhone:
+          (data['visitor_phone'] ?? data['visitorPhone'] ?? '').toString(),
       status: (data['status'] ?? 'PENDING').toString(),
       createdAt: createdAt,
       approvedAt: approvedAt,
-      approvedBy: data['approved_by']?.toString() ?? data['approvedBy']?.toString(),
-      guardId: data['guard_uid']?.toString() ?? data['guard_id']?.toString() ?? widget.guardId,
+      approvedBy:
+          data['approved_by']?.toString() ?? data['approvedBy']?.toString(),
+      guardId: data['guard_uid']?.toString() ??
+          data['guard_id']?.toString() ??
+          widget.guardId,
       photoPath: data['photo_path']?.toString(),
       photoUrl: data['photo_url']?.toString() ?? data['photoUrl']?.toString(),
       note: data['note']?.toString(),
       residentPhone: data['resident_phone']?.toString(),
-      cab: data['cab'] is Map ? Map<String, dynamic>.from(data['cab'] as Map) : null,
-      delivery: data['delivery'] is Map ? Map<String, dynamic>.from(data['delivery'] as Map) : null,
+      cab: data['cab'] is Map
+          ? Map<String, dynamic>.from(data['cab'] as Map)
+          : null,
+      delivery: data['delivery'] is Map
+          ? Map<String, dynamic>.from(data['delivery'] as Map)
+          : null,
     );
   }
 
   Widget _buildVisitorCard(Map<String, dynamic> visitorData) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
-    final visitorType = (visitorData['visitor_type'] ?? visitorData['visitorType'] ?? 'GUEST').toString();
-    final flatNo = (visitorData['flat_no'] ?? visitorData['flatNo'] ?? 'N/A').toString();
-    final phone = (visitorData['visitor_phone'] ?? visitorData['visitorPhone'] ?? 'N/A').toString();
-    final residentPhone = (visitorData['resident_phone'] ?? '').toString().trim();
+    final visitorType =
+        (visitorData['visitor_type'] ?? visitorData['visitorType'] ?? 'GUEST')
+            .toString();
+    final flatNo =
+        (visitorData['flat_no'] ?? visitorData['flatNo'] ?? 'N/A').toString();
+    final phone =
+        (visitorData['visitor_phone'] ?? visitorData['visitorPhone'] ?? 'N/A')
+            .toString();
+    final residentPhone =
+        (visitorData['resident_phone'] ?? '').toString().trim();
     final status = (visitorData['status'] ?? 'PENDING').toString();
     final createdAt = visitorData['createdAt'];
-    final approvedAtRaw = visitorData['approvedAt'] ?? visitorData['approved_at'];
+    final approvedAtRaw =
+        visitorData['approvedAt'] ?? visitorData['approved_at'];
     final photoUrl = visitorData['photo_url'] ?? visitorData['photoUrl'];
-    final deliveryPartner = (visitorData['delivery_partner']?.toString() ?? '').trim();
-    final deliveryPartnerOther = (visitorData['delivery_partner_other']?.toString() ?? '').trim();
+    final deliveryPartner =
+        (visitorData['delivery_partner']?.toString() ?? '').trim();
+    final deliveryPartnerOther =
+        (visitorData['delivery_partner_other']?.toString() ?? '').trim();
 
     DateTime? createdDateTime;
     if (createdAt != null) {
@@ -664,9 +735,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
         (deliveryPartner.isNotEmpty || deliveryPartnerOther.isNotEmpty);
     final deliveryDisplay = hasDeliveryPartner
         ? (deliveryPartner == 'Other'
-            ? (deliveryPartnerOther.isNotEmpty
-                ? deliveryPartnerOther
-                : 'Other')
+            ? (deliveryPartnerOther.isNotEmpty ? deliveryPartnerOther : 'Other')
             : deliveryPartner)
         : null;
 
@@ -675,10 +744,10 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
       decoration: BoxDecoration(
         color: cs.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.6)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.6)),
         boxShadow: [
           BoxShadow(
-            color: cs.onSurface.withOpacity(0.04),
+            color: cs.onSurface.withValues(alpha: 0.04),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -714,9 +783,10 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                 Row(
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: cs.primary.withOpacity(0.15),
+                        color: cs.primary.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -728,19 +798,23 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                         ),
                       ),
                     ),
-                    if (deliveryDisplay != null && deliveryDisplay.isNotEmpty) ...[
+                    if (deliveryDisplay != null &&
+                        deliveryDisplay.isNotEmpty) ...[
                       const SizedBox(width: 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
                         decoration: BoxDecoration(
-                          color: cs.secondary.withOpacity(0.14),
+                          color: cs.secondary.withValues(alpha: 0.14),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: cs.secondary.withOpacity(0.3)),
+                          border: Border.all(
+                              color: cs.secondary.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.local_shipping_outlined, size: 14, color: cs.secondary),
+                            Icon(Icons.local_shipping_outlined,
+                                size: 14, color: cs.secondary),
                             const SizedBox(width: 6),
                             Flexible(
                               child: Text(
@@ -774,7 +848,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         border: Border.all(
-                          color: cs.primary.withOpacity(0.2),
+                          color: cs.primary.withValues(alpha: 0.2),
                           width: 2,
                         ),
                       ),
@@ -784,16 +858,20 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                                 imageUrl: photoUrl,
                                 fit: BoxFit.cover,
                                 placeholder: (context, url) => Container(
-                                  color: theme.dividerColor.withOpacity(0.55),
-                                  child: Center(child: Icon(Icons.person_rounded, color: cs.primary, size: 24)),
+                                  color: theme.dividerColor
+                                      .withValues(alpha: 0.55),
+                                  child: Center(
+                                      child: Icon(Icons.person_rounded,
+                                          color: cs.primary, size: 24)),
                                 ),
                                 errorWidget: (context, url, error) => Container(
-                                  color: cs.primary.withOpacity(0.1),
-                                  child: Icon(Icons.person_rounded, color: cs.primary, size: 24),
+                                  color: cs.primary.withValues(alpha: 0.1),
+                                  child: Icon(Icons.person_rounded,
+                                      color: cs.primary, size: 24),
                                 ),
                               )
                             : Container(
-                                color: cs.primary.withOpacity(0.1),
+                                color: cs.primary.withValues(alpha: 0.1),
                                 child: Icon(
                                   Icons.person_rounded,
                                   color: cs.primary,
@@ -814,7 +892,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                               Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: cs.primary.withOpacity(0.1),
+                                  color: cs.primary.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Icon(
@@ -840,7 +918,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                               Container(
                                 padding: const EdgeInsets.all(4),
                                 decoration: BoxDecoration(
-                                  color: cs.primary.withOpacity(0.1),
+                                  color: cs.primary.withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Icon(
@@ -854,7 +932,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                                 phone,
                                 style: TextStyle(
                                   fontSize: 14,
-                                  color: cs.onSurface.withOpacity(0.7),
+                                  color: cs.onSurface.withValues(alpha: 0.7),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -864,11 +942,13 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                             const SizedBox(height: 6),
                             InkWell(
                               onTap: () async {
-                                final cleaned = residentPhone.replaceAll(RegExp(r'[^\d+]'), '');
+                                final cleaned = residentPhone.replaceAll(
+                                    RegExp(r'[^\d+]'), '');
                                 if (cleaned.isEmpty) return;
                                 final uri = Uri.parse('tel:$cleaned');
                                 if (await canLaunchUrl(uri)) {
-                                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                  await launchUrl(uri,
+                                      mode: LaunchMode.externalApplication);
                                 }
                               },
                               borderRadius: BorderRadius.circular(6),
@@ -877,7 +957,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                                   Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                      color: cs.tertiary.withOpacity(0.1),
+                                      color: cs.tertiary.withValues(alpha: 0.1),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: Icon(
@@ -913,7 +993,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: cs.primary.withOpacity(0.1),
+                        color: cs.primary.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -931,7 +1011,7 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
                             "Raised: ${createdDateTime != null ? _formatDateTime(createdDateTime) : '—'}",
                             style: TextStyle(
                               fontSize: 13,
-                              color: cs.onSurface.withOpacity(0.7),
+                              color: cs.onSurface.withValues(alpha: 0.7),
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -975,7 +1055,8 @@ class _GuardHistoryScreenState extends State<GuardHistoryScreen> {
       dateStr = "${localTime.day}/${localTime.month}/${localTime.year}";
     }
 
-    final timeStr = "${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}";
+    final timeStr =
+        "${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}";
     return "$dateStr at $timeStr";
   }
 }

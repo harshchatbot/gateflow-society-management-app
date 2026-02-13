@@ -26,7 +26,9 @@ class ErrorMessages {
         case 'not-found':
           return "The item was not found. It may have been removed.";
         default:
-          if (msg.contains('network') || msg.contains('socket') || msg.contains('connection')) {
+          if (msg.contains('network') ||
+              msg.contains('socket') ||
+              msg.contains('connection')) {
             return "No internet connection. Please check your network.";
           }
           if (msg.contains('timeout') || code.contains('timeout')) {

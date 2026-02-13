@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_service.dart';
 import '../services/complaint_service.dart';
 import '../services/notice_service.dart';
@@ -11,8 +10,7 @@ class AdminNotificationCounts {
   final int recentNotices;
   final int openSos;
 
-  int get total =>
-      pendingSignups + pendingComplaints + recentNotices + openSos;
+  int get total => pendingSignups + pendingComplaints + recentNotices + openSos;
 
   const AdminNotificationCounts({
     required this.pendingSignups,
@@ -38,8 +36,7 @@ class AdminNotificationAggregator {
     // Join requests
     final residents =
         await firestore.getResidentJoinRequestsForAdmin(societyId);
-    final admins =
-        await firestore.getAdminJoinRequestsForAdmin(societyId);
+    final admins = await firestore.getAdminJoinRequestsForAdmin(societyId);
     pendingSignups += residents.length + admins.length;
 
     // Society-code signups
@@ -62,8 +59,8 @@ class AdminNotificationAggregator {
 
     // Notices (last 24h)
     if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
-      final notices =
-          await noticeService.getNotices(societyId: societyId, activeOnly: true);
+      final notices = await noticeService.getNotices(
+          societyId: societyId, activeOnly: true);
       if (notices.isSuccess && notices.data != null) {
         final now = DateTime.now();
         recentNotices = notices.data!.where((n) {

@@ -16,7 +16,8 @@ import 'resident_pending_approval_screen.dart';
 import 'resident_shell_screen.dart';
 
 class AuthPostLoginRouter extends StatefulWidget {
-  final String defaultSocietyId; // you must pass societyId you’re onboarding into
+  final String
+      defaultSocietyId; // you must pass societyId you’re onboarding into
 
   const AuthPostLoginRouter({
     super.key,
@@ -75,9 +76,10 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
                 societyId:
                     (pendingSocietyRequest['proposedSocietyId'] ?? 'pending')
                         .toString(),
-                adminName:
-                    (pendingSocietyRequest['requesterName'] ?? 'Admin').toString(),
-                email: (pendingSocietyRequest['requesterPhone'] ?? '').toString(),
+                adminName: (pendingSocietyRequest['requesterName'] ?? 'Admin')
+                    .toString(),
+                email:
+                    (pendingSocietyRequest['requesterPhone'] ?? '').toString(),
                 title: "Society Setup Pending",
                 badgeText: "Waiting for Sentinel verification",
                 message: "Your request is under review by Sentinel team.",
@@ -112,7 +114,9 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
         await FirebaseAuth.instance.signOut();
         await Storage.clearAllSessions();
         await Storage.clearFirebaseSession();
-        GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
+        if (!mounted) return;
+        GateBlockMessage.set(gateResult.userMessage ??
+            'This society is currently inactive. Please contact the society admin.');
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
         );
@@ -135,6 +139,7 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
         final member = memberSnap.data() ?? {};
         final guardName = (member['name'] ?? 'Guard').toString();
 
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => GuardShellScreen(
@@ -148,12 +153,12 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
       }
 
       if (systemRole == 'super_admin') {
-        final platform = await _firestore.getPlatformAdminProfile(uid: user.uid);
+        final platform =
+            await _firestore.getPlatformAdminProfile(uid: user.uid);
         final active = platform?['active'] == true;
-        final role =
-            (platform?['role'] ?? platform?['systemRole'] ?? '')
-                .toString()
-                .toLowerCase();
+        final role = (platform?['role'] ?? platform?['systemRole'] ?? '')
+            .toString()
+            .toLowerCase();
         if (!(active && role == 'super_admin')) {
           setState(() {
             _loading = false;
@@ -161,6 +166,7 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
           });
           return;
         }
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => PlatformSuperAdminConsoleScreen(
@@ -181,7 +187,8 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
         final member = memberSnap.data() ?? {};
         final active = member['active'] == true;
         final name = (member['name'] ?? 'Admin').toString();
-        final role = (member['societyRole'] ?? 'ADMIN').toString().toUpperCase();
+        final role =
+            (member['societyRole'] ?? 'ADMIN').toString().toUpperCase();
 
         if (systemRole == 'admin' && !active) {
           if (!mounted) return;
@@ -197,6 +204,7 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
           return;
         }
 
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => AdminShellScreen(
@@ -238,6 +246,7 @@ class _AuthPostLoginRouterState extends State<AuthPostLoginRouter> {
         }
 
         if (flatNo.isNotEmpty) {
+          if (!mounted) return;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
               builder: (_) => ResidentShellScreen(

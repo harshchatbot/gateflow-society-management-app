@@ -10,7 +10,7 @@ import '../widgets/module_disabled_placeholder.dart';
 import '../widgets/loading_skeletons.dart';
 
 /// Admin Manage Complaints Screen
-/// 
+///
 /// Allows admins to view and manage all complaints from residents
 /// Theme: Sentinel (unified)
 class AdminManageComplaintsScreen extends StatefulWidget {
@@ -26,10 +26,12 @@ class AdminManageComplaintsScreen extends StatefulWidget {
   });
 
   @override
-  State<AdminManageComplaintsScreen> createState() => _AdminManageComplaintsScreenState();
+  State<AdminManageComplaintsScreen> createState() =>
+      _AdminManageComplaintsScreenState();
 }
 
-class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScreen> {
+class _AdminManageComplaintsScreenState
+    extends State<AdminManageComplaintsScreen> {
   late final ComplaintService _service = ComplaintService(
     baseUrl: Env.apiBaseUrl,
   );
@@ -38,7 +40,8 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
   List<dynamic> _filteredComplaints = [];
   bool _isLoading = false;
   String? _error;
-  String _selectedFilter = "ALL"; // ALL, PENDING, IN_PROGRESS, RESOLVED, REJECTED
+  String _selectedFilter =
+      "ALL"; // ALL, PENDING, IN_PROGRESS, RESOLVED, REJECTED
 
   @override
   void initState() {
@@ -114,7 +117,8 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                const Icon(Icons.check_circle_rounded,
+                    color: Colors.white, size: 20),
                 const SizedBox(width: 8),
                 Text(
                   "Complaint marked as ${status.toLowerCase()}",
@@ -124,7 +128,8 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -162,7 +167,8 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: theme.colorScheme.onSurface),
+          icon: Icon(Icons.arrow_back_rounded,
+              color: theme.colorScheme.onSurface),
           onPressed: () {
             if (widget.onBackPressed != null) {
               widget.onBackPressed!();
@@ -185,10 +191,11 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.15),
+                color: theme.colorScheme.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.refresh_rounded, color: theme.colorScheme.primary, size: 20),
+              child: Icon(Icons.refresh_rounded,
+                  color: theme.colorScheme.primary, size: 20),
             ),
             onPressed: _isLoading ? null : _loadComplaints,
           ),
@@ -201,7 +208,8 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             children: [
               // Filter Chips
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 color: Theme.of(context).scaffoldBackgroundColor,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -224,7 +232,8 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
               // Stats Row
               if (_complaints.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
                     children: [
                       Expanded(
@@ -238,7 +247,14 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                       Expanded(
                         child: _buildStatChip(
                           "Pending",
-                          _complaints.where((c) => (c['status'] ?? '').toString().toUpperCase() == 'PENDING').length.toString(),
+                          _complaints
+                              .where((c) =>
+                                  (c['status'] ?? '')
+                                      .toString()
+                                      .toUpperCase() ==
+                                  'PENDING')
+                              .length
+                              .toString(),
                           AppColors.warning,
                         ),
                       ),
@@ -246,7 +262,14 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                       Expanded(
                         child: _buildStatChip(
                           "Resolved",
-                          _complaints.where((c) => (c['status'] ?? '').toString().toUpperCase() == 'RESOLVED').length.toString(),
+                          _complaints
+                              .where((c) =>
+                                  (c['status'] ?? '')
+                                      .toString()
+                                      .toUpperCase() ==
+                                  'RESOLVED')
+                              .length
+                              .toString(),
                           AppColors.success,
                         ),
                       ),
@@ -273,11 +296,13 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.15)
               : Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).dividerColor,
             width: isSelected ? 2 : 1,
           ),
         ),
@@ -286,7 +311,12 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w700,
-            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color: isSelected
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
           ),
         ),
       ),
@@ -297,9 +327,9 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Column(
         children: [
@@ -316,7 +346,7 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             style: TextStyle(
               fontSize: 11,
               fontWeight: FontWeight.w600,
-              color: color.withOpacity(0.8),
+              color: color.withValues(alpha: 0.8),
             ),
           ),
         ],
@@ -337,16 +367,21 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.error.withOpacity(0.1),
+                color:
+                    Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+              child: Icon(Icons.error_outline,
+                  size: 64, color: Theme.of(context).colorScheme.error),
             ),
             const SizedBox(height: 16),
             Text(
               _error!,
               style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -360,7 +395,8 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -376,7 +412,10 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -387,7 +426,9 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             ),
             const SizedBox(height: 16),
             Text(
-              _selectedFilter == "ALL" ? "No complaints yet" : "No ${_selectedFilter.toLowerCase()} complaints",
+              _selectedFilter == "ALL"
+                  ? "No complaints yet"
+                  : "No ${_selectedFilter.toLowerCase()} complaints",
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
@@ -401,7 +442,10 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                   : "Try selecting a different filter",
               style: TextStyle(
                 fontSize: 14,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
@@ -431,7 +475,9 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
     final status = (complaint['status'] ?? 'PENDING').toString();
     final flatNo = (complaint['flat_no'] ?? 'N/A').toString();
     final residentName = (complaint['resident_name'] ?? 'Unknown').toString();
-    final photoUrl = (complaint['photoUrl'] ?? complaint['photo_url'] ?? '').toString().trim();
+    final photoUrl = (complaint['photoUrl'] ?? complaint['photo_url'] ?? '')
+        .toString()
+        .trim();
     final hasPhoto = photoUrl.isNotEmpty;
     final createdAt = complaint['created_at']?.toString() ?? '';
 
@@ -442,13 +488,13 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
           color: status == "PENDING"
-              ? AppColors.warning.withOpacity(0.5)
-              : Theme.of(context).dividerColor.withOpacity(0.5),
+              ? AppColors.warning.withValues(alpha: 0.5)
+              : Theme.of(context).dividerColor.withValues(alpha: 0.5),
           width: status == "PENDING" ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -471,9 +517,13 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -500,12 +550,24 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                       placeholder: (context, url) => Container(
                         height: 140,
                         color: Colors.grey.shade300,
-                        child: Center(child: Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), size: 40)),
+                        child: Center(
+                            child: Icon(Icons.image_outlined,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.6),
+                                size: 40)),
                       ),
                       errorWidget: (context, url, error) => Container(
                         height: 140,
                         color: Theme.of(context).scaffoldBackgroundColor,
-                        child: Center(child: Icon(Icons.broken_image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), size: 40)),
+                        child: Center(
+                            child: Icon(Icons.broken_image_outlined,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.6),
+                                size: 40)),
                       ),
                     ),
                   ),
@@ -515,11 +577,11 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                 // Title
                 Text(
                   title,
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w900,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -531,7 +593,10 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -545,7 +610,10 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                       residentName,
                       style: TextStyle(
                         fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -553,7 +621,10 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                     Container(
                       padding: const EdgeInsets.all(6),
                       decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Icon(
@@ -567,7 +638,10 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                       "Flat $flatNo",
                       style: TextStyle(
                         fontSize: 13,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.7),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -581,7 +655,10 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                     description,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                       fontWeight: FontWeight.w500,
                     ),
                     maxLines: 2,
@@ -598,7 +675,10 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                         Container(
                           padding: const EdgeInsets.all(6),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Icon(
@@ -612,7 +692,10 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                           _formatDateTime(createdAt),
                           style: TextStyle(
                             fontSize: 13,
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.7),
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -624,11 +707,14 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                         icon: const Icon(Icons.edit_rounded, size: 16),
                         label: const Text(
                           "Update",
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                          style: TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w700),
                         ),
                         style: TextButton.styleFrom(
-                          foregroundColor: Theme.of(context).colorScheme.primary,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          foregroundColor:
+                              Theme.of(context).colorScheme.primary,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 6),
                         ),
                       ),
                   ],
@@ -648,7 +734,9 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
     final status = (complaint['status'] ?? 'PENDING').toString();
     final flatNo = (complaint['flat_no'] ?? 'N/A').toString();
     final residentName = (complaint['resident_name'] ?? 'Unknown').toString();
-    final photoUrl = (complaint['photoUrl'] ?? complaint['photo_url'] ?? '').toString().trim();
+    final photoUrl = (complaint['photoUrl'] ?? complaint['photo_url'] ?? '')
+        .toString()
+        .trim();
     final hasPhoto = photoUrl.isNotEmpty;
     final createdAt = complaint['created_at']?.toString() ?? '';
     final resolvedAt = complaint['resolved_at']?.toString();
@@ -690,10 +778,14 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(Icons.report_problem_rounded, color: Theme.of(context).colorScheme.primary, size: 24),
+                    child: Icon(Icons.report_problem_rounded,
+                        color: Theme.of(context).colorScheme.primary, size: 24),
                   ),
                   const SizedBox(width: 12),
                   Text(
@@ -718,12 +810,24 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                     placeholder: (context, url) => Container(
                       height: 200,
                       color: Colors.grey.shade300,
-                      child: Center(child: Icon(Icons.image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), size: 48)),
+                      child: Center(
+                          child: Icon(Icons.image_outlined,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
+                              size: 48)),
                     ),
                     errorWidget: (context, url, error) => Container(
                       height: 200,
                       color: Theme.of(context).scaffoldBackgroundColor,
-                      child: Center(child: Icon(Icons.broken_image_outlined, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6), size: 48)),
+                      child: Center(
+                          child: Icon(Icons.broken_image_outlined,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withValues(alpha: 0.6),
+                              size: 48)),
                     ),
                   ),
                 ),
@@ -745,16 +849,25 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                    border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.3)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.admin_panel_settings_rounded, color: Theme.of(context).colorScheme.primary, size: 18),
+                          Icon(Icons.admin_panel_settings_rounded,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 18),
                           const SizedBox(width: 8),
                           Text(
                             "Admin Response",
@@ -797,7 +910,8 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                 ),
               ),
@@ -818,7 +932,8 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text(
             "Update Complaint Status",
             style: TextStyle(fontWeight: FontWeight.w900),
@@ -836,23 +951,30 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                 Wrap(
                   spacing: 8,
                   runSpacing: 8,
-                  children: (currentStatus == "RESOLVED" 
-                    ? ["PENDING", "IN_PROGRESS", "REJECTED"] 
-                    : ["IN_PROGRESS", "RESOLVED", "REJECTED"]).map((status) {
+                  children: (currentStatus == "RESOLVED"
+                          ? ["PENDING", "IN_PROGRESS", "REJECTED"]
+                          : ["IN_PROGRESS", "RESOLVED", "REJECTED"])
+                      .map((status) {
                     final isSelected = selectedStatus == status;
                     return GestureDetector(
                       onTap: () {
                         setDialogState(() => selectedStatus = status);
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 8),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
+                              ? Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.15)
                               : Theme.of(context).colorScheme.surface,
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(
-                            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).dividerColor,
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context).dividerColor,
                             width: isSelected ? 2 : 1,
                           ),
                         ),
@@ -861,7 +983,12 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w700,
-                            color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                            color: isSelected
+                                ? Theme.of(context).colorScheme.primary
+                                : Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.7),
                           ),
                         ),
                       ),
@@ -881,11 +1008,14 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                     hintText: "Add your response or notes...",
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Theme.of(context).dividerColor),
+                      borderSide:
+                          BorderSide(color: Theme.of(context).dividerColor),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+                      borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 2),
                     ),
                     contentPadding: const EdgeInsets.all(12),
                   ),
@@ -899,9 +1029,11 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
               style: OutlinedButton.styleFrom(
                 side: BorderSide(color: Theme.of(context).dividerColor),
                 foregroundColor: Theme.of(context).colorScheme.onSurface,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text("Cancel", style: TextStyle(fontWeight: FontWeight.w700)),
+              child: const Text("Cancel",
+                  style: TextStyle(fontWeight: FontWeight.w700)),
             ),
             const SizedBox(width: 8),
             ElevatedButton(
@@ -911,16 +1043,20 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
                   _updateComplaintStatus(
                     complaintId,
                     selectedStatus!,
-                    responseController.text.trim().isEmpty ? null : responseController.text.trim(),
+                    responseController.text.trim().isEmpty
+                        ? null
+                        : responseController.text.trim(),
                   );
                 }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
-              child: const Text("Update", style: TextStyle(fontWeight: FontWeight.w900)),
+              child: const Text("Update",
+                  style: TextStyle(fontWeight: FontWeight.w900)),
             ),
           ],
         ),
@@ -938,7 +1074,10 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
             label,
             style: TextStyle(
               fontSize: 12,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              color: Theme.of(context)
+                  .colorScheme
+                  .onSurface
+                  .withValues(alpha: 0.7),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -956,54 +1095,11 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
     );
   }
 
-  void _showCloseConfirmation(Map<String, dynamic> complaint) {
-    final complaintId = (complaint['complaint_id'] ?? '').toString();
-    final title = (complaint['title'] ?? 'Untitled').toString();
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          "Close Complaint",
-          style: TextStyle(fontWeight: FontWeight.w900),
-        ),
-        content: Text(
-          "Are you sure you want to mark this complaint as closed?\n\n\"$title\"",
-          style: const TextStyle(fontSize: 15),
-        ),
-        actions: [
-          OutlinedButton(
-            onPressed: () => Navigator.pop(context),
-            style: OutlinedButton.styleFrom(
-              side: BorderSide(color: Theme.of(context).dividerColor),
-              foregroundColor: Theme.of(context).colorScheme.onSurface,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text("Cancel", style: TextStyle(fontWeight: FontWeight.w700)),
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              _updateComplaintStatus(complaintId, "RESOLVED", null);
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.success,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text("Close", style: TextStyle(fontWeight: FontWeight.w900)),
-          ),
-        ],
-      ),
-    );
-  }
-
   String _formatDateTime(String dateTimeStr) {
     if (dateTimeStr.isEmpty) return "Unknown";
     try {
-      final dt = DateTime.parse(dateTimeStr.replaceAll("Z", "+00:00")).toLocal();
+      final dt =
+          DateTime.parse(dateTimeStr.replaceAll("Z", "+00:00")).toLocal();
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final yesterday = DateTime(now.year, now.month, now.day - 1);
@@ -1017,7 +1113,8 @@ class _AdminManageComplaintsScreenState extends State<AdminManageComplaintsScree
         return "${dt.day}/${dt.month}/${dt.year} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
       }
     } catch (e) {
-      AppLogger.e("Error formatting date time", error: e, data: {"dateTimeStr": dateTimeStr});
+      AppLogger.e("Error formatting date time",
+          error: e, data: {"dateTimeStr": dateTimeStr});
       return dateTimeStr;
     }
   }

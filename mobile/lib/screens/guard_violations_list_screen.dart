@@ -25,7 +25,8 @@ class GuardViolationsListScreen extends StatefulWidget {
   });
 
   @override
-  State<GuardViolationsListScreen> createState() => _GuardViolationsListScreenState();
+  State<GuardViolationsListScreen> createState() =>
+      _GuardViolationsListScreenState();
 }
 
 class _GuardViolationsListScreenState extends State<GuardViolationsListScreen> {
@@ -132,7 +133,8 @@ class _GuardViolationsListScreenState extends State<GuardViolationsListScreen> {
         ),
         title: const Text(
           'My Violation Reports',
-          style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 20),
+          style: TextStyle(
+              color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 20),
         ),
         centerTitle: true,
         actions: [
@@ -140,10 +142,11 @@ class _GuardViolationsListScreenState extends State<GuardViolationsListScreen> {
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.primary.withOpacity(0.15),
+                color: AppColors.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.refresh_rounded, color: AppColors.primary, size: 20),
+              child: const Icon(Icons.refresh_rounded,
+                  color: AppColors.primary, size: 20),
             ),
             onPressed: _isLoading ? null : _loadViolations,
           ),
@@ -157,20 +160,26 @@ class _GuardViolationsListScreenState extends State<GuardViolationsListScreen> {
             children: [
               Container(
                 margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: AppColors.primarySoft,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.primary.withOpacity(0.3)),
+                  border: Border.all(
+                      color: AppColors.primary.withValues(alpha: 0.3)),
                 ),
                 child: const Row(
                   children: [
-                    Icon(Icons.lock_rounded, color: AppColors.primary, size: 20),
+                    Icon(Icons.lock_rounded,
+                        color: AppColors.primary, size: 20),
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Violations are private. You see only your own reports. No names are publicised.',
-                        style: TextStyle(fontSize: 12, color: AppColors.text2, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.text2,
+                            fontWeight: FontWeight.w500),
                       ),
                     ),
                   ],
@@ -179,7 +188,10 @@ class _GuardViolationsListScreenState extends State<GuardViolationsListScreen> {
               Expanded(child: _buildContent()),
             ],
           ),
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: 'Loading…'),
+          AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
+              show: _isLoading,
+              message: 'Loading…'),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -199,7 +211,9 @@ class _GuardViolationsListScreenState extends State<GuardViolationsListScreen> {
           children: [
             const Icon(Icons.error_outline, size: 64, color: AppColors.error),
             const SizedBox(height: 16),
-            Text(_error!, style: const TextStyle(color: AppColors.text2, fontSize: 16), textAlign: TextAlign.center),
+            Text(_error!,
+                style: const TextStyle(color: AppColors.text2, fontSize: 16),
+                textAlign: TextAlign.center),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _loadViolations,
@@ -208,7 +222,8 @@ class _GuardViolationsListScreenState extends State<GuardViolationsListScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -221,11 +236,15 @@ class _GuardViolationsListScreenState extends State<GuardViolationsListScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.directions_car_outlined, size: 64, color: AppColors.textMuted),
+            const Icon(Icons.directions_car_outlined,
+                size: 64, color: AppColors.textMuted),
             const SizedBox(height: 16),
             const Text(
               'No violation reports yet',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.text),
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.text),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -241,8 +260,10 @@ class _GuardViolationsListScreenState extends State<GuardViolationsListScreen> {
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -285,35 +306,59 @@ class _GuardViolationsListScreenState extends State<GuardViolationsListScreen> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: AppColors.warning.withOpacity(0.15),
+                color: AppColors.warning.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(_violationTypeIcon(type), color: AppColors.warning, size: 24),
+              child: Icon(_violationTypeIcon(type),
+                  color: AppColors.warning, size: 24),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Flat $flatNo', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.text)),
-                  Text(_violationTypeLabel(type), style: const TextStyle(fontSize: 13, color: AppColors.text2)),
+                  Text('Flat $flatNo',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800,
+                          fontSize: 16,
+                          color: AppColors.text)),
+                  Text(_violationTypeLabel(type),
+                      style: const TextStyle(
+                          fontSize: 13, color: AppColors.text2)),
                   if (createdAt != null && createdAt.isNotEmpty)
-                    Text(createdAt.length >= 10 ? createdAt.substring(0, 10) : createdAt, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                    Text(
+                        createdAt.length >= 10
+                            ? createdAt.substring(0, 10)
+                            : createdAt,
+                        style: const TextStyle(
+                            fontSize: 12, color: AppColors.textMuted)),
                   if (note != null && note.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 4),
-                      child: Text(note, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.text2)),
+                      child: Text(note,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.text2)),
                     ),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: status == 'RESOLVED' ? AppColors.success.withOpacity(0.15) : AppColors.warning.withOpacity(0.15),
+                      color: status == 'RESOLVED'
+                          ? AppColors.success.withValues(alpha: 0.15)
+                          : AppColors.warning.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
                       status,
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: status == 'RESOLVED' ? AppColors.success : AppColors.warning),
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: status == 'RESOLVED'
+                              ? AppColors.success
+                              : AppColors.warning),
                     ),
                   ),
                 ],
@@ -327,8 +372,10 @@ class _GuardViolationsListScreenState extends State<GuardViolationsListScreen> {
                   width: 48,
                   height: 48,
                   fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(width: 48, height: 48, color: Colors.grey.shade300),
-                  errorWidget: (context, url, error) => const SizedBox(width: 48, height: 48),
+                  placeholder: (context, url) => Container(
+                      width: 48, height: 48, color: Colors.grey.shade300),
+                  errorWidget: (context, url, error) =>
+                      const SizedBox(width: 48, height: 48),
                 ),
               ),
           ],

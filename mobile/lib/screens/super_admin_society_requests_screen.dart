@@ -174,7 +174,9 @@ class _SuperAdminSocietyRequestsScreenState
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          proposedName.isNotEmpty ? proposedName : 'Unnamed society',
+                          proposedName.isNotEmpty
+                              ? proposedName
+                              : 'Unnamed society',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w800,
                           ),
@@ -182,9 +184,12 @@ class _SuperAdminSocietyRequestsScreenState
                         const SizedBox(height: 6),
                         Text('Code: $proposedCode'),
                         if (city.isNotEmpty || state.isNotEmpty)
-                          Text('Location: $city${city.isNotEmpty && state.isNotEmpty ? ", " : ""}$state'),
-                        Text('Requester: ${requester.isNotEmpty ? requester : "Unknown"}'),
-                        if (requesterPhone.isNotEmpty) Text('Phone: $requesterPhone'),
+                          Text(
+                              'Location: $city${city.isNotEmpty && state.isNotEmpty ? ", " : ""}$state'),
+                        Text(
+                            'Requester: ${requester.isNotEmpty ? requester : "Unknown"}'),
+                        if (requesterPhone.isNotEmpty)
+                          Text('Phone: $requesterPhone'),
                         const SizedBox(height: 12),
                         Row(
                           children: [
@@ -216,7 +221,7 @@ class _SuperAdminSocietyRequestsScreenState
           if (_busy)
             Positioned.fill(
               child: ColoredBox(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 child: const Center(
                   child: CircularProgressIndicator(),
                 ),

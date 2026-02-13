@@ -159,16 +159,19 @@ class InviteBulkUploadService {
           .collection('invites')
           .doc(inviteKey);
 
-      batch.set(inviteRef, {
-        'email': email,
-        'systemRole': systemRole,
-        'societyRole': societyRole.isEmpty ? null : societyRole,
-        'flatNo': flatNo.isEmpty ? null : flatNo,
-        'status': 'pending',
-        'active': true,
-        'createdAt': FieldValue.serverTimestamp(),
-        'createdByUid': createdByUid,
-      }, SetOptions(merge: true));
+      batch.set(
+          inviteRef,
+          {
+            'email': email,
+            'systemRole': systemRole,
+            'societyRole': societyRole.isEmpty ? null : societyRole,
+            'flatNo': flatNo.isEmpty ? null : flatNo,
+            'status': 'pending',
+            'active': true,
+            'createdAt': FieldValue.serverTimestamp(),
+            'createdByUid': createdByUid,
+          },
+          SetOptions(merge: true));
 
       ops++;
       created++;

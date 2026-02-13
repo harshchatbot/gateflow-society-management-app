@@ -32,6 +32,7 @@ class _SosAlertsScreenState extends State<SosAlertsScreen> {
   bool _loading = true;
   bool _loadingMore = false;
   List<Map<String, dynamic>> _alerts = [];
+
   /// Cursor for "Load more" (null = no more or not loaded).
   DocumentSnapshot? _lastDoc;
 
@@ -53,15 +54,25 @@ class _SosAlertsScreenState extends State<SosAlertsScreen> {
     final query = _searchController.text.trim().toLowerCase();
     if (query.isEmpty) return _alerts;
     return _alerts.where((sos) {
-      final flatNo = (sos['flatNo'] ?? sos['flat_no'] ?? '').toString().toLowerCase();
-      final residentName = (sos['residentName'] ?? sos['resident_name'] ?? 'Resident').toString().toLowerCase();
+      final flatNo =
+          (sos['flatNo'] ?? sos['flat_no'] ?? '').toString().toLowerCase();
+      final residentName =
+          (sos['residentName'] ?? sos['resident_name'] ?? 'Resident')
+              .toString()
+              .toLowerCase();
       final phone = (sos['phone'] ?? '').toString().toLowerCase();
       final status = (sos['status'] ?? 'OPEN').toString().toLowerCase();
       final type = (sos['type'] ?? '').toString().toLowerCase();
       final note = (sos['note'] ?? '').toString().toLowerCase();
       final sosId = (sos['sosId'] ?? '').toString().toLowerCase();
-      final ackBy = (sos['acknowledgedByName'] ?? sos['acknowledged_by_name'] ?? '').toString().toLowerCase();
-      final resolvedBy = (sos['resolvedByName'] ?? sos['resolved_by_name'] ?? '').toString().toLowerCase();
+      final ackBy =
+          (sos['acknowledgedByName'] ?? sos['acknowledged_by_name'] ?? '')
+              .toString()
+              .toLowerCase();
+      final resolvedBy =
+          (sos['resolvedByName'] ?? sos['resolved_by_name'] ?? '')
+              .toString()
+              .toLowerCase();
       return flatNo.contains(query) ||
           residentName.contains(query) ||
           phone.contains(query) ||
@@ -155,163 +166,180 @@ class _SosAlertsScreenState extends State<SosAlertsScreen> {
                         child: _filteredAlerts.isEmpty
                             ? _buildNoFilterResults()
                             : ListView.builder(
-                                padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                                itemCount: _filteredAlerts.length + (_lastDoc != null ? 1 : 0),
+                                padding:
+                                    const EdgeInsets.fromLTRB(16, 8, 16, 80),
+                                itemCount: _filteredAlerts.length +
+                                    (_lastDoc != null ? 1 : 0),
                                 itemBuilder: (context, index) {
                                   if (index == _filteredAlerts.length) {
                                     return _buildLoadMoreRow();
                                   }
                                   final sos = _filteredAlerts[index];
-                      final sosId = (sos['sosId'] ?? '').toString();
-                      final flatNo = (sos['flatNo'] ?? '').toString();
-                      final residentName =
-                          (sos['residentName'] ?? 'Resident').toString();
-                      final phone = (sos['phone'] ?? '').toString();
-                      final status = (sos['status'] ?? 'OPEN').toString();
-                      final createdAt = sos['createdAt'];
+                                  final sosId = (sos['sosId'] ?? '').toString();
+                                  final flatNo =
+                                      (sos['flatNo'] ?? '').toString();
+                                  final residentName =
+                                      (sos['residentName'] ?? 'Resident')
+                                          .toString();
+                                  final phone = (sos['phone'] ?? '').toString();
+                                  final status =
+                                      (sos['status'] ?? 'OPEN').toString();
+                                  final createdAt = sos['createdAt'];
 
-                      final acknowledgedByName =
-                          (sos['acknowledgedByName'] ?? sos['acknowledged_by_name'])
-                              ?.toString();
-                      final resolvedByName =
-                          (sos['resolvedByName'] ?? sos['resolved_by_name'])
-                              ?.toString();
+                                  final acknowledgedByName =
+                                      (sos['acknowledgedByName'] ??
+                                              sos['acknowledged_by_name'])
+                                          ?.toString();
+                                  final resolvedByName =
+                                      (sos['resolvedByName'] ??
+                                              sos['resolved_by_name'])
+                                          ?.toString();
 
-                      DateTime? created;
-                      if (createdAt is Timestamp) {
-                        created = createdAt.toDate();
-                      }
+                                  DateTime? created;
+                                  if (createdAt is Timestamp) {
+                                    created = createdAt.toDate();
+                                  }
 
-                      final statusUpper = status.toUpperCase();
-                      Color statusColor;
-                      if (statusUpper == 'OPEN') {
-                        statusColor = AppColors.error;
-                      } else if (statusUpper == 'ACKNOWLEDGED') {
-                        statusColor = AppColors.warning;
-                      } else {
-                        statusColor = AppColors.success;
-                      }
+                                  final statusUpper = status.toUpperCase();
+                                  Color statusColor;
+                                  if (statusUpper == 'OPEN') {
+                                    statusColor = AppColors.error;
+                                  } else if (statusUpper == 'ACKNOWLEDGED') {
+                                    statusColor = AppColors.warning;
+                                  } else {
+                                    statusColor = AppColors.success;
+                                  }
 
-                      return InkWell(
-                        onTap: () {
-                          if (sosId.isEmpty) return;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SosDetailScreen(
-                                societyId: widget.societyId,
-                                sosId: sosId,
-                                flatNo: flatNo,
-                                residentName: residentName,
-                                residentPhone:
-                                    phone.isNotEmpty ? phone : null,
-                              ),
-                            ),
-                          );
-                        },
-                        child: Container(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: AppColors.surface,
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: AppColors.border),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.sos_rounded,
-                                  color: AppColors.error),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Flat $flatNo',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w900,
-                                        fontSize: 14,
-                                        color: AppColors.text,
+                                  return InkWell(
+                                    onTap: () {
+                                      if (sosId.isEmpty) return;
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => SosDetailScreen(
+                                            societyId: widget.societyId,
+                                            sosId: sosId,
+                                            flatNo: flatNo,
+                                            residentName: residentName,
+                                            residentPhone:
+                                                phone.isNotEmpty ? phone : null,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Container(
+                                      margin: const EdgeInsets.only(bottom: 12),
+                                      padding: const EdgeInsets.all(14),
+                                      decoration: BoxDecoration(
+                                        color: AppColors.surface,
+                                        borderRadius: BorderRadius.circular(20),
+                                        border:
+                                            Border.all(color: AppColors.border),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          const Icon(Icons.sos_rounded,
+                                              color: AppColors.error),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  'Flat $flatNo',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w900,
+                                                    fontSize: 14,
+                                                    color: AppColors.text,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  residentName,
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: AppColors.text2,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                if (phone.isNotEmpty) ...[
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    phone,
+                                                    style: const TextStyle(
+                                                      fontSize: 12,
+                                                      color: AppColors.text2,
+                                                    ),
+                                                  ),
+                                                ],
+                                                if (created != null) ...[
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    created
+                                                        .toLocal()
+                                                        .toString(),
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      color: AppColors.text2,
+                                                    ),
+                                                  ),
+                                                ],
+                                                if (acknowledgedByName !=
+                                                        null &&
+                                                    acknowledgedByName
+                                                        .isNotEmpty) ...[
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    'Ack: $acknowledgedByName',
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      color: AppColors.text2,
+                                                    ),
+                                                  ),
+                                                ],
+                                                if (resolvedByName != null &&
+                                                    resolvedByName
+                                                        .isNotEmpty) ...[
+                                                  const SizedBox(height: 2),
+                                                  Text(
+                                                    'Resolved: $resolvedByName',
+                                                    style: const TextStyle(
+                                                      fontSize: 11,
+                                                      color: AppColors.text2,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 10, vertical: 6),
+                                            decoration: BoxDecoration(
+                                              color: statusColor.withValues(
+                                                  alpha: 0.12),
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                              border: Border.all(
+                                                  color: statusColor.withValues(
+                                                      alpha: 0.3)),
+                                            ),
+                                            child: Text(
+                                              statusUpper,
+                                              style: TextStyle(
+                                                color: statusColor,
+                                                fontWeight: FontWeight.w900,
+                                                fontSize: 11,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      residentName,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: AppColors.text2,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    if (phone.isNotEmpty) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        phone,
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: AppColors.text2,
-                                        ),
-                                      ),
-                                    ],
-                                    if (created != null) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        created.toLocal().toString(),
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: AppColors.text2,
-                                        ),
-                                      ),
-                                      ],
-                                    if (acknowledgedByName != null &&
-                                        acknowledgedByName.isNotEmpty) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Ack: $acknowledgedByName',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: AppColors.text2,
-                                        ),
-                                      ),
-                                    ],
-                                    if (resolvedByName != null &&
-                                        resolvedByName.isNotEmpty) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Resolved: $resolvedByName',
-                                        style: const TextStyle(
-                                          fontSize: 11,
-                                          color: AppColors.text2,
-                                        ),
-                                      ),
-                                    ],
-                                  ],
-                                ),
+                                  );
+                                },
                               ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 10, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                      color: statusColor.withOpacity(0.3)),
-                                ),
-                                child: Text(
-                                  statusUpper,
-                                  style: TextStyle(
-                                    color: statusColor,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 11,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                                ),
                       ),
                     ],
                   ),
@@ -330,8 +358,10 @@ class _SosAlertsScreenState extends State<SosAlertsScreen> {
             controller: _searchController,
             decoration: InputDecoration(
               hintText: "Search by flat, name, phone, status, type…",
-              hintStyle: const TextStyle(color: AppColors.textMuted, fontSize: 14),
-              prefixIcon: const Icon(Icons.search_rounded, color: AppColors.error, size: 22),
+              hintStyle:
+                  const TextStyle(color: AppColors.textMuted, fontSize: 14),
+              prefixIcon: const Icon(Icons.search_rounded,
+                  color: AppColors.error, size: 22),
               suffixIcon: _searchController.text.isNotEmpty
                   ? IconButton(
                       icon: const Icon(Icons.clear_rounded, size: 20),
@@ -344,7 +374,8 @@ class _SosAlertsScreenState extends State<SosAlertsScreen> {
                 borderRadius: BorderRadius.circular(14),
                 borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
             style: const TextStyle(fontSize: 15),
             onChanged: (_) => setState(() {}),
@@ -355,7 +386,10 @@ class _SosAlertsScreenState extends State<SosAlertsScreen> {
               _searchController.text.trim().isEmpty
                   ? "${_alerts.length} alert${_alerts.length != 1 ? 's' : ''}"
                   : "Showing ${_filteredAlerts.length} of ${_alerts.length}",
-              style: const TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w500),
+              style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textMuted,
+                  fontWeight: FontWeight.w500),
             ),
           ],
         ],
@@ -368,7 +402,8 @@ class _SosAlertsScreenState extends State<SosAlertsScreen> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const Icon(Icons.filter_list_off_rounded, size: 56, color: AppColors.text2),
+          const Icon(Icons.filter_list_off_rounded,
+              size: 56, color: AppColors.text2),
           const SizedBox(height: 16),
           const Text(
             "No alerts match your search",
@@ -415,11 +450,11 @@ class _SosAlertsScreenState extends State<SosAlertsScreen> {
                 label: const Text("Load more"),
                 style: TextButton.styleFrom(
                   foregroundColor: AppColors.error,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
               ),
       ),
     );
   }
 }
-

@@ -38,7 +38,6 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isOnDuty = true; // Duty Status Toggle
-  bool _isLoadingProfile = true;
   String? _photoUrl;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -79,9 +78,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       AppLogger.e("Load guard profile failed", error: e, stackTrace: st);
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoadingProfile = false;
-        });
+        setState(() {});
       }
     }
   }
@@ -90,7 +87,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           // If we're in a tab navigation (IndexedStack), switch to dashboard
           if (widget.onBackPressed != null) {
@@ -103,169 +100,210 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: CustomScrollView(
-        slivers: [
-          // Premium Profile Header
-          SliverAppBar(
-            expandedHeight: 220,
-            pinned: true,
-            backgroundColor: Theme.of(context).colorScheme.primary,
-            automaticallyImplyLeading: true,
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
-              onPressed: () {
-                // If we're in a tab navigation (IndexedStack), switch to dashboard
-                if (widget.onBackPressed != null) {
-                  widget.onBackPressed!();
-                } else if (Navigator.of(context).canPop()) {
-                  Navigator.of(context).pop();
-                }
-              },
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Theme.of(context).colorScheme.primary,
-                      Theme.of(context).colorScheme.primary.withOpacity(0.85),
+          slivers: [
+            // Premium Profile Header
+            SliverAppBar(
+              expandedHeight: 220,
+              pinned: true,
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              automaticallyImplyLeading: true,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back_rounded, color: Colors.white),
+                onPressed: () {
+                  // If we're in a tab navigation (IndexedStack), switch to dashboard
+                  if (widget.onBackPressed != null) {
+                    widget.onBackPressed!();
+                  } else if (Navigator.of(context).canPop()) {
+                    Navigator.of(context).pop();
+                  }
+                },
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).colorScheme.primary,
+                        Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.85),
+                      ],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(height: 40),
+                      GestureDetector(
+                        onTap: (_localSelfie != null ||
+                                (_photoUrl != null && _photoUrl!.isNotEmpty))
+                            ? () => _openGuardProfilePhotoPreview(
+                                  _localSelfie?.path,
+                                  _photoUrl,
+                                )
+                            : _pickAndUploadSelfie,
+                        onLongPress: _pickAndUploadSelfie,
+                        child: CircleAvatar(
+                          radius: 45,
+                          backgroundColor: Colors.white24,
+                          backgroundImage: _localSelfie != null
+                              ? FileImage(File(_localSelfie!.path))
+                              : (_photoUrl != null && _photoUrl!.isNotEmpty
+                                  ? CachedNetworkImageProvider(_photoUrl!)
+                                  : null) as ImageProvider<Object>?,
+                          child: _localSelfie == null &&
+                                  (_photoUrl == null || _photoUrl!.isEmpty)
+                              ? const Icon(Icons.person,
+                                  size: 50, color: Colors.white)
+                              : null,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        widget.guardName,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900),
+                      ),
+                      Text(
+                        "Guard ID: ${widget.guardId}",
+                        style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.8),
+                            fontSize: 14),
+                      ),
                     ],
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
                   ),
                 ),
+              ),
+            ),
+
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
                 child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const SizedBox(height: 40),
-                    GestureDetector(
-                      onTap: (_localSelfie != null || (_photoUrl != null && _photoUrl!.isNotEmpty))
-                          ? () => _openGuardProfilePhotoPreview(
-                                _localSelfie?.path,
-                                _photoUrl,
-                              )
-                          : _pickAndUploadSelfie,
-                      onLongPress: _pickAndUploadSelfie,
-                      child: CircleAvatar(
-                        radius: 45,
-                        backgroundColor: Colors.white24,
-                        backgroundImage: _localSelfie != null
-                            ? FileImage(File(_localSelfie!.path))
-                            : (_photoUrl != null && _photoUrl!.isNotEmpty
-                                ? CachedNetworkImageProvider(_photoUrl!)
-                                : null) as ImageProvider<Object>?,
-                        child: _localSelfie == null && (_photoUrl == null || _photoUrl!.isEmpty)
-                            ? const Icon(Icons.person, size: 50, color: Colors.white)
-                            : null,
+                    // 0. Account summary
+                    _buildAccountInfoSection(),
+                    const SizedBox(height: 20),
+
+                    // Login options: Add phone (recommended), Add email (optional)
+                    _buildLoginOptionsSection(),
+                    const SizedBox(height: 20),
+
+                    // 1. Duty Status & Shift Card
+                    _buildDutyCard(),
+                    const SizedBox(height: 20),
+
+                    // Profile & Contact
+                    _buildProfileForm(),
+                    const SizedBox(height: 25),
+
+                    // Password
+                    _buildPasswordCard(),
+                    const SizedBox(height: 25),
+
+                    // Get Started (Quick Start + Interactive Tour)
+                    InkWell(
+                      onTap: () async {
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => GetStartedScreen(
+                              role: 'guard',
+                              onStartTour: widget.onStartTourRequested,
+                            ),
+                          ),
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(Icons.lightbulb_outline_rounded,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  size: 22),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("Get Started",
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w900,
+                                          fontSize: 16,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface)),
+                                  const SizedBox(height: 4),
+                                  Text("Quick start guide & interactive tour",
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface
+                                              .withValues(alpha: 0.7))),
+                                ],
+                              ),
+                            ),
+                            Icon(Icons.arrow_forward_ios_rounded,
+                                size: 16,
+                                color: Theme.of(context).colorScheme.primary),
+                          ],
+                        ),
                       ),
                     ),
+                    const SizedBox(height: 20),
+
+                    // 3. Operational Tasks Grid
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text("My Operations",
+                          style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                              color: Theme.of(context).colorScheme.onSurface)),
+                    ),
                     const SizedBox(height: 12),
-                    Text(
-                      widget.guardName,
-                      style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
-                    ),
-                    Text(
-                      "Guard ID: ${widget.guardId}",
-                      style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14),
-                    ),
+                    _buildTaskGrid(),
+
+                    const SizedBox(height: 30),
+
+                    // 4. Logout Button
+                    _buildLogoutButton(context),
+
+                    const SizedBox(height: 120), // Nav Bar Spacer
                   ],
                 ),
               ),
             ),
-          ),
-
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                children: [
-                  // 0. Account summary
-                  _buildAccountInfoSection(),
-                  const SizedBox(height: 20),
-
-                  // Login options: Add phone (recommended), Add email (optional)
-                  _buildLoginOptionsSection(),
-                  const SizedBox(height: 20),
-
-                  // 1. Duty Status & Shift Card
-                  _buildDutyCard(),
-                  const SizedBox(height: 20),
-
-                  // Profile & Contact
-                  _buildProfileForm(),
-                  const SizedBox(height: 25),
-
-                  // Password
-                  _buildPasswordCard(),
-                  const SizedBox(height: 25),
-
-                  // Get Started (Quick Start + Interactive Tour)
-                  InkWell(
-                    onTap: () async {
-                      await Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => GetStartedScreen(
-                            role: 'guard',
-                            onStartTour: widget.onStartTourRequested,
-                          ),
-                        ),
-                      );
-                    },
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(Icons.lightbulb_outline_rounded, color: Theme.of(context).colorScheme.primary, size: 22),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text("Get Started", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Theme.of(context).colorScheme.onSurface)),
-                                const SizedBox(height: 4),
-                                Text("Quick start guide & interactive tour", style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7))),
-                              ],
-                            ),
-                          ),
-                          Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // 3. Operational Tasks Grid
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text("My Operations", style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: Theme.of(context).colorScheme.onSurface)),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildTaskGrid(),
-
-                  const SizedBox(height: 30),
-
-                  // 4. Logout Button
-                  _buildLogoutButton(context),
-
-                  const SizedBox(height: 120), // Nav Bar Spacer
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
         ),
       ),
     );
@@ -286,14 +324,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Duty Status", style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.7), fontWeight: FontWeight.bold, fontSize: 12)),
-              Text(_isOnDuty ? "Currently ON-DUTY" : "OFF-DUTY", 
-                style: TextStyle(color: _isOnDuty ? AppColors.success : theme.colorScheme.error, fontWeight: FontWeight.w900, fontSize: 16)),
+              Text("Duty Status",
+                  style: TextStyle(
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12)),
+              Text(_isOnDuty ? "Currently ON-DUTY" : "OFF-DUTY",
+                  style: TextStyle(
+                      color: _isOnDuty
+                          ? AppColors.success
+                          : theme.colorScheme.error,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 16)),
             ],
           ),
           Switch.adaptive(
             value: _isOnDuty,
-            activeColor: AppColors.success,
+            activeThumbColor: AppColors.success,
             onChanged: (v) => setState(() => _isOnDuty = v),
           ),
         ],
@@ -311,7 +358,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         border: Border.all(color: theme.dividerColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -325,7 +372,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.12),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -400,8 +447,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (!hasPhone)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.phone_android_rounded, color: theme.colorScheme.primary),
-              title: const Text("Add phone number", style: TextStyle(fontWeight: FontWeight.w700)),
+              leading: Icon(Icons.phone_android_rounded,
+                  color: theme.colorScheme.primary),
+              title: const Text("Add phone number",
+                  style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle: const Text("Recommended for easier login"),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: () async {
@@ -420,8 +469,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           if (!hasRealEmail)
             ListTile(
               contentPadding: EdgeInsets.zero,
-              leading: Icon(Icons.email_outlined, color: theme.colorScheme.primary),
-              title: const Text("Add email (optional)", style: TextStyle(fontWeight: FontWeight.w700)),
+              leading:
+                  Icon(Icons.email_outlined, color: theme.colorScheme.primary),
+              title: const Text("Add email (optional)",
+                  style: TextStyle(fontWeight: FontWeight.w700)),
               subtitle: const Text("For recovery and optional login"),
               trailing: const Icon(Icons.chevron_right_rounded),
               onTap: _showAddEmailDialog,
@@ -440,7 +491,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text("Add email (optional)", style: TextStyle(fontWeight: FontWeight.w900)),
+        title: const Text("Add email (optional)",
+            style: TextStyle(fontWeight: FontWeight.w900)),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -463,7 +515,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               TextField(
                 controller: confirmController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: "Confirm password"),
+                decoration:
+                    const InputDecoration(labelText: "Confirm password"),
               ),
             ],
           ),
@@ -486,7 +539,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
               }
               if (pass.length < 6) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Password must be at least 6 characters")),
+                  const SnackBar(
+                      content: Text("Password must be at least 6 characters")),
                 );
                 return;
               }
@@ -497,7 +551,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 return;
               }
               try {
-                await authService.linkWithEmailCredential(email: email, password: pass);
+                await authService.linkWithEmailCredential(
+                    email: email, password: pass);
                 if (!context.mounted) return;
                 Navigator.of(context).pop(true);
               } catch (e) {
@@ -540,7 +595,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         Container(
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.12),
+            color: theme.colorScheme.primary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, size: 20, color: theme.colorScheme.primary),
@@ -554,7 +609,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: theme.colorScheme.onSurface.withOpacity(0.7),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -710,9 +765,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await _firestore.updateGuardProfile(
         societyId: widget.societyId,
         uid: widget.guardId,
-        email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-        phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-        shiftTimings: _shiftController.text.trim().isEmpty ? null : _shiftController.text.trim(),
+        email: _emailController.text.trim().isEmpty
+            ? null
+            : _emailController.text.trim(),
+        phone: _phoneController.text.trim().isEmpty
+            ? null
+            : _phoneController.text.trim(),
+        shiftTimings: _shiftController.text.trim().isEmpty
+            ? null
+            : _shiftController.text.trim(),
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -754,7 +815,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
 
       final storage = FirebaseStorage.instance;
-      final ref = storage.ref().child('societies/${widget.societyId}/guards/${widget.guardId}.jpg');
+      final ref = storage
+          .ref()
+          .child('societies/${widget.societyId}/guards/${widget.guardId}.jpg');
       final file = File(picked.path);
       final task = await ref.putFile(file);
       final url = await task.ref.getDownloadURL();
@@ -777,7 +840,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final newPin = _newPinController.text.trim();
     final confirm = _confirmPinController.text.trim();
 
-    if (newPin.length < 4 || newPin.length > 6 || int.tryParse(newPin) == null) {
+    if (newPin.length < 4 ||
+        newPin.length > 6 ||
+        int.tryParse(newPin) == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text(
@@ -845,10 +910,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       crossAxisSpacing: 12,
       childAspectRatio: 1.6,
       children: [
-        _buildTaskItem(Icons.qr_code_scanner_rounded, "Patrolling", "Next: 04:00 PM"),
+        _buildTaskItem(
+            Icons.qr_code_scanner_rounded, "Patrolling", "Next: 04:00 PM"),
         _buildTaskItem(Icons.language_rounded, "Language", "English"),
         _buildTaskItem(Icons.support_agent_rounded, "Helpdesk", "2 New Tasks"),
-        _buildTaskItem(Icons.info_outline_rounded, "Society Info", widget.societyId),
+        _buildTaskItem(
+            Icons.info_outline_rounded, "Society Info", widget.societyId),
       ],
     );
   }
@@ -860,7 +927,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (!mounted) return;
     await showDialog<void>(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.9),
+      barrierColor: Colors.black.withValues(alpha: 0.9),
       builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,
@@ -925,8 +992,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
         children: [
           Icon(icon, color: theme.colorScheme.primary, size: 20),
           const SizedBox(height: 6),
-          Text(title, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: theme.colorScheme.onSurface)),
-          Text(subtitle, style: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 11)),
+          Text(title,
+              style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
+                  color: theme.colorScheme.onSurface)),
+          Text(subtitle,
+              style: TextStyle(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                  fontSize: 11)),
         ],
       ),
     );
@@ -941,10 +1015,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           try {
             // 1. Sign out from Firebase Auth
             await FirebaseAuth.instance.signOut();
-            
+
             // 2. Clear old session storage
             await Storage.clearGuardSession();
-            
+
             // 3. Clear Firebase session storage
             await Storage.clearFirebaseSession();
             SocietyModules.clear();
@@ -952,7 +1026,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             AppLogger.i("Guard session cleared - logout successful");
             if (context.mounted) {
               Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
+                MaterialPageRoute(
+                    builder: (_) => const OnboardingChooseRoleScreen()),
                 (route) => false,
               );
             }
@@ -961,17 +1036,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
             // Still navigate to role select even if logout fails
             if (context.mounted) {
               Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
+                MaterialPageRoute(
+                    builder: (_) => const OnboardingChooseRoleScreen()),
                 (route) => false,
               );
             }
           }
         },
-        icon: Icon(Icons.logout_rounded, color: Theme.of(context).colorScheme.error),
-        label: Text("END SESSION", style: TextStyle(color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w900)),
+        icon: Icon(Icons.logout_rounded,
+            color: Theme.of(context).colorScheme.error),
+        label: Text("END SESSION",
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontWeight: FontWeight.w900)),
         style: OutlinedButton.styleFrom(
           side: BorderSide(color: Theme.of(context).colorScheme.error),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         ),
       ),
     );

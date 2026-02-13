@@ -26,10 +26,12 @@ class GuardReportViolationScreen extends StatefulWidget {
   });
 
   @override
-  State<GuardReportViolationScreen> createState() => _GuardReportViolationScreenState();
+  State<GuardReportViolationScreen> createState() =>
+      _GuardReportViolationScreenState();
 }
 
-class _GuardReportViolationScreenState extends State<GuardReportViolationScreen> {
+class _GuardReportViolationScreenState
+    extends State<GuardReportViolationScreen> {
   final _formKey = GlobalKey<FormState>();
   final _flatController = TextEditingController();
   final _noteController = TextEditingController();
@@ -42,8 +44,16 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
   bool _isSuccess = false;
 
   static const _types = [
-    (FirestoreService.violationTypeParking, 'Parking', Icons.directions_car_rounded),
-    (FirestoreService.violationTypeFireLane, 'Fire lane', Icons.local_fire_department_rounded),
+    (
+      FirestoreService.violationTypeParking,
+      'Parking',
+      Icons.directions_car_rounded
+    ),
+    (
+      FirestoreService.violationTypeFireLane,
+      'Fire lane',
+      Icons.local_fire_department_rounded
+    ),
     (FirestoreService.violationTypeOther, 'Other', Icons.warning_rounded),
   ];
 
@@ -56,13 +66,16 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
 
   Future<void> _pickImage() async {
     try {
-      final x = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80, maxWidth: 1200);
+      final x = await _picker.pickImage(
+          source: ImageSource.camera, imageQuality: 80, maxWidth: 1200);
       if (x != null) setState(() => _photo = File(x.path));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Camera error: $e'), backgroundColor: AppColors.error),
-      );
+          SnackBar(
+              content: Text('Camera error: $e'),
+              backgroundColor: AppColors.error),
+        );
       }
     }
   }
@@ -95,7 +108,9 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
         guardUid: widget.guardId,
         flatNo: _flatController.text.trim(),
         violationType: _violationType,
-        note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        note: _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
         photoUrl: photoUrl,
       );
       if (!mounted) return;
@@ -138,13 +153,16 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
         backgroundColor: AppColors.primary,
         foregroundColor: Colors.white,
         elevation: 0,
-        title: const Text('Report Violation', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+        title: const Text('Report Violation',
+            style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_rounded),
           onPressed: () {
             if (widget.onBackPressed != null) {
               widget.onBackPressed!();
-            } else if (Navigator.canPop(context)) Navigator.pop(context);
+            } else if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
           },
         ),
       ),
@@ -160,25 +178,34 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: AppColors.warning.withOpacity(0.1),
+                      color: AppColors.warning.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.warning.withOpacity(0.3)),
+                      border: Border.all(
+                          color: AppColors.warning.withValues(alpha: 0.3)),
                     ),
                     child: const Row(
                       children: [
-                        Icon(Icons.lock_rounded, color: AppColors.warning, size: 24),
+                        Icon(Icons.lock_rounded,
+                            color: AppColors.warning, size: 24),
                         SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             'Violations are private. No names are publicised. Only admins see full data; residents see only their flat.',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.text2),
+                            style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.text2),
                           ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 24),
-                  const Text('Flat / Unit', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.text2)),
+                  const Text('Flat / Unit',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.text2)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _flatController,
@@ -186,12 +213,19 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
                       hintText: 'e.g. B-402',
                       filled: true,
                       fillColor: AppColors.surface,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none),
                     ),
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Required' : null,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty ? 'Required' : null,
                   ),
                   const SizedBox(height: 20),
-                  const Text('Violation type', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.text2)),
+                  const Text('Violation type',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.text2)),
                   const SizedBox(height: 8),
                   Row(
                     children: _types.map((t) {
@@ -205,15 +239,30 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 12),
                               decoration: BoxDecoration(
-                                color: isSelected ? AppColors.primary : AppColors.surface,
+                                color: isSelected
+                                    ? AppColors.primary
+                                    : AppColors.surface,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: isSelected ? AppColors.primary : AppColors.border),
+                                border: Border.all(
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : AppColors.border),
                               ),
                               child: Column(
                                 children: [
-                                  Icon(t.$3, size: 22, color: isSelected ? Colors.white : AppColors.text2),
+                                  Icon(t.$3,
+                                      size: 22,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : AppColors.text2),
                                   const SizedBox(height: 4),
-                                  Text(t.$2, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: isSelected ? Colors.white : AppColors.text2)),
+                                  Text(t.$2,
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                          color: isSelected
+                                              ? Colors.white
+                                              : AppColors.text2)),
                                 ],
                               ),
                             ),
@@ -223,7 +272,11 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
                     }).toList(),
                   ),
                   const SizedBox(height: 20),
-                  const Text('Note (optional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.text2)),
+                  const Text('Note (optional)',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.text2)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: _noteController,
@@ -232,11 +285,17 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
                       hintText: 'Brief note...',
                       filled: true,
                       fillColor: AppColors.surface,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none),
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Text('Photo (optional)', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.text2)),
+                  const Text('Photo (optional)',
+                      style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.text2)),
                   const SizedBox(height: 8),
                   InkWell(
                     onTap: _photo == null ? _pickImage : null,
@@ -260,9 +319,12 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
                                   top: 8,
                                   right: 8,
                                   child: IconButton(
-                                    icon: const Icon(Icons.close, color: Colors.white),
-                                    onPressed: () => setState(() => _photo = null),
-                                    style: IconButton.styleFrom(backgroundColor: Colors.black54),
+                                    icon: const Icon(Icons.close,
+                                        color: Colors.white),
+                                    onPressed: () =>
+                                        setState(() => _photo = null),
+                                    style: IconButton.styleFrom(
+                                        backgroundColor: Colors.black54),
                                   ),
                                 ),
                               ],
@@ -271,9 +333,14 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.add_a_photo, color: AppColors.textMuted, size: 36),
+                                  Icon(Icons.add_a_photo,
+                                      color: AppColors.textMuted, size: 36),
                                   SizedBox(height: 8),
-                                  Text('Tap to add photo', style: TextStyle(fontSize: 12, color: AppColors.textMuted, fontWeight: FontWeight.w600)),
+                                  Text('Tap to add photo',
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: AppColors.textMuted,
+                                          fontWeight: FontWeight.w600)),
                                 ],
                               ),
                             ),
@@ -287,19 +354,31 @@ class _GuardReportViolationScreenState extends State<GuardReportViolationScreen>
                       onPressed: _isLoading || _isSuccess ? null : _submit,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
                         elevation: 0,
                       ),
                       child: _isSuccess
-                          ? const Row(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.check, color: Colors.white), SizedBox(width: 8), Text('Reported')])
-                          : Text(_isLoading ? 'Submitting...' : 'Submit report'),
+                          ? const Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                  Icon(Icons.check, color: Colors.white),
+                                  SizedBox(width: 8),
+                                  Text('Reported')
+                                ])
+                          : Text(
+                              _isLoading ? 'Submitting...' : 'Submit report'),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          if (_isLoading) AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: true, message: 'Submitting...'),
+          if (_isLoading)
+            AppLoader.overlay(
+                showAfter: const Duration(milliseconds: 300),
+                show: true,
+                message: 'Submitting...'),
         ],
       ),
     );

@@ -83,7 +83,9 @@ class QuoteService {
 
     final storedDate = prefs.getString(_keyQuoteDate);
     final storedQuote = prefs.getString(_keyQuoteText);
-    if (storedDate == todayKey && storedQuote != null && storedQuote.isNotEmpty) {
+    if (storedDate == todayKey &&
+        storedQuote != null &&
+        storedQuote.isNotEmpty) {
       return storedQuote;
     }
 
@@ -98,7 +100,8 @@ class QuoteService {
         quote = _fallbackQuotes[index];
       }
     } catch (e, st) {
-      AppLogger.w('Quote of the day: Firestore failed, using fallback', error: e, stackTrace: st);
+      AppLogger.w('Quote of the day: Firestore failed, using fallback',
+          error: e, stackTrace: st);
       final index = _stableHash(todayKey).abs() % _fallbackQuotes.length;
       quote = _fallbackQuotes[index];
     }

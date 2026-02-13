@@ -29,10 +29,11 @@ class DashboardQuickAction extends StatelessWidget {
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.6)),
+            border: Border.all(
+                color: Theme.of(context).dividerColor.withValues(alpha: 0.6)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -46,7 +47,7 @@ class DashboardQuickAction extends StatelessWidget {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: tint.withOpacity(0.12),
+                  color: tint.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(14),
                 ),
                 child: Icon(icon, color: tint, size: 26),

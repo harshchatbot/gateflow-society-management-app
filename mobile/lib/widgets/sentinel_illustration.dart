@@ -102,9 +102,8 @@ class _SentinelIllustrationState extends State<SentinelIllustration> {
 
   @override
   Widget build(BuildContext context) {
-    final String asset = _eyesOpen
-        ? _openEyesAssetFor(widget.kind)
-        : _closedEyesAsset;
+    final String asset =
+        _eyesOpen ? _openEyesAssetFor(widget.kind) : _closedEyesAsset;
 
     final h = widget.height ?? 140;
     return Container(
@@ -134,7 +133,7 @@ class _SentinelIllustrationState extends State<SentinelIllustration> {
         Icon(
           Icons.shield_rounded,
           size: 48,
-          color: SentinelColors.primary.withOpacity(0.6),
+          color: SentinelColors.primary.withValues(alpha: 0.6),
         ),
         const SizedBox(height: 8),
         Text(

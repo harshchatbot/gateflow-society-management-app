@@ -74,7 +74,7 @@ class StatusChip extends StatelessWidget {
       case "LEAVE_AT_GATE":
         return SentinelStatusPalette.bg(SentinelStatusPalette.info);
       default:
-        return Theme.of(context).colorScheme.onSurface.withOpacity(0.12);
+        return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.12);
     }
   }
 
@@ -89,7 +89,7 @@ class StatusChip extends StatelessWidget {
       case "LEAVE_AT_GATE":
         return SentinelStatusPalette.border(SentinelStatusPalette.info);
       default:
-        return Theme.of(context).colorScheme.onSurface.withOpacity(0.18);
+        return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.18);
     }
   }
 
@@ -104,7 +104,7 @@ class StatusChip extends StatelessWidget {
       case "LEAVE_AT_GATE":
         return SentinelStatusPalette.fg(SentinelStatusPalette.info);
       default:
-        return Theme.of(context).colorScheme.onSurface.withOpacity(0.85);
+        return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.85);
     }
   }
 }

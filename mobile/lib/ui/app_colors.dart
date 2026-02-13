@@ -8,7 +8,7 @@ class AppColors {
   static const Color success = Color(0xFF6E8A5E);
   static const Color warning = Color(0xFFC58A3A);
   static const Color error = Color(0xFFB85A49);
-  
+
   // Admin theme (purple/violet)
   static const Color admin = Color(0xFF5B3B28); // deep espresso brown
   static const Color adminSoft = Color(0xFFF3E7DA);
@@ -24,12 +24,12 @@ class AppColors {
   static Color statusChipBg(String status) {
     switch (status.toUpperCase()) {
       case "APPROVED":
-        return success.withOpacity(0.12);
+        return success.withValues(alpha: 0.12);
       case "REJECTED":
-        return error.withOpacity(0.12);
+        return error.withValues(alpha: 0.12);
       case "PENDING":
       default:
-        return warning.withOpacity(0.14);
+        return warning.withValues(alpha: 0.14);
     }
   }
 

@@ -9,7 +9,6 @@ import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
 import '../ui/app_loader.dart';
 
-import 'admin_pending_approval_screen.dart';
 import 'resident_pending_approval_screen.dart';
 import 'admin_signup_screen.dart';
 
@@ -265,11 +264,11 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
       color: theme.colorScheme.surface,
       borderRadius: BorderRadius.circular(22),
       border: Border.all(
-        color: theme.dividerColor.withOpacity(0.35),
+        color: theme.dividerColor.withValues(alpha: 0.35),
       ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.06),
+          color: Colors.black.withValues(alpha: 0.06),
           blurRadius: 18,
           offset: const Offset(0, 10),
         ),
@@ -295,16 +294,18 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.4)),
+        borderSide:
+            BorderSide(color: theme.dividerColor.withValues(alpha: 0.4)),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
-        borderSide: BorderSide(color: theme.dividerColor.withOpacity(0.4)),
+        borderSide:
+            BorderSide(color: theme.dividerColor.withValues(alpha: 0.4)),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(18),
         borderSide: BorderSide(
-          color: theme.colorScheme.primary.withOpacity(0.55),
+          color: theme.colorScheme.primary.withValues(alpha: 0.55),
           width: 1.5,
         ),
       ),
@@ -344,7 +345,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
-                color: theme.colorScheme.surfaceVariant.withOpacity(0.35),
+                color: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.35),
               ),
             ),
           ),
@@ -359,7 +361,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                     _subtitle,
                     style: TextStyle(
                       fontSize: 14,
-                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -393,7 +395,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
             hintText: 'Enter your society name',
             prefixIcon: Icon(
               Icons.search_rounded,
-              color: theme.colorScheme.onSurface.withOpacity(0.65),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
             ),
             suffixIcon: _loadingSocieties
                 ? const Padding(
@@ -407,8 +409,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                 : (_searchController.text.trim().isNotEmpty
                     ? IconButton(
                         icon: Icon(Icons.close_rounded,
-                            color:
-                                theme.colorScheme.onSurface.withOpacity(0.6)),
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.6)),
                         onPressed: () {
                           _searchController.clear();
                           _resetSelection(keepSearchText: false);
@@ -423,7 +425,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
           Text(
             'Start typing to search your society.',
             style: TextStyle(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               fontWeight: FontWeight.w600,
             ),
           )
@@ -433,7 +435,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                 ? 'Searching...'
                 : 'No societies found. Ask your society to update search name in app.',
             style: TextStyle(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               fontWeight: FontWeight.w600,
             ),
           )
@@ -450,7 +452,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
 
                 return Material(
                   color: selected
-                      ? theme.colorScheme.primary.withOpacity(0.08)
+                      ? theme.colorScheme.primary.withValues(alpha: 0.08)
                       : theme.colorScheme.surface,
                   child: InkWell(
                     onTap: () {
@@ -469,7 +471,8 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                         width: 38,
                         height: 38,
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.10),
+                          color:
+                              theme.colorScheme.primary.withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
@@ -491,7 +494,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                               style: TextStyle(
                                 fontSize: 13,
                                 color: theme.colorScheme.onSurface
-                                    .withOpacity(0.7),
+                                    .withValues(alpha: 0.7),
                                 fontWeight: FontWeight.w600,
                               ),
                             )
@@ -501,7 +504,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                               color: theme.colorScheme.primary)
                           : Icon(Icons.chevron_right_rounded,
                               color: theme.colorScheme.onSurface
-                                  .withOpacity(0.35)),
+                                  .withValues(alpha: 0.35)),
                     ),
                   ),
                 );
@@ -519,7 +522,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
       return Text(
         'Select a society to choose your unit.',
         style: TextStyle(
-          color: theme.colorScheme.onSurface.withOpacity(0.7),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
           fontWeight: FontWeight.w600,
         ),
       );
@@ -531,14 +534,14 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
       return Text(
         'No units configured for this society.',
         style: TextStyle(
-          color: theme.colorScheme.onSurface.withOpacity(0.7),
+          color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
           fontWeight: FontWeight.w600,
         ),
       );
     }
 
     return DropdownButtonFormField<String>(
-      value: _selectedUnitId,
+      initialValue: _selectedUnitId,
       decoration: _premiumFieldDecoration(
         context: context,
         hintText: '',
@@ -627,7 +630,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
             Text(
               'Next: Enter your details and send request to Super Admin.',
               style: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w600,
                 fontSize: 13,
               ),
@@ -653,9 +656,9 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                   borderRadius: BorderRadius.circular(18),
                 ),
                 disabledBackgroundColor:
-                    theme.colorScheme.onSurface.withOpacity(0.10),
+                    theme.colorScheme.onSurface.withValues(alpha: 0.10),
                 disabledForegroundColor:
-                    theme.colorScheme.onSurface.withOpacity(0.45),
+                    theme.colorScheme.onSurface.withValues(alpha: 0.45),
               ),
               child: _submitting
                   ? AppLoader.inline(size: 22)
@@ -681,7 +684,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
           width: 34,
           height: 34,
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.10),
+            color: theme.colorScheme.primary.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(icon, size: 18, color: theme.colorScheme.primary),
@@ -695,7 +698,7 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: theme.colorScheme.onSurface.withOpacity(0.65),
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.65),
                   fontWeight: FontWeight.w700,
                 ),
               ),
@@ -724,12 +727,12 @@ class _FindSocietyScreenState extends State<FindSocietyScreen> {
     final selected = _residencyType == value;
 
     final bg = selected
-        ? theme.colorScheme.primary.withOpacity(0.12)
-        : theme.colorScheme.onSurface.withOpacity(0.05);
+        ? theme.colorScheme.primary.withValues(alpha: 0.12)
+        : theme.colorScheme.onSurface.withValues(alpha: 0.05);
 
     final fg = selected
         ? theme.colorScheme.primary
-        : theme.colorScheme.onSurface.withOpacity(0.72);
+        : theme.colorScheme.onSurface.withValues(alpha: 0.72);
 
     return Material(
       color: bg,

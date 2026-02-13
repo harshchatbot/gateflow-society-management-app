@@ -36,14 +36,14 @@ class ApiClient {
             final user = FirebaseAuth.instance.currentUser;
             if (user != null) {
               final token = await user.getIdToken();
-                if (token != null && token.isNotEmpty) {
-                  options.headers['Authorization'] = 'Bearer $token';
-                }
-
+              if (token != null && token.isNotEmpty) {
+                options.headers['Authorization'] = 'Bearer $token';
+              }
             }
           } catch (e) {
             // Non-blocking: request should still proceed even if token fetch fails
-            AppLogger.w('Failed to attach Firebase token', data: {'err': e.toString()});
+            AppLogger.w('Failed to attach Firebase token',
+                data: {'err': e.toString()});
           }
           handler.next(options);
         },

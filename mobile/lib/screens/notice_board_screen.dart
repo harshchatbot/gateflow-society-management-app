@@ -9,9 +9,8 @@ import '../widgets/loading_skeletons.dart';
 import 'admin_manage_notices_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-
 /// Notice Board Screen
-/// 
+///
 /// Redesigned with modern card style, filter chips, and bell icon
 /// Theme: Adapts to role (blue/green/purple)
 class NoticeBoardScreen extends StatefulWidget {
@@ -19,8 +18,10 @@ class NoticeBoardScreen extends StatefulWidget {
   final Color themeColor; // Role-specific theme color
   final String? adminId; // Optional: if provided, shows manage button
   final String? adminName; // Optional: for admin context
-  final bool useScaffold; // Whether to wrap in Scaffold (true for standalone, false for tab)
-  final VoidCallback? onBackPressed; // Callback for back button when in tab navigation
+  final bool
+      useScaffold; // Whether to wrap in Scaffold (true for standalone, false for tab)
+  final VoidCallback?
+      onBackPressed; // Callback for back button when in tab navigation
 
   const NoticeBoardScreen({
     super.key,
@@ -53,180 +54,204 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   }
 
   Future<void> _loadNotices() async {
-  if (!mounted) return;
-  setState(() {
-    _isLoading = true;
-    _error = null;
-  });
-
-  try {
-    AppLogger.i("Loading notices", data: {
-      "societyId": widget.societyId,
-      "activeOnly": true,
-      "source": "api_first",
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
     });
 
-    // 1) Try API first
-    final result = await _service.getNotices(
-      societyId: widget.societyId,
-      activeOnly: true,
-    );
-
-    if (!mounted) return;
-
-    List<dynamic> noticesList = [];
-
-    if (result.isSuccess && result.data != null) {
-      noticesList = result.data!;
-      AppLogger.i("Notices fetched (API)", data: {
-        "count": noticesList.length,
+    try {
+      AppLogger.i("Loading notices", data: {
         "societyId": widget.societyId,
-      });
-    } else {
-      AppLogger.w("Notices API failed, trying Firestore fallback", error: result.error, data: {
-        "societyId": widget.societyId,
-      });
-    }
-
-    // 2) If API returned empty -> Firestore fallback for demo
-    if (noticesList.isEmpty) {
-      AppLogger.w("API returned 0 notices, using Firestore fallback", data: {
-        "societyId": widget.societyId,
+        "activeOnly": true,
+        "source": "api_first",
       });
 
-      // Try to get active notices - handle both 'status' and 'is_active' field names
-      Query query = FirebaseFirestore.instance
-          .collection('societies')
-          .doc(widget.societyId)
-          .collection('notices');
+      // 1) Try API first
+      final result = await _service.getNotices(
+        societyId: widget.societyId,
+        activeOnly: true,
+      );
 
-      // Try status field first (new format)
-      Query activeQuery = query.where('status', isEqualTo: 'active');
-      
-      QuerySnapshot snap;
-      try {
-        snap = await activeQuery.orderBy('createdAt', descending: true).get();
-      } catch (e) {
-        // If orderBy fails (missing index), try without orderBy
-        AppLogger.w("OrderBy failed, trying without orderBy", error: e);
-        try {
-          snap = await activeQuery.get();
-        } catch (e2) {
-          // If status field doesn't work, try is_active field (old format)
-          AppLogger.w("Status field query failed, trying is_active field", error: e2);
-          snap = await query.where('is_active', isEqualTo: true).get();
-        }
+      if (!mounted) return;
+
+      List<dynamic> noticesList = [];
+
+      if (result.isSuccess && result.data != null) {
+        noticesList = result.data!;
+        AppLogger.i("Notices fetched (API)", data: {
+          "count": noticesList.length,
+          "societyId": widget.societyId,
+        });
+      } else {
+        AppLogger.w("Notices API failed, trying Firestore fallback",
+            error: result.error,
+            data: {
+              "societyId": widget.societyId,
+            });
       }
 
-      // Normalize Firestore docs into the exact shape UI expects
-      noticesList = snap.docs.map((d) {
-        final m = d.data() as Map<String, dynamic>;
+      // 2) If API returned empty -> Firestore fallback for demo
+      if (noticesList.isEmpty) {
+        AppLogger.w("API returned 0 notices, using Firestore fallback", data: {
+          "societyId": widget.societyId,
+        });
 
-        // Check if notice is active (handle both status and is_active fields)
-        final status = (m["status"] ?? "").toString().toLowerCase();
-        final isActive = m["is_active"] == true || status == "active";
-        
-        // Skip inactive notices
-        if (!isActive) {
-          return null;
-        }
+        // Try to get active notices - handle both 'status' and 'is_active' field names
+        Query query = FirebaseFirestore.instance
+            .collection('societies')
+            .doc(widget.societyId)
+            .collection('notices');
 
-        // Check expiry date if present
-        if (m["expiryAt"] != null) {
+        // Try status field first (new format)
+        Query activeQuery = query.where('status', isEqualTo: 'active');
+
+        QuerySnapshot snap;
+        try {
+          snap = await activeQuery.orderBy('createdAt', descending: true).get();
+        } catch (e) {
+          // If orderBy fails (missing index), try without orderBy
+          AppLogger.w("OrderBy failed, trying without orderBy", error: e);
           try {
-            Timestamp? expiryTimestamp;
-            if (m["expiryAt"] is Timestamp) {
-              expiryTimestamp = m["expiryAt"] as Timestamp;
-            } else if (m["expiry_date"] != null) {
-              // Try parsing expiry_date string
-              final expiryDate = DateTime.parse(m["expiry_date"].toString());
-              expiryTimestamp = Timestamp.fromDate(expiryDate);
-            }
-            
-            if (expiryTimestamp != null) {
-              final now = Timestamp.now();
-              if (expiryTimestamp.compareTo(now) < 0) {
-                // Notice has expired
-                return null;
-              }
-            }
-          } catch (e) {
-            AppLogger.w("Error checking expiry date", error: e);
-            // Continue if expiry check fails
+            snap = await activeQuery.get();
+          } catch (e2) {
+            // If status field doesn't work, try is_active field (old format)
+            AppLogger.w("Status field query failed, trying is_active field",
+                error: e2);
+            snap = await query.where('is_active', isEqualTo: true).get();
           }
         }
 
-        // Ensure fields used by UI exist
-        String createdAtStr = "";
-        if (m["createdAt"] is Timestamp) {
-          createdAtStr = (m["createdAt"] as Timestamp).toDate().toUtc().toIso8601String();
-        } else if (m["created_at"] != null) {
-          createdAtStr = m["created_at"].toString();
-        } else {
-          createdAtStr = DateTime.now().toUtc().toIso8601String();
-        }
+        // Normalize Firestore docs into the exact shape UI expects
+        noticesList = snap.docs
+            .map((d) {
+              final m = d.data() as Map<String, dynamic>;
 
-        return <String, dynamic>{
-          "notice_id": (m["notice_id"] ?? m["id"] ?? d.id).toString(),
-          "title": (m["title"] ?? "Untitled").toString(),
-          "content": (m["content"] ?? m["message"] ?? "").toString(),
-          "notice_type": (m["noticeType"] ?? m["notice_type"] ?? "GENERAL").toString().toUpperCase(),
-          "created_at": createdAtStr,
-          "created_by_name": (m["createdByName"] ?? m["created_by_name"] ?? "Society Admin").toString(),
-          "status": (m["status"] ?? "active").toString(),
-        };
-      }).where((notice) => notice != null).cast<Map<String, dynamic>>().toList();
+              // Check if notice is active (handle both status and is_active fields)
+              final status = (m["status"] ?? "").toString().toLowerCase();
+              final isActive = m["is_active"] == true || status == "active";
 
-      // Sort newest first (already sorted by Firestore query, but ensure consistency)
-      noticesList.sort((a, b) {
-        final da = (a["created_at"] ?? "").toString();
-        final db = (b["created_at"] ?? "").toString();
-        if (da.isEmpty || db.isEmpty) return 0;
-        try {
-          final dateA = DateTime.parse(da.replaceAll("Z", "+00:00"));
-          final dateB = DateTime.parse(db.replaceAll("Z", "+00:00"));
-          return dateB.compareTo(dateA);
-        } catch (e) {
-          return db.compareTo(da); // Fallback to string comparison
-        }
-      });
+              // Skip inactive notices
+              if (!isActive) {
+                return null;
+              }
 
-      AppLogger.i("Notices fetched (Firestore fallback)", data: {
+              // Check expiry date if present
+              if (m["expiryAt"] != null) {
+                try {
+                  Timestamp? expiryTimestamp;
+                  if (m["expiryAt"] is Timestamp) {
+                    expiryTimestamp = m["expiryAt"] as Timestamp;
+                  } else if (m["expiry_date"] != null) {
+                    // Try parsing expiry_date string
+                    final expiryDate =
+                        DateTime.parse(m["expiry_date"].toString());
+                    expiryTimestamp = Timestamp.fromDate(expiryDate);
+                  }
+
+                  if (expiryTimestamp != null) {
+                    final now = Timestamp.now();
+                    if (expiryTimestamp.compareTo(now) < 0) {
+                      // Notice has expired
+                      return null;
+                    }
+                  }
+                } catch (e) {
+                  AppLogger.w("Error checking expiry date", error: e);
+                  // Continue if expiry check fails
+                }
+              }
+
+              // Ensure fields used by UI exist
+              String createdAtStr = "";
+              if (m["createdAt"] is Timestamp) {
+                createdAtStr = (m["createdAt"] as Timestamp)
+                    .toDate()
+                    .toUtc()
+                    .toIso8601String();
+              } else if (m["created_at"] != null) {
+                createdAtStr = m["created_at"].toString();
+              } else {
+                createdAtStr = DateTime.now().toUtc().toIso8601String();
+              }
+
+              return <String, dynamic>{
+                "notice_id": (m["notice_id"] ?? m["id"] ?? d.id).toString(),
+                "title": (m["title"] ?? "Untitled").toString(),
+                "content": (m["content"] ?? m["message"] ?? "").toString(),
+                "notice_type":
+                    (m["noticeType"] ?? m["notice_type"] ?? "GENERAL")
+                        .toString()
+                        .toUpperCase(),
+                "created_at": createdAtStr,
+                "created_by_name": (m["createdByName"] ??
+                        m["created_by_name"] ??
+                        "Society Admin")
+                    .toString(),
+                "status": (m["status"] ?? "active").toString(),
+              };
+            })
+            .where((notice) => notice != null)
+            .cast<Map<String, dynamic>>()
+            .toList();
+
+        // Sort newest first (already sorted by Firestore query, but ensure consistency)
+        noticesList.sort((a, b) {
+          final da = (a["created_at"] ?? "").toString();
+          final db = (b["created_at"] ?? "").toString();
+          if (da.isEmpty || db.isEmpty) return 0;
+          try {
+            final dateA = DateTime.parse(da.replaceAll("Z", "+00:00"));
+            final dateB = DateTime.parse(db.replaceAll("Z", "+00:00"));
+            return dateB.compareTo(dateA);
+          } catch (e) {
+            return db.compareTo(da); // Fallback to string comparison
+          }
+        });
+
+        AppLogger.i("Notices fetched (Firestore fallback)", data: {
+          "count": noticesList.length,
+          "societyId": widget.societyId,
+        });
+      }
+
+      // 3) Update UI state
+      AppLogger.i("Notices loaded successfully", data: {
         "count": noticesList.length,
         "societyId": widget.societyId,
+        "sample_notices": noticesList
+            .take(3)
+            .map((n) => {
+                  "notice_id": n['notice_id']?.toString() ?? 'N/A',
+                  "title": n['title']?.toString() ?? 'N/A',
+                  "notice_type": n['notice_type']?.toString() ?? 'N/A',
+                  "status": n['status']?.toString() ??
+                      n['is_active']?.toString() ??
+                      'N/A',
+                })
+            .toList(),
       });
-    }
 
-    // 3) Update UI state
-    AppLogger.i("Notices loaded successfully", data: {
-      "count": noticesList.length,
-      "societyId": widget.societyId,
-      "sample_notices": noticesList.take(3).map((n) => {
-            "notice_id": n['notice_id']?.toString() ?? 'N/A',
-            "title": n['title']?.toString() ?? 'N/A',
-            "notice_type": n['notice_type']?.toString() ?? 'N/A',
-            "status": n['status']?.toString() ?? n['is_active']?.toString() ?? 'N/A',
-          }).toList(),
-    });
-
-    if (!mounted) return;
-    setState(() {
-      _notices = noticesList;
-      _isLoading = false;
-    });
-  } catch (e, stackTrace) {
-    AppLogger.e("Error loading notices", error: e, stackTrace: stackTrace, data: {
-      "societyId": widget.societyId,
-    });
-    if (mounted) {
+      if (!mounted) return;
       setState(() {
+        _notices = noticesList;
         _isLoading = false;
-        _error = "Connection error. Please try again.";
       });
+    } catch (e, stackTrace) {
+      AppLogger.e("Error loading notices",
+          error: e,
+          stackTrace: stackTrace,
+          data: {
+            "societyId": widget.societyId,
+          });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = "Connection error. Please try again.";
+        });
+      }
     }
   }
-}
-
 
   List<dynamic> get _filteredNotices {
     if (_selectedFilter == null) return _notices;
@@ -272,7 +297,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                           icon: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: widget.themeColor.withOpacity(0.15),
+                              color: widget.themeColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Icon(
@@ -305,7 +330,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                               "Society announcements & updates",
                               style: TextStyle(
                                 fontSize: 14,
-                                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                color: theme.colorScheme.onSurface
+                                    .withValues(alpha: 0.7),
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -321,7 +347,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                             icon: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: widget.themeColor.withOpacity(0.15),
+                                color:
+                                    widget.themeColor.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
@@ -339,16 +366,19 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                               icon: Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: widget.themeColor.withOpacity(0.15),
+                                  color:
+                                      widget.themeColor.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Icon(Icons.edit_note_rounded, color: widget.themeColor, size: 20),
+                                child: Icon(Icons.edit_note_rounded,
+                                    color: widget.themeColor, size: 20),
                               ),
                               onPressed: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (context) => AdminManageNoticesScreen(
+                                    builder: (context) =>
+                                        AdminManageNoticesScreen(
                                       adminId: widget.adminId!,
                                       adminName: widget.adminName ?? "Admin",
                                       societyId: widget.societyId,
@@ -370,7 +400,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
 
               // Filter Chips
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 color: theme.colorScheme.surface,
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -388,7 +419,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         icon: Icons.campaign_rounded,
                         filterValue: "GENERAL",
                         isSelected: _selectedFilter == "GENERAL",
-                        onTap: () => setState(() => _selectedFilter = "GENERAL"),
+                        onTap: () =>
+                            setState(() => _selectedFilter = "GENERAL"),
                       ),
                       const SizedBox(width: 12),
                       _buildFilterChip(
@@ -396,7 +428,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         icon: Icons.celebration_rounded,
                         filterValue: "SCHEDULE",
                         isSelected: _selectedFilter == "SCHEDULE",
-                        onTap: () => setState(() => _selectedFilter = "SCHEDULE"),
+                        onTap: () =>
+                            setState(() => _selectedFilter = "SCHEDULE"),
                       ),
                       const SizedBox(width: 12),
                       _buildFilterChip(
@@ -404,7 +437,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         icon: Icons.warning_rounded,
                         filterValue: "EMERGENCY",
                         isSelected: _selectedFilter == "EMERGENCY",
-                        onTap: () => setState(() => _selectedFilter = "EMERGENCY"),
+                        onTap: () =>
+                            setState(() => _selectedFilter = "EMERGENCY"),
                       ),
                       const SizedBox(width: 12),
                       _buildFilterChip(
@@ -412,7 +446,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         icon: Icons.build_rounded,
                         filterValue: "MAINTENANCE",
                         isSelected: _selectedFilter == "MAINTENANCE",
-                        onTap: () => setState(() => _selectedFilter = "MAINTENANCE"),
+                        onTap: () =>
+                            setState(() => _selectedFilter = "MAINTENANCE"),
                       ),
                       const SizedBox(width: 12),
                       _buildFilterChip(
@@ -452,7 +487,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       if (widget.onBackPressed != null) {
         return PopScope(
           canPop: false,
-          onPopInvoked: (didPop) {
+          onPopInvokedWithResult: (didPop, _) {
             if (!didPop) {
               if (widget.onBackPressed != null) {
                 widget.onBackPressed!();
@@ -465,10 +500,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
       // If no back callback, return content directly (for backward compatibility)
       return content;
     }
-    
+
     return PopScope(
       canPop: false,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (!didPop) {
           // If we're in a tab navigation, switch to dashboard
           if (widget.onBackPressed != null) {
@@ -485,7 +520,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
           elevation: 0,
           automaticallyImplyLeading: true,
           leading: IconButton(
-            icon: Icon(Icons.arrow_back_rounded, color: Theme.of(context).colorScheme.onSurface),
+            icon: Icon(Icons.arrow_back_rounded,
+                color: Theme.of(context).colorScheme.onSurface),
             onPressed: () {
               // If we're in a tab navigation, switch to dashboard
               if (widget.onBackPressed != null) {
@@ -511,7 +547,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     Color chipColor;
     Color iconColor;
     final theme = Theme.of(context);
-    
+
     if (isSelected) {
       chipColor = widget.themeColor;
       iconColor = theme.colorScheme.onPrimary;
@@ -525,13 +561,14 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         iconColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.alert);
       } else if (label == "Maintenance") {
         chipColor = NoticeCategoryPalette.bg(NoticeCategoryPalette.maintenance);
-        iconColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.maintenance);
+        iconColor =
+            NoticeCategoryPalette.icon(NoticeCategoryPalette.maintenance);
       } else if (label == "Policy") {
         chipColor = NoticeCategoryPalette.bg(NoticeCategoryPalette.policy);
         iconColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.policy);
       } else {
         chipColor = theme.colorScheme.surface;
-        iconColor = theme.colorScheme.onSurface.withOpacity(0.7);
+        iconColor = theme.colorScheme.onSurface.withValues(alpha: 0.7);
       }
     }
 
@@ -542,7 +579,9 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         decoration: BoxDecoration(
           color: chipColor,
           borderRadius: BorderRadius.circular(20),
-          border: isSelected ? Border.all(color: widget.themeColor, width: 2) : null,
+          border: isSelected
+              ? Border.all(color: widget.themeColor, width: 2)
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -577,16 +616,17 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: theme.colorScheme.error.withOpacity(0.1),
+                color: theme.colorScheme.error.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+              child: Icon(Icons.error_outline,
+                  size: 64, color: theme.colorScheme.error),
             ),
             const SizedBox(height: 16),
             Text(
               _error!,
               style: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -600,7 +640,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: widget.themeColor,
                 foregroundColor: theme.colorScheme.onPrimary,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -625,7 +666,7 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: widget.themeColor.withOpacity(0.1),
+                      color: widget.themeColor.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
@@ -636,7 +677,9 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _selectedFilter == null ? "No notices" : "No ${_selectedFilter!.toLowerCase()} notices",
+                    _selectedFilter == null
+                        ? "No notices"
+                        : "No ${_selectedFilter!.toLowerCase()} notices",
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.w900,
@@ -648,7 +691,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                     "New notices from the society will appear here",
                     style: TextStyle(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                       fontWeight: FontWeight.w500,
                     ),
                     textAlign: TextAlign.center,
@@ -661,7 +707,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: widget.themeColor,
                       foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                   ),
                 ],
@@ -688,7 +735,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
   Widget _buildNoticeCard(Map<String, dynamic> notice) {
     final title = (notice['title'] ?? 'Untitled').toString();
     final content = (notice['content'] ?? '').toString();
-    final noticeType = (notice['notice_type'] ?? 'GENERAL').toString().toUpperCase();
+    final noticeType =
+        (notice['notice_type'] ?? 'GENERAL').toString().toUpperCase();
     final createdAt = notice['created_at']?.toString() ?? '';
     final isNew = _isNewNotice(notice);
 
@@ -714,20 +762,23 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         break;
       case "MAINTENANCE":
         icon = Icons.build_rounded;
-        iconBgColor = NoticeCategoryPalette.bg(NoticeCategoryPalette.maintenance);
-        categoryColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.maintenance);
+        iconBgColor =
+            NoticeCategoryPalette.bg(NoticeCategoryPalette.maintenance);
+        categoryColor =
+            NoticeCategoryPalette.icon(NoticeCategoryPalette.maintenance);
         categoryLabel = "Maintenance";
         break;
       case "POLICY":
         icon = Icons.description_rounded;
         iconBgColor = NoticeCategoryPalette.bg(NoticeCategoryPalette.policy);
-        categoryColor = NoticeCategoryPalette.icon(NoticeCategoryPalette.policy);
+        categoryColor =
+            NoticeCategoryPalette.icon(NoticeCategoryPalette.policy);
         categoryLabel = "Policy";
         break;
       default: // GENERAL
         icon = Icons.campaign_rounded;
         iconBgColor = theme.colorScheme.surfaceContainerHighest;
-        categoryColor = theme.colorScheme.onSurface.withOpacity(0.7);
+        categoryColor = theme.colorScheme.onSurface.withValues(alpha: 0.7);
         categoryLabel = "Announcement";
     }
 
@@ -738,7 +789,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -788,7 +840,8 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                           if (isNew) ...[
                             const SizedBox(width: 8),
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
                                 color: Theme.of(context).colorScheme.error,
                                 borderRadius: BorderRadius.circular(12),
@@ -810,7 +863,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                         content,
                         style: TextStyle(
                           fontSize: 14,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .onSurface
+                              .withValues(alpha: 0.7),
                           fontWeight: FontWeight.w500,
                           height: 1.4,
                         ),
@@ -822,9 +878,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: categoryColor.withOpacity(0.15),
+                              color: categoryColor.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
@@ -842,14 +899,20 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                               Icon(
                                 Icons.access_time_rounded,
                                 size: 14,
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.7),
                               ),
                               const SizedBox(width: 4),
                               Text(
                                 _formatDateTime(createdAt),
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: 0.7),
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -872,7 +935,9 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     final title = (notice['title'] ?? 'Untitled').toString();
     final content = (notice['content'] ?? '').toString();
     final createdAt = notice['created_at']?.toString() ?? '';
-    final adminName = (notice['created_by_name'] ?? notice['admin_name'] ?? 'Society Admin').toString();
+    final adminName =
+        (notice['created_by_name'] ?? notice['admin_name'] ?? 'Society Admin')
+            .toString();
 
     showModalBottomSheet(
       context: context,
@@ -918,7 +983,10 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
                 decoration: BoxDecoration(
                   color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.3)),
+                  border: Border.all(
+                      color: Theme.of(context)
+                          .dividerColor
+                          .withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   content,
@@ -933,24 +1001,40 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
               const SizedBox(height: 16),
               Row(
                 children: [
-                  Icon(Icons.person_rounded, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                  Icon(Icons.person_rounded,
+                      size: 16,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7)),
                   const SizedBox(width: 6),
                   Text(
                     adminName,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const Spacer(),
-                  Icon(Icons.access_time_rounded, size: 16, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7)),
+                  Icon(Icons.access_time_rounded,
+                      size: 16,
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7)),
                   const SizedBox(width: 6),
                   Text(
                     _formatDateTime(createdAt),
                     style: TextStyle(
                       fontSize: 14,
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurface
+                          .withValues(alpha: 0.7),
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -968,10 +1052,12 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
     try {
       // Handle both ISO8601 with Z and without
       String normalized = dateTimeStr;
-      if (normalized.contains("Z") && !normalized.contains("+") && !normalized.contains("-", 10)) {
+      if (normalized.contains("Z") &&
+          !normalized.contains("+") &&
+          !normalized.contains("-", 10)) {
         normalized = normalized.replaceAll("Z", "+00:00");
       }
-      
+
       final dt = DateTime.parse(normalized).toLocal();
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
@@ -989,12 +1075,28 @@ class _NoticeBoardScreenState extends State<NoticeBoardScreen> {
         return "Yesterday";
       } else {
         // Show date for older notices
-        final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        final months = [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec'
+        ];
         return "${dt.day} ${months[dt.month - 1]} ${dt.year}";
       }
     } catch (e) {
-      AppLogger.e("Error formatting date time", error: e, data: {"dateTimeStr": dateTimeStr});
-      return dateTimeStr.length > 10 ? dateTimeStr.substring(0, 10) : dateTimeStr;
+      AppLogger.e("Error formatting date time",
+          error: e, data: {"dateTimeStr": dateTimeStr});
+      return dateTimeStr.length > 10
+          ? dateTimeStr.substring(0, 10)
+          : dateTimeStr;
     }
   }
 }

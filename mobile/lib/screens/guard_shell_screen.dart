@@ -13,8 +13,6 @@ import 'guard_profile_screen.dart';
 import '../services/notification_service.dart';
 import '../core/society_modules.dart';
 
-
-
 class GuardShellScreen extends StatefulWidget {
   final String guardId;
   final String guardName;
@@ -33,7 +31,8 @@ class GuardShellScreen extends StatefulWidget {
 
 class _GuardShellScreenState extends State<GuardShellScreen> {
   int _index = 0;
-  final GlobalKey<State<GuardDashboardScreen>> _dashboardKey = GlobalKey<State<GuardDashboardScreen>>();
+  final GlobalKey<State<GuardDashboardScreen>> _dashboardKey =
+      GlobalKey<State<GuardDashboardScreen>>();
   bool _modulesReady = false;
 
   @override
@@ -45,7 +44,8 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
         setState(() {
           _modulesReady = true;
           // If we were on Profile (index 1) in 2-screen layout, map to Profile in 5-screen
-          if (_index == 1 && SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
+          if (_index == 1 &&
+              SocietyModules.isEnabled(SocietyModuleIds.visitorManagement)) {
             _index = 4;
           }
         });
@@ -81,7 +81,8 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
   }
 
   List<Widget> _buildScreens() {
-    final hasVisitor = SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
+    final hasVisitor =
+        SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
     return [
       GuardDashboardScreen(
         key: _dashboardKey,
@@ -118,7 +119,8 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
   }
 
   List<FloatingNavItem> _buildNavItems() {
-    final hasVisitor = SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
+    final hasVisitor =
+        SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
     if (!hasVisitor) {
       return const [
         FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
@@ -134,40 +136,41 @@ class _GuardShellScreenState extends State<GuardShellScreen> {
     ];
   }
 
-  int _getProfileIndex() {
-    return SocietyModules.isEnabled(SocietyModuleIds.visitorManagement) ? 4 : 1;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final hasVisitor = _modulesReady && SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
-    final screens = _modulesReady ? _buildScreens() : [
-      GuardDashboardScreen(
-        key: _dashboardKey,
-        guardId: widget.guardId,
-        guardName: widget.guardName,
-        societyId: widget.societyId,
-        onTapNewEntry: null,
-        onTapVisitors: null,
-      ),
-      ProfileScreen(
-        guardId: widget.guardId,
-        guardName: widget.guardName,
-        societyId: widget.societyId,
-        onBackPressed: () => setState(() => _index = 0),
-        onStartTourRequested: _onStartTourRequested,
-      ),
-    ];
+    final hasVisitor = _modulesReady &&
+        SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
+    final screens = _modulesReady
+        ? _buildScreens()
+        : [
+            GuardDashboardScreen(
+              key: _dashboardKey,
+              guardId: widget.guardId,
+              guardName: widget.guardName,
+              societyId: widget.societyId,
+              onTapNewEntry: null,
+              onTapVisitors: null,
+            ),
+            ProfileScreen(
+              guardId: widget.guardId,
+              guardName: widget.guardName,
+              societyId: widget.societyId,
+              onBackPressed: () => setState(() => _index = 0),
+              onStartTourRequested: _onStartTourRequested,
+            ),
+          ];
     if (_index >= screens.length) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _index = 0);
       });
     }
     final clampedIndex = _index.clamp(0, screens.length - 1);
-    final navItems = _modulesReady ? _buildNavItems() : const [
-      FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
-      FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
-    ];
+    final navItems = _modulesReady
+        ? _buildNavItems()
+        : const [
+            FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
+            FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
+          ];
     return Scaffold(
       extendBody: true,
       resizeToAvoidBottomInset: false,

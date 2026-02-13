@@ -89,14 +89,22 @@ class Visitor {
       photoPath: json['photo_path'] as String?,
       photoUrl: json['photo_url'] as String?,
       note: json['note'] as String?,
-      residentPhone: (json['resident_phone'] ?? json['residentPhone']) as String?,
+      residentPhone:
+          (json['resident_phone'] ?? json['residentPhone']) as String?,
       visitorName: (json['visitor_name'] ?? json['visitorName']) as String?,
-      deliveryPartner: (json['delivery_partner'] ?? json['deliveryPartner']) as String?,
-      deliveryPartnerOther: (json['delivery_partner_other'] ?? json['deliveryPartnerOther']) as String?,
-      vehicleNumber: (json['vehicle_number'] ?? json['vehicleNumber']) as String?,
+      deliveryPartner:
+          (json['delivery_partner'] ?? json['deliveryPartner']) as String?,
+      deliveryPartnerOther: (json['delivery_partner_other'] ??
+          json['deliveryPartnerOther']) as String?,
+      vehicleNumber:
+          (json['vehicle_number'] ?? json['vehicleNumber']) as String?,
       entryMode: (json['entry_mode'] ?? json['entryMode']) as String?,
-      cab: json['cab'] is Map ? Map<String, dynamic>.from(json['cab'] as Map) : null,
-      delivery: json['delivery'] is Map ? Map<String, dynamic>.from(json['delivery'] as Map) : null,
+      cab: json['cab'] is Map
+          ? Map<String, dynamic>.from(json['cab'] as Map)
+          : null,
+      delivery: json['delivery'] is Map
+          ? Map<String, dynamic>.from(json['delivery'] as Map)
+          : null,
     );
   }
 

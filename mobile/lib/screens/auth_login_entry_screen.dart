@@ -71,7 +71,7 @@ class AuthLoginEntryScreen extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
-                  color: cs.onSurface.withOpacity(0.7),
+                  color: cs.onSurface.withValues(alpha: 0.7),
                 ),
               ),
               const SizedBox(height: 18),
@@ -116,7 +116,7 @@ class AuthLoginEntryScreen extends StatelessWidget {
                     'Login with Email',
                     style: TextStyle(
                       fontSize: 14,
-                      color: cs.onSurface.withOpacity(0.75),
+                      color: cs.onSurface.withValues(alpha: 0.75),
                       fontWeight: FontWeight.w600,
                     ),
                   ),

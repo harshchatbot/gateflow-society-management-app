@@ -49,7 +49,8 @@ class NoticeService {
           final expiry = DateTime.parse(expiryDate);
           expiryAt = Timestamp.fromDate(expiry);
         } catch (e) {
-          AppLogger.w("Invalid expiry date format", data: {'expiryDate': expiryDate});
+          AppLogger.w("Invalid expiry date format",
+              data: {'expiryDate': expiryDate});
         }
       }
 
@@ -102,7 +103,8 @@ class NoticeService {
         targetRole: targetRole,
       );
 
-      AppLogger.i("Notices fetched successfully", data: {'count': notices.length});
+      AppLogger.i("Notices fetched successfully",
+          data: {'count': notices.length});
       return ApiResult.success(notices);
     } catch (e, stackTrace) {
       AppLogger.e("Error getting notices", error: e, stackTrace: stackTrace);
@@ -127,10 +129,13 @@ class NoticeService {
         isActive: isActive,
       );
 
-      AppLogger.i("Notice status updated", data: {'noticeId': noticeId, 'isActive': isActive});
-      return ApiResult.success({'ok': true, 'notice_id': noticeId, 'is_active': isActive});
+      AppLogger.i("Notice status updated",
+          data: {'noticeId': noticeId, 'isActive': isActive});
+      return ApiResult.success(
+          {'ok': true, 'notice_id': noticeId, 'is_active': isActive});
     } catch (e, stackTrace) {
-      AppLogger.e("Error updating notice status", error: e, stackTrace: stackTrace);
+      AppLogger.e("Error updating notice status",
+          error: e, stackTrace: stackTrace);
       return ApiResult.failure("Failed to update notice: ${e.toString()}");
     }
   }

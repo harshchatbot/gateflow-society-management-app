@@ -54,10 +54,12 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
     final auth = FirebaseAuth.instance;
 
     try {
-      return await auth.signInWithEmailAndPassword(email: email, password: pass);
+      return await auth.signInWithEmailAndPassword(
+          email: email, password: pass);
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
-        return await auth.createUserWithEmailAndPassword(email: email, password: pass);
+        return await auth.createUserWithEmailAndPassword(
+            email: email, password: pass);
       }
       rethrow;
     }
@@ -76,7 +78,9 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
 
       if (code.isEmpty) throw Exception("Enter society code");
       if (email.isEmpty) throw Exception("Enter email");
-      if (pass.length < 6) throw Exception("Password must be at least 6 characters");
+      if (pass.length < 6) {
+        throw Exception("Password must be at least 6 characters");
+      }
 
       // 1) Resolve societyId from code
       final societyId = await _resolveSocietyId(code);
@@ -89,10 +93,12 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
 
       // 3) Claim invite (batch)
       final claimService = InviteClaimService();
-      final result = await claimService.claimInviteForSociety(societyId: societyId);
+      final result =
+          await claimService.claimInviteForSociety(societyId: societyId);
 
       if (!result.claimed) {
-        throw Exception("No pending invite found for ${user.email}. Please contact admin.");
+        throw Exception(
+            "No pending invite found for ${user.email}. Please contact admin.");
       }
 
       if (!mounted) return;
@@ -110,6 +116,7 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
         final member = memberSnap.data() ?? {};
         final guardName = (member['name'] ?? 'Guard').toString();
 
+        if (!mounted) return;
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => GuardShellScreen(
@@ -124,7 +131,9 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
 
       // Resident shell not yet wired
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Joined as ${result.systemRole}. Resident UI pending.")),
+        SnackBar(
+            content:
+                Text("Joined as ${result.systemRole}. Resident UI pending.")),
       );
     } catch (e) {
       setState(() => _error = e.toString());
@@ -143,7 +152,6 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
           children: [
             const Text("Enter Society Code + Sign up/Login to join"),
             const SizedBox(height: 12),
-
             TextField(
               controller: _codeCtrl,
               decoration: const InputDecoration(
@@ -153,7 +161,6 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 12),
-
             TextField(
               controller: _emailCtrl,
               decoration: const InputDecoration(
@@ -164,7 +171,6 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
               textInputAction: TextInputAction.next,
             ),
             const SizedBox(height: 12),
-
             TextField(
               controller: _passCtrl,
               decoration: const InputDecoration(
@@ -176,7 +182,6 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
               onSubmitted: (_) => _joinSignupAndClaim(),
             ),
             const SizedBox(height: 12),
-
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -190,7 +195,6 @@ class _JoinAndSignupScreenState extends State<JoinAndSignupScreen> {
                     : const Text("Join & Continue"),
               ),
             ),
-
             if (_error != null) ...[
               const SizedBox(height: 12),
               Text(_error!, style: const TextStyle(color: Colors.red)),

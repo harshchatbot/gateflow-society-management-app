@@ -34,9 +34,9 @@ class ResidentShellScreen extends StatefulWidget {
 
 class _ResidentShellScreenState extends State<ResidentShellScreen> {
   int _index = 0;
-  final GlobalKey<State<ResidentDashboardScreen>> _dashboardKey = GlobalKey<State<ResidentDashboardScreen>>();
+  final GlobalKey<State<ResidentDashboardScreen>> _dashboardKey =
+      GlobalKey<State<ResidentDashboardScreen>>();
   bool _modulesReady = false;
-
 
   @override
   void initState() {
@@ -79,11 +79,13 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
   }
 
   List<Widget> _buildScreens() {
-    final hasVisitor = SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
+    final hasVisitor =
+        SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
     final hasComplaints = SocietyModules.isEnabled(SocietyModuleIds.complaints);
     final hasNotices = SocietyModules.isEnabled(SocietyModuleIds.notices);
     final complaintsIdx = hasVisitor ? 3 : 1;
-    final noticesIdx = hasVisitor ? (hasComplaints ? 4 : 3) : (hasComplaints ? 2 : 1);
+    final noticesIdx =
+        hasVisitor ? (hasComplaints ? 4 : 3) : (hasComplaints ? 2 : 1);
 
     return [
       ResidentDashboardScreen(
@@ -92,10 +94,14 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
         residentName: widget.residentName,
         societyId: widget.societyId,
         flatNo: widget.flatNo,
-        onNavigateToApprovals: hasVisitor ? () => setState(() => _index = 1) : null,
-        onNavigateToHistory: hasVisitor ? () => setState(() => _index = 2) : null,
-        onNavigateToComplaints: hasComplaints ? () => setState(() => _index = complaintsIdx) : null,
-        onNavigateToNotices: hasNotices ? () => setState(() => _index = noticesIdx) : null,
+        onNavigateToApprovals:
+            hasVisitor ? () => setState(() => _index = 1) : null,
+        onNavigateToHistory:
+            hasVisitor ? () => setState(() => _index = 2) : null,
+        onNavigateToComplaints:
+            hasComplaints ? () => setState(() => _index = complaintsIdx) : null,
+        onNavigateToNotices:
+            hasNotices ? () => setState(() => _index = noticesIdx) : null,
       ),
       if (hasVisitor) ...[
         ResidentApprovalsScreen(
@@ -137,59 +143,69 @@ class _ResidentShellScreenState extends State<ResidentShellScreen> {
   }
 
   List<FloatingNavItem> _buildNavItems() {
-    final hasVisitor = SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
+    final hasVisitor =
+        SocietyModules.isEnabled(SocietyModuleIds.visitorManagement);
     final hasComplaints = SocietyModules.isEnabled(SocietyModuleIds.complaints);
     final hasNotices = SocietyModules.isEnabled(SocietyModuleIds.notices);
     final items = <FloatingNavItem>[
       const FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
     ];
     if (hasVisitor) {
-      items.add(const FloatingNavItem(icon: Icons.verified_rounded, label: "Approvals"));
-      items.add(const FloatingNavItem(icon: Icons.history_rounded, label: "History"));
+      items.add(const FloatingNavItem(
+          icon: Icons.verified_rounded, label: "Approvals"));
+      items.add(
+          const FloatingNavItem(icon: Icons.history_rounded, label: "History"));
     }
     if (hasComplaints) {
-      items.add(const FloatingNavItem(icon: Icons.report_problem_rounded, label: "Complaints"));
+      items.add(const FloatingNavItem(
+          icon: Icons.report_problem_rounded, label: "Complaints"));
     }
     if (hasNotices) {
-      items.add(const FloatingNavItem(icon: Icons.notifications_rounded, label: "Notices"));
+      items.add(const FloatingNavItem(
+          icon: Icons.notifications_rounded, label: "Notices"));
     }
-    items.add(const FloatingNavItem(icon: Icons.person_rounded, label: "Profile"));
+    items.add(
+        const FloatingNavItem(icon: Icons.person_rounded, label: "Profile"));
     return items;
   }
 
   @override
   Widget build(BuildContext context) {
-    final screens = _modulesReady ? _buildScreens() : [
-      ResidentDashboardScreen(
-        key: _dashboardKey,
-        residentId: widget.residentId,
-        residentName: widget.residentName,
-        societyId: widget.societyId,
-        flatNo: widget.flatNo,
-        onNavigateToApprovals: null,
-        onNavigateToHistory: null,
-        onNavigateToComplaints: null,
-        onNavigateToNotices: null,
-      ),
-      ResidentProfileScreen(
-        residentId: widget.residentId,
-        residentName: widget.residentName,
-        societyId: widget.societyId,
-        flatNo: widget.flatNo,
-        onBackPressed: () => setState(() => _index = 0),
-        onStartTourRequested: _onStartTourRequested,
-      ),
-    ];
+    final screens = _modulesReady
+        ? _buildScreens()
+        : [
+            ResidentDashboardScreen(
+              key: _dashboardKey,
+              residentId: widget.residentId,
+              residentName: widget.residentName,
+              societyId: widget.societyId,
+              flatNo: widget.flatNo,
+              onNavigateToApprovals: null,
+              onNavigateToHistory: null,
+              onNavigateToComplaints: null,
+              onNavigateToNotices: null,
+            ),
+            ResidentProfileScreen(
+              residentId: widget.residentId,
+              residentName: widget.residentName,
+              societyId: widget.societyId,
+              flatNo: widget.flatNo,
+              onBackPressed: () => setState(() => _index = 0),
+              onStartTourRequested: _onStartTourRequested,
+            ),
+          ];
     if (_index >= screens.length) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _index = 0);
       });
     }
     final clampedIndex = _index.clamp(0, screens.length - 1);
-    final navItems = _modulesReady ? _buildNavItems() : const [
-      FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
-      FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
-    ];
+    final navItems = _modulesReady
+        ? _buildNavItems()
+        : const [
+            FloatingNavItem(icon: Icons.home_rounded, label: "Home"),
+            FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
+          ];
     return Scaffold(
       extendBody: true,
       resizeToAvoidBottomInset: false,

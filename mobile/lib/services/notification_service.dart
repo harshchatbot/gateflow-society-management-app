@@ -9,7 +9,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../core/app_logger.dart';
 
 /// Notification Service
-/// 
+///
 /// Handles FCM token management and local notifications with sound
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -17,8 +17,9 @@ class NotificationService {
   NotificationService._internal();
 
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
-  
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
+
   String? _fcmToken;
   bool _initialized = false;
   AuthorizationStatus? _authorizationStatus;
@@ -26,15 +27,19 @@ class NotificationService {
   StreamSubscription<User?>? _authStateSubscription;
 
   String _topicKey(String raw) {
-    final cleaned = raw.trim().toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]+'), '_');
-    return cleaned.replaceAll(RegExp(r'_+'), '_').replaceAll(RegExp(r'^_|_$'), '');
+    final cleaned =
+        raw.trim().toUpperCase().replaceAll(RegExp(r'[^A-Z0-9]+'), '_');
+    return cleaned
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
   }
-  
-  final Map<String, Function(Map<String, dynamic>)> _onNotificationReceivedListeners =
+
+  final Map<String, Function(Map<String, dynamic>)>
+      _onNotificationReceivedListeners =
       <String, Function(Map<String, dynamic>)>{};
-  final Map<String, Function(Map<String, dynamic>)> _onNotificationTapListeners =
-      <String, Function(Map<String, dynamic>)>{};
-  
+  final Map<String, Function(Map<String, dynamic>)>
+      _onNotificationTapListeners = <String, Function(Map<String, dynamic>)>{};
+
   /// Set callback for notification received
   void setOnNotificationReceived(Function(Map<String, dynamic>) callback) {
     registerOnNotificationReceived('default', callback);
@@ -86,7 +91,8 @@ class NotificationService {
           firebaseAvailable = true;
           AppLogger.i("Firebase initialized successfully");
         } catch (e2) {
-          AppLogger.w("Firebase not available, skipping notification setup: $e2");
+          AppLogger.w(
+              "Firebase not available, skipping notification setup: $e2");
           return;
         }
       }
@@ -127,7 +133,8 @@ class NotificationService {
       );
 
       // Initialize local notifications (for foreground notifications)
-      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const androidSettings =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
       const iosSettings = DarwinInitializationSettings(
         requestAlertPermission: true,
         requestBadgePermission: true,
@@ -145,14 +152,16 @@ class NotificationService {
 
       // Create the notification channel (required for Android 8.0+)
       await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
           ?.createNotificationChannel(androidChannel);
 
       // Get FCM token (may fail with TOO_MANY_REGISTRATIONS during development)
       try {
         _fcmToken = await _fcm.getToken();
         if (_fcmToken != null) {
-          AppLogger.i("FCM token obtained", data: {"token": "${_fcmToken!.substring(0, 20)}..."});
+          AppLogger.i("FCM token obtained",
+              data: {"token": "${_fcmToken!.substring(0, 20)}..."});
           await _saveFcmToken(_fcmToken!);
         }
 
@@ -164,7 +173,8 @@ class NotificationService {
         });
       } catch (e) {
         final msg = e.toString();
-        if (msg.contains('TOO_MANY_REGISTRATIONS') || msg.contains('too_many_registrations')) {
+        if (msg.contains('TOO_MANY_REGISTRATIONS') ||
+            msg.contains('too_many_registrations')) {
           AppLogger.w(
             "FCM token temporarily unavailable: too many registrations on this device. "
             "Push will work again after some time or after clearing app data. Local notifications will still work.",
@@ -207,14 +217,16 @@ class NotificationService {
   /// Get current FCM token
   String? get fcmToken => _fcmToken;
   AuthorizationStatus? get authorizationStatus => _authorizationStatus;
-  List<String> get subscribedTopics => _subscribedTopics.toList(growable: false);
+  List<String> get subscribedTopics =>
+      _subscribedTopics.toList(growable: false);
 
   /// Save FCM token to local storage (to send to backend)
   Future<void> _saveFcmToken(String token) async {
     try {
       // Save to SharedPreferences for later use
       // In a real implementation, you'd send this to your backend
-      AppLogger.i("FCM token saved locally", data: {"token_length": token.length});
+      AppLogger.i("FCM token saved locally",
+          data: {"token_length": token.length});
     } catch (e) {
       AppLogger.e("Error saving FCM token", error: e);
     }
@@ -243,7 +255,7 @@ class NotificationService {
       body: message.notification?.body ?? "",
       payload: jsonEncode(callbackData),
     );
-    
+
     _notifyReceived(callbackData);
   }
 
@@ -313,7 +325,8 @@ class NotificationService {
           _notifyTap(data);
         }
       } catch (e, st) {
-        AppLogger.e("Failed to parse notification payload", error: e, stackTrace: st);
+        AppLogger.e("Failed to parse notification payload",
+            error: e, stackTrace: st);
       }
     }
   }
@@ -321,7 +334,8 @@ class NotificationService {
   /// Subscribe to a topic (e.g., society-specific notifications)
   Future<void> subscribeToTopic(String topic) async {
     if (!_initialized) {
-      AppLogger.w("Notification service not initialized, skipping topic subscription");
+      AppLogger.w(
+          "Notification service not initialized, skipping topic subscription");
       return;
     }
 
@@ -368,7 +382,8 @@ class NotificationService {
   }) async {
     // Check if Firebase is initialized
     if (!_initialized) {
-      AppLogger.w("Notification service not initialized, skipping topic subscription");
+      AppLogger.w(
+          "Notification service not initialized, skipping topic subscription");
       return;
     }
 
@@ -402,7 +417,8 @@ class NotificationService {
         await unsubscribeFromTopic(topic);
       }
 
-      final missingTopics = desiredTopics.difference(_subscribedTopics).toList();
+      final missingTopics =
+          desiredTopics.difference(_subscribedTopics).toList();
       for (final topic in missingTopics) {
         await subscribeToTopic(topic);
       }

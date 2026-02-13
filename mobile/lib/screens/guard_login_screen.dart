@@ -17,7 +17,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/invite_claim_service.dart';
 import '../core/session_gate_service.dart';
 
-
 class GuardLoginScreen extends StatefulWidget {
   const GuardLoginScreen({super.key});
 
@@ -41,8 +40,6 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
     super.dispose();
   }
 
-
-  
   void _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -103,7 +100,8 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
 
       // 4) Extract membership data
       final societyId = (membership['societyId'] as String?)?.trim() ?? '';
-      final systemRole = (membership['systemRole'] as String?)?.trim() ?? 'guard';
+      final systemRole =
+          (membership['systemRole'] as String?)?.trim() ?? 'guard';
       final name = (membership['name'] as String?)?.trim() ?? 'Guard';
 
       if (societyId.isEmpty) {
@@ -121,7 +119,8 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
         await FirebaseAuth.instance.signOut();
         await Storage.clearAllSessions();
         await Storage.clearFirebaseSession();
-        GateBlockMessage.set(gateResult.userMessage ?? 'This society is currently inactive. Please contact the society admin.');
+        GateBlockMessage.set(gateResult.userMessage ??
+            'This society is currently inactive. Please contact the society admin.');
         if (!mounted) return;
         setState(() => _isLoading = false);
         Navigator.of(context).pushReplacement(
@@ -159,7 +158,8 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
       if (memberPhone.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Add your phone in Profile for easier login next time.'),
+            content:
+                Text('Add your phone in Profile for easier login next time.'),
             duration: Duration(seconds: 5),
             behavior: SnackBarBehavior.floating,
           ),
@@ -214,8 +214,6 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
     }
   }
 
-
-
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -239,11 +237,11 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.9),
+              color: Colors.white.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -260,7 +258,8 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
               Navigator.of(context).pop();
             } else {
               Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
+                MaterialPageRoute(
+                    builder: (_) => const OnboardingChooseRoleScreen()),
               );
             }
           },
@@ -276,7 +275,10 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                    Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.15),
                     AppColors.bg,
                     AppColors.bg,
                   ],
@@ -298,7 +300,10 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Verifying Credentials…"),
+          AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
+              show: _isLoading,
+              message: "Verifying Credentials…"),
         ],
       ),
     );
@@ -315,7 +320,7 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
             fit: BoxFit.contain,
             errorBuilder: (ctx, __, ___) => Container(
               decoration: BoxDecoration(
-                color: Theme.of(ctx).colorScheme.primary.withOpacity(0.1),
+                color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(
@@ -340,7 +345,8 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
         Text(
           "Secure Society Access",
           style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             fontWeight: FontWeight.w600,
             fontSize: 15,
           ),
@@ -355,10 +361,11 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
       decoration: BoxDecoration(
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: Theme.of(context).dividerColor.withOpacity(0.5)),
+        border: Border.all(
+            color: Theme.of(context).dividerColor.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 30,
             offset: const Offset(0, 15),
           ),
@@ -374,7 +381,10 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -404,8 +414,13 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
               onSubmitted: (_) => _handleLogin(),
               suffixIcon: IconButton(
                 icon: Icon(
-                  _obscurePassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .onSurface
+                      .withValues(alpha: 0.7),
                   size: 20,
                 ),
                 onPressed: () {
@@ -428,39 +443,47 @@ class _GuardLoginScreenState extends State<GuardLoginScreen> {
                     : () async {
                         final username = _usernameController.text.trim();
                         if (username.isEmpty || !username.contains('@')) {
-                          _showError("Please enter a valid email address first to reset password.");
+                          _showError(
+                              "Please enter a valid email address first to reset password.");
                           return;
                         }
                         try {
-                          await _authService.sendPasswordResetEmail(email: username.trim());
+                          await _authService.sendPasswordResetEmail(
+                              email: username.trim());
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
                                 content: const Row(
                                   children: [
-                                    Icon(Icons.check_circle_rounded, color: Colors.white, size: 20),
+                                    Icon(Icons.check_circle_rounded,
+                                        color: Colors.white, size: 20),
                                     SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
                                         "Password reset email sent. Please check your inbox.",
-                                        style: TextStyle(fontWeight: FontWeight.bold),
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold),
                                       ),
                                     ),
                                   ],
                                 ),
                                 backgroundColor: AppColors.success,
                                 behavior: SnackBarBehavior.floating,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12)),
                                 margin: const EdgeInsets.all(16),
                               ),
                             );
                           }
                         } catch (e, stackTrace) {
-                          AppLogger.e("Error sending password reset email", error: e, stackTrace: stackTrace);
+                          AppLogger.e("Error sending password reset email",
+                              error: e, stackTrace: stackTrace);
                           if (mounted) {
-                            String errorMsg = "Failed to send reset email. Please try again.";
+                            String errorMsg =
+                                "Failed to send reset email. Please try again.";
                             if (e.toString().contains('user-not-found')) {
-                              errorMsg = "Email not found. Please check your email address.";
+                              errorMsg =
+                                  "Email not found. Please check your email address.";
                             }
                             _showError(errorMsg);
                           }
@@ -579,7 +602,8 @@ class _PremiumField extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color:
+                Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
             letterSpacing: 0.2,
           ),
         ),
@@ -591,7 +615,7 @@ class _PremiumField extends StatelessWidget {
             border: Border.all(color: Theme.of(context).dividerColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -614,15 +638,22 @@ class _PremiumField extends StatelessWidget {
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
+                child: Icon(icon,
+                    color: Theme.of(context).colorScheme.primary, size: 20),
               ),
               suffixIcon: suffixIcon,
               hintText: hint,
               hintStyle: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurface
+                    .withValues(alpha: 0.6),
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),

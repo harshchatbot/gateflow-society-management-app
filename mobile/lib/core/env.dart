@@ -13,7 +13,8 @@ class Env {
     } catch (e, st) {
       AppLogger.e('Failed to load .env', error: e, stackTrace: st);
       throw AppError(
-        userMessage: 'Configuration error. Please reinstall or contact support.',
+        userMessage:
+            'Configuration error. Please reinstall or contact support.',
         technicalMessage: 'Env load failed: $e',
       );
     }

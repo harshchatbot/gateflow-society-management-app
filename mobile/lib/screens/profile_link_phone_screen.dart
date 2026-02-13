@@ -86,7 +86,8 @@ class _ProfileLinkPhoneScreenState extends State<ProfileLinkPhoneScreen> {
         _errorMessage = _friendlyError(e.code);
       });
     } catch (e, st) {
-      AppLogger.e('Profile link phone: send OTP failed', error: e, stackTrace: st);
+      AppLogger.e('Profile link phone: send OTP failed',
+          error: e, stackTrace: st);
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -135,7 +136,8 @@ class _ProfileLinkPhoneScreenState extends State<ProfileLinkPhoneScreen> {
         _errorMessage = _friendlyError(e.code);
       });
     } catch (e, st) {
-      AppLogger.e('Profile link phone: verify failed', error: e, stackTrace: st);
+      AppLogger.e('Profile link phone: verify failed',
+          error: e, stackTrace: st);
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -197,7 +199,8 @@ class _ProfileLinkPhoneScreenState extends State<ProfileLinkPhoneScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                 decoration: BoxDecoration(
                   color: AppColors.bg,
                   borderRadius: BorderRadius.circular(12),
@@ -234,7 +237,8 @@ class _ProfileLinkPhoneScreenState extends State<ProfileLinkPhoneScreen> {
           ),
           if (_errorMessage != null) ...[
             const SizedBox(height: 12),
-            Text(_errorMessage!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
+            Text(_errorMessage!,
+                style: const TextStyle(color: AppColors.error, fontSize: 13)),
           ],
           const SizedBox(height: 24),
           SizedBox(
@@ -244,13 +248,15 @@ class _ProfileLinkPhoneScreenState extends State<ProfileLinkPhoneScreen> {
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
               ),
               child: _isLoading
                   ? const SizedBox(
                       height: 24,
                       width: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : const Text('Send OTP'),
             ),
@@ -276,11 +282,13 @@ class _ProfileLinkPhoneScreenState extends State<ProfileLinkPhoneScreen> {
             keyboardType: TextInputType.number,
             maxLength: 6,
             textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.w600),
+            style: const TextStyle(
+                fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.w600),
             decoration: InputDecoration(
               hintText: '000000',
               counterText: '',
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              border:
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               filled: true,
               fillColor: AppColors.bg,
             ),
@@ -288,7 +296,8 @@ class _ProfileLinkPhoneScreenState extends State<ProfileLinkPhoneScreen> {
           ),
           if (_errorMessage != null) ...[
             const SizedBox(height: 12),
-            Text(_errorMessage!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
+            Text(_errorMessage!,
+                style: const TextStyle(color: AppColors.error, fontSize: 13)),
           ],
           const SizedBox(height: 16),
           TextButton(
@@ -303,13 +312,15 @@ class _ProfileLinkPhoneScreenState extends State<ProfileLinkPhoneScreen> {
               style: FilledButton.styleFrom(
                 backgroundColor: AppColors.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
               ),
               child: _isLoading
                   ? const SizedBox(
                       height: 24,
                       width: 24,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
                     )
                   : const Text('Verify & Add'),
             ),

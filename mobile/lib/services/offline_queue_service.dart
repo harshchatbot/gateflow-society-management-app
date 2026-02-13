@@ -13,7 +13,6 @@ const String kActionCreateVisitor = 'create_visitor';
 const String kActionUpdateStatus = 'update_status';
 
 const String _prefKeyQueue = 'offline_queue_actions';
-const String _prefKeyQueueDir = 'offline_queue_photo_dir';
 
 /// Single pending action: type + payload (JSON-serializable).
 class QueuedAction {
@@ -33,7 +32,7 @@ class QueuedAction {
     return QueuedAction(
       id: id,
       type: type,
-      payload: Map<String, dynamic>.from(payload as Map),
+      payload: Map<String, dynamic>.from(payload),
     );
   }
 }
@@ -79,9 +78,14 @@ class OfflineQueueService {
 
   Future<void> init() async {
     await _loadQueue();
-    Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
+    Connectivity()
+        .onConnectivityChanged
+        .listen((List<ConnectivityResult> results) {
       final online = results.isNotEmpty &&
-          results.any((r) => r == ConnectivityResult.wifi || r == ConnectivityResult.mobile || r == ConnectivityResult.ethernet);
+          results.any((r) =>
+              r == ConnectivityResult.wifi ||
+              r == ConnectivityResult.mobile ||
+              r == ConnectivityResult.ethernet);
       if (_isOnline != online) {
         _isOnline = online;
         _notify(this);
@@ -91,7 +95,10 @@ class OfflineQueueService {
     // Initial state
     final results = await Connectivity().checkConnectivity();
     _isOnline = results.isNotEmpty &&
-        results.any((r) => r == ConnectivityResult.wifi || r == ConnectivityResult.mobile || r == ConnectivityResult.ethernet);
+        results.any((r) =>
+            r == ConnectivityResult.wifi ||
+            r == ConnectivityResult.mobile ||
+            r == ConnectivityResult.ethernet);
     _notify(this);
     if (_isOnline) _processQueue();
   }
@@ -153,7 +160,10 @@ class OfflineQueueService {
         final src = File(photoPath);
         if (await src.exists()) {
           final dir = await _getQueuePhotoDir();
-          final ext = photoPath.toLowerCase().endsWith('.jpg') || photoPath.toLowerCase().endsWith('.jpeg') ? '.jpg' : '.jpg';
+          final ext = photoPath.toLowerCase().endsWith('.jpg') ||
+                  photoPath.toLowerCase().endsWith('.jpeg')
+              ? '.jpg'
+              : '.jpg';
           final dest = File('$dir/$id$ext');
           await src.copy(dest.path);
           storedPhotoPath = dest.path;
@@ -167,16 +177,23 @@ class OfflineQueueService {
       'flatNo': flatNo,
       'visitorType': visitorType,
       'visitorPhone': visitorPhone,
-      if (residentPhone != null && residentPhone.isNotEmpty) 'residentPhone': residentPhone,
-      if (visitorName != null && visitorName.isNotEmpty) 'visitorName': visitorName,
-      if (deliveryPartner != null && deliveryPartner.isNotEmpty) 'deliveryPartner': deliveryPartner,
-      if (deliveryPartnerOther != null && deliveryPartnerOther.isNotEmpty) 'deliveryPartnerOther': deliveryPartnerOther,
-      if (vehicleNumber != null && vehicleNumber.isNotEmpty) 'vehicleNumber': vehicleNumber,
-      if (typePayload != null && typePayload.isNotEmpty) 'typePayload': typePayload,
+      if (residentPhone != null && residentPhone.isNotEmpty)
+        'residentPhone': residentPhone,
+      if (visitorName != null && visitorName.isNotEmpty)
+        'visitorName': visitorName,
+      if (deliveryPartner != null && deliveryPartner.isNotEmpty)
+        'deliveryPartner': deliveryPartner,
+      if (deliveryPartnerOther != null && deliveryPartnerOther.isNotEmpty)
+        'deliveryPartnerOther': deliveryPartnerOther,
+      if (vehicleNumber != null && vehicleNumber.isNotEmpty)
+        'vehicleNumber': vehicleNumber,
+      if (typePayload != null && typePayload.isNotEmpty)
+        'typePayload': typePayload,
       'hasPhoto': storedPhotoPath != null,
       if (storedPhotoPath != null) 'photoPath': storedPhotoPath,
     };
-    _queue.add(QueuedAction(id: id, type: kActionCreateVisitor, payload: payload));
+    _queue.add(
+        QueuedAction(id: id, type: kActionCreateVisitor, payload: payload));
     await _saveQueue();
   }
 
@@ -194,7 +211,8 @@ class OfflineQueueService {
       if (approvedBy != null && approvedBy.isNotEmpty) 'approvedBy': approvedBy,
       if (note != null && note.isNotEmpty) 'note': note,
     };
-    _queue.add(QueuedAction(id: id, type: kActionUpdateStatus, payload: payload));
+    _queue
+        .add(QueuedAction(id: id, type: kActionUpdateStatus, payload: payload));
     await _saveQueue();
   }
 
@@ -220,7 +238,8 @@ class OfflineQueueService {
     }
     _isProcessing = false;
     if (failed.isNotEmpty && onSyncFailure != null) {
-      onSyncFailure!('${failed.length} action(s) could not sync. Will retry when online.');
+      onSyncFailure!(
+          '${failed.length} action(s) could not sync. Will retry when online.');
     }
   }
 
@@ -236,7 +255,9 @@ class OfflineQueueService {
       final deliveryPartner = p['deliveryPartner'] as String?;
       final deliveryPartnerOther = p['deliveryPartnerOther'] as String?;
       final vehicleNumber = p['vehicleNumber'] as String?;
-      final typePayload = p['typePayload'] is Map ? Map<String, dynamic>.from(p['typePayload'] as Map) : null;
+      final typePayload = p['typePayload'] is Map
+          ? Map<String, dynamic>.from(p['typePayload'] as Map)
+          : null;
       final hasPhoto = p['hasPhoto'] == true;
       final photoPath = p['photoPath'] as String?;
 
@@ -257,7 +278,9 @@ class OfflineQueueService {
             typePayload: typePayload,
           );
           if (r.isSuccess) {
-            try { await file.delete(); } catch (_) {}
+            try {
+              await file.delete();
+            } catch (_) {}
             return true;
           }
         }

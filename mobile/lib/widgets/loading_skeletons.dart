@@ -14,7 +14,8 @@ class SkeletonBox extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final base = Theme.of(context).colorScheme.onSurface.withOpacity(0.08);
+    final base =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.08);
     return Container(
       width: width,
       height: height,
@@ -44,9 +45,9 @@ class HistorySkeletonList extends StatelessWidget {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: Theme.of(context).dividerColor),
         ),
-        child: Column(
+        child: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: const [
+          children: [
             SkeletonBox(width: 140, height: 18),
             SizedBox(height: 12),
             SkeletonBox(width: double.infinity, height: 14),

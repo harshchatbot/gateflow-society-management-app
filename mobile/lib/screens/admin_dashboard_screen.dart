@@ -73,7 +73,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       GlobalKey<State<StatefulWidget>>();
 
   Map<String, dynamic>? _stats;
-  bool _isLoading = false;
   String? _error;
 
   /// Society-wide visitor counts last 7 days (for chart). null until loaded.
@@ -199,8 +198,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   void _maybeAutoRunTour() async {
-    final seen =
-        await TourStorage.hasSeenTourForRole(widget.systemRole ?? 'admin');
+    final seen = await TourStorage.hasSeenTourForRole(widget.systemRole);
     if (mounted && !seen) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Future.delayed(const Duration(milliseconds: 500), () {
@@ -220,16 +218,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         _keyResidents,
         _keyGuards
       ];
-      if (SocietyModules.isEnabled(SocietyModuleIds.complaints))
+      if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
         keys.add(_keyComplaints);
-      if (SocietyModules.isEnabled(SocietyModuleIds.notices))
+      }
+      if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
         keys.add(_keyNotices);
+      }
       if (SocietyModules.isEnabled(SocietyModuleIds.sos)) keys.add(_keySos);
       if (keys.isEmpty) return;
       ShowCaseWidget.of(_showCaseContext!).startShowCase(keys);
     } catch (_) {
-      if (mounted)
-        TourStorage.setHasSeenTourForRole(widget.systemRole ?? 'admin');
+      if (mounted) {
+        TourStorage.setHasSeenTourForRole(widget.systemRole);
+      }
     }
   }
 
@@ -250,7 +251,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   void _setupNotificationListener() {
     // Listen for new notifications to update count
     final notificationService = NotificationService();
-    notificationService.registerOnNotificationReceived('admin_dashboard', (data) {
+    notificationService.registerOnNotificationReceived('admin_dashboard',
+        (data) {
       final type = (data['type'] ?? '').toString();
       if (type == 'complaint') {
         // Complaints are action-based; reload counts from backend
@@ -388,7 +390,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
       // Count open SOS (only if module enabled)
       if (SocietyModules.isEnabled(SocietyModuleIds.sos)) {
-        final sosList = await _firestore.getSosRequests(societyId: widget.societyId);
+        final sosList =
+            await _firestore.getSosRequests(societyId: widget.societyId);
         openSosCount = sosList.where((s) {
           final status = (s['status'] ?? 'OPEN').toString().toUpperCase();
           return status == 'OPEN';
@@ -518,7 +521,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _loadStats() async {
     if (!mounted) return;
     setState(() {
-      _isLoading = true;
       _error = null;
     });
 
@@ -530,7 +532,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       if (result.isSuccess && result.data != null) {
         setState(() {
           _stats = result.data!;
-          _isLoading = false;
         });
         AppLogger.i("Admin dashboard stats loaded", data: _stats);
         // Load society-wide visitor chart (no guard filter)
@@ -546,7 +547,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         }
       } else {
         setState(() {
-          _isLoading = false;
           _error = userFriendlyMessageFromError(
               result.error ?? "Failed to load stats");
         });
@@ -556,7 +556,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       AppLogger.e("Error loading admin stats", error: e);
       if (mounted) {
         setState(() {
-          _isLoading = false;
           _error = userFriendlyMessageFromError(e);
         });
       }
@@ -609,7 +608,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         ],
       ),
     );
-    if (shouldExit == true && context.mounted) {
+    if (!mounted) return;
+    if (shouldExit == true) {
       // Navigate to role select instead of just popping
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(builder: (_) => const OnboardingChooseRoleScreen()),
@@ -624,14 +624,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       enableAutoScroll: true,
       scrollDuration: const Duration(milliseconds: 400),
       onFinish: () {
-        TourStorage.setHasSeenTourForRole(widget.systemRole ?? 'admin');
+        TourStorage.setHasSeenTourForRole(widget.systemRole);
       },
       builder: (context) {
         _showCaseContext = context;
         final theme = Theme.of(context);
         return PopScope(
           canPop: false,
-          onPopInvoked: (didPop) async {
+          onPopInvokedWithResult: (didPop, _) async {
             if (!didPop) {
               await _onWillPop();
             }
@@ -653,7 +653,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         end: Alignment.bottomRight,
                         colors: [
                           theme.colorScheme.primary,
-                          theme.colorScheme.primary.withOpacity(0.85),
+                          theme.colorScheme.primary.withValues(alpha: 0.85),
                         ],
                       ),
                     ),
@@ -682,7 +682,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         DashboardHero(
                           userName: widget.adminName,
                           statusMessage: _notificationCount > 0
-                              ? '${_notificationCount} item(s) need attention'
+                              ? '$_notificationCount item(s) need attention'
                               : 'Society overview',
                           mascotMood: _sosBadgeCount > 0
                               ? SentiMood.warning
@@ -715,8 +715,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               Builder(
                                 builder: (context) {
                                   final totalBadgeCount = _notificationCount;
-                                  if (totalBadgeCount <= 0)
+                                  if (totalBadgeCount <= 0) {
                                     return const SizedBox.shrink();
+                                  }
                                   return Positioned(
                                     right: 8,
                                     top: 8,
@@ -806,7 +807,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ),
                   ),
                 ),
-
               ],
             ),
           ),
@@ -819,7 +819,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     return Material(
       elevation: 4,
       borderRadius: BorderRadius.circular(24),
-      shadowColor: Colors.black.withOpacity(0.15),
+      shadowColor: Colors.black.withValues(alpha: 0.15),
       color: Colors.white, // IMPORTANT: solid material
       child: Container(
         padding: const EdgeInsets.all(18),
@@ -827,7 +827,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           color: Colors.white, // solid card
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+            color:
+                Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
           ),
         ),
         child: Row(
@@ -837,7 +838,10 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
               width: 50,
               height: 50,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
@@ -870,7 +874,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       color: Theme.of(context)
                           .colorScheme
                           .onSurface
-                          .withOpacity(0.7),
+                          .withValues(alpha: 0.7),
                       fontSize: 12,
                     ),
                   ),
@@ -880,7 +884,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
             Icon(
               Icons.arrow_forward_ios_rounded,
-              color: Theme.of(context).colorScheme.primary.withOpacity(0.6),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
               size: 16,
             ),
           ],
@@ -911,7 +916,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           Text(
             'CAB: $cab   Delivery: $delivery',
             style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             ),
           ),
         ],
@@ -929,7 +934,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         border: Border.all(color: Theme.of(context).dividerColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -1097,7 +1102,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     }
     // Resident join requests (admin-only)
-    if ((widget.systemRole ?? '').toLowerCase() == 'admin') {
+    if (widget.systemRole.toLowerCase() == 'admin') {
       children.add(
         DashboardQuickAction(
           label: "Join Requests",
@@ -1126,7 +1131,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       );
     }
 
-    if ((widget.systemRole ?? '').toLowerCase() == 'super_admin') {
+    if (widget.systemRole.toLowerCase() == 'super_admin') {
       children.add(
         DashboardQuickAction(
           label: "Society Requests",
@@ -1203,7 +1208,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     if (!mounted) return;
     await showDialog<void>(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.9),
+      barrierColor: Colors.black.withValues(alpha: 0.9),
       builder: (dialogContext) {
         return Dialog(
           backgroundColor: Colors.transparent,

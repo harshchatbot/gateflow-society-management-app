@@ -84,7 +84,8 @@ class SessionGateService {
       final pointer = pointerDoc.data() ?? {};
       final societyId = pointer['societyId']?.toString().trim();
       if (societyId == null || societyId.isEmpty) {
-        AppLogger.w('Session gate: pointer missing societyId', data: {'uid': uid});
+        AppLogger.w('Session gate: pointer missing societyId',
+            data: {'uid': uid});
         return GateResult.blocked(
           GateBlockReason.membershipNotFound,
           _inactiveSocietyMessage,
@@ -120,10 +121,12 @@ class SessionGateService {
       }
 
       // 3) Read society doc: societies/{societyId}
-      final societyDoc = await _firestore.collection('societies').doc(societyId).get();
+      final societyDoc =
+          await _firestore.collection('societies').doc(societyId).get();
 
       if (!societyDoc.exists) {
-        AppLogger.w('Session gate: society not found', data: {'societyId': societyId});
+        AppLogger.w('Session gate: society not found',
+            data: {'societyId': societyId});
         return GateResult.blocked(
           GateBlockReason.societyNotFound,
           _inactiveSocietyMessage,
@@ -133,7 +136,8 @@ class SessionGateService {
       final societyData = societyDoc.data() ?? {};
       final societyActive = societyData['active'];
       if (societyActive == false) {
-        AppLogger.i('Session gate: society inactive', data: {'societyId': societyId});
+        AppLogger.i('Session gate: society inactive',
+            data: {'societyId': societyId});
         return GateResult.blocked(
           GateBlockReason.societyInactive,
           _inactiveSocietyMessage,
@@ -146,7 +150,8 @@ class SessionGateService {
         'societyId': societyId,
         ...memberData,
       };
-      AppLogger.i('Session gate: allowed', data: {'uid': uid, 'societyId': societyId});
+      AppLogger.i('Session gate: allowed',
+          data: {'uid': uid, 'societyId': societyId});
       return GateResult.allowed(memberInfo);
     } catch (e, stackTrace) {
       AppLogger.e('Session gate: error', error: e, stackTrace: stackTrace);

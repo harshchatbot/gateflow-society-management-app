@@ -113,7 +113,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
       // Focus OTP field
       await Future<void>.delayed(const Duration(milliseconds: 150));
-      if (mounted) FocusScope.of(context).requestFocus(_otpFocus);
+      if (!mounted) return;
+      FocusScope.of(context).requestFocus(_otpFocus);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -215,8 +216,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       if (!mounted) return;
       _showError("Login failed. Please try again.");
     } finally {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -279,6 +281,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               (platformAdmin?['societyRole'] ?? 'SUPER_ADMIN').toString(),
           name: (platformAdmin?['name'] ?? 'Platform Admin').toString(),
         );
+        if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -335,6 +338,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         return;
       }
 
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (_) => const AdminOnboardingScreen()),
@@ -466,11 +470,11 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: cs.surface.withOpacity(0.9),
+              color: cs.surface.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -504,7 +508,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    cs.primary.withOpacity(0.12),
+                    cs.primary.withValues(alpha: 0.12),
                     theme.scaffoldBackgroundColor,
                     theme.scaffoldBackgroundColor,
                   ],
@@ -550,7 +554,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             fit: BoxFit.contain,
             errorBuilder: (ctx, __, ___) => Container(
               decoration: BoxDecoration(
-                color: Theme.of(ctx).colorScheme.primary.withOpacity(0.1),
+                color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(
@@ -578,7 +582,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
               : "Enter the OTP sent to your phone",
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: cs.onSurface.withOpacity(0.7),
+            color: cs.onSurface.withValues(alpha: 0.7),
             fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
@@ -587,9 +591,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: cs.primary.withOpacity(0.10),
+            color: cs.primary.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: cs.primary.withOpacity(0.18)),
+            border: Border.all(color: cs.primary.withValues(alpha: 0.18)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -622,10 +626,10 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: AppColors.border.withOpacity(0.55)),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.55)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 28,
               offset: const Offset(0, 14),
             ),
@@ -642,7 +646,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
-                        color: cs.onSurface.withOpacity(0.72),
+                        color: cs.onSurface.withValues(alpha: 0.72),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -657,11 +661,13 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                       onSubmitted: (_) => _sendOtp(),
                       validator: (v) {
                         final value = (v ?? '').trim();
-                        if (value.isEmpty)
+                        if (value.isEmpty) {
                           return "Please enter your phone number";
+                        }
                         final digits = value.replaceAll(RegExp(r'[^\d]'), '');
-                        if (digits.length < 10)
+                        if (digits.length < 10) {
                           return "Enter a valid phone number";
+                        }
                         return null;
                       },
                     ),
@@ -694,7 +700,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                       "We’ll send a one-time password to verify your identity.",
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: cs.onSurface.withOpacity(0.65),
+                        color: cs.onSurface.withValues(alpha: 0.65),
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
@@ -712,7 +718,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
-                        color: cs.onSurface.withOpacity(0.72),
+                        color: cs.onSurface.withValues(alpha: 0.72),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -729,8 +735,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                         final value = (v ?? '').trim();
                         if (value.isEmpty) return "Please enter OTP";
                         final digits = value.replaceAll(RegExp(r'[^\d]'), '');
-                        if (digits.length < 6)
+                        if (digits.length < 6) {
                           return "Enter a valid 6-digit OTP";
+                        }
                         return null;
                       },
                     ),
@@ -796,7 +803,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                             style: TextStyle(
                               color: _canResend
                                   ? cs.primary
-                                  : cs.onSurface.withOpacity(0.45),
+                                  : cs.onSurface.withValues(alpha: 0.45),
                               fontWeight: FontWeight.w900,
                               fontSize: 13,
                             ),
@@ -817,9 +824,9 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cs.primary.withOpacity(0.06),
+        color: cs.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: cs.primary.withOpacity(0.14)),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.14)),
       ),
       child: Row(
         children: [
@@ -827,7 +834,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: cs.primary.withOpacity(0.14),
+              color: cs.primary.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(Icons.add_business_rounded, color: cs.primary),
@@ -848,7 +855,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
                 Text(
                   "Request Society Admin setup (email optional)",
                   style: TextStyle(
-                    color: cs.onSurface.withOpacity(0.7),
+                    color: cs.onSurface.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -916,7 +923,7 @@ class _PremiumField extends StatelessWidget {
         border: Border.all(color: Theme.of(context).dividerColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -939,7 +946,7 @@ class _PremiumField extends StatelessWidget {
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: cs.primary.withOpacity(0.15),
+              color: cs.primary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: cs.primary, size: 20),

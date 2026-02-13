@@ -11,7 +11,7 @@ import '../services/notification_service.dart';
 import '../core/society_modules.dart';
 
 /// Admin Shell Screen
-/// 
+///
 /// Main container for admin navigation with bottom nav
 class AdminShellScreen extends StatefulWidget {
   final String adminId;
@@ -36,7 +36,8 @@ class AdminShellScreen extends StatefulWidget {
 class _AdminShellScreenState extends State<AdminShellScreen> {
   int _currentIndex = 0;
   final Map<int, bool> _screenInitialized = {};
-  final GlobalKey<State<AdminDashboardScreen>> _dashboardKey = GlobalKey<State<AdminDashboardScreen>>();
+  final GlobalKey<State<AdminDashboardScreen>> _dashboardKey =
+      GlobalKey<State<AdminDashboardScreen>>();
   bool _modulesReady = false;
 
   @override
@@ -90,12 +91,15 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
       const FloatingNavItem(icon: Icons.dashboard_rounded, label: "Dashboard"),
     ];
     if (SocietyModules.isEnabled(SocietyModuleIds.complaints)) {
-      items.add(const FloatingNavItem(icon: Icons.report_problem_rounded, label: "Complaints"));
+      items.add(const FloatingNavItem(
+          icon: Icons.report_problem_rounded, label: "Complaints"));
     }
     if (SocietyModules.isEnabled(SocietyModuleIds.notices)) {
-      items.add(const FloatingNavItem(icon: Icons.notifications_rounded, label: "Notices"));
+      items.add(const FloatingNavItem(
+          icon: Icons.notifications_rounded, label: "Notices"));
     }
-    items.add(const FloatingNavItem(icon: Icons.person_rounded, label: "Profile"));
+    items.add(
+        const FloatingNavItem(icon: Icons.person_rounded, label: "Profile"));
     return items;
   }
 
@@ -120,7 +124,9 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
     if (!_modulesReady) {
       if (tabIndex == 0) {
         _navigateToScreen(0);
-      } else if (tabIndex == 1) _navigateToScreen(5);
+      } else if (tabIndex == 1) {
+        _navigateToScreen(5);
+      }
       return;
     }
     final tabToScreen = _buildTabToScreenIndex();
@@ -146,7 +152,8 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           adminName: widget.adminName,
           societyId: widget.societyId,
           systemRole: widget.systemRole,
-          onTabNavigate: (int index, [int? subTab]) => _navigateToScreen(index, residentsSubTab: subTab),
+          onTabNavigate: (int index, [int? subTab]) =>
+              _navigateToScreen(index, residentsSubTab: subTab),
         );
       case 1:
         return AdminManageResidentsScreen(
@@ -211,10 +218,13 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final navItems = _modulesReady ? _buildNavItems() : [
-      const FloatingNavItem(icon: Icons.dashboard_rounded, label: "Dashboard"),
-      const FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
-    ];
+    final navItems = _modulesReady
+        ? _buildNavItems()
+        : [
+            const FloatingNavItem(
+                icon: Icons.dashboard_rounded, label: "Dashboard"),
+            const FloatingNavItem(icon: Icons.person_rounded, label: "Profile"),
+          ];
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBody: true,
@@ -228,8 +238,9 @@ class _AdminShellScreenState extends State<AdminShellScreen> {
           Align(
             alignment: Alignment.bottomCenter,
             child: SocietyBottomNav(
-              currentIndex:
-                  _modulesReady ? _getCurrentTabIndex() : (_currentIndex == 0 ? 0 : 1),
+              currentIndex: _modulesReady
+                  ? _getCurrentTabIndex()
+                  : (_currentIndex == 0 ? 0 : 1),
               onTap: _onBottomNavTap,
               showCenterButton: false,
               items: navItems,

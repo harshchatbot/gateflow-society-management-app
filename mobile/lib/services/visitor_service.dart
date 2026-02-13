@@ -5,11 +5,7 @@ import '../core/api_client.dart';
 import '../core/app_error.dart';
 import '../core/app_logger.dart';
 import '../models/visitor.dart';
-
-import 'package:gateflow/services/visitor_service.dart';
-import 'package:gateflow/core/result.dart' as core_result;
 import 'package:flutter/foundation.dart';
-
 
 class Result<T> {
   final T? data;
@@ -48,7 +44,8 @@ class VisitorService {
 
       final res = await _api.post("/api/visitors", data: payload);
 
-      AppLogger.i("API POST /api/visitors status=${res.statusCode} data=${res.data}");
+      AppLogger.i(
+          "API POST /api/visitors status=${res.statusCode} data=${res.data}");
 
       final visitor = Visitor.fromJson(_asMap(res.data));
       return Result.success(visitor);
@@ -92,27 +89,31 @@ class VisitorService {
         ),
       });
 
-      AppLogger.i("API POST /api/visitors/with-photo formData(flat_no=${flatNo.trim()}, flat_id=$flatId)");
+      AppLogger.i(
+          "API POST /api/visitors/with-photo formData(flat_no=${flatNo.trim()}, flat_id=$flatId)");
 
       final res = await _api.post(
         "/api/visitors/with-photo",
         data: formData,
       );
 
-      AppLogger.i("API POST /api/visitors/with-photo status=${res.statusCode} data=${res.data}");
+      AppLogger.i(
+          "API POST /api/visitors/with-photo status=${res.statusCode} data=${res.data}");
 
       final visitor = Visitor.fromJson(_asMap(res.data));
       return Result.success(visitor);
     } on DioException catch (e) {
       final err = _mapDioError(e);
-      AppLogger.e("createVisitorWithPhoto DioException", error: err.technicalMessage);
+      AppLogger.e("createVisitorWithPhoto DioException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e) {
       final err = AppError(
         userMessage: "Failed to create visitor with photo",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("createVisitorWithPhoto unknown error", error: err.technicalMessage);
+      AppLogger.e("createVisitorWithPhoto unknown error",
+          error: err.technicalMessage);
       return Result.failure(err);
     }
   }
@@ -120,7 +121,8 @@ class VisitorService {
   // ----------------------------
   // Today Visitors
   // ----------------------------
-  Future<Result<List<Visitor>>> getTodayVisitors({required String guardId}) async {
+  Future<Result<List<Visitor>>> getTodayVisitors(
+      {required String guardId}) async {
     final path = "/api/visitors/today/$guardId";
     try {
       AppLogger.i("API GET $path", data: {"guardId": guardId});
@@ -153,15 +155,14 @@ class VisitorService {
 
       late final List<Visitor> list;
       try {
-        list = raw
-            .map((e) => Visitor.fromJson(_asMap(e)))
-            .toList();
+        list = raw.map((e) => Visitor.fromJson(_asMap(e))).toList();
       } catch (parseErr) {
         final err = AppError(
           userMessage: "Failed to parse visitors",
           technicalMessage: "Visitor.fromJson error: $parseErr | raw=$raw",
         );
-        AppLogger.e("getTodayVisitors parse error", error: err.technicalMessage);
+        AppLogger.e("getTodayVisitors parse error",
+            error: err.technicalMessage);
         return Result.failure(err);
       }
 
@@ -176,7 +177,8 @@ class VisitorService {
         userMessage: "Failed to fetch visitors",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("getTodayVisitors unknown error", error: err.technicalMessage);
+      AppLogger.e("getTodayVisitors unknown error",
+          error: err.technicalMessage);
       return Result.failure(err);
     }
   }
@@ -219,15 +221,14 @@ class VisitorService {
 
       late final List<Visitor> list;
       try {
-        list = raw
-            .map((e) => Visitor.fromJson(_asMap(e)))
-            .toList();
+        list = raw.map((e) => Visitor.fromJson(_asMap(e))).toList();
       } catch (parseErr) {
         final err = AppError(
           userMessage: "Failed to parse visitors",
           technicalMessage: "Visitor.fromJson error: $parseErr | raw=$raw",
         );
-        AppLogger.e("getVisitorsByFlatNo parse error", error: err.technicalMessage);
+        AppLogger.e("getVisitorsByFlatNo parse error",
+            error: err.technicalMessage);
         return Result.failure(err);
       }
 
@@ -235,14 +236,16 @@ class VisitorService {
       return Result.success(list);
     } on DioException catch (e) {
       final err = _mapDioError(e);
-      AppLogger.e("getVisitorsByFlatNo DioException", error: err.technicalMessage);
+      AppLogger.e("getVisitorsByFlatNo DioException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e) {
       final err = AppError(
         userMessage: "Failed to fetch visitors",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("getVisitorsByFlatNo unknown error", error: err.technicalMessage);
+      AppLogger.e("getVisitorsByFlatNo unknown error",
+          error: err.technicalMessage);
       return Result.failure(err);
     }
   }
@@ -283,23 +286,24 @@ class VisitorService {
       return Result.success(v);
     } on DioException catch (e) {
       final err = _mapDioError(e);
-      AppLogger.e("updateVisitorStatus DioException", error: err.technicalMessage);
+      AppLogger.e("updateVisitorStatus DioException",
+          error: err.technicalMessage);
       return Result.failure(err);
     } catch (e) {
       final err = AppError(
         userMessage: "Failed to update status",
         technicalMessage: e.toString(),
       );
-      AppLogger.e("updateVisitorStatus unknown error", error: err.technicalMessage);
+      AppLogger.e("updateVisitorStatus unknown error",
+          error: err.technicalMessage);
       return Result.failure(err);
     }
   }
 
-
-
   // Add this inside your VisitorService class
   Future<Result<Map<String, dynamic>>> getGuardProfile(String guardId) async {
-    final path = "/api/guards/profile/$guardId"; // Adjust this to your actual endpoint
+    final path =
+        "/api/guards/profile/$guardId"; // Adjust this to your actual endpoint
     debugPrint("final path : $path");
     try {
       AppLogger.i("API GET $path");
@@ -319,7 +323,6 @@ class VisitorService {
       ));
     }
   }
-
 
   // ----------------------------
   // Helpers
@@ -346,14 +349,17 @@ class VisitorService {
         detailMsg = detail.toString();
       }
 
-      if (status == 400) userMessage = detailMsg.isNotEmpty ? detailMsg : "Invalid input";
+      if (status == 400) {
+        userMessage = detailMsg.isNotEmpty ? detailMsg : "Invalid input";
+      }
       if (status == 401) userMessage = "Unauthorized";
       if (status == 404) userMessage = "API not found (404)";
       if (status == 500) userMessage = "Server error. Please try again.";
 
       technical = "HTTP $status | $detailMsg | url=${e.requestOptions.uri}";
     } else {
-      technical = "DioException(no response) | ${e.type} | url=${e.requestOptions.uri} | ${e.message}";
+      technical =
+          "DioException(no response) | ${e.type} | url=${e.requestOptions.uri} | ${e.message}";
     }
 
     return AppError(userMessage: userMessage, technicalMessage: technical);

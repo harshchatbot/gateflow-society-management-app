@@ -27,13 +27,14 @@ class AdminManageViolationsScreen extends StatefulWidget {
   });
 
   @override
-  State<AdminManageViolationsScreen> createState() => _AdminManageViolationsScreenState();
+  State<AdminManageViolationsScreen> createState() =>
+      _AdminManageViolationsScreenState();
 }
 
-class _AdminManageViolationsScreenState extends State<AdminManageViolationsScreen> {
+class _AdminManageViolationsScreenState
+    extends State<AdminManageViolationsScreen> {
   final FirestoreService _firestore = FirestoreService();
 
-  List<Map<String, dynamic>> _violations = [];
   List<Map<String, dynamic>> _filteredViolations = [];
   bool _isLoading = false;
   String? _error;
@@ -60,7 +61,6 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
 
       if (!mounted) return;
       setState(() {
-        _violations = list;
         _filteredViolations = list;
         _isLoading = false;
       });
@@ -135,13 +135,19 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
                     children: [
                       DropdownButton<int>(
                         value: m,
-                        items: List.generate(12, (i) => i + 1).map((mo) => DropdownMenuItem(value: mo, child: Text(_monthName(mo)))).toList(),
+                        items: List.generate(12, (i) => i + 1)
+                            .map((mo) => DropdownMenuItem(
+                                value: mo, child: Text(_monthName(mo))))
+                            .toList(),
                         onChanged: (v) => setState(() => m = v ?? m),
                       ),
                       const SizedBox(width: 12),
                       DropdownButton<int>(
                         value: y,
-                        items: [now.year, now.year - 1].map((yr) => DropdownMenuItem(value: yr, child: Text('$yr'))).toList(),
+                        items: [now.year, now.year - 1]
+                            .map((yr) =>
+                                DropdownMenuItem(value: yr, child: Text('$yr')))
+                            .toList(),
                         onChanged: (v) => setState(() => y = v ?? y),
                       ),
                     ],
@@ -151,7 +157,9 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
             },
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel')),
             FilledButton(
               onPressed: () => Navigator.pop(context, DateTime(y, m)),
               child: const Text('Continue'),
@@ -180,7 +188,8 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
       final parking = stats['parking'] as int? ?? 0;
       final fireLane = stats['fireLane'] as int? ?? 0;
       final other = stats['other'] as int? ?? 0;
-      final reducedPercent = stats['repeatedViolationsReducedPercent'] as num? ?? 0;
+      final reducedPercent =
+          stats['repeatedViolationsReducedPercent'] as num? ?? 0;
 
       final monthLabel = _monthName(month);
       final content = StringBuffer();
@@ -188,7 +197,10 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
       content.writeln('• $parking parking violation${parking != 1 ? 's' : ''}');
       content.writeln('• $fireLane fire-lane case${fireLane != 1 ? 's' : ''}');
       if (other > 0) content.writeln('• $other other');
-      if (reducedPercent > 0) content.writeln('• Repeated violations reduced by ${reducedPercent.toStringAsFixed(0)}%');
+      if (reducedPercent > 0) {
+        content.writeln(
+            '• Repeated violations reduced by ${reducedPercent.toStringAsFixed(0)}%');
+      }
       if (total == 0) content.writeln('• No violations reported this month.');
 
       final confirm = await showDialog<bool>(
@@ -202,7 +214,9 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+            TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancel')),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
               child: const Text('Publish'),
@@ -217,7 +231,8 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
       }
 
       final title = 'Parking & violations summary – $monthLabel $year';
-      final expiryAt = Timestamp.fromDate(DateTime(year, month).add(const Duration(days: 365)));
+      final expiryAt = Timestamp.fromDate(
+          DateTime(year, month).add(const Duration(days: 365)));
       await _firestore.createNotice(
         societyId: widget.societyId,
         title: title,
@@ -255,7 +270,20 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
   }
 
   static String _monthName(int month) {
-    const names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const names = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
+    ];
     return names[month - 1];
   }
 
@@ -303,7 +331,8 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
         ),
         title: const Text(
           'Manage Violations',
-          style: TextStyle(color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 20),
+          style: TextStyle(
+              color: AppColors.text, fontWeight: FontWeight.w900, fontSize: 20),
         ),
         centerTitle: true,
         actions: [
@@ -311,10 +340,11 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: AppColors.admin.withOpacity(0.15),
+                color: AppColors.admin.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.refresh_rounded, color: AppColors.admin, size: 20),
+              child: const Icon(Icons.refresh_rounded,
+                  color: AppColors.admin, size: 20),
             ),
             onPressed: _isLoading ? null : _loadViolations,
           ),
@@ -329,11 +359,13 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
               // Privacy note
               Container(
                 margin: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: AppColors.adminSoft,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.admin.withOpacity(0.3)),
+                  border:
+                      Border.all(color: AppColors.admin.withValues(alpha: 0.3)),
                 ),
                 child: const Row(
                   children: [
@@ -342,7 +374,10 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
                     Expanded(
                       child: Text(
                         'Violations are private. Society sees only anonymous summaries when you publish.',
-                        style: TextStyle(fontSize: 12, color: AppColors.text2, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: AppColors.text2,
+                            fontWeight: FontWeight.w500),
                       ),
                     ),
                   ],
@@ -350,7 +385,8 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
               ),
               // Filters
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
                   children: [
                     _buildFilterChip('ALL', 'All'),
@@ -367,7 +403,10 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
               ),
             ],
           ),
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: 'Loading violations…'),
+          AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
+              show: _isLoading,
+              message: 'Loading violations…'),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -386,13 +425,20 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.admin.withOpacity(0.15) : AppColors.surface,
+          color: isSelected
+              ? AppColors.admin.withValues(alpha: 0.15)
+              : AppColors.surface,
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: isSelected ? AppColors.admin : AppColors.border, width: isSelected ? 2 : 1),
+          border: Border.all(
+              color: isSelected ? AppColors.admin : AppColors.border,
+              width: isSelected ? 2 : 1),
         ),
         child: Text(
           label,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: isSelected ? AppColors.admin : AppColors.text2),
+          style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: isSelected ? AppColors.admin : AppColors.text2),
         ),
       ),
     );
@@ -406,13 +452,19 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
           children: [
             const Icon(Icons.error_outline, size: 64, color: AppColors.error),
             const SizedBox(height: 16),
-            Text(_error!, style: const TextStyle(color: AppColors.text2, fontSize: 16), textAlign: TextAlign.center),
+            Text(_error!,
+                style: const TextStyle(color: AppColors.text2, fontSize: 16),
+                textAlign: TextAlign.center),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _loadViolations,
               icon: const Icon(Icons.refresh_rounded),
               label: const Text('Retry'),
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.admin, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.admin,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12))),
             ),
           ],
         ),
@@ -424,11 +476,17 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.directions_car_outlined, size: 64, color: AppColors.textMuted),
+            const Icon(Icons.directions_car_outlined,
+                size: 64, color: AppColors.textMuted),
             const SizedBox(height: 16),
             Text(
-              _statusFilter == 'ALL' ? 'No violations this month' : 'No $_statusFilter violations',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.text),
+              _statusFilter == 'ALL'
+                  ? 'No violations this month'
+                  : 'No $_statusFilter violations',
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppColors.text),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -455,7 +513,6 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
   }
 
   Widget _buildViolationCard(Map<String, dynamic> v) {
-    final id = v['violation_id']?.toString() ?? '';
     final flatNo = v['flat_no']?.toString() ?? '–';
     final type = v['violation_type']?.toString() ?? 'OTHER';
     final status = (v['status'] ?? 'OPEN').toString().toUpperCase();
@@ -480,36 +537,61 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: AppColors.warning.withOpacity(0.15),
+                  color: AppColors.warning.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(_violationTypeIcon(type), color: AppColors.warning, size: 24),
+                child: Icon(_violationTypeIcon(type),
+                    color: AppColors.warning, size: 24),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Flat $flatNo', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppColors.text)),
+                    Text('Flat $flatNo',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 16,
+                            color: AppColors.text)),
                     const SizedBox(height: 2),
-                    Text(_violationTypeLabel(type), style: const TextStyle(fontSize: 13, color: AppColors.text2)),
+                    Text(_violationTypeLabel(type),
+                        style: const TextStyle(
+                            fontSize: 13, color: AppColors.text2)),
                     if (createdAt != null && createdAt.isNotEmpty)
-                      Text(createdAt.length >= 10 ? createdAt.substring(0, 10) : createdAt, style: const TextStyle(fontSize: 12, color: AppColors.textMuted)),
+                      Text(
+                          createdAt.length >= 10
+                              ? createdAt.substring(0, 10)
+                              : createdAt,
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.textMuted)),
                     if (note != null && note.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(top: 4),
-                        child: Text(note, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppColors.text2)),
+                        child: Text(note,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                fontSize: 12, color: AppColors.text2)),
                       ),
                     const SizedBox(height: 6),
                     Row(
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: status == 'RESOLVED' ? AppColors.success.withOpacity(0.15) : AppColors.warning.withOpacity(0.15),
+                            color: status == 'RESOLVED'
+                                ? AppColors.success.withValues(alpha: 0.15)
+                                : AppColors.warning.withValues(alpha: 0.15),
                             borderRadius: BorderRadius.circular(8),
                           ),
-                          child: Text(status, style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: status == 'RESOLVED' ? AppColors.success : AppColors.warning)),
+                          child: Text(status,
+                              style: TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                  color: status == 'RESOLVED'
+                                      ? AppColors.success
+                                      : AppColors.warning)),
                         ),
                       ],
                     ),
@@ -524,8 +606,10 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
                     width: 48,
                     height: 48,
                     fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(width: 48, height: 48, color: Colors.grey.shade300),
-                    errorWidget: (context, url, error) => const SizedBox(width: 48, height: 48),
+                    placeholder: (context, url) => Container(
+                        width: 48, height: 48, color: Colors.grey.shade300),
+                    errorWidget: (context, url, error) =>
+                        const SizedBox(width: 48, height: 48),
                   ),
                 ),
             ],
@@ -541,7 +625,8 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
 
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
@@ -549,13 +634,20 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Flat ${v['flat_no']}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+              Text('Flat ${v['flat_no']}',
+                  style: const TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.w900)),
               const SizedBox(height: 8),
-              Text(_violationTypeLabel(v['violation_type']?.toString() ?? 'OTHER'), style: const TextStyle(fontSize: 14, color: AppColors.text2)),
+              Text(
+                  _violationTypeLabel(
+                      v['violation_type']?.toString() ?? 'OTHER'),
+                  style: const TextStyle(fontSize: 14, color: AppColors.text2)),
               if (v['note'] != null && (v['note'] as String).isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
-                  child: Text(v['note'] as String, style: const TextStyle(fontSize: 14, color: AppColors.text2)),
+                  child: Text(v['note'] as String,
+                      style: const TextStyle(
+                          fontSize: 14, color: AppColors.text2)),
                 ),
               const SizedBox(height: 16),
               if (status == 'OPEN')
@@ -568,7 +660,11 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
                     },
                     icon: const Icon(Icons.check_circle_rounded),
                     label: const Text('Mark as Resolved'),
-                    style: FilledButton.styleFrom(backgroundColor: AppColors.success, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12))),
                   ),
                 ),
               if (status == 'RESOLVED')
@@ -581,7 +677,10 @@ class _AdminManageViolationsScreenState extends State<AdminManageViolationsScree
                     },
                     icon: const Icon(Icons.refresh_rounded),
                     label: const Text('Reopen'),
-                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.warning, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                    style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.warning,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12))),
                   ),
                 ),
             ],

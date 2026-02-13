@@ -6,9 +6,8 @@ import '../core/app_logger.dart';
 import '../services/firestore_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-
 /// Admin Manage Admins Screen
-/// 
+///
 /// Allows super admins to view and manage all admins and pending admin signups
 /// Theme: Purple/Admin theme
 class AdminManageAdminsScreen extends StatefulWidget {
@@ -24,10 +23,12 @@ class AdminManageAdminsScreen extends StatefulWidget {
   });
 
   @override
-  State<AdminManageAdminsScreen> createState() => _AdminManageAdminsScreenState();
+  State<AdminManageAdminsScreen> createState() =>
+      _AdminManageAdminsScreenState();
 }
 
-class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with SingleTickerProviderStateMixin {
+class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen>
+    with SingleTickerProviderStateMixin {
   final FirestoreService _firestore = FirestoreService();
   final AdminSignupService _signupService = AdminSignupService();
 
@@ -38,7 +39,6 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
   String? _error;
   final TextEditingController _searchController = TextEditingController();
   late TabController _tabController;
-  int _currentTabIndex = 0;
   bool _isSuperAdmin = false;
 
   @override
@@ -48,9 +48,6 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) {
-        setState(() {
-          _currentTabIndex = _tabController.index;
-        });
         if (_tabController.index == 1) {
           _loadPendingSignups();
         }
@@ -82,8 +79,9 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
         final name = (admin['name'] ?? '').toString().toLowerCase();
         final email = (admin['email'] ?? '').toString().toLowerCase();
         final phone = (admin['phone'] ?? '').toString().toLowerCase();
-        final societyRole = (admin['societyRole'] ?? '').toString().toLowerCase();
-        
+        final societyRole =
+            (admin['societyRole'] ?? '').toString().toLowerCase();
+
         return name.contains(query) ||
             email.contains(query) ||
             phone.contains(query) ||
@@ -105,7 +103,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
         societyId: widget.societyId,
         systemRole: "admin",
       );
-      
+
       final superAdminMembers = await _firestore.getMembers(
         societyId: widget.societyId,
         systemRole: "super_admin",
@@ -131,7 +129,6 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
     }
   }
 
-  
   Future<void> _loadPendingSignups() async {
     if (!mounted) return;
     setState(() {
@@ -191,7 +188,8 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
         },
       );
     } catch (e, st) {
-      AppLogger.e("Error loading pending signups (members)", error: e, stackTrace: st);
+      AppLogger.e("Error loading pending signups (members)",
+          error: e, stackTrace: st);
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -199,10 +197,6 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
       });
     }
   }
-
-
-
-
 
   Future<void> _handleApproveSignup(Map<String, dynamic> signup) async {
     final uid = signup['uid'] as String?;
@@ -215,7 +209,8 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
       context: context,
       builder: (context) => AlertDialog(
         title: const Text("Approve Admin Signup"),
-        content: Text("Are you sure you want to approve ${signup['name']} (${signup['email']}) as an admin?"),
+        content: Text(
+            "Are you sure you want to approve ${signup['name']} (${signup['email']}) as an admin?"),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -278,7 +273,8 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text("Are you sure you want to reject ${signup['name']} (${signup['email']})?"),
+            Text(
+                "Are you sure you want to reject ${signup['name']} (${signup['email']})?"),
             const SizedBox(height: 16),
             TextField(
               controller: reasonController,
@@ -315,7 +311,9 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
         societyId: widget.societyId,
         uid: uid,
         superAdminUid: widget.adminId,
-        reason: reasonController.text.trim().isEmpty ? null : reasonController.text.trim(),
+        reason: reasonController.text.trim().isEmpty
+            ? null
+            : reasonController.text.trim(),
       );
 
       if (!mounted) return;
@@ -427,9 +425,10 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                   if (_admins.isNotEmpty) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.admin.withOpacity(0.2),
+                        color: AppColors.admin.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -453,9 +452,10 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                   if (_pendingSignups.isNotEmpty) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: AppColors.error.withOpacity(0.2),
+                        color: AppColors.error.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
@@ -483,7 +483,10 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
               _buildPendingSignupsList(),
             ],
           ),
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Loading..."),
+          AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
+              show: _isLoading,
+              message: "Loading..."),
         ],
       ),
     );
@@ -495,7 +498,8 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.text2),
+            const Icon(Icons.error_outline_rounded,
+                size: 64, color: AppColors.text2),
             const SizedBox(height: 16),
             Text(
               _error!,
@@ -519,7 +523,8 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.admin_panel_settings_rounded, size: 64, color: AppColors.text2),
+            Icon(Icons.admin_panel_settings_rounded,
+                size: 64, color: AppColors.text2),
             SizedBox(height: 16),
             Text(
               "No admins found",
@@ -591,7 +596,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
             width: 50,
             height: 50,
             decoration: BoxDecoration(
-              color: AppColors.admin.withOpacity(0.15),
+              color: AppColors.admin.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
             child: const Icon(
@@ -619,9 +624,10 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                     ),
                     if (isSuperAdmin)
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: AppColors.admin.withOpacity(0.2),
+                          color: AppColors.admin.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(
@@ -678,7 +684,8 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, size: 64, color: AppColors.text2),
+            const Icon(Icons.error_outline_rounded,
+                size: 64, color: AppColors.text2),
             const SizedBox(height: 16),
             Text(
               _error!,
@@ -702,7 +709,8 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.pending_actions_rounded, size: 64, color: AppColors.text2),
+            Icon(Icons.pending_actions_rounded,
+                size: 64, color: AppColors.text2),
             SizedBox(height: 16),
             Text(
               "No pending signups",
@@ -731,17 +739,19 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
     );
   }
 
-  
   Widget _buildPendingSignupCard(Map<String, dynamic> signup) {
     final name = signup['name'] ?? 'Unknown';
     final email = signup['email'] ?? '';
     final phone = signup['phone'] ?? '';
 
-    final systemRole = (signup['systemRole'] ?? '').toString().toLowerCase(); // "admin" | "resident"
+    final systemRole = (signup['systemRole'] ?? '')
+        .toString()
+        .toLowerCase(); // "admin" | "resident"
     final flatNo = (signup['flatNo'] ?? '').toString();
 
     // Keep existing admin label logic as-is
-    final societyRole = (signup['societyRole'] ?? 'ADMIN').toString().toUpperCase();
+    final societyRole =
+        (signup['societyRole'] ?? 'ADMIN').toString().toUpperCase();
 
     final createdAt = signup['createdAt']; // Timestamp
 
@@ -757,7 +767,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
         color: AppColors.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.error.withOpacity(0.3),
+          color: AppColors.error.withValues(alpha: 0.3),
           width: 2,
         ),
       ),
@@ -770,7 +780,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  color: AppColors.error.withOpacity(0.15),
+                  color: AppColors.error.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -835,7 +845,7 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
             decoration: BoxDecoration(
-              color: AppColors.error.withOpacity(0.1),
+              color: AppColors.error.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
@@ -890,30 +900,6 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
     );
   }
 
-
-
-  String _formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      final now = DateTime.now();
-      final diff = now.difference(date);
-
-      if (diff.inDays == 0) {
-        return "Today";
-      } else if (diff.inDays == 1) {
-        return "Yesterday";
-      } else if (diff.inDays < 7) {
-        return "${diff.inDays} days ago";
-      } else {
-        return "${date.day}/${date.month}/${date.year}";
-      }
-    } catch (e) {
-      return dateStr;
-    }
-  }
-
-
-
   String _formatCreatedAt(dynamic createdAt) {
     try {
       if (createdAt is Timestamp) {
@@ -931,7 +917,4 @@ class _AdminManageAdminsScreenState extends State<AdminManageAdminsScreen> with 
       return createdAt.toString();
     }
   }
-
-
-
 }

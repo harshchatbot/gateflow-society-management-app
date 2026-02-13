@@ -6,12 +6,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../core/app_logger.dart';
-import '../core/env.dart';
-import '../services/admin_service.dart';
 import '../services/firebase_auth_service.dart';
 import '../services/firestore_service.dart';
-import '../services/invite_claim_service.dart';
-import '../services/invite_bulk_upload_service.dart';
 import '../ui/app_loader.dart';
 import 'admin_login_screen.dart';
 import 'admin_pending_approval_screen.dart';
@@ -41,13 +37,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   final _pinController = TextEditingController();
   final _confirmPinController = TextEditingController();
 
-  late final AdminService _adminService = AdminService(
-    baseUrl: Env.apiBaseUrl,
-  );
-
   final FirebaseAuthService _authService = FirebaseAuthService();
   final FirestoreService _firestore = FirestoreService();
-  final InviteClaimService _inviteClaimService = InviteClaimService();
 
   bool _isLoading = false;
   bool _isLoadingLocations = false;
@@ -63,7 +54,13 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
   List<Map<String, String>> _cityOptions = [];
   String? _selectedStateId;
 
-  final List<String> _roles = ["ADMIN", "PRESIDENT", "SECRETARY", "TREASURER", "COMMITTEE"];
+  final List<String> _roles = [
+    "ADMIN",
+    "PRESIDENT",
+    "SECRETARY",
+    "TREASURER",
+    "COMMITTEE"
+  ];
 
   @override
   void initState() {
@@ -133,7 +130,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
     final existingData = existing.data() ?? <String, dynamic>{};
     final existingRole =
         (existingData['systemRole'] ?? '').toString().toLowerCase();
-    if (existingRole == 'super_admin' && systemRole.toLowerCase() != 'super_admin') {
+    if (existingRole == 'super_admin' &&
+        systemRole.toLowerCase() != 'super_admin') {
       // Safety: never downgrade platform super admin root pointer from onboarding flow.
       return;
     }
@@ -322,8 +320,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                   "Sentinel team will validate and approve your society.",
               timelineStep3Subtitle:
                   "Once approved, login is enabled with full society admin access.",
-              tipText:
-                  "You’ll receive access once your request is verified.",
+              tipText: "You’ll receive access once your request is verified.",
             ),
           ),
         );
@@ -401,7 +398,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
         );
         return;
       }
-
     } catch (e, stackTrace) {
       AppLogger.e("Admin onboarding exception",
           error: e, stackTrace: stackTrace);
@@ -459,11 +455,11 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: theme.colorScheme.surface.withOpacity(0.9),
+              color: theme.colorScheme.surface.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
+                  color: Colors.black.withValues(alpha: 0.1),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -491,7 +487,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    theme.colorScheme.primary.withOpacity(0.15),
+                    theme.colorScheme.primary.withValues(alpha: 0.15),
                     theme.scaffoldBackgroundColor,
                     theme.scaffoldBackgroundColor,
                   ],
@@ -514,7 +510,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             ),
           ),
           if (_isLoading || _isLoadingLocations)
-            AppLoader.overlay(showAfter: const Duration(milliseconds: 300), 
+            AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
               show: true,
               message: _isLoading
                   ? (_isCreatingSociety
@@ -536,7 +533,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                 theme.colorScheme.primary,
                 theme.colorScheme.tertiary,
                 theme.colorScheme.secondary,
-                theme.colorScheme.primary.withOpacity(0.8),
+                theme.colorScheme.primary.withValues(alpha: 0.8),
               ],
             ),
           ),
@@ -557,7 +554,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => Container(
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.1),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(
@@ -587,7 +584,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               ? "Set up your society and become Society Admin"
               : "Claim your admin invite to join",
           style: TextStyle(
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             fontWeight: FontWeight.w600,
             fontSize: 15,
           ),
@@ -597,37 +594,6 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
     );
   }
 
-  Future<void> _uploadInvitesCsv({
-    required String societyId,
-  }) async {
-    try {
-      setState(() => _isLoading = true);
-
-      final result = await InviteBulkUploadService().pickCsvAndUploadInvites(
-        societyId: societyId,
-      );
-
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      final msg =
-          "Processed: ${result.processed} | Created: ${result.created} | Skipped: ${result.skipped}";
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(msg)),
-      );
-
-      if (result.errors.isNotEmpty) {
-        AppLogger.w("Bulk invite upload errors",
-            data: {"errors": result.errors});
-      }
-    } catch (e, st) {
-      AppLogger.e("Bulk invite upload failed", error: e, stackTrace: st);
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      _showError("Upload failed: ${e.toString()}");
-    }
-  }
-
   Widget _buildRegistrationForm() {
     final theme = Theme.of(context);
     return Container(
@@ -635,10 +601,10 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.5)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 30,
             offset: const Offset(0, 15),
           ),
@@ -654,7 +620,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -672,7 +638,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                     width: 34,
                     height: 34,
                     decoration: BoxDecoration(
-                      color: theme.colorScheme.primary.withOpacity(0.12),
+                      color: theme.colorScheme.primary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
@@ -716,9 +682,10 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: theme.scaffoldBackgroundColor.withOpacity(0.6),
+                  color: theme.scaffoldBackgroundColor.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: theme.dividerColor.withOpacity(0.9)),
+                  border: Border.all(
+                      color: theme.dividerColor.withValues(alpha: 0.9)),
                 ),
                 child: Column(
                   children: [
@@ -814,7 +781,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w800,
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     letterSpacing: 0.2,
                   ),
                 ),
@@ -826,20 +793,21 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                     border: Border.all(color: theme.dividerColor),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
+                        color: Colors.black.withValues(alpha: 0.02),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
                     ],
                   ),
                   child: DropdownButtonFormField<String>(
-                    value: _selectedRole,
+                    initialValue: _selectedRole,
                     decoration: InputDecoration(
                       prefixIcon: Container(
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.15),
+                          color:
+                              theme.colorScheme.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: Icon(Icons.admin_panel_settings_rounded,
@@ -850,10 +818,8 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                       contentPadding: const EdgeInsets.symmetric(
                           horizontal: 16, vertical: 18),
                     ),
-                    items: (_isCreatingSociety
-                            ? ["ADMIN"]
-                            : _roles)
-                        .map((role) {
+                    items:
+                        (_isCreatingSociety ? ["ADMIN"] : _roles).map((role) {
                       return DropdownMenuItem(
                         value: role,
                         child: Text(
@@ -890,7 +856,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                     _obscurePin
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined,
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     size: 20,
                   ),
                   onPressed: () => setState(() => _obscurePin = !_obscurePin),
@@ -922,7 +888,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                     _obscureConfirmPin
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined,
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     size: 20,
                   ),
                   onPressed: () =>
@@ -973,7 +939,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
                 Text(
                   "Already have an account? ",
                   style: TextStyle(
-                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1011,7 +977,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             letterSpacing: 0.2,
           ),
         ),
@@ -1023,14 +989,14 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             border: Border.all(color: theme.dividerColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
           child: DropdownButtonFormField<String>(
-            value: _selectedState,
+            initialValue: _selectedState,
             isExpanded: true,
             menuMaxHeight: 320,
             borderRadius: BorderRadius.circular(16),
@@ -1047,7 +1013,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             hint: Text(
               "Select state",
               style: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
@@ -1122,7 +1088,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             letterSpacing: 0.2,
           ),
         ),
@@ -1134,14 +1100,14 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             border: Border.all(color: theme.dividerColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
             ],
           ),
           child: DropdownButtonFormField<String>(
-            value: _selectedCity,
+            initialValue: _selectedCity,
             isExpanded: true,
             menuMaxHeight: 320,
             borderRadius: BorderRadius.circular(16),
@@ -1158,7 +1124,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             hint: Text(
               "Select city",
               style: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
@@ -1208,7 +1174,7 @@ class _AdminOnboardingScreenState extends State<AdminOnboardingScreen> {
             disabledHint: Text(
               "Select state first",
               style: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
@@ -1256,7 +1222,7 @@ class _PremiumField extends StatelessWidget {
           style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w800,
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             letterSpacing: 0.2,
           ),
         ),
@@ -1268,7 +1234,7 @@ class _PremiumField extends StatelessWidget {
             border: Border.all(color: theme.dividerColor),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 10,
                 offset: const Offset(0, 2),
               ),
@@ -1291,7 +1257,7 @@ class _PremiumField extends StatelessWidget {
                 margin: const EdgeInsets.all(12),
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.primary.withOpacity(0.15),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(icon, color: theme.colorScheme.primary, size: 20),
@@ -1299,7 +1265,7 @@ class _PremiumField extends StatelessWidget {
               suffixIcon: suffixIcon,
               hintText: hint,
               hintStyle: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.6),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
                 fontSize: 15,
                 fontWeight: FontWeight.w500,
               ),
@@ -1512,7 +1478,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    cs.primary.withOpacity(0.12),
+                    cs.primary.withValues(alpha: 0.12),
                     theme.scaffoldBackgroundColor,
                     theme.scaffoldBackgroundColor,
                   ],
@@ -1534,11 +1500,11 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                         icon: Container(
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
-                            color: cs.surface.withOpacity(0.9),
+                            color: cs.surface.withValues(alpha: 0.9),
                             borderRadius: BorderRadius.circular(12),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
+                                color: Colors.black.withValues(alpha: 0.08),
                                 blurRadius: 10,
                                 offset: const Offset(0, 2),
                               ),
@@ -1560,7 +1526,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                       fit: BoxFit.contain,
                       errorBuilder: (ctx, __, ___) => Container(
                         decoration: BoxDecoration(
-                          color: cs.primary.withOpacity(0.10),
+                          color: cs.primary.withValues(alpha: 0.10),
                           borderRadius: BorderRadius.circular(24),
                         ),
                         child: Icon(
@@ -1586,7 +1552,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                     "OTP sent to ${_maskE164(widget.phoneE164)}",
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: cs.onSurface.withOpacity(0.7),
+                      color: cs.onSurface.withValues(alpha: 0.7),
                       fontWeight: FontWeight.w600,
                       fontSize: 14,
                     ),
@@ -1598,10 +1564,10 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                       color: cs.surface,
                       borderRadius: BorderRadius.circular(26),
                       border: Border.all(
-                          color: theme.dividerColor.withOpacity(0.8)),
+                          color: theme.dividerColor.withValues(alpha: 0.8)),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withValues(alpha: 0.06),
                           blurRadius: 28,
                           offset: const Offset(0, 14),
                         ),
@@ -1615,7 +1581,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
-                            color: cs.onSurface.withOpacity(0.72),
+                            color: cs.onSurface.withValues(alpha: 0.72),
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -1692,7 +1658,7 @@ class _OtpVerifyScreenState extends State<OtpVerifyScreen> {
                               fontWeight: FontWeight.w900,
                               color: _canResend
                                   ? cs.primary
-                                  : cs.onSurface.withOpacity(0.45),
+                                  : cs.onSurface.withValues(alpha: 0.45),
                             ),
                           ),
                         ),

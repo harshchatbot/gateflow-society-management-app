@@ -97,11 +97,11 @@ class AdminPendingApprovalScreen extends StatelessWidget {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: cs.surface.withOpacity(0.95),
+              color: cs.surface.withValues(alpha: 0.95),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: cs.onSurface.withOpacity(0.08),
+                  color: cs.onSurface.withValues(alpha: 0.08),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -125,7 +125,7 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    cs.primary.withOpacity(0.12),
+                    cs.primary.withValues(alpha: 0.12),
                     theme.scaffoldBackgroundColor,
                     theme.scaffoldBackgroundColor,
                   ],
@@ -144,7 +144,7 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                       width: 110,
                       height: 110,
                       decoration: BoxDecoration(
-                        color: cs.primary.withOpacity(0.14),
+                        color: cs.primary.withValues(alpha: 0.14),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
@@ -169,15 +169,16 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: cs.primary.withOpacity(0.10),
+                        color: cs.primary.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(14),
                         border: Border.all(
-                            color: cs.primary.withOpacity(0.18)),
+                            color: cs.primary.withValues(alpha: 0.18)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.shield_rounded, color: cs.primary, size: 18),
+                          Icon(Icons.shield_rounded,
+                              color: cs.primary, size: 18),
                           const SizedBox(width: 8),
                           Text(
                             badgeText ?? "Waiting for Super Admin approval",
@@ -196,7 +197,7 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                           "Hi ${adminName.isNotEmpty ? adminName : 'Admin'}, your admin access request has been submitted.\nYou’ll be able to login once it’s approved.",
                       style: TextStyle(
                         fontSize: 15,
-                        color: cs.onSurface.withOpacity(0.72),
+                        color: cs.onSurface.withValues(alpha: 0.72),
                         height: 1.5,
                         fontWeight: FontWeight.w600,
                       ),
@@ -235,7 +236,7 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w800,
-                                  color: cs.onSurface.withOpacity(0.72),
+                                  color: cs.onSurface.withValues(alpha: 0.72),
                                 ),
                               ),
                             ],
@@ -257,7 +258,7 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: cs.onSurface.withOpacity(0.68),
+                              color: cs.onSurface.withValues(alpha: 0.68),
                               height: 1.4,
                             ),
                           ),
@@ -315,9 +316,10 @@ class AdminPendingApprovalScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      tipText ?? "Tip: If it takes too long, contact your Super Admin.",
+                      tipText ??
+                          "Tip: If it takes too long, contact your Super Admin.",
                       style: TextStyle(
-                        color: cs.onSurface.withOpacity(0.68),
+                        color: cs.onSurface.withValues(alpha: 0.68),
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
@@ -364,13 +366,13 @@ class _TimelineCard extends StatelessWidget {
           height: 34,
           decoration: BoxDecoration(
             color: done
-                ? Colors.green.withOpacity(0.18)
-                : cs.primary.withOpacity(0.12),
+                ? Colors.green.withValues(alpha: 0.18)
+                : cs.primary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: done
-                  ? Colors.green.withOpacity(0.28)
-                  : cs.primary.withOpacity(0.18),
+                  ? Colors.green.withValues(alpha: 0.28)
+                  : cs.primary.withValues(alpha: 0.18),
             ),
           ),
           child: Icon(
@@ -398,7 +400,7 @@ class _TimelineCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: cs.onSurface.withOpacity(0.7),
+                  color: cs.onSurface.withValues(alpha: 0.7),
                   height: 1.35,
                 ),
               ),
@@ -431,7 +433,7 @@ class _TimelineCard extends StatelessWidget {
             done: true,
           ),
           const SizedBox(height: 14),
-          Divider(color: theme.dividerColor.withOpacity(0.9)),
+          Divider(color: theme.dividerColor.withValues(alpha: 0.9)),
           const SizedBox(height: 14),
           _step(
             context: context,
@@ -442,7 +444,7 @@ class _TimelineCard extends StatelessWidget {
             done: false,
           ),
           const SizedBox(height: 14),
-          Divider(color: theme.dividerColor.withOpacity(0.9)),
+          Divider(color: theme.dividerColor.withValues(alpha: 0.9)),
           const SizedBox(height: 14),
           _step(
             context: context,

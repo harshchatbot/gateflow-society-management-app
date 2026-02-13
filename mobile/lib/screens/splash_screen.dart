@@ -11,14 +11,16 @@ class SplashScreen extends StatefulWidget {
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
+class _SplashScreenState extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
   late final Animation<double> _fade;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 700));
+    _controller = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 700));
     _fade = CurvedAnimation(parent: _controller, curve: Curves.easeInOut);
     _controller.forward();
     _checkSession();
@@ -82,7 +84,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                 Container(
                   padding: const EdgeInsets.all(18),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     shape: BoxShape.circle,
                     border: Border.all(color: colorScheme.outlineVariant),
                   ),
@@ -107,7 +109,8 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                   'Guard-first visitor entry',
                   style: TextStyle(
                     fontSize: 15,
-                    color: colorScheme.onPrimaryContainer.withOpacity(0.7),
+                    color:
+                        colorScheme.onPrimaryContainer.withValues(alpha: 0.7),
                   ),
                 ),
               ],

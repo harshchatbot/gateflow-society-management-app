@@ -13,7 +13,6 @@ import '../ui/app_colors.dart';
 import 'admin_onboarding_screen.dart';
 import 'admin_pending_approval_screen.dart';
 import 'admin_shell_screen.dart';
-import 'admin_signup_screen.dart';
 import 'find_society_screen.dart';
 import 'guard_join_screen.dart';
 import 'guard_shell_screen.dart';
@@ -62,7 +61,6 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
   bool get _canResend => _resendSeconds <= 0 && !_isLoading;
 
   bool get _isAdminHint => (widget.roleHint ?? '').toLowerCase() == 'admin';
-  bool get _isGuardHint => (widget.roleHint ?? '').toLowerCase() == 'guard';
 
   @override
   void dispose() {
@@ -168,7 +166,8 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
       _startResendTimer(seconds: 30);
 
       await Future<void>.delayed(const Duration(milliseconds: 150));
-      if (mounted) FocusScope.of(context).requestFocus(_otpFocus);
+      if (!mounted) return;
+      FocusScope.of(context).requestFocus(_otpFocus);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -252,8 +251,6 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
         // 🔍 STEP-1: lookup pending join request
         try {
           AppLogger.i("JoinRequest lookup: start", data: {'uid': uid});
-
-          Map<String, dynamic>? jr;
 
           final roleHint = (widget.roleHint ?? '').trim().toLowerCase();
 
@@ -432,6 +429,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
             return;
           }
 
+          if (!mounted) return;
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
                 builder: (_) => const FindSocietyScreen(mode: 'admin')),
@@ -470,6 +468,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
           await FirebaseAuth.instance.signOut();
           await Storage.clearFirebaseSession();
           await Storage.clearAllSessions();
+          if (!mounted) return;
 
           setState(() => _isLoading = false);
           Navigator.pushReplacement(
@@ -518,10 +517,6 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
       // ✅ Admin pending approval
       if (systemRole == 'admin' && !active) {
         if (!mounted) return;
-        final contact =
-            FirebaseAuth.instance.currentUser?.phoneNumber?.trim() ??
-                FirebaseAuth.instance.currentUser?.email?.trim() ??
-                '';
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(
             builder: (_) => AdminPendingApprovalScreen(
@@ -663,38 +658,10 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
       if (!mounted) return;
       _showError("Login failed. Please try again.");
     } finally {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
-  }
-
-  void _showNoAccountDialog() {
-    showDialog<void>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('No account found'),
-        content: const Text(
-          'This number is not linked to any account. Sign up as Guard, Resident, or Admin to get started.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              FirebaseAuth.instance.signOut();
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(
-                    builder: (_) => const OnboardingChooseRoleScreen()),
-              );
-            },
-            child: const Text('Sign up'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<Map<String, dynamic>?> getJoinRequestIndex(String uid) async {
@@ -760,8 +727,9 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
 
   String get _heroAsset {
     final r = (widget.roleHint ?? 'resident').toLowerCase();
-    if (r == 'admin')
+    if (r == 'admin') {
       return 'assets/illustrations/illustration_login_admin.png';
+    }
     if (r == 'guard') return 'assets/illustrations/guard_login.png';
     return 'assets/illustrations/illustration_society_11.png';
   }
@@ -788,11 +756,11 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
           icon: Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: cs.surface.withOpacity(0.9),
+              color: cs.surface.withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
+                  color: Colors.black.withValues(alpha: 0.08),
                   blurRadius: 10,
                   offset: const Offset(0, 2),
                 ),
@@ -836,7 +804,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                   colors: [
-                    cs.primary.withOpacity(0.12),
+                    cs.primary.withValues(alpha: 0.12),
                     theme.scaffoldBackgroundColor,
                     theme.scaffoldBackgroundColor,
                   ],
@@ -872,7 +840,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
           if (_isLoading)
             Positioned.fill(
               child: Container(
-                color: Colors.black.withOpacity(0.08),
+                color: Colors.black.withValues(alpha: 0.08),
                 child: const Center(
                   child: SizedBox(
                     height: 34,
@@ -900,7 +868,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
             fit: BoxFit.contain,
             errorBuilder: (ctx, __, ___) => Container(
               decoration: BoxDecoration(
-                color: Theme.of(ctx).colorScheme.primary.withOpacity(0.1),
+                color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(24),
               ),
               child: Icon(
@@ -926,7 +894,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
           _heroSubtitle,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: cs.onSurface.withOpacity(0.7),
+            color: cs.onSurface.withValues(alpha: 0.7),
             fontWeight: FontWeight.w600,
             fontSize: 14,
           ),
@@ -935,9 +903,9 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
           decoration: BoxDecoration(
-            color: cs.primary.withOpacity(0.10),
+            color: cs.primary.withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: cs.primary.withOpacity(0.18)),
+            border: Border.all(color: cs.primary.withValues(alpha: 0.18)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -970,10 +938,10 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
         decoration: BoxDecoration(
           color: AppColors.surface,
           borderRadius: BorderRadius.circular(28),
-          border: Border.all(color: AppColors.border.withOpacity(0.55)),
+          border: Border.all(color: AppColors.border.withValues(alpha: 0.55)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.06),
+              color: Colors.black.withValues(alpha: 0.06),
               blurRadius: 28,
               offset: const Offset(0, 14),
             ),
@@ -990,7 +958,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
-                        color: cs.onSurface.withOpacity(0.72),
+                        color: cs.onSurface.withValues(alpha: 0.72),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1006,8 +974,9 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
                         final value = (v ?? '').trim();
                         if (value.isEmpty) return "Please enter your phone";
                         final digits = value.replaceAll(RegExp(r'[^\d]'), '');
-                        if (digits.length != 10)
+                        if (digits.length != 10) {
                           return "Enter a valid 10-digit number";
+                        }
                         return null;
                       },
                     ),
@@ -1040,7 +1009,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
                       "We’ll send a one-time password to verify your identity.",
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: cs.onSurface.withOpacity(0.65),
+                        color: cs.onSurface.withValues(alpha: 0.65),
                         fontWeight: FontWeight.w600,
                         fontSize: 12,
                       ),
@@ -1058,7 +1027,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
-                        color: cs.onSurface.withOpacity(0.72),
+                        color: cs.onSurface.withValues(alpha: 0.72),
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -1074,8 +1043,9 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
                         final value = (v ?? '').trim();
                         if (value.isEmpty) return "Please enter OTP";
                         final digits = value.replaceAll(RegExp(r'[^\d]'), '');
-                        if (digits.length != 6)
+                        if (digits.length != 6) {
                           return "Enter a valid 6-digit OTP";
+                        }
                         return null;
                       },
                     ),
@@ -1141,7 +1111,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
                             style: TextStyle(
                               color: _canResend
                                   ? cs.primary
-                                  : cs.onSurface.withOpacity(0.45),
+                                  : cs.onSurface.withValues(alpha: 0.45),
                               fontWeight: FontWeight.w900,
                               fontSize: 13,
                             ),
@@ -1162,9 +1132,9 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: cs.primary.withOpacity(0.06),
+        color: cs.primary.withValues(alpha: 0.06),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: cs.primary.withOpacity(0.14)),
+        border: Border.all(color: cs.primary.withValues(alpha: 0.14)),
       ),
       child: Row(
         children: [
@@ -1172,7 +1142,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: cs.primary.withOpacity(0.14),
+              color: cs.primary.withValues(alpha: 0.14),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(Icons.add_business_rounded, color: cs.primary),
@@ -1193,7 +1163,7 @@ class _PhoneOtpLoginScreenState extends State<PhoneOtpLoginScreen> {
                 Text(
                   "Request Society Admin setup",
                   style: TextStyle(
-                    color: cs.onSurface.withOpacity(0.7),
+                    color: cs.onSurface.withValues(alpha: 0.7),
                     fontWeight: FontWeight.w600,
                     fontSize: 12,
                   ),
@@ -1260,7 +1230,7 @@ class _PremiumField extends StatelessWidget {
         border: Border.all(color: Theme.of(context).dividerColor),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
@@ -1283,7 +1253,7 @@ class _PremiumField extends StatelessWidget {
             margin: const EdgeInsets.all(12),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: cs.primary.withOpacity(0.15),
+              color: cs.primary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(icon, color: cs.primary, size: 20),

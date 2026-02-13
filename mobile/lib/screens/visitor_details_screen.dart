@@ -23,6 +23,7 @@ import 'new_visitor_screen.dart';
 class VisitorDetailsScreen extends StatefulWidget {
   final Visitor visitor;
   final String guardId;
+
   /// When false (e.g. opened by guard), Approve/Reject/Leave actions are hidden. Residents use their own approval screen.
   final bool showStatusActions;
   const VisitorDetailsScreen({
@@ -60,7 +61,8 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
     _visitor = widget.visitor;
     _previousStatus = widget.visitor.status;
     _noteController.text = _visitor.note ?? "";
-    _confettiController = ConfettiController(duration: const Duration(milliseconds: 600));
+    _confettiController =
+        ConfettiController(duration: const Duration(milliseconds: 600));
     _refreshFavoriteStatus();
   }
 
@@ -97,7 +99,9 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
         visitorId: _visitor.visitorId,
         status: status,
         approvedBy: "GUARD:${widget.guardId}",
-        note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        note: _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
       );
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -121,7 +125,9 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
         visitorId: _visitor.visitorId,
         status: status,
         approvedBy: "GUARD:${widget.guardId}", // later replace with resident
-        note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+        note: _noteController.text.trim().isEmpty
+            ? null
+            : _noteController.text.trim(),
       );
 
       if (!mounted) return;
@@ -140,7 +146,8 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
             _confettiController.play();
           }
         } else {
-          final friendly = userFriendlyMessageFromError(res.error ?? "Failed to update status");
+          final friendly = userFriendlyMessageFromError(
+              res.error ?? "Failed to update status");
           _error = friendly;
           _showStatusErrorDialog(friendly, status);
         }
@@ -217,7 +224,8 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
       dateStr = "${localTime.day}/${localTime.month}/${localTime.year}";
     }
 
-    final timeStr = "${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}";
+    final timeStr =
+        "${localTime.hour.toString().padLeft(2, '0')}:${localTime.minute.toString().padLeft(2, '0')}";
     return "$dateStr at $timeStr";
   }
 
@@ -324,7 +332,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 26,
             offset: const Offset(0, 14),
           ),
@@ -342,7 +350,9 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                 placeholder: (context, url) => Container(
                   color: Colors.grey.shade300,
                   child: Center(
-                    child: Icon(AppIcons.more, color: AppColors.textMuted.withOpacity(0.8), size: 40),
+                    child: Icon(AppIcons.more,
+                        color: AppColors.textMuted.withValues(alpha: 0.8),
+                        size: 40),
                   ),
                 ),
                 errorWidget: (context, url, error) => Container(
@@ -350,7 +360,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                   child: Center(
                     child: Icon(
                       AppIcons.more,
-                      color: AppColors.textMuted.withOpacity(0.8),
+                      color: AppColors.textMuted.withValues(alpha: 0.8),
                       size: 40,
                     ),
                   ),
@@ -376,8 +386,8 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     colors: [
-                      Colors.black.withOpacity(0.00),
-                      Colors.black.withOpacity(0.28),
+                      Colors.black.withValues(alpha: 0.00),
+                      Colors.black.withValues(alpha: 0.28),
                     ],
                   ),
                 ),
@@ -396,15 +406,18 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 7),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.88),
+                          color: Colors.white.withValues(alpha: 0.88),
                           borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: AppColors.border.withOpacity(0.9)),
+                          border: Border.all(
+                              color: AppColors.border.withValues(alpha: 0.9)),
                         ),
                         child: Row(
                           children: [
-                            Icon(_typeIcon(_visitor.visitorType), size: 16, color: AppColors.text),
+                            Icon(_typeIcon(_visitor.visitorType),
+                                size: 16, color: AppColors.text),
                             const SizedBox(width: 6),
                             Text(
                               _visitor.visitorType.toUpperCase(),
@@ -423,12 +436,15 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                         duration: const Duration(milliseconds: 200),
                         switchInCurve: Curves.easeOut,
                         switchOutCurve: Curves.easeOut,
-                        transitionBuilder: (Widget child, Animation<double> animation) {
+                        transitionBuilder:
+                            (Widget child, Animation<double> animation) {
                           return FadeTransition(
                             opacity: animation,
                             child: ScaleTransition(
-                              scale: Tween<double>(begin: 0.96, end: 1.0).animate(
-                                CurvedAnimation(parent: animation, curve: Curves.easeOut),
+                              scale:
+                                  Tween<double>(begin: 0.96, end: 1.0).animate(
+                                CurvedAnimation(
+                                    parent: animation, curve: Curves.easeOut),
                               ),
                               child: child,
                             ),
@@ -443,34 +459,44 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                       ),
                     ],
                   ),
-                  if (_isPending(_visitor.status) && !widget.showStatusActions) ...[
+                  if (_isPending(_visitor.status) &&
+                      !widget.showStatusActions) ...[
                     const SizedBox(height: 10),
                     Row(
                       children: [
                         Expanded(
                           child: FilledButton(
-                            onPressed: _loading ? null : () => _setStatus("APPROVED"),
+                            onPressed:
+                                _loading ? null : () => _setStatus("APPROVED"),
                             style: FilledButton.styleFrom(
                               backgroundColor: SentinelStatusPalette.success,
                               foregroundColor: Colors.white,
                               elevation: 0,
                               padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: const Text("Allow Entry", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                            child: const Text("Allow Entry",
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700, fontSize: 13)),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: _loading ? null : () => _setStatus("REJECTED"),
+                            onPressed:
+                                _loading ? null : () => _setStatus("REJECTED"),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: SentinelStatusPalette.error,
-                              side: const BorderSide(color: SentinelStatusPalette.error),
+                              side: const BorderSide(
+                                  color: SentinelStatusPalette.error),
                               padding: const EdgeInsets.symmetric(vertical: 10),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
-                            child: const Text("Deny", style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                            child: const Text("Deny",
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700, fontSize: 13)),
                           ),
                         ),
                       ],
@@ -494,7 +520,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
         border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.045),
+            color: Colors.black.withValues(alpha: 0.045),
             blurRadius: 26,
             offset: const Offset(0, 14),
           ),
@@ -566,523 +592,566 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final displayFlat = _visitor.flatNo.isNotEmpty ? _visitor.flatNo : _visitor.flatId;
+    final displayFlat =
+        _visitor.flatNo.isNotEmpty ? _visitor.flatNo : _visitor.flatId;
     final statusColor = _statusColor(_visitor.status);
     final readOnlyProviderChip = _readOnlyProviderChip(context);
     final lastActionLine = _lastActionLine();
 
     return PopScope(
       canPop: true,
-      onPopInvoked: (didPop) {
+      onPopInvokedWithResult: (didPop, _) {
         if (!didPop && Navigator.of(context).canPop()) {
           Navigator.of(context).pop();
         }
       },
       child: Scaffold(
-      backgroundColor: AppColors.bg,
-      appBar: AppBar(
         backgroundColor: AppColors.bg,
-        elevation: 0,
-        surfaceTintColor: AppColors.bg,
-        automaticallyImplyLeading: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
-          onPressed: () {
-            if (Navigator.of(context).canPop()) {
-              Navigator.of(context).pop();
-            }
-          },
-        ),
-        title: const Text(
-          "Visitor Details",
-          style: TextStyle(
-            color: AppColors.text,
-            fontWeight: FontWeight.w900,
+        appBar: AppBar(
+          backgroundColor: AppColors.bg,
+          elevation: 0,
+          surfaceTintColor: AppColors.bg,
+          automaticallyImplyLeading: true,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back_rounded, color: AppColors.text),
+            onPressed: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              }
+            },
+          ),
+          title: const Text(
+            "Visitor Details",
+            style: TextStyle(
+              color: AppColors.text,
+              fontWeight: FontWeight.w900,
+            ),
           ),
         ),
-      ),
-      body: Stack(
-        children: [
-          // Background subtle gradient (premium)
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    AppColors.primarySoft.withOpacity(0.65),
-                    AppColors.bg,
-                  ],
+        body: Stack(
+          children: [
+            // Background subtle gradient (premium)
+            Positioned.fill(
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.primarySoft.withValues(alpha: 0.65),
+                      AppColors.bg,
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
 
-          ListView(
-            padding: EdgeInsets.fromLTRB(
-              16,
-              12,
-              16,
-              MediaQuery.of(context).padding.bottom + 28,
-            ),
-            children: [
-              if (_error != null) ...[
-                _errorBanner(),
-                const SizedBox(height: 12),
-              ],
-
-              SentinelIllustration(
-                kind: _illustrationKindForType(_visitor.visitorType),
-                height: 110,
+            ListView(
+              padding: EdgeInsets.fromLTRB(
+                16,
+                12,
+                16,
+                MediaQuery.of(context).padding.bottom + 28,
               ),
-              const SizedBox(height: 14),
-              if (readOnlyProviderChip != null) ...[
-                readOnlyProviderChip,
+              children: [
+                if (_error != null) ...[
+                  _errorBanner(),
+                  const SizedBox(height: 12),
+                ],
+
+                SentinelIllustration(
+                  kind: _illustrationKindForType(_visitor.visitorType),
+                  height: 110,
+                ),
                 const SizedBox(height: 14),
-              ],
+                if (readOnlyProviderChip != null) ...[
+                  readOnlyProviderChip,
+                  const SizedBox(height: 14),
+                ],
 
-              _photoHeader(),
-              const SizedBox(height: 14),
+                _photoHeader(),
+                const SizedBox(height: 14),
 
-              _premiumCard(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      displayFlat,
-                      style: const TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.text,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(AppIcons.phone, size: 16, color: AppColors.text2), // ✅
-                        const SizedBox(width: 6),
-                        Text(
-                          _visitor.visitorPhone.isEmpty ? "No phone" : _visitor.visitorPhone,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.text2,
-                          ),
+                _premiumCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        displayFlat,
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.text,
                         ),
-                        const Spacer(),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          const Icon(AppIcons.phone,
+                              size: 16, color: AppColors.text2), // ✅
+                          const SizedBox(width: 6),
+                          Text(
+                            _visitor.visitorPhone.isEmpty
+                                ? "No phone"
+                                : _visitor.visitorPhone,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.text2,
+                            ),
+                          ),
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 7),
+                            decoration: BoxDecoration(
+                              color: statusColor.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                  color: statusColor.withValues(alpha: 0.30)),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(_statusIcon(_visitor.status),
+                                    size: 14, color: statusColor), // ✅
+                                const SizedBox(width: 6),
+                                Text(
+                                  _visitor.status,
+                                  style: TextStyle(
+                                    color: statusColor,
+                                    fontWeight: FontWeight.w900,
+                                    fontSize: 12,
+                                    letterSpacing: 0.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (!widget.showStatusActions && _isFavoriteForUnit) ...[
+                        const SizedBox(height: 8),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 10, vertical: 6),
                           decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.12),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.10),
                             borderRadius: BorderRadius.circular(999),
-                            border: Border.all(color: statusColor.withOpacity(0.30)),
+                            border: Border.all(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary
+                                  .withValues(alpha: 0.24),
+                            ),
                           ),
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(_statusIcon(_visitor.status), size: 14, color: statusColor), // ✅
+                              const Icon(
+                                Icons.star_rounded,
+                                size: 15,
+                                color: _favoriteGold,
+                              ),
                               const SizedBox(width: 6),
                               Text(
-                                _visitor.status,
+                                "Favourite for this unit",
                                 style: TextStyle(
-                                  color: statusColor,
-                                  fontWeight: FontWeight.w900,
                                   fontSize: 12,
-                                  letterSpacing: 0.2,
+                                  fontWeight: FontWeight.w800,
+                                  color: Theme.of(context).colorScheme.primary,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                    if (!widget.showStatusActions && _isFavoriteForUnit) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withOpacity(0.10),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withOpacity(0.24),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
+                      ] else if (!widget.showStatusActions &&
+                          _favoriteLoading) ...[
+                        const SizedBox(height: 8),
+                        Row(
                           children: [
-                            Icon(
-                              Icons.star_rounded,
-                              size: 15,
-                              color: _favoriteGold,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              "Favourite for this unit",
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w800,
+                            SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
                                 color: Theme.of(context).colorScheme.primary,
                               ),
                             ),
-                          ],
-                        ),
-                      ),
-                    ] else if (!widget.showStatusActions && _favoriteLoading) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          SizedBox(
-                            width: 14,
-                            height: 14,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Checking favourites...",
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .onSurface
-                                  .withOpacity(0.65),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (lastActionLine != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        lastActionLine,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                    if (!_isPending(_visitor.status)) ...[
-                      const SizedBox(height: 10),
-                      OutlinedButton.icon(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute<void>(
-                              builder: (_) => NewVisitorScreen(
-                                guardId: widget.guardId,
-                                guardName: '',
-                                societyId: _visitor.societyId,
-                                initialVisitor: _visitor,
+                            const SizedBox(width: 8),
+                            Text(
+                              "Checking favourites...",
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface
+                                    .withValues(alpha: 0.65),
                               ),
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.replay_rounded, size: 18),
-                        label: const Text('Repeat visitor'),
-                      ),
-                    ],
-                    if (_visitor.residentPhone != null && _visitor.residentPhone!.trim().isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      InkWell(
-                        onTap: () async {
-                          final phone = _visitor.residentPhone!;
-                          final cleaned = phone.replaceAll(RegExp(r'[^\d+]'), '');
-                          if (cleaned.isEmpty) return;
-                          final uri = Uri.parse('tel:$cleaned');
-                          if (await canLaunchUrl(uri)) {
-                            await launchUrl(uri, mode: LaunchMode.externalApplication);
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Row(
+                          ],
+                        ),
+                      ],
+                      if (lastActionLine != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          lastActionLine,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.6),
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                      if (!_isPending(_visitor.status)) ...[
+                        const SizedBox(height: 10),
+                        OutlinedButton.icon(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) => NewVisitorScreen(
+                                  guardId: widget.guardId,
+                                  guardName: '',
+                                  societyId: _visitor.societyId,
+                                  initialVisitor: _visitor,
+                                ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.replay_rounded, size: 18),
+                          label: const Text('Repeat visitor'),
+                        ),
+                      ],
+                      if (_visitor.residentPhone != null &&
+                          _visitor.residentPhone!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: () async {
+                            final phone = _visitor.residentPhone!;
+                            final cleaned =
+                                phone.replaceAll(RegExp(r'[^\d+]'), '');
+                            if (cleaned.isEmpty) return;
+                            final uri = Uri.parse('tel:$cleaned');
+                            if (await canLaunchUrl(uri)) {
+                              await launchUrl(uri,
+                                  mode: LaunchMode.externalApplication);
+                            }
+                          },
+                          borderRadius: BorderRadius.circular(8),
+                          child: Row(
+                            children: [
+                              const Icon(AppIcons.phone,
+                                  size: 16, color: AppColors.success),
+                              const SizedBox(width: 6),
+                              Text(
+                                "Resident (flat owner): ${_visitor.residentPhone}",
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.success,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.call_rounded,
+                                  size: 16, color: AppColors.success),
+                            ],
+                          ),
+                        ),
+                      ],
+                      if (_visitor.visitorType.toUpperCase() == 'CAB' &&
+                          _visitor.cab != null &&
+                          _visitor.cab!['provider'] != null &&
+                          (_visitor.cab!['provider'] as String)
+                              .trim()
+                              .isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(
                           children: [
-                            const Icon(AppIcons.phone, size: 16, color: AppColors.success),
+                            const Icon(AppIcons.cab,
+                                size: 16, color: AppColors.text2),
                             const SizedBox(width: 6),
                             Text(
-                              "Resident (flat owner): ${_visitor.residentPhone}",
+                              "Cab Provider: ${_visitor.cab!['provider']}",
                               style: const TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
-                                color: AppColors.success,
+                                color: AppColors.text2,
                               ),
                             ),
-                            const SizedBox(width: 6),
-                            const Icon(Icons.call_rounded, size: 16, color: AppColors.success),
                           ],
                         ),
-                      ),
-                    ],
-                    if (_visitor.visitorType.toUpperCase() == 'CAB' &&
-                        _visitor.cab != null &&
-                        _visitor.cab!['provider'] != null &&
-                        (_visitor.cab!['provider'] as String).trim().isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(AppIcons.cab, size: 16, color: AppColors.text2),
-                          const SizedBox(width: 6),
-                          Text(
-                            "Cab Provider: ${_visitor.cab!['provider']}",
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.text2,
+                      ],
+                      if (_visitor.visitorType.toUpperCase() == 'DELIVERY' &&
+                          _visitor.delivery != null &&
+                          _visitor.delivery!['provider'] != null &&
+                          (_visitor.delivery!['provider'] as String)
+                              .trim()
+                              .isNotEmpty) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(AppIcons.delivery,
+                                size: 16, color: AppColors.text2),
+                            const SizedBox(width: 6),
+                            Text(
+                              "Delivery Partner: ${_visitor.delivery!['provider']}",
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.text2,
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    if (_visitor.visitorType.toUpperCase() == 'DELIVERY' &&
-                        _visitor.delivery != null &&
-                        _visitor.delivery!['provider'] != null &&
-                        (_visitor.delivery!['provider'] as String).trim().isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(AppIcons.delivery, size: 16, color: AppColors.text2),
-                          const SizedBox(width: 6),
-                          Text(
-                            "Delivery Partner: ${_visitor.delivery!['provider']}",
-                            style: const TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.text2,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    const SizedBox(height: 10),
-                    const Divider(height: 1),
-                    const SizedBox(height: 12),
-
-                    const Text(
-                      "Note (optional)",
-                      style: TextStyle(
-                        color: AppColors.text,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 13.5,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.bg,
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: TextField(
-                        controller: _noteController,
-                        minLines: 1,
-                        maxLines: 3,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: AppColors.text,
+                          ],
                         ),
-                        decoration: const InputDecoration(
-                          hintText: "Add a note for the resident (optional)…",
-                          hintStyle: TextStyle(
-                            color: AppColors.textMuted,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-                          prefixIcon: Icon(AppIcons.note, color: AppColors.text2), // ✅
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Only show actions if visitor is still PENDING and viewer is allowed (e.g. resident); guards must not see Approve/Reject/Leave
-              if (widget.showStatusActions && _isPending(_visitor.status)) ...[
-                const SizedBox(height: 14),
-                // Actions
-                _premiumCard(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
+                      ],
+                      const SizedBox(height: 10),
+                      const Divider(height: 1),
+                      const SizedBox(height: 12),
                       const Text(
-                        "Actions",
+                        "Note (optional)",
                         style: TextStyle(
                           color: AppColors.text,
                           fontWeight: FontWeight.w900,
                           fontSize: 13.5,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: SizedBox(
-                              height: 52,
-                              child: ElevatedButton.icon(
-                                onPressed: _loading ? null : () => _setStatus("APPROVED"),
-                                icon: const Icon(AppIcons.approve, size: 18),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.success,
-                                  foregroundColor: Colors.white,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  disabledBackgroundColor: AppColors.success.withOpacity(0.5),
-                                ),
-                                label: const Text(
-                                  "Approve",
-                                  style: TextStyle(fontWeight: FontWeight.w900),
-                                ),
-                              ),
-                            ),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.bg,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: TextField(
+                          controller: _noteController,
+                          minLines: 1,
+                          maxLines: 3,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.text,
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: SizedBox(
-                              height: 52,
-                              child: OutlinedButton.icon(
-                                onPressed: _loading ? null : () => _setStatus("REJECTED"),
-                                icon: const Icon(AppIcons.reject, size: 18),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppColors.error,
-                                  side: BorderSide(color: AppColors.error.withOpacity(0.28)),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  backgroundColor: AppColors.surface,
-                                  disabledForegroundColor: AppColors.error.withOpacity(0.5),
-                                ),
-                                label: const Text(
-                                  "Reject",
-                                  style: TextStyle(fontWeight: FontWeight.w900),
-                                ),
-                              ),
+                          decoration: const InputDecoration(
+                            hintText: "Add a note for the resident (optional)…",
+                            hintStyle: TextStyle(
+                              color: AppColors.textMuted,
+                              fontWeight: FontWeight.w600,
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: OutlinedButton.icon(
-                          onPressed: _loading ? null : () => _setStatus("LEAVE_AT_GATE"),
-                          icon: const Icon(AppIcons.leave, size: 18),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppColors.warning,
-                            side: BorderSide(color: AppColors.warning.withOpacity(0.28)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            backgroundColor: AppColors.surface,
-                            disabledForegroundColor: AppColors.warning.withOpacity(0.5),
-                          ),
-                          label: const Text(
-                            "Leave at Gate",
-                            style: TextStyle(fontWeight: FontWeight.w900),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 14),
+                            prefixIcon: Icon(AppIcons.note,
+                                color: AppColors.text2), // ✅
                           ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ] else ...[
-                // Show status info card for completed visitors
-                const SizedBox(height: 14),
-                _premiumCard(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(
-                            _statusIcon(_visitor.status),
-                            color: statusColor,
-                            size: 20,
+
+                // Only show actions if visitor is still PENDING and viewer is allowed (e.g. resident); guards must not see Approve/Reject/Leave
+                if (widget.showStatusActions &&
+                    _isPending(_visitor.status)) ...[
+                  const SizedBox(height: 14),
+                  // Actions
+                  _premiumCard(
+                    padding: const EdgeInsets.all(14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          "Actions",
+                          style: TextStyle(
+                            color: AppColors.text,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 13.5,
                           ),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              "Status: ${_visitor.status}",
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                color: statusColor,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (_visitor.approvedAt != null) ...[
-                        const SizedBox(height: 12),
-                        const Divider(height: 1),
+                        ),
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            const Icon(Icons.access_time_rounded, size: 16, color: AppColors.text2),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Processed: ${_formatDateTime(_visitor.approvedAt!)}",
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: AppColors.text2,
-                                fontWeight: FontWeight.w600,
+                            Expanded(
+                              child: SizedBox(
+                                height: 52,
+                                child: ElevatedButton.icon(
+                                  onPressed: _loading
+                                      ? null
+                                      : () => _setStatus("APPROVED"),
+                                  icon: const Icon(AppIcons.approve, size: 18),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: AppColors.success,
+                                    foregroundColor: Colors.white,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    disabledBackgroundColor: AppColors.success
+                                        .withValues(alpha: 0.5),
+                                  ),
+                                  label: const Text(
+                                    "Approve",
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w900),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: SizedBox(
+                                height: 52,
+                                child: OutlinedButton.icon(
+                                  onPressed: _loading
+                                      ? null
+                                      : () => _setStatus("REJECTED"),
+                                  icon: const Icon(AppIcons.reject, size: 18),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.error,
+                                    side: BorderSide(
+                                        color: AppColors.error
+                                            .withValues(alpha: 0.28)),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    backgroundColor: AppColors.surface,
+                                    disabledForegroundColor:
+                                        AppColors.error.withValues(alpha: 0.5),
+                                  ),
+                                  label: const Text(
+                                    "Reject",
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.w900),
+                                  ),
+                                ),
                               ),
                             ),
                           ],
                         ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: OutlinedButton.icon(
+                            onPressed: _loading
+                                ? null
+                                : () => _setStatus("LEAVE_AT_GATE"),
+                            icon: const Icon(AppIcons.leave, size: 18),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: AppColors.warning,
+                              side: BorderSide(
+                                  color: AppColors.warning
+                                      .withValues(alpha: 0.28)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              backgroundColor: AppColors.surface,
+                              disabledForegroundColor:
+                                  AppColors.warning.withValues(alpha: 0.5),
+                            ),
+                            label: const Text(
+                              "Leave at Gate",
+                              style: TextStyle(fontWeight: FontWeight.w900),
+                            ),
+                          ),
+                        ),
                       ],
-                    ],
+                    ),
                   ),
-                ),
-              ],
-            ],
-          ),
-
-          // One-time confetti when status transitions to APPROVED (does not intercept gestures)
-          IgnorePointer(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConfettiWidget(
-                confettiController: _confettiController,
-                blastDirectionality: BlastDirectionality.explosive,
-                emissionFrequency: 0.05,
-                numberOfParticles: 22,
-                maxBlastForce: 14,
-                minBlastForce: 4,
-                gravity: 0.4,
-                colors: [
-                  SentinelColors.accent,
-                  SentinelStatusPalette.success.withOpacity(0.8),
-                  Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+                ] else ...[
+                  // Show status info card for completed visitors
+                  const SizedBox(height: 14),
+                  _premiumCard(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              _statusIcon(_visitor.status),
+                              color: statusColor,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                "Status: ${_visitor.status}",
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                  color: statusColor,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (_visitor.approvedAt != null) ...[
+                          const SizedBox(height: 12),
+                          const Divider(height: 1),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              const Icon(Icons.access_time_rounded,
+                                  size: 16, color: AppColors.text2),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Processed: ${_formatDateTime(_visitor.approvedAt!)}",
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.text2,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                 ],
+              ],
+            ),
+
+            // One-time confetti when status transitions to APPROVED (does not intercept gestures)
+            IgnorePointer(
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConfettiWidget(
+                  confettiController: _confettiController,
+                  blastDirectionality: BlastDirectionality.explosive,
+                  emissionFrequency: 0.05,
+                  numberOfParticles: 22,
+                  maxBlastForce: 14,
+                  minBlastForce: 4,
+                  gravity: 0.4,
+                  colors: [
+                    SentinelColors.accent,
+                    SentinelStatusPalette.success.withValues(alpha: 0.8),
+                    Theme.of(context)
+                        .colorScheme
+                        .onSurface
+                        .withValues(alpha: 0.3),
+                  ],
+                ),
               ),
             ),
-          ),
 
-          // Full screen glass loader
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), 
-            show: _loading,
-            message: "Updating status…",
-          ),
-        ],
-      ),
+            // Full screen glass loader
+            AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
+              show: _loading,
+              message: "Updating status…",
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1107,9 +1176,9 @@ class _StatusChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.88),
+        color: Colors.white.withValues(alpha: 0.88),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.border.withOpacity(0.9)),
+        border: Border.all(color: AppColors.border.withValues(alpha: 0.9)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

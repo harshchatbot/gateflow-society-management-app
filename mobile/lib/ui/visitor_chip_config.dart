@@ -37,10 +37,20 @@ final List<ChipGroupConfig> visitorChipGroups = [
     visitorType: 'DELIVERY',
     storageKey: 'delivery',
     field: 'provider',
-    options: ['Zomato', 'Swiggy', 'Blinkit', 'Zepto', 'Amazon', 'Flipkart', 'Dunzo', 'Other'],
+    options: [
+      'Zomato',
+      'Swiggy',
+      'Blinkit',
+      'Zepto',
+      'Amazon',
+      'Flipkart',
+      'Dunzo',
+      'Other'
+    ],
     defaultValue: 'Other',
     icon: Icons.local_shipping_rounded,
   ),
 ];
 
-String visitorChipSelectionKey(ChipGroupConfig g) => '${g.storageKey}.${g.field}';
+String visitorChipSelectionKey(ChipGroupConfig g) =>
+    '${g.storageKey}.${g.field}';

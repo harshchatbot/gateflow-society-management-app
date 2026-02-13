@@ -7,7 +7,7 @@ import '../services/firestore_service.dart';
 import '../widgets/loading_skeletons.dart';
 
 /// Admin Manage Residents Screen
-/// 
+///
 /// Allows admins to view and manage all residents in the society
 /// Theme: Sentinel (unified)
 class AdminManageResidentsScreen extends StatefulWidget {
@@ -22,17 +22,20 @@ class AdminManageResidentsScreen extends StatefulWidget {
   });
 
   @override
-  State<AdminManageResidentsScreen> createState() => _AdminManageResidentsScreenState();
+  State<AdminManageResidentsScreen> createState() =>
+      _AdminManageResidentsScreenState();
 }
 
 /// Page size for paginated residents list. Load more fetches next [kResidentsPageSize] docs.
 const int kResidentsPageSize = 30;
 
-class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen> {
+class _AdminManageResidentsScreenState
+    extends State<AdminManageResidentsScreen> {
   final FirestoreService _firestore = FirestoreService();
 
   List<dynamic> _residents = [];
   List<dynamic> _filteredResidents = [];
+
   /// Cursor for "Load more" (null = no more or not loaded).
   DocumentSnapshot? _lastDoc;
   bool _isLoading = false;
@@ -64,11 +67,16 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
 
     setState(() {
       _filteredResidents = _residents.where((resident) {
-        final name = (resident['resident_name'] ?? resident['name'] ?? '').toString().toLowerCase();
+        final name = (resident['resident_name'] ?? resident['name'] ?? '')
+            .toString()
+            .toLowerCase();
         final flatNo = (resident['flat_no'] ?? '').toString().toLowerCase();
-        final phone = (resident['resident_phone'] ?? resident['phone'] ?? '').toString().toLowerCase();
-        final residentId = (resident['resident_id'] ?? '').toString().toLowerCase();
-        
+        final phone = (resident['resident_phone'] ?? resident['phone'] ?? '')
+            .toString()
+            .toLowerCase();
+        final residentId =
+            (resident['resident_id'] ?? '').toString().toLowerCase();
+
         return name.contains(query) ||
             flatNo.contains(query) ||
             phone.contains(query) ||
@@ -108,7 +116,8 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
 
       AppLogger.i("Loaded ${_residents.length} residents (first page)");
     } catch (e, st) {
-      AppLogger.e("Error loading residents (Firestore)", error: e, stackTrace: st);
+      AppLogger.e("Error loading residents (Firestore)",
+          error: e, stackTrace: st);
       if (!mounted) return;
       setState(() {
         _isLoading = false;
@@ -148,13 +157,13 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
         _isLoadingMore = false;
       });
       _filterResidents();
-      AppLogger.i("Loaded more residents: +${list.length} (total ${_residents.length})");
+      AppLogger.i(
+          "Loaded more residents: +${list.length} (total ${_residents.length})");
     } catch (e, st) {
       AppLogger.e("Error loading more residents", error: e, stackTrace: st);
       if (mounted) setState(() => _isLoadingMore = false);
     }
   }
-
 
   void _showError(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -177,7 +186,8 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
         backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: theme.colorScheme.onSurface),
+          icon: Icon(Icons.arrow_back_rounded,
+              color: theme.colorScheme.onSurface),
           onPressed: () {
             if (widget.onBackPressed != null) {
               widget.onBackPressed!();
@@ -200,10 +210,11 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
             icon: Container(
               padding: const EdgeInsets.all(8),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.15),
+                color: theme.colorScheme.primary.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(Icons.refresh_rounded, color: theme.colorScheme.primary, size: 20),
+              child: Icon(Icons.refresh_rounded,
+                  color: theme.colorScheme.primary, size: 20),
             ),
             onPressed: _isLoading ? null : _loadResidents,
           ),
@@ -225,7 +236,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                     border: Border.all(color: theme.dividerColor),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.02),
+                        color: Colors.black.withValues(alpha: 0.02),
                         blurRadius: 10,
                         offset: const Offset(0, 2),
                       ),
@@ -236,26 +247,35 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                     onChanged: (_) => _filterResidents(),
                     decoration: InputDecoration(
                       hintText: "Search by name, flat, phone...",
-                      hintStyle: TextStyle(color: theme.colorScheme.onSurface.withOpacity(0.6), fontSize: 14),
+                      hintStyle: TextStyle(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.6),
+                          fontSize: 14),
                       prefixIcon: Container(
                         margin: const EdgeInsets.all(12),
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withOpacity(0.15),
+                          color:
+                              theme.colorScheme.primary.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: Icon(Icons.search_rounded, color: theme.colorScheme.primary, size: 20),
+                        child: Icon(Icons.search_rounded,
+                            color: theme.colorScheme.primary, size: 20),
                       ),
                       suffixIcon: _searchController.text.isNotEmpty
                           ? IconButton(
-                              icon: Icon(Icons.clear_rounded, color: theme.colorScheme.onSurface.withOpacity(0.6), size: 20),
+                              icon: Icon(Icons.clear_rounded,
+                                  color: theme.colorScheme.onSurface
+                                      .withValues(alpha: 0.6),
+                                  size: 20),
                               onPressed: () {
                                 _searchController.clear();
                               },
                             )
                           : null,
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 14),
                     ),
                   ),
                 ),
@@ -263,13 +283,15 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
               // Results Count
               if (_filteredResidents.isNotEmpty)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Row(
                     children: [
                       Text(
                         "${_filteredResidents.length} resident${_filteredResidents.length != 1 ? 's' : ''}",
                         style: TextStyle(
-                          color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.7),
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -300,16 +322,17 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: theme.colorScheme.error.withOpacity(0.1),
+                color: theme.colorScheme.error.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
+              child: Icon(Icons.error_outline,
+                  size: 64, color: theme.colorScheme.error),
             ),
             const SizedBox(height: 16),
             Text(
               _error!,
               style: TextStyle(
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
@@ -323,7 +346,8 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
               style: ElevatedButton.styleFrom(
                 backgroundColor: theme.colorScheme.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ],
@@ -339,7 +363,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primary.withOpacity(0.1),
+                color: theme.colorScheme.primary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(
@@ -350,7 +374,9 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
             ),
             const SizedBox(height: 16),
             Text(
-              _searchController.text.isNotEmpty ? "No residents found" : "No residents yet",
+              _searchController.text.isNotEmpty
+                  ? "No residents found"
+                  : "No residents yet",
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
@@ -364,7 +390,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                   : "Residents will appear here once added",
               style: TextStyle(
                 fontSize: 14,
-                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
                 fontWeight: FontWeight.w500,
               ),
               textAlign: TextAlign.center,
@@ -384,7 +410,8 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
           if (index == _filteredResidents.length) {
             return _buildLoadMoreRow();
           }
-          return _buildResidentCard(_filteredResidents[index] as Map<String, dynamic>);
+          return _buildResidentCard(
+              _filteredResidents[index] as Map<String, dynamic>);
         },
       ),
     );
@@ -410,7 +437,8 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                 label: const Text("Load more"),
                 style: TextButton.styleFrom(
                   foregroundColor: theme.colorScheme.primary,
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
               ),
       ),
@@ -419,13 +447,17 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
 
   Widget _buildResidentCard(Map<String, dynamic> resident) {
     final theme = Theme.of(context);
-    final residentName = (resident['resident_name'] ?? resident['name'] ?? 'Unknown').toString();
+    final residentName =
+        (resident['resident_name'] ?? resident['name'] ?? 'Unknown').toString();
     final flatNo = (resident['flat_no'] ?? 'N/A').toString();
-    final phone = (resident['resident_phone'] ?? resident['phone'] ?? 'N/A').toString();
+    final phone =
+        (resident['resident_phone'] ?? resident['phone'] ?? 'N/A').toString();
     final residentId = (resident['resident_id'] ?? 'N/A').toString();
     final role = (resident['role'] ?? 'RESIDENT').toString();
-    final active = (resident['active'] ?? 'TRUE').toString().toUpperCase() == 'TRUE';
-    final photoUrl = (resident['photoUrl'] ?? resident['photo_url'] ?? '').toString().trim();
+    final active =
+        (resident['active'] ?? 'TRUE').toString().toUpperCase() == 'TRUE';
+    final photoUrl =
+        (resident['photoUrl'] ?? resident['photo_url'] ?? '').toString().trim();
     final hasPhoto = photoUrl.isNotEmpty;
 
     return Container(
@@ -434,12 +466,14 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(
-          color: active ? theme.dividerColor.withOpacity(0.5) : theme.colorScheme.error.withOpacity(0.3),
+          color: active
+              ? theme.dividerColor.withValues(alpha: 0.5)
+              : theme.colorScheme.error.withValues(alpha: 0.3),
           width: active ? 1 : 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.03),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 8,
             offset: const Offset(0, 3),
           ),
@@ -465,9 +499,12 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                             width: 48,
                             height: 48,
                             decoration: BoxDecoration(
-                              color: theme.colorScheme.primary.withOpacity(0.15),
+                              color: theme.colorScheme.primary
+                                  .withValues(alpha: 0.15),
                               shape: BoxShape.circle,
-                              border: Border.all(color: theme.dividerColor.withOpacity(0.5)),
+                              border: Border.all(
+                                  color: theme.dividerColor
+                                      .withValues(alpha: 0.5)),
                             ),
                             child: ClipOval(
                               child: hasPhoto
@@ -477,7 +514,9 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                                       width: 48,
                                       height: 48,
                                       placeholder: (_, __) => Center(
-                                        child: Icon(Icons.person_rounded, color: theme.colorScheme.primary, size: 24),
+                                        child: Icon(Icons.person_rounded,
+                                            color: theme.colorScheme.primary,
+                                            size: 24),
                                       ),
                                       errorWidget: (_, __, ___) => Icon(
                                         Icons.person_rounded,
@@ -510,7 +549,8 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                                   role,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                    color: theme.colorScheme.onSurface
+                                        .withValues(alpha: 0.7),
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
@@ -521,11 +561,12 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                       ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: active
-                            ? AppColors.success.withOpacity(0.15)
-                            : theme.colorScheme.error.withOpacity(0.15),
+                            ? AppColors.success.withValues(alpha: 0.15)
+                            : theme.colorScheme.error.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -533,7 +574,9 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w800,
-                          color: active ? AppColors.success : theme.colorScheme.error,
+                          color: active
+                              ? AppColors.success
+                              : theme.colorScheme.error,
                         ),
                       ),
                     ),
@@ -542,7 +585,6 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                 const SizedBox(height: 16),
                 const Divider(height: 1),
                 const SizedBox(height: 12),
-
                 _buildDetailRow(Icons.home_rounded, "Flat", flatNo),
                 const SizedBox(height: 8),
                 _buildDetailRow(Icons.phone_rounded, "Phone", phone),
@@ -563,7 +605,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
         Container(
           padding: const EdgeInsets.all(6),
           decoration: BoxDecoration(
-            color: theme.colorScheme.primary.withOpacity(0.1),
+            color: theme.colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(icon, size: 16, color: theme.colorScheme.primary),
@@ -573,7 +615,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
           "$label: ",
           style: TextStyle(
             fontSize: 13,
-            color: theme.colorScheme.onSurface.withOpacity(0.7),
+            color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -593,7 +635,8 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
 
   void _showResidentDetails(Map<String, dynamic> resident) {
     final theme = Theme.of(context);
-    final photoUrl = (resident['photoUrl'] ?? resident['photo_url'] ?? '').toString().trim();
+    final photoUrl =
+        (resident['photoUrl'] ?? resident['photo_url'] ?? '').toString().trim();
     final hasPhoto = photoUrl.isNotEmpty;
 
     showModalBottomSheet(
@@ -639,7 +682,8 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                       width: 56,
                       height: 56,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.primary.withOpacity(0.15),
+                        color:
+                            theme.colorScheme.primary.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: theme.dividerColor),
                       ),
@@ -650,7 +694,9 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                                 imageUrl: photoUrl,
                                 fit: BoxFit.cover,
                                 placeholder: (_, __) => Center(
-                                  child: Icon(Icons.person_rounded, color: theme.colorScheme.primary, size: 28),
+                                  child: Icon(Icons.person_rounded,
+                                      color: theme.colorScheme.primary,
+                                      size: 28),
                                 ),
                                 errorWidget: (_, __, ___) => Icon(
                                   Icons.person_rounded,
@@ -658,7 +704,8 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                                   size: 28,
                                 ),
                               )
-                            : Icon(Icons.person_rounded, color: theme.colorScheme.primary, size: 28),
+                            : Icon(Icons.person_rounded,
+                                color: theme.colorScheme.primary, size: 28),
                       ),
                     ),
                   ),
@@ -676,12 +723,20 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                 ],
               ),
               const SizedBox(height: 24),
-              _buildDetailSection("Name", resident['resident_name'] ?? resident['name'] ?? 'N/A'),
+              _buildDetailSection("Name",
+                  resident['resident_name'] ?? resident['name'] ?? 'N/A'),
               _buildDetailSection("Flat No", resident['flat_no'] ?? 'N/A'),
-              _buildDetailSection("Phone", resident['resident_phone'] ?? resident['phone'] ?? 'N/A'),
-              _buildDetailSection("Resident ID", resident['resident_id'] ?? 'N/A'),
+              _buildDetailSection("Phone",
+                  resident['resident_phone'] ?? resident['phone'] ?? 'N/A'),
+              _buildDetailSection(
+                  "Resident ID", resident['resident_id'] ?? 'N/A'),
               _buildDetailSection("Role", resident['role'] ?? 'RESIDENT'),
-              _buildDetailSection("Status", (resident['active'] ?? 'TRUE').toString().toUpperCase() == 'TRUE' ? 'Active' : 'Inactive'),
+              _buildDetailSection(
+                  "Status",
+                  (resident['active'] ?? 'TRUE').toString().toUpperCase() ==
+                          'TRUE'
+                      ? 'Active'
+                      : 'Inactive'),
               const SizedBox(height: 20),
             ],
           ),
@@ -710,7 +765,10 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
                 placeholder: (_, __) => const Center(
                   child: CircularProgressIndicator(color: Colors.white),
                 ),
-                errorWidget: (_, __, ___) => const Icon(Icons.broken_image_rounded, color: Colors.white, size: 64),
+                errorWidget: (_, __, ___) => const Icon(
+                    Icons.broken_image_rounded,
+                    color: Colors.white,
+                    size: 64),
               ),
             ),
           ),
@@ -730,7 +788,7 @@ class _AdminManageResidentsScreenState extends State<AdminManageResidentsScreen>
             label,
             style: TextStyle(
               fontSize: 12,
-              color: theme.colorScheme.onSurface.withOpacity(0.7),
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
               fontWeight: FontWeight.w600,
             ),
           ),

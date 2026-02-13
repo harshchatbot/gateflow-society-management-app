@@ -8,7 +8,7 @@ import '../core/society_modules.dart';
 import '../widgets/module_disabled_placeholder.dart';
 
 /// Admin Create Notice Screen
-/// 
+///
 /// Allows admins to create new notices/announcements
 /// Theme: Purple/Admin theme
 class AdminCreateNoticeScreen extends StatefulWidget {
@@ -24,7 +24,8 @@ class AdminCreateNoticeScreen extends StatefulWidget {
   });
 
   @override
-  State<AdminCreateNoticeScreen> createState() => _AdminCreateNoticeScreenState();
+  State<AdminCreateNoticeScreen> createState() =>
+      _AdminCreateNoticeScreenState();
 }
 
 class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
@@ -35,7 +36,7 @@ class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
-  
+
   String _selectedType = "GENERAL";
   String _selectedPriority = "NORMAL";
   bool _isLoading = false;
@@ -97,7 +98,8 @@ class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
             ),
             backgroundColor: AppColors.success,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             margin: const EdgeInsets.all(16),
           ),
         );
@@ -170,20 +172,25 @@ class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
                     spacing: 8,
                     runSpacing: 8,
                     children: _noticeTypes.entries.map((entry) {
-                      final type = entry.key; // Backend value (GENERAL, SCHEDULE, etc.)
-                      final label = entry.value; // User-friendly label (Announcement, Event, etc.)
+                      final type =
+                          entry.key; // Backend value (GENERAL, SCHEDULE, etc.)
+                      final label = entry
+                          .value; // User-friendly label (Announcement, Event, etc.)
                       final isSelected = _selectedType == type;
                       return GestureDetector(
                         onTap: () => setState(() => _selectedType = type),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? AppColors.admin.withOpacity(0.15)
+                                ? AppColors.admin.withValues(alpha: 0.15)
                                 : AppColors.surface,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isSelected ? AppColors.admin : AppColors.border,
+                              color: isSelected
+                                  ? AppColors.admin
+                                  : AppColors.border,
                               width: isSelected ? 2 : 1,
                             ),
                           ),
@@ -192,7 +199,9 @@ class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: isSelected ? AppColors.admin : AppColors.text2,
+                              color: isSelected
+                                  ? AppColors.admin
+                                  : AppColors.text2,
                             ),
                           ),
                         ),
@@ -219,20 +228,26 @@ class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
                       Color priorityColor = AppColors.admin;
                       if (priority == "URGENT") {
                         priorityColor = AppColors.error;
-                      } else if (priority == "HIGH") priorityColor = AppColors.warning;
-                      else if (priority == "LOW") priorityColor = AppColors.text2;
+                      } else if (priority == "HIGH") {
+                        priorityColor = AppColors.warning;
+                      } else if (priority == "LOW") {
+                        priorityColor = AppColors.text2;
+                      }
 
                       return GestureDetector(
-                        onTap: () => setState(() => _selectedPriority = priority),
+                        onTap: () =>
+                            setState(() => _selectedPriority = priority),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? priorityColor.withOpacity(0.15)
+                                ? priorityColor.withValues(alpha: 0.15)
                                 : AppColors.surface,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: isSelected ? priorityColor : AppColors.border,
+                              color:
+                                  isSelected ? priorityColor : AppColors.border,
                               width: isSelected ? 2 : 1,
                             ),
                           ),
@@ -241,7 +256,8 @@ class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
-                              color: isSelected ? priorityColor : AppColors.text2,
+                              color:
+                                  isSelected ? priorityColor : AppColors.text2,
                             ),
                           ),
                         ),
@@ -256,14 +272,16 @@ class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
                     decoration: InputDecoration(
                       labelText: "Title",
                       hintText: "Enter notice title",
-                      prefixIcon: const Icon(Icons.title_rounded, color: AppColors.admin),
+                      prefixIcon: const Icon(Icons.title_rounded,
+                          color: AppColors.admin),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                         borderSide: const BorderSide(color: AppColors.border),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.admin, width: 2),
+                        borderSide:
+                            const BorderSide(color: AppColors.admin, width: 2),
                       ),
                       filled: true,
                       fillColor: AppColors.surface,
@@ -298,7 +316,8 @@ class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
                       alignLabelWithHint: true,
                       prefixIcon: const Padding(
                         padding: EdgeInsets.only(bottom: 120),
-                        child: Icon(Icons.description_rounded, color: AppColors.admin),
+                        child: Icon(Icons.description_rounded,
+                            color: AppColors.admin),
                       ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -306,7 +325,8 @@ class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: AppColors.admin, width: 2),
+                        borderSide:
+                            const BorderSide(color: AppColors.admin, width: 2),
                       ),
                       filled: true,
                       fillColor: AppColors.surface,
@@ -360,7 +380,10 @@ class _AdminCreateNoticeScreenState extends State<AdminCreateNoticeScreen> {
               ),
             ),
           ),
-          AppLoader.overlay(showAfter: const Duration(milliseconds: 300), show: _isLoading, message: "Creating notice…"),
+          AppLoader.overlay(
+              showAfter: const Duration(milliseconds: 300),
+              show: _isLoading,
+              message: "Creating notice…"),
         ],
       ),
     );
