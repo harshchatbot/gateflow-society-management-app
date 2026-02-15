@@ -206,7 +206,7 @@ service cloud.firestore {
 
       allow update: if isAdmin(societyId) || isCreatorBootstrappingSociety(societyId);
 
-      allow delete: if isAdmin(societyId);
+      allow delete: if false;
 
       match /members/{uid} {
 
@@ -247,7 +247,7 @@ service cloud.firestore {
           || isAdmin(societyId)
         );
 
-        allow delete: if isAdmin(societyId);
+        allow delete: if false;
       }
 
       match /invites/{inviteKey} {
@@ -277,12 +277,13 @@ service cloud.firestore {
           && request.resource.data.status == "claimed"
           && request.resource.data.claimedByUid == request.auth.uid;
 
-        allow delete: if isAdmin(societyId);
+        allow delete: if false;
       }
 
       match /notices/{id} {
         allow read: if activeMember(societyId);
-        allow create, update, delete: if isAdmin(societyId);
+        allow create, update: if isAdmin(societyId);
+        allow delete: if false;
       }
 
       match /complaints/{id} {
@@ -295,7 +296,8 @@ service cloud.firestore {
           );
         allow create: if activeMember(societyId)
           && (!("visibility" in request.resource.data) || request.resource.data.visibility in ["general", "personal"]);
-        allow update, delete: if isAdmin(societyId);
+        allow update: if isAdmin(societyId);
+        allow delete: if false;
       }
 
       match /sos_requests/{id} {
@@ -323,7 +325,8 @@ service cloud.firestore {
             || (isGuard(societyId) && resource.data.guardUid == request.auth.uid)
             || (isResident(societyId) && resource.data.flatNo != null && member(societyId).data.flatNo != null && resource.data.flatNo.upper() == member(societyId).data.flatNo.upper())
           );
-        allow update, delete: if isAdmin(societyId);
+        allow update: if isAdmin(societyId);
+        allow delete: if false;
       }
 
       match /visitors/{id} {
@@ -348,7 +351,7 @@ service cloud.firestore {
               && request.resource.data.approved_by == request.auth.uid
             )
           );
-        allow delete: if isAdmin(societyId);
+        allow delete: if false;
       }
 
       match /residentSignups/{id} {
@@ -369,7 +372,8 @@ service cloud.firestore {
 
       match /flats/{id} {
         allow read: if activeMember(societyId);
-        allow create, update, delete: if isAdmin(societyId);
+        allow create, update: if isAdmin(societyId);
+        allow delete: if false;
       }
 
       // Favorite visitors by unit/flat:
@@ -377,7 +381,8 @@ service cloud.firestore {
       // Guards can read, but cannot write.
       match /units/{unitId} {
         allow read: if activeMember(societyId);
-        allow create, update, delete: if isAdmin(societyId);
+        allow create, update: if isAdmin(societyId);
+        allow delete: if false;
 
         // Unit-level quick-entry setting
         // societies/{societyId}/units/{unitId}/settings/visitor_access
@@ -395,7 +400,7 @@ service cloud.firestore {
               "updatedAt",
               "updatedByUid"
             ]);
-          allow delete: if isAdmin(societyId);
+          allow delete: if false;
         }
 
         match /favorite_visitors/{visitorKey} {
@@ -426,7 +431,8 @@ service cloud.firestore {
       allow read: if signedIn() && resource.data.active == true;
 
       // ✅ SuperAdmin-only create/update/delete
-      allow create, update, delete: if isGlobalSuperAdmin();
+      allow create, update: if isGlobalSuperAdmin();
+      allow delete: if false;
 
       match /units/{unitId} {
         allow read: if signedIn() && resource.data.active == true;
@@ -457,7 +463,7 @@ service cloud.firestore {
           )
           || isSocietyAdmin();
 
-        allow delete: if isSocietyAdmin();
+        allow delete: if false;
       }
     }
 
@@ -544,7 +550,8 @@ service cloud.firestore {
     match /guard_join_codes/{code} {
       allow read: if true;
       allow create: if signedIn() && isAdmin(request.resource.data.societyId);
-      allow update, delete: if signedIn() && isAdmin(resource.data.societyId);
+      allow update: if signedIn() && isAdmin(resource.data.societyId);
+      allow delete: if false;
     }
 
     // PHONE INDEX

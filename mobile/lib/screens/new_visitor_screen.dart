@@ -374,10 +374,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
     }
     final phoneAvailable = phone.trim().isNotEmpty;
     final canUseNoPhoneAuto = phoneAvailable || _selectedFromFavoriteList;
-    final favPreApproved = match != null &&
-        (match['isPreApproved'] == true) &&
-        autoApproveEnabled &&
-        canUseNoPhoneAuto;
+    final favPreApproved = match != null && canUseNoPhoneAuto;
     final scheduleApproved = preapproval != null && canUseNoPhoneAuto;
     final isQuickEntry = favPreApproved || scheduleApproved;
     if (!mounted) return;
@@ -453,10 +450,7 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
       };
     }
 
-    final favEligible = favorite != null &&
-        favorite['isPreApproved'] == true &&
-        autoApproveEnabled &&
-        canUseNoPhoneAuto;
+    final favEligible = favorite != null && canUseNoPhoneAuto;
 
     if (favEligible) {
       return <String, dynamic>{
