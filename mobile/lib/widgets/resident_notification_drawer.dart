@@ -185,6 +185,7 @@ class _ResidentNotificationDrawerState
 
         // Get complaints from last 7 days
         final recentComplaintsList = allComplaints.where((c) {
+          if (!_isActionableComplaint(c)) return false;
           try {
             final createdAt = c['created_at']?.toString() ?? '';
             if (createdAt.isEmpty) return false;
@@ -253,6 +254,13 @@ class _ResidentNotificationDrawerState
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  bool _isActionableComplaint(Map<String, dynamic> complaint) {
+    final status = (complaint['status'] ?? '').toString().toUpperCase().trim();
+    if (!(status == 'PENDING' || status == 'IN_PROGRESS')) return false;
+    final resolvedAt = complaint['resolvedAt'] ?? complaint['resolved_at'];
+    return resolvedAt == null;
   }
 
   String _formatTime(String? dateTimeStr) {

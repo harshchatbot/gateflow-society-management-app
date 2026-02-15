@@ -16,7 +16,6 @@ import '../ui/visitor_chip_config.dart';
 // ✅ Phosphor icon mapping (single source)
 import '../ui/app_icons.dart';
 import '../utils/error_messages.dart';
-import '../widgets/sentinel_illustration.dart';
 import '../widgets/error_retry_widget.dart';
 import 'new_visitor_screen.dart';
 
@@ -43,7 +42,6 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
   final FavoriteVisitorsService _favoritesService =
       FavoriteVisitorsService.instance;
   bool _loading = false;
-  bool _favoriteLoading = false;
   bool _isFavoriteForUnit = false;
   String? _error;
   String? _lastAttemptedStatus;
@@ -194,6 +192,55 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
     );
   }
 
+  Future<void> _openPhotoPreview(String imageUrl) async {
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      barrierColor: Colors.black.withValues(alpha: 0.9),
+      builder: (dialogContext) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.all(12),
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: InteractiveViewer(
+                  minScale: 1,
+                  maxScale: 5,
+                  child: Center(
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl,
+                      fit: BoxFit.contain,
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      errorWidget: (context, url, error) => const Center(
+                        child: Icon(Icons.broken_image_outlined,
+                            color: Colors.white, size: 42),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Material(
+                  color: Colors.black54,
+                  shape: const CircleBorder(),
+                  child: IconButton(
+                    onPressed: () => Navigator.of(dialogContext).pop(),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   bool _isPending(String status) {
     final s = status.toUpperCase();
     return s == 'PENDING';
@@ -273,13 +320,11 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
     if (unitIdRaw.isEmpty || (name.isEmpty && phone.isEmpty)) {
       if (!mounted) return;
       setState(() {
-        _favoriteLoading = false;
         _isFavoriteForUnit = false;
       });
       return;
     }
 
-    setState(() => _favoriteLoading = true);
     final key = FavoriteVisitorsService.buildVisitorKey(
       name: name.isEmpty ? phone : name,
       phone: phone,
@@ -292,7 +337,6 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
     );
     if (!mounted) return;
     setState(() {
-      _favoriteLoading = false;
       _isFavoriteForUnit = match;
     });
   }
@@ -344,24 +388,27 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
           fit: StackFit.expand,
           children: [
             if (hasPhoto)
-              CachedNetworkImage(
-                imageUrl: _visitor.photoUrl!,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Colors.grey.shade300,
-                  child: Center(
-                    child: Icon(AppIcons.more,
-                        color: AppColors.textMuted.withValues(alpha: 0.8),
-                        size: 40),
+              GestureDetector(
+                onTap: () => _openPhotoPreview(_visitor.photoUrl!),
+                child: CachedNetworkImage(
+                  imageUrl: _visitor.photoUrl!,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.grey.shade300,
+                    child: Center(
+                      child: Icon(AppIcons.more,
+                          color: AppColors.textMuted.withValues(alpha: 0.8),
+                          size: 40),
+                    ),
                   ),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: AppColors.bg,
-                  child: Center(
-                    child: Icon(
-                      AppIcons.more,
-                      color: AppColors.textMuted.withValues(alpha: 0.8),
-                      size: 40,
+                  errorWidget: (context, url, error) => Container(
+                    color: AppColors.bg,
+                    child: Center(
+                      child: Icon(
+                        AppIcons.more,
+                        color: AppColors.textMuted.withValues(alpha: 0.8),
+                        size: 40,
+                      ),
                     ),
                   ),
                 ),
@@ -380,21 +427,25 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
 
             // Subtle gradient overlay for readability
             Positioned.fill(
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withValues(alpha: 0.00),
-                      Colors.black.withValues(alpha: 0.28),
-                    ],
+              child: IgnorePointer(
+                ignoring: true,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.black.withValues(alpha: 0.00),
+                        Colors.black.withValues(alpha: 0.28),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
 
-            // Status chip + type label overlay; when PENDING and guard, show one-tap Allow/Deny
+            // Status chip + type label overlay.
+            // Action buttons are only for approval-capable contexts.
             Positioned(
               left: 14,
               right: 14,
@@ -460,7 +511,7 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                     ],
                   ),
                   if (_isPending(_visitor.status) &&
-                      !widget.showStatusActions) ...[
+                      widget.showStatusActions) ...[
                     const SizedBox(height: 10),
                     Row(
                       children: [
@@ -539,17 +590,6 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
         if (_lastAttemptedStatus != null) _setStatus(_lastAttemptedStatus!);
       },
     );
-  }
-
-  String _illustrationKindForType(String visitorType) {
-    switch (visitorType.toUpperCase()) {
-      case 'CAB':
-        return 'cab';
-      case 'DELIVERY':
-        return 'delivery';
-      default:
-        return 'visitor';
-    }
   }
 
   Widget? _readOnlyProviderChip(BuildContext context) {
@@ -659,11 +699,6 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                   const SizedBox(height: 12),
                 ],
 
-                SentinelIllustration(
-                  kind: _illustrationKindForType(_visitor.visitorType),
-                  height: 110,
-                ),
-                const SizedBox(height: 14),
                 if (readOnlyProviderChip != null) ...[
                   readOnlyProviderChip,
                   const SizedBox(height: 14),
@@ -769,33 +804,6 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                             ],
                           ),
                         ),
-                      ] else if (!widget.showStatusActions &&
-                          _favoriteLoading) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            SizedBox(
-                              width: 14,
-                              height: 14,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              "Checking favourites...",
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .onSurface
-                                    .withValues(alpha: 0.65),
-                              ),
-                            ),
-                          ],
-                        ),
                       ],
                       if (lastActionLine != null) ...[
                         const SizedBox(height: 6),
@@ -815,6 +823,17 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                         const SizedBox(height: 10),
                         OutlinedButton.icon(
                           onPressed: () {
+                            if (_isFavoriteForUnit) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Pre-approved visitor. Resident approval not required.',
+                                  ),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                              return;
+                            }
                             Navigator.of(context).push(
                               MaterialPageRoute<void>(
                                 builder: (_) => NewVisitorScreen(
@@ -826,8 +845,17 @@ class _VisitorDetailsScreenState extends State<VisitorDetailsScreen> {
                               ),
                             );
                           },
-                          icon: const Icon(Icons.replay_rounded, size: 18),
-                          label: const Text('Repeat visitor'),
+                          icon: Icon(
+                            _isFavoriteForUnit
+                                ? Icons.verified_rounded
+                                : Icons.replay_rounded,
+                            size: 18,
+                          ),
+                          label: Text(
+                            _isFavoriteForUnit
+                                ? 'Pre-approved visitor'
+                                : 'Repeat visitor',
+                          ),
                         ),
                       ],
                       if (_visitor.residentPhone != null &&

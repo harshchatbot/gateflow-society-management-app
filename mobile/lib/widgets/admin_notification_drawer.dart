@@ -184,16 +184,11 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
                       .toList()
                   : <Map<String, dynamic>>[];
 
-          pendingComplaints = allComplaints.where((c) {
-            final status = (c['status'] ?? '').toString().toUpperCase();
-            return status == 'PENDING' || status == 'IN_PROGRESS';
-          }).length;
+          pendingComplaints =
+              allComplaints.where(_isActionableComplaint).length;
 
           complaintNotifications = allComplaints
-              .where((c) {
-                final status = (c['status'] ?? '').toString().toUpperCase();
-                return status == 'PENDING' || status == 'IN_PROGRESS';
-              })
+              .where(_isActionableComplaint)
               .take(5)
               .map((c) => {
                     'type': 'complaint',
@@ -346,6 +341,13 @@ class _AdminNotificationDrawerState extends State<AdminNotificationDrawer> {
           error: e, stackTrace: st);
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  bool _isActionableComplaint(Map<String, dynamic> complaint) {
+    final status = (complaint['status'] ?? '').toString().toUpperCase().trim();
+    if (!(status == 'PENDING' || status == 'IN_PROGRESS')) return false;
+    final resolvedAt = complaint['resolvedAt'] ?? complaint['resolved_at'];
+    return resolvedAt == null;
   }
 
   String _formatTime(String? dateTimeStr) {

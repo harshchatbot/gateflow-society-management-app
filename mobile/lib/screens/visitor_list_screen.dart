@@ -40,8 +40,8 @@ class _VisitorListScreenState extends State<VisitorListScreen>
 
   List<Visitor> _today = [];
   List<Visitor> _byFlat = [];
-
-  final _flatController = TextEditingController();
+  List<String> _flatOptions = [];
+  String? _selectedFlatNo;
 
   @override
   void initState() {
@@ -53,7 +53,6 @@ class _VisitorListScreenState extends State<VisitorListScreen>
   @override
   void dispose() {
     _tabController.dispose();
-    _flatController.dispose();
     super.dispose();
   }
 
@@ -63,6 +62,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
       final membership = await _firestore.getCurrentUserMembership();
       _societyId = membership?['societyId'] as String?;
       if (_societyId != null && _societyId!.isNotEmpty) {
+        await _loadFlatOptions();
         await _loadToday();
       } else {
         if (mounted) {
@@ -80,6 +80,32 @@ class _VisitorListScreenState extends State<VisitorListScreen>
           _error = userFriendlyMessageFromError(e);
         });
       }
+    }
+  }
+
+  Future<void> _loadFlatOptions() async {
+    if (_societyId == null || _societyId!.isEmpty) return;
+    try {
+      // Logged-in flow should read units from society scope only.
+      final List<Map<String, dynamic>> flats =
+          await _firestore.getSocietyFlats(_societyId!);
+
+      final options = flats
+          .map((f) => (f['flatNo'] ?? f['id'] ?? '').toString().trim())
+          .where((f) => f.isNotEmpty)
+          .toSet()
+          .toList()
+        ..sort();
+
+      if (!mounted) return;
+      setState(() {
+        _flatOptions = options;
+        if (_selectedFlatNo != null && !_flatOptions.contains(_selectedFlatNo)) {
+          _selectedFlatNo = null;
+        }
+      });
+    } catch (e, st) {
+      AppLogger.e("Error loading flat options", error: e, stackTrace: st);
     }
   }
 
@@ -173,7 +199,7 @@ class _VisitorListScreenState extends State<VisitorListScreen>
   }
 
   Future<void> _loadByFlat() async {
-    final flatNo = _flatController.text.trim().toUpperCase();
+    final flatNo = (_selectedFlatNo ?? '').trim().toUpperCase();
     if (flatNo.isEmpty || _societyId == null || _societyId!.isEmpty) return;
 
     setState(() {
@@ -597,26 +623,47 @@ class _VisitorListScreenState extends State<VisitorListScreen>
     final theme = Theme.of(context);
     return Container(
       margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: theme.dividerColor),
       ),
-      child: TextField(
-        controller: _flatController,
-        onSubmitted: (_) => _loadByFlat(),
-        decoration: InputDecoration(
-          hintText: "Enter Flat No (e.g. A-101)",
-          hintStyle: TextStyle(
-              fontSize: 14,
-              color: theme.colorScheme.onSurface.withValues(alpha: 0.6)),
-          border: InputBorder.none,
-          suffixIcon: IconButton(
-            icon: Icon(Icons.search, color: theme.colorScheme.primary),
-            onPressed: _loadByFlat,
+      child: Row(
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              initialValue: _selectedFlatNo,
+              isExpanded: true,
+              items: _flatOptions
+                  .map((flat) => DropdownMenuItem<String>(
+                        value: flat,
+                        child: Text(
+                          flat,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ))
+                  .toList(),
+              onChanged: (value) => setState(() => _selectedFlatNo = value),
+              decoration: InputDecoration(
+                hintText:
+                    _flatOptions.isEmpty ? "No flats available" : "Select Flat",
+                hintStyle: TextStyle(
+                  fontSize: 14,
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+              ),
+            ),
           ),
-        ),
+          IconButton(
+            icon: Icon(Icons.search, color: theme.colorScheme.primary),
+            onPressed: (_selectedFlatNo == null || _selectedFlatNo!.isEmpty)
+                ? null
+                : _loadByFlat,
+          ),
+        ],
       ),
     );
   }

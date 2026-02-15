@@ -61,6 +61,7 @@ class _SentinelAliveMascotState extends State<SentinelAliveMascot>
   bool _eyesClosed = false;
   bool _showNudgeBubble = false;
   int _nudgeIndex = 0;
+  int _tapBlinkCount = 0;
 
   @override
   void initState() {
@@ -141,14 +142,44 @@ class _SentinelAliveMascotState extends State<SentinelAliveMascot>
     final millis = 2600 + math.Random().nextInt(2400);
     _nextBlinkTimer?.cancel();
     _nextBlinkTimer = Timer(Duration(milliseconds: millis), () {
-      if (!mounted) return;
-      setState(() => _eyesClosed = true);
+      _blinkNow();
+    });
+  }
 
-      _openEyesTimer?.cancel();
-      _openEyesTimer = Timer(const Duration(milliseconds: 130), () {
+  void _blinkNow() {
+    _nextBlinkTimer?.cancel();
+    _openEyesTimer?.cancel();
+
+    if (!mounted) return;
+    setState(() => _eyesClosed = true);
+
+    _openEyesTimer = Timer(const Duration(milliseconds: 130), () {
+      if (!mounted) return;
+      setState(() => _eyesClosed = false);
+      _scheduleNextBlink();
+    });
+  }
+
+  void _doubleBlinkNow() {
+    _nextBlinkTimer?.cancel();
+    _openEyesTimer?.cancel();
+
+    if (!mounted) return;
+    setState(() => _eyesClosed = true);
+
+    _openEyesTimer = Timer(const Duration(milliseconds: 110), () {
+      if (!mounted) return;
+      setState(() => _eyesClosed = false);
+
+      _openEyesTimer = Timer(const Duration(milliseconds: 90), () {
         if (!mounted) return;
-        setState(() => _eyesClosed = false);
-        _scheduleNextBlink();
+        setState(() => _eyesClosed = true);
+
+        _openEyesTimer = Timer(const Duration(milliseconds: 120), () {
+          if (!mounted) return;
+          setState(() => _eyesClosed = false);
+          _scheduleNextBlink();
+        });
       });
     });
   }
@@ -190,65 +221,79 @@ class _SentinelAliveMascotState extends State<SentinelAliveMascot>
         ? ''
         : widget.nudgeMessages[_nudgeIndex % widget.nudgeMessages.length];
 
-    return SizedBox(
-      width: widget.size + 20,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (widget.showNudge && _showNudgeBubble && nudgeText.isNotEmpty) ...[
-            _NudgeBubble(
-              text: nudgeText,
-              textStyle: widget.nudgeTextStyle,
-            ),
-            const SizedBox(height: 8),
-          ],
-          AnimatedBuilder(
-            animation: Listenable.merge([_lifeController, _reactionController]),
-            builder: (context, child) {
-              final lifeT = Curves.easeInOut.transform(_lifeController.value);
-              final yOffset = -4.0 + (lifeT * 8.0);
-              final tilt = ((lifeT - 0.5) * 0.05);
-              final scale = 1.0 + _reactionScale.value;
+    return ClipRect(
+      child: SizedBox(
+        width: widget.size + 20,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (widget.showNudge && _showNudgeBubble && nudgeText.isNotEmpty) ...[
+              _NudgeBubble(
+                text: nudgeText,
+                textStyle: widget.nudgeTextStyle,
+              ),
+              const SizedBox(height: 8),
+            ],
+            AnimatedBuilder(
+              animation: Listenable.merge([_lifeController, _reactionController]),
+              builder: (context, child) {
+                final lifeT = Curves.easeInOut.transform(_lifeController.value);
+                final yOffset = -4.0 + (lifeT * 8.0);
+                final tilt = ((lifeT - 0.5) * 0.05);
+                final scale = 1.0 + _reactionScale.value;
 
-              return Transform.translate(
-                offset: Offset(0, yOffset),
-                child: Transform.rotate(
-                  angle: tilt,
-                  child: Transform.scale(scale: scale, child: child),
-                ),
-              );
-            },
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 120),
-              switchInCurve: Curves.easeOut,
-              switchOutCurve: Curves.easeIn,
-              child: Image.asset(
-                _eyesClosed
-                    ? _closedEyesAssetForMood(widget.mood)
-                    : _assetForMood(widget.mood),
-                key: ValueKey<String>(
-                  '${widget.mood.name}_${_eyesClosed ? 'closed' : 'open'}',
-                ),
-                width: widget.size,
-                height: widget.size,
-                fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => Container(
-                  width: widget.size,
-                  height: widget.size,
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
+                return Transform.translate(
+                  offset: Offset(0, yOffset),
+                  child: Transform.rotate(
+                    angle: tilt,
+                    child: Transform.scale(scale: scale, child: child),
                   ),
-                  child: Icon(
-                    Icons.pets_rounded,
-                    size: widget.size * 0.45,
-                    color: AppColors.primary.withValues(alpha: 0.75),
+                );
+              },
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  _reactionController.forward(from: 0);
+                  _tapBlinkCount += 1;
+                  if (_tapBlinkCount % 3 == 0) {
+                    _doubleBlinkNow();
+                  } else {
+                    _blinkNow();
+                  }
+                },
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 120),
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  child: Image.asset(
+                    _eyesClosed
+                        ? _closedEyesAssetForMood(widget.mood)
+                        : _assetForMood(widget.mood),
+                    key: ValueKey<String>(
+                      '${widget.mood.name}_${_eyesClosed ? 'closed' : 'open'}',
+                    ),
+                    width: widget.size,
+                    height: widget.size,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: widget.size,
+                      height: widget.size,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Icon(
+                        Icons.pets_rounded,
+                        size: widget.size * 0.45,
+                        color: AppColors.primary.withValues(alpha: 0.75),
+                      ),
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

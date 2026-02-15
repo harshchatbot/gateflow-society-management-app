@@ -758,9 +758,11 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
                         ],
                         DashboardHero(
                           userName: _dynamicName,
-                          statusMessage: (pendingCount + _sosBadgeCount) > 0
-                              ? '${pendingCount + _sosBadgeCount} pending · Check approvals'
-                              : 'All gates are secure',
+                          statusMessage: _notificationCount > 0
+                              ? '$_notificationCount pending · Check alerts'
+                              : (pendingCount > 0
+                                  ? '$pendingCount visitor(s) awaiting resident decision'
+                                  : 'All gates are secure'),
                           mascotMood: _sosBadgeCount > 0
                               ? SentiMood.warning
                               : ((pendingCount + _sosBadgeCount) > 0
@@ -1347,26 +1349,35 @@ class _GuardDashboardScreenState extends State<GuardDashboardScreen> {
   void _showSettingsSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        ),
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text("Gate Settings",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: Icon(Icons.notifications_active,
-                  color: Theme.of(context).colorScheme.primary),
-              title: const Text("Alert Sounds"),
-              trailing: Switch.adaptive(value: true, onChanged: (v) {}),
-            ),
-          ],
+      builder: (context) => SafeArea(
+        top: false,
+        child: Container(
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          ),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.of(context).padding.bottom,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Gate Settings",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+              const SizedBox(height: 20),
+              ListTile(
+                leading: Icon(Icons.notifications_active,
+                    color: Theme.of(context).colorScheme.primary),
+                title: const Text("Alert Sounds"),
+                trailing: Switch.adaptive(value: true, onChanged: (v) {}),
+              ),
+            ],
+          ),
         ),
       ),
     );

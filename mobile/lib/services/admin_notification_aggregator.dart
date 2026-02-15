@@ -21,6 +21,13 @@ class AdminNotificationCounts {
 }
 
 class AdminNotificationAggregator {
+  static bool _isActionableComplaint(Map<String, dynamic> complaint) {
+    final status = (complaint['status'] ?? '').toString().toUpperCase().trim();
+    if (!(status == 'PENDING' || status == 'IN_PROGRESS')) return false;
+    final resolvedAt = complaint['resolvedAt'] ?? complaint['resolved_at'];
+    return resolvedAt == null;
+  }
+
   static Future<AdminNotificationCounts> load({
     required String societyId,
     required FirestoreService firestore,
@@ -50,10 +57,8 @@ class AdminNotificationAggregator {
       final complaints =
           await complaintService.getAllComplaints(societyId: societyId);
       if (complaints.isSuccess && complaints.data != null) {
-        pendingComplaints = complaints.data!.where((c) {
-          final status = (c['status'] ?? '').toString().toUpperCase();
-          return status == 'PENDING' || status == 'IN_PROGRESS';
-        }).length;
+        pendingComplaints =
+            complaints.data!.where(_isActionableComplaint).length;
       }
     }
 

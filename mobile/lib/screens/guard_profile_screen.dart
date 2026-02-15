@@ -66,6 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfile() async {
     try {
       final membership = await _firestore.getCurrentUserMembership();
+      if (!mounted) return;
       if (membership != null && membership['uid'] == widget.guardId) {
         setState(() {
           _photoUrl = membership['photoUrl'] as String?;

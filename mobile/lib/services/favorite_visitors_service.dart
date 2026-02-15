@@ -137,7 +137,8 @@ class FavoriteVisitorsService {
     String? unitId,
     int limit = 200,
   }) async {
-    final resolvedUnit = (unitId ?? '').trim();
+    final resolvedUnit =
+        await _resolveCanonicalUnitId(societyId: societyId, unitId: unitId ?? '');
     if (resolvedUnit.isEmpty) return <String>{};
 
     try {
@@ -185,7 +186,9 @@ class FavoriteVisitorsService {
     String? photoUrl,
     String? unitId,
   }) async {
-    final resolvedUnitId = (unitId ?? '').trim();
+    final rawUnitId = (unitId ?? '').trim();
+    final resolvedUnitId =
+        await _resolveCanonicalUnitId(societyId: societyId, unitId: rawUnitId);
     if (resolvedUnitId.isEmpty) return <String>{};
 
     final normalizedName = visitorName.trim();
@@ -235,7 +238,9 @@ class FavoriteVisitorsService {
     required String unitId,
     required String visitorKey,
   }) async {
-    final resolvedUnit = unitId.trim();
+    final rawUnit = unitId.trim();
+    final resolvedUnit =
+        await _resolveCanonicalUnitId(societyId: societyId, unitId: rawUnit);
     if (resolvedUnit.isEmpty || visitorKey.trim().isEmpty) return false;
 
     // Preferred path
@@ -244,6 +249,14 @@ class FavoriteVisitorsService {
       unitId: resolvedUnit,
     ).doc(visitorKey).get();
     if (primary.exists) return true;
+
+    if (rawUnit.isNotEmpty && rawUnit != resolvedUnit) {
+      final rawDoc = await _favoritesRef(
+        societyId: societyId,
+        unitId: rawUnit,
+      ).doc(visitorKey).get();
+      if (rawDoc.exists) return true;
+    }
 
     // Compatibility fallback path
     final legacy = await _legacyFavoritesRef(
@@ -258,7 +271,9 @@ class FavoriteVisitorsService {
     required String unitId,
     int limit = 5,
   }) async {
-    final resolvedUnit = unitId.trim();
+    final rawUnit = unitId.trim();
+    final resolvedUnit =
+        await _resolveCanonicalUnitId(societyId: societyId, unitId: rawUnit);
     if (resolvedUnit.isEmpty) return <Map<String, dynamic>>[];
 
     try {
@@ -284,6 +299,29 @@ class FavoriteVisitorsService {
           .toList();
 
       if (mapped.isNotEmpty) return mapped;
+
+      if (rawUnit.isNotEmpty && rawUnit != resolvedUnit) {
+        final rawSnap = await _favoritesRef(
+          societyId: societyId,
+          unitId: rawUnit,
+        ).orderBy('createdAt', descending: true).limit(limit).get();
+        final rawMapped = rawSnap.docs
+            .map((d) {
+              final data = d.data();
+              return <String, dynamic>{
+                'visitorKey': d.id,
+                'name': (data['name'] ?? '').toString(),
+                'phone': data['phone']?.toString(),
+                'purpose': data['purpose']?.toString(),
+                'photoUrl': data['photoUrl']?.toString(),
+                'isPreApproved': data['isPreApproved'] == true,
+                'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
+              };
+            })
+            .where((m) => (m['name'] as String).trim().isNotEmpty)
+            .toList();
+        if (rawMapped.isNotEmpty) return rawMapped;
+      }
     } catch (_) {
       // continue to compatibility fallback
     }
@@ -319,7 +357,8 @@ class FavoriteVisitorsService {
     String residentId, {
     String? unitId,
   }) async {
-    final resolvedUnit = (unitId ?? '').trim();
+    final resolvedUnit =
+        await _resolveCanonicalUnitId(societyId: societyId, unitId: unitId ?? '');
     if (resolvedUnit.isNotEmpty) {
       try {
         final snap = await _unitVisitorSettingsRef(
@@ -344,7 +383,8 @@ class FavoriteVisitorsService {
     bool enabled, {
     String? unitId,
   }) async {
-    final resolvedUnit = (unitId ?? '').trim();
+    final resolvedUnit =
+        await _resolveCanonicalUnitId(societyId: societyId, unitId: unitId ?? '');
     if (resolvedUnit.isNotEmpty) {
       try {
         await _unitVisitorSettingsRef(
@@ -370,6 +410,8 @@ class FavoriteVisitorsService {
     bool? isPreApproved,
     bool? notifyResidentOnEntry,
   }) async {
+    final resolvedUnit =
+        await _resolveCanonicalUnitId(societyId: societyId, unitId: unitId);
     final updates = <String, dynamic>{
       'updatedAt': FieldValue.serverTimestamp(),
       'updatedByUid': _auth.currentUser?.uid,
@@ -380,7 +422,7 @@ class FavoriteVisitorsService {
     }
     await _favoritesRef(
       societyId: societyId,
-      unitId: unitId,
+      unitId: resolvedUnit,
     ).doc(visitorKey).set(updates, SetOptions(merge: true));
   }
 
@@ -391,7 +433,9 @@ class FavoriteVisitorsService {
     String? phone,
     String? purpose,
   }) async {
-    final resolvedUnit = unitId.trim();
+    final rawUnit = unitId.trim();
+    final resolvedUnit =
+        await _resolveCanonicalUnitId(societyId: societyId, unitId: rawUnit);
     if (resolvedUnit.isEmpty) return null;
     final trimmedName = name.trim();
     final trimmedPhone = (phone ?? '').trim();
@@ -417,6 +461,25 @@ class FavoriteVisitorsService {
         'isPreApproved': data['isPreApproved'] == true,
         'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
       };
+    }
+
+    if (rawUnit.isNotEmpty && rawUnit != resolvedUnit) {
+      final rawDoc = await _favoritesRef(
+        societyId: societyId,
+        unitId: rawUnit,
+      ).doc(key).get();
+      if (rawDoc.exists) {
+        final data = rawDoc.data() ?? <String, dynamic>{};
+        return <String, dynamic>{
+          'id': rawDoc.id,
+          'visitorKey': key,
+          'name': (data['name'] ?? '').toString(),
+          'phone': data['phone']?.toString(),
+          'purpose': data['purpose']?.toString(),
+          'isPreApproved': data['isPreApproved'] == true,
+          'notifyResidentOnEntry': data['notifyResidentOnEntry'] != false,
+        };
+      }
     }
 
     // Compatibility fallback by normalized name from legacy docs.
@@ -454,7 +517,8 @@ class FavoriteVisitorsService {
     required String visitorKey,
     required DateTime now,
   }) async {
-    final resolvedUnit = unitId.trim();
+    final resolvedUnit =
+        await _resolveCanonicalUnitId(societyId: societyId, unitId: unitId);
     if (resolvedUnit.isEmpty || visitorKey.trim().isEmpty) return null;
     try {
       final snap = await _unitPreapprovalsRef(
@@ -511,7 +575,8 @@ class FavoriteVisitorsService {
     required String unitId,
     int limit = 100,
   }) async {
-    final resolvedUnit = unitId.trim();
+    final resolvedUnit =
+        await _resolveCanonicalUnitId(societyId: societyId, unitId: unitId);
     if (resolvedUnit.isEmpty) return <Map<String, dynamic>>[];
     try {
       final snap = await _unitPreapprovalsRef(
@@ -559,7 +624,8 @@ class FavoriteVisitorsService {
     int? maxEntries,
     bool notifyResidentOnEntry = true,
   }) async {
-    final resolvedUnit = unitId.trim();
+    final resolvedUnit =
+        await _resolveCanonicalUnitId(societyId: societyId, unitId: unitId);
     if (resolvedUnit.isEmpty || visitorKey.trim().isEmpty) return;
     final doc = (preapprovalId == null || preapprovalId.trim().isEmpty)
         ? _unitPreapprovalsRef(societyId: societyId, unitId: resolvedUnit).doc()
@@ -593,7 +659,8 @@ class FavoriteVisitorsService {
     required String unitId,
     required String preapprovalId,
   }) async {
-    final resolvedUnit = unitId.trim();
+    final resolvedUnit =
+        await _resolveCanonicalUnitId(societyId: societyId, unitId: unitId);
     if (resolvedUnit.isEmpty || preapprovalId.trim().isEmpty) return;
     await _unitPreapprovalsRef(
       societyId: societyId,
@@ -670,5 +737,91 @@ class FavoriteVisitorsService {
   }) async {
     final map = await _loadAutoApprovedMap(societyId, residentId);
     return map.containsKey(pendingId);
+  }
+
+  String _normalizeUnitToken(String input) {
+    return input.trim().toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
+  bool _unitCandidateMatches(String targetToken, List<String> candidates) {
+    for (final c in candidates) {
+      if (_normalizeUnitToken(c) == targetToken) return true;
+    }
+    return false;
+  }
+
+  Future<String> _resolveCanonicalUnitId({
+    required String societyId,
+    required String unitId,
+  }) async {
+    final raw = unitId.trim();
+    if (raw.isEmpty) return '';
+
+    final targetToken = _normalizeUnitToken(raw);
+    if (targetToken.isEmpty) return raw;
+
+    try {
+      final exactUnit = await _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('units')
+          .doc(raw)
+          .get();
+      if (exactUnit.exists) return raw;
+    } catch (_) {}
+
+    try {
+      final exactFlat = await _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('flats')
+          .doc(raw)
+          .get();
+      if (exactFlat.exists) return raw;
+    } catch (_) {}
+
+    try {
+      final unitDocs = await _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('units')
+          .limit(500)
+          .get();
+      for (final d in unitDocs.docs) {
+        final data = d.data();
+        final candidates = <String>[
+          d.id,
+          (data['label'] ?? '').toString(),
+          (data['flatNo'] ?? '').toString(),
+          (data['flat_no'] ?? '').toString(),
+        ];
+        if (_unitCandidateMatches(targetToken, candidates)) {
+          return d.id;
+        }
+      }
+    } catch (_) {}
+
+    try {
+      final flatDocs = await _firestore
+          .collection('societies')
+          .doc(societyId)
+          .collection('flats')
+          .limit(500)
+          .get();
+      for (final d in flatDocs.docs) {
+        final data = d.data();
+        final candidates = <String>[
+          d.id,
+          (data['label'] ?? '').toString(),
+          (data['flatNo'] ?? '').toString(),
+          (data['flat_no'] ?? '').toString(),
+        ];
+        if (_unitCandidateMatches(targetToken, candidates)) {
+          return d.id;
+        }
+      }
+    } catch (_) {}
+
+    return raw;
   }
 }

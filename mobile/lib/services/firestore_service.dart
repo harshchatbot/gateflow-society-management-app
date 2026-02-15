@@ -55,13 +55,22 @@ class FirestoreService {
     return _societyRef(societyId).collection('flats');
   }
 
+  /// Get units subcollection reference (used by some societies instead of flats)
+  CollectionReference _unitsRef(String societyId) {
+    return _societyRef(societyId).collection('units');
+  }
+
   /// List active flats/units for a society (for guard dropdown when creating visitor).
   /// Returns list of { id, flatNo } sorted by flatNo.
+  /// Source priority (society-scope only):
+  /// 1) societies/{societyId}/flats
+  /// 2) societies/{societyId}/units (fallback)
   Future<List<Map<String, dynamic>>> getSocietyFlats(String societyId) async {
     try {
-      final snapshot =
+      final flatsSnapshot =
           await _flatsRef(societyId).where('active', isEqualTo: true).get();
-      final list = snapshot.docs.map((doc) {
+
+      List<Map<String, dynamic>> list = flatsSnapshot.docs.map((doc) {
         final data = doc.data() as Map<String, dynamic>? ?? {};
         final flatNo =
             (data['flatNo'] ?? data['flat_no'] ?? data['label'] ?? doc.id)
@@ -69,6 +78,21 @@ class FirestoreService {
                 .trim();
         return {'id': doc.id, 'flatNo': flatNo.isEmpty ? doc.id : flatNo};
       }).toList();
+
+      // Some societies use societies/{societyId}/units instead of flats.
+      if (list.isEmpty) {
+        final unitsSnapshot =
+            await _unitsRef(societyId).where('active', isEqualTo: true).get();
+        list = unitsSnapshot.docs.map((doc) {
+          final data = doc.data() as Map<String, dynamic>? ?? {};
+          final label =
+              (data['label'] ?? data['flatNo'] ?? data['flat_no'] ?? doc.id)
+                  .toString()
+                  .trim();
+          return {'id': doc.id, 'flatNo': label.isEmpty ? doc.id : label};
+        }).toList();
+      }
+
       list.sort(
           (a, b) => (a['flatNo'] as String).compareTo(b['flatNo'] as String));
       return list;

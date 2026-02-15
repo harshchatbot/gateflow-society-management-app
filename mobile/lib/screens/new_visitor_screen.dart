@@ -175,17 +175,9 @@ class _NewVisitorScreenState extends State<NewVisitorScreen> {
   Future<void> _loadFlats() async {
     setState(() => _flatsLoading = true);
     try {
-      // Prefer society flats (societies/{id}/flats); if empty, use public_societies units (e.g. Villa-E01)
-      List<Map<String, dynamic>> list =
+      // Logged-in flow should read units from society scope only.
+      final List<Map<String, dynamic>> list =
           await _firestore.getSocietyFlats(widget.societyId);
-      if (list.isEmpty) {
-        final publicUnits =
-            await _firestore.getPublicSocietyUnits(widget.societyId);
-        list = publicUnits.map((u) {
-          final label = (u['label'] as String?) ?? u['id'] as String;
-          return {'id': u['id'], 'flatNo': label};
-        }).toList();
-      }
       if (!mounted) return;
       final normalizedSelected = _normalizeSelectedFlatForList(
         _selectedFlatNo,
